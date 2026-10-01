@@ -2226,3 +2226,26 @@ Live #324 did successfully publish the new current-season Simulation generation 
 Immediately after publication, another intelligence job started; Safari stale-while-revalidate also issued `POST /api/connect/sleeper/background/refresh` at ~22:28:44Z. More importantly, Render received yet another API-triggered deployment of the **same merged #324 commit** at ~22:29:28Z, after several earlier same-commit acceptance deployments. That redeployment replaces/restarts the instance and prevents a clean stable-settle observation.
 
 Treat this as an acceptance-execution problem unless new evidence shows a product defect. Do not keep redeploying identical #324 code merely to observe it. Hosted acceptance should use one stable deployment, allow the replacement intelligence generation to finish, verify current-season values and continuity, then stop. A same-material background verification may run, but it must not force a new deployment or make usable published intelligence disappear.
+
+## 2026-10-01 — #324 ACCEPTED: current-season factual baseline / future-only Simulation
+
+PR #324 was squash-merged as `1e5e3ff982e0507b9dbf10fc35e07d0886996571`. The accepted capability preserves completed regular-season results as immutable facts, simulates only unresolved regular-season games, exposes expected remaining versus expected final wins, and uses separate scoring evidence for each configured playoff week. A zero-length remaining regular-season schedule is valid after the regular season ends so final factual standings can feed postseason Simulation.
+
+Risk-proportionate validation is complete:
+- exact-head ordinary CI: **1,954 passed**, one existing warning;
+- focused PR164 corrective regression: PASS;
+- Live Forecast corrective trace: PASS;
+- the two Codex P1 findings (playoff-week scoring and post-regular-season execution) were corrected and their review threads resolved;
+- authenticated physical Safari reached a valid published current-season result for the managed franchise: **2-1, Contender, 9.2 projected final wins, 91% playoffs, 12% championship**.
+
+Stable hosted acceptance used one deployment only after management stopped the repeated same-commit redeploy loop:
+- Render deploy `dep-davdthqd0e5s73fkcbq0` on merged #324 commit `1e5e3ff9...` became live at **22:31:11Z** and remained the newest/live deployment through the latest available acceptance evidence;
+- the stable instance `...-2cpdj` served League Atlas at **22:31:35Z** on State `68eac82b...` with `standings=12 simulation=True`;
+- startup settle at **22:32:32Z** restored that State with `forecast=True simulation=True value=True complete=True`, product readiness `full`, and Intrinsic `full`;
+- no subsequent shutdown, background refresh, reconciliation, working-generation, or replacement-deploy event appeared in the settle window;
+- Render memory settled near **267 MB** against the 512 MiB service limit, with the product readiness log reporting ~290 MB RSS / ~290.5 MB peak and no active heavy-work owner.
+
+This is sufficient acceptance for the Tier B #324 capability. Do not redeploy or re-prove #324 absent contradictory evidence.
+
+**Simulation 2.0 roadmap advances immediately to item 2:** legal lineup optimization, player availability/missed-game uncertainty, bye handling, empty-slot behavior, and legal bench substitution. Reconcile against existing lineup/bye-aware machinery and add only the missing governed capability; do not redo accepted #324 current-season, #321 postseason, or #323 continuity work.
+
