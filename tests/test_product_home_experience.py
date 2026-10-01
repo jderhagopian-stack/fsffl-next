@@ -202,8 +202,8 @@ def test_first_load_hotfix_busts_changed_assets_without_churning_other_surfaces(
     assert f"/static/app.js?v=20260929-physical-connect1" in INDEX
     assert f"/static/home_dashboard.js?v=20260929-physical-connect1" in INDEX
     assert f"/static/product_shell.js?v=20260929-physical-connect1" in INDEX
-    assert "const homeNorthStarStaticVersion='20260927-dualstate1';" in SHELL
-    assert "const franchiseNorthStarStaticVersion='20260927-dualstate1';" in SHELL
+    assert "const homeNorthStarStaticVersion='20261001-continuity2';" in SHELL
+    assert "const franchiseNorthStarStaticVersion='20261001-continuity2';" in SHELL
 
 
 
@@ -225,5 +225,6 @@ def test_home_removes_redundant_large_intelligence_status_card() -> None:
 def test_home_explicitly_labels_stale_last_good_during_target_rebuild() -> None:
     assert "payload.intelligence_freshness||{}" in HOME
     assert "State current · last-good intelligence" in HOME
-    assert "Replacement intelligence is rebuilding." in HOME
-    assert "roster and standings remain current." in HOME
+    assert "home-last-good-status" in HOME
+    assert "Derived fields as of " in HOME
+    assert "Replacement intelligence is rebuilding." not in HOME
