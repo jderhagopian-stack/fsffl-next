@@ -17,6 +17,7 @@ class LeagueMetric(StrEnum):
     OPTIMIZED_EXPECTED_POINTS = "optimized_expected_points"
     EXPECTED_WINS = "expected_wins"
     PLAYOFF_PROBABILITY = "playoff_probability"
+    BYE_PROBABILITY = "bye_probability"
     FIRST_PLACE_PROBABILITY = "first_place_probability"
     CHAMPIONSHIP_PROBABILITY = "championship_probability"
     ASSET_PORTFOLIO_MEAN = "asset_portfolio_mean"
@@ -33,6 +34,7 @@ _METRIC_DIRECTIONS = {
     LeagueMetric.OPTIMIZED_EXPECTED_POINTS: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.EXPECTED_WINS: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.PLAYOFF_PROBABILITY: MetricDirection.HIGHER_IS_BETTER,
+    LeagueMetric.BYE_PROBABILITY: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.FIRST_PLACE_PROBABILITY: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.CHAMPIONSHIP_PROBABILITY: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.ASSET_PORTFOLIO_MEAN: MetricDirection.HIGHER_IS_BETTER,
@@ -50,7 +52,10 @@ class LeagueTeamAnalyticsRow(FrozenModel):
     expected_wins: float | None = None
     expected_remaining_wins: float | None = None
     playoff_probability: float | None = None
+    playoff_seed_probabilities: tuple[float, ...] | None = None
     playoff_unavailability_reason: str | None = None
+    bye_probability: float | None = None
+    bye_unavailability_reason: str | None = None
     first_place_probability: float | None = None
     championship_probability: float | None = None
     championship_unavailability_reason: str | None = None
@@ -146,8 +151,15 @@ def _row_from_team(view: TeamAnalyticsView) -> LeagueTeamAnalyticsRow:
             outcome.expected_remaining_wins if outcome is not None else None
         ),
         playoff_probability=outcome.playoff_probability if outcome is not None else None,
+        playoff_seed_probabilities=(
+            outcome.playoff_seed_probabilities if outcome is not None else None
+        ),
         playoff_unavailability_reason=(
             outcome.playoff_unavailability_reason if outcome is not None else None
+        ),
+        bye_probability=outcome.bye_probability if outcome is not None else None,
+        bye_unavailability_reason=(
+            outcome.bye_unavailability_reason if outcome is not None else None
         ),
         first_place_probability=outcome.first_place_probability if outcome is not None else None,
         championship_probability=outcome.championship_probability if outcome is not None else None,
