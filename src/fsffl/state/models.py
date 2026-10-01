@@ -138,6 +138,8 @@ class LeaguePlayoffRules(FrozenModel):
             return self.matchups
         if self.bracket_authority != "settings_derived_standard" or self.bracket_derivation_policy != "seeded_standard_fixed_v1":
             return ()
+        if len(self.round_weeks) != self.round_count or not self.round_weeks:
+            return ()
         def seed(n: int) -> PlayoffParticipantRef:
             return PlayoffParticipantRef(seed_number=n)
         def winner(key: str) -> PlayoffParticipantRef:
@@ -159,9 +161,6 @@ class LeaguePlayoffRules(FrozenModel):
             raise ValueError("observed brackets cannot declare a derived bracket policy")
         if self.bracket_authority == "settings_derived_standard" and (self.matchups or self.bracket_derivation_policy is None):
             raise ValueError("settings-derived brackets require a derivation policy and no observed matchup graph")
-        matchups = self.effective_matchups()
-        if not matchups:
-            return self
         if len(self.round_weeks) != self.round_count:
             raise ValueError("round_weeks must map every configured playoff round")
         if tuple(sorted(set(self.round_weeks))) != self.round_weeks:
@@ -174,6 +173,9 @@ class LeaguePlayoffRules(FrozenModel):
             raise ValueError("bye_seeds must be unique")
         if any(seed > self.playoff_team_count for seed in self.bye_seeds):
             raise ValueError("bye seed exceeds playoff_team_count")
+        matchups = self.effective_matchups()
+        if not matchups:
+            return self
         matchup_ids = [row.matchup_id for row in matchups]
         if len(set(matchup_ids)) != len(matchup_ids):
             raise ValueError("playoff matchup ids must be unique")

@@ -282,6 +282,18 @@ def test_custom_bracket_policy_is_retained_and_fails_closed_without_losing_quali
     }
 
 
+def test_standard_bracket_with_incomplete_week_map_fails_validation_cleanly() -> None:
+    payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
+    payload.update(
+        bracket_authority="settings_derived_standard",
+        bracket_derivation_policy="seeded_standard_fixed_v1",
+        matchups=(),
+        round_weeks=(15, 16),
+    )
+    with pytest.raises(ValueError, match="round_weeks must map every configured playoff round"):
+        LeaguePlayoffRules.model_validate(payload)
+
+
 def test_reseeding_policy_is_retained_but_not_silently_treated_as_fixed_bracket() -> None:
     reseeded = FIVE_TEAM_THREE_BYE_BRACKET.model_copy(
         update={"reseeding_policy": "highest_remaining_seed_each_round"}
