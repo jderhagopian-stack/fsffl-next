@@ -1993,3 +1993,25 @@ This is sufficient Tier-B hosted acceptance because the new field semantics/pres
 
 **Simulation 2.0 roadmap advances immediately to item 4:** governed counterfactual competitive-outcome deltas using common Monte Carlo worlds where mathematically valid. Simulation returns deltas only; Decision/Trade/Market retain transaction economics, owner preference and acceptance authority.
 
+## 2026-10-01 — Simulation 2.0 item 4 ACTIVE: governed common-world counterfactual deltas
+
+#326 finish/seed/bye output authority is accepted and remains closed. Item 4 implements the directive's counterfactual/scenario contract on top of the existing trade, waiver and What-If paths rather than creating a parallel scenario engine.
+
+Reconciliation found that production baseline/scenario runs already use the same configured seed, but **same seed alone is not sufficient common-world evidence**. Both supported RNG paths can consume a different number/order of random draws when an alternate State changes whether a team/week scoring distribution is deterministic (zero variance) versus stochastic. Postseason participant changes can create the same problem when possible teams have mixed deterministic/stochastic playoff distributions.
+
+The bounded item-4 implementation therefore:
+- keeps canonical 50,000-run probability math unchanged;
+- adds a topology-only regular-season common-world coordinate to each Simulation result, covering factual completed results, ordered unresolved schedule/team identities, deterministic-vs-stochastic draw mask, and governed qualification rules while intentionally excluding changed scoring means/standard deviations;
+- adds a stricter postseason common-world coordinate only when configured bracket execution has a stable draw topology (all possible playoff scoring rows stochastic or all deterministic); mixed deterministic/stochastic postseason paths remain valid Simulation but cannot claim paired title worlds;
+- requires matching Simulation model, count, seed, RNG protocol/runtime/bit-generator/batch/dtype/layout/seed-derivation plus matching topology coordinates before labeling a counterfactual delta `common_random_numbers`;
+- otherwise returns the same mathematically valid aggregate competitive delta with explicit `aggregate_difference` provenance and a concrete pairing-unavailability reason;
+- creates a Simulation-owned typed `CounterfactualCompetitiveOutcomeDelta` for expected/future wins, playoff, bye, first-place and championship probability deltas;
+- routes Trade Decision, Waiver and injury/availability What-If competitive deltas through that Simulation contract;
+- leaves Team Utility responsible only for wrapping the Simulation competitive delta with non-competitive consequence channels such as resilience;
+- leaves Value, transaction economics, materiality, owner strategy, negotiation, disposition and acceptance authority downstream and unchanged;
+- preserves exact scenario-cache reuse as performance-only. Cache hits may reuse an exact changed-State Simulation result but never create comparison authority.
+
+Because the persisted Simulation result gains common-world coordinates and downstream scenario APIs expose explicit pairing provenance, this is a Tier B Simulation/output-contract change. Simulation artifact identity advances; pre-item-4 Simulation artifacts must not silently claim common-world comparability.
+
+Validation must remain bounded to the changed contract: deterministic common-world/topology tests, Team Utility/Trade/waiver/What-If consumer tests, fixed 50,000-world replay baselines for supported runtimes, full CI, and exact-head P1/P2 review. Hosted acceptance, after merge, should target one baseline + one alternate-State scenario path and confirm the comparison metadata; do not rerun broad #324-#326 acceptance.
+
