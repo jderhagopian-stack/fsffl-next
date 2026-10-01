@@ -925,3 +925,12 @@ PR #320 must emit the ordinary `championship_probability` if either an exact pro
 - Required correction: dependency-aware completion. Reuse exact compatible artifacts; restore/build only missing/stale/invalidated capabilities and actual downstream dependents; atomic publication does not require recomputing current modules. If only Intrinsic is missing, do only Intrinsic. If all authoritative artifacts are current, reconciliation should be a no-op/cheap verification.
 - Presentation/readiness must distinguish the fully usable served generation from a working replacement. Last-good availability must keep affected surfaces usable; `7/7 + all required capabilities Full` cannot remain overall Partial without an explicit unresolved reason.
 - Apply focused/risk-proportionate validation only. After one targeted physical acceptance, resume the canonical next Simulation 2.0 item: **week-by-week current-season engine**.
+
+
+## 2026-10-01 — #322 physical acceptance failed; restart/served-generation pinning remains active
+
+- #322 is merged/deployed as `150c7b68...`, but authenticated Safari acceptance failed after a Render process restart.
+- The product simultaneously exposed a valid prior published League Atlas generation and an incomplete replacement/current runtime to Franchise: top banner could say `Intelligence current` while League warned last-good/rebuilding and Franchise lost classification, Forecast/Simulation-derived fields, Market, and Intrinsic.
+- Live sequence: old instance shut down ~19:57:58Z; replacement started 19:58:56Z; League Atlas served prior state `a2ad414e...` with Simulation; automatic Sleeper refresh began 19:59:40Z; replacement state `cc094159...` materialized; reconciliation started 20:00:26Z; startup readiness for replacement State had Forecast/Simulation/Value absent and Intrinsic unavailable.
+- Required fix is narrow: on restart/restore and legitimate changed-State revalidation, every affected surface must remain pinned to the same served publication generation for derived intelligence until atomic promotion. Canonical current-State facts may advance separately, but incomplete replacement intelligence must not blank last-good derived fields if continuity is claimed.
+- Use focused restart/changed-State continuity regressions and one physical acceptance. Do not reopen model math or broad platform acceptance. Then continue directly to the week-by-week Simulation 2.0 engine.
