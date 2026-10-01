@@ -1935,3 +1935,27 @@ Probabilistic missed-game uncertainty remains explicitly deferred until Forecast
 
 **Simulation 2.0 roadmap advances to item 3:** reconcile the existing full finish-position distribution, expected finish, first-place/playoff/championship outputs, canonical playoff rules and bye seeds against the remaining finish/seed/postseason output contract. Add only missing governed outputs; do not rebuild #324 current-season mechanics or #321 postseason execution.
 
+## 2026-10-01 — Simulation 2.0 item 3 ACTIVE: finish / seed / bye outputs
+
+#325 exact weekly availability + legal substitution is accepted. The active roadmap position is item 3: finish/seed distributions and the remaining league-governed postseason outputs on top of the accepted weekly engine.
+
+Reconciliation shows the engine already owns:
+- expected final and remaining wins;
+- exact full regular-season rank probabilities;
+- expected finish;
+- first-place and playoff qualification probabilities;
+- league-governed fixed postseason execution where supported;
+- championship probability with exact-versus-settings-derived provenance;
+- fail-closed unsupported qualification/bracket reasons.
+
+The bounded item-3 gap is output completeness, not postseason reimplementation:
+- add discrete median regular-season finish;
+- expose playoff seed probabilities explicitly when canonical qualification seeding is supported;
+- emit bye probability when canonical playoff rules identify the bye seeds;
+- keep bye authority independent from championship execution, so a known opening bye can remain available even if a later reseeding policy is not executable;
+- withhold seed/bye outputs with explicit reasons when seeding or bracket structure is not governed.
+
+No division probability is invented because current canonical LeagueRules do not yet carry a governed division structure/seeding contract; it remains "where applicable" and fail-closed until that State authority exists.
+
+This slice advances Simulation output identity because the persisted authoritative result contract changes. Preserve the accepted #324 current-season facts/future-only mechanics, #324 playoff-week scoring, #325 availability/substitution, 50,000-world authority, and deterministic RNG protocol.
+
