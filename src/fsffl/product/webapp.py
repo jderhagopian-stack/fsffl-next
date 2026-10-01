@@ -10,7 +10,7 @@ from threading import RLock
 from uuid import uuid4
 from typing import Callable
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
@@ -148,40 +148,6 @@ def require_beta_user(credentials: HTTPBasicCredentials | None = Depends(_securi
             headers={"WWW-Authenticate": "Basic"},
         )
     return expected_username
-
-
-def require_beta_user_or_external_acceptance(
-    credentials: HTTPBasicCredentials | None = Depends(_security),
-    acceptance_token: str | None = Header(
-        default=None,
-        alias="X-FSFFL-Acceptance-Token",
-    ),
-) -> str:
-    """Allow a short-lived repo-owned hosted acceptance runner on selected routes.
-
-    The alternate path is disabled by default and uses the existing scheduler
-    credential already provisioned in Render and GitHub Actions. It never grants
-    access to the private shell and is only wired to the small set of API routes
-    needed for hosted concurrency acceptance.
-    """
-
-    enabled = os.getenv("FSFFL_EXTERNAL_ACCEPTANCE_AUTH", "0").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
-    expected_token = os.getenv("FSFFL_SCHEDULER_TOKEN")
-    expected_username = os.getenv("FSFFL_BETA_USERNAME")
-    if (
-        enabled
-        and acceptance_token
-        and expected_token
-        and expected_username
-        and secrets.compare_digest(acceptance_token, expected_token)
-    ):
-        return expected_username
-    return require_beta_user(credentials)
 
 
 def _runtime_capability_readiness(runtime) -> dict[str, object]:
@@ -1180,7 +1146,7 @@ def create_app(
         return FileResponse(_STATIC_DIR / "index.html")
 
     @application.get("/api/product-context")
-    def product_context(user_id: str = Depends(require_beta_user_or_external_acceptance)) -> dict[str, object]:
+    def product_context(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime_payload = runtime_context_payload(user_id)
         if runtime_payload["league_id"] is not None:
             return runtime_payload
@@ -1990,7 +1956,7 @@ def create_app(
 
     @application.post("/api/intelligence/jobs")
     def start_intelligence_job(
-        user_id: str = Depends(require_beta_user_or_external_acceptance),
+        user_id: str = Depends(require_beta_user),
     ) -> dict[str, object]:
         refresh = active_hosted_refresh_payload(user_id)
         if refresh is not None:
@@ -2005,7 +1971,7 @@ def create_app(
         )
 
     @application.get("/api/intelligence/jobs/current")
-    def current_intelligence_job(user_id: str = Depends(require_beta_user_or_external_acceptance)) -> dict[str, object]:
+    def current_intelligence_job(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         refresh = active_hosted_refresh_payload(user_id)
         if refresh is not None:
             return {**runtime_context_payload(user_id), **refresh}
@@ -2082,7 +2048,7 @@ def create_app(
         }
 
     @application.get("/api/home")
-    def home_north_star(user_id: str = Depends(require_beta_user_or_external_acceptance)) -> dict[str, object]:
+    def home_north_star(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         """Compose Home strictly from already-attached governed evidence."""
 
         runtime = store.get(user_id)
@@ -2140,7 +2106,7 @@ def create_app(
         })
 
     @application.get("/api/my-team")
-    def my_team(user_id: str = Depends(require_beta_user_or_external_acceptance)) -> dict[str, object]:
+    def my_team(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
         if presentation_payload_loader is not None:
             stale = presentation_payload_loader(user_id, runtime, "franchise")
