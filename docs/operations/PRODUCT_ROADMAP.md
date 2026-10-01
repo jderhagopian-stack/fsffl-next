@@ -219,3 +219,8 @@ Physical Safari acceptance now passes the #323 restart/served-generation continu
 After the Simulation 2.0 program reaches its promotion gates, continue the accepted higher-level sequence: origin-aware draft-pick Value -> Long-Term Intrinsic -> PIT historical market evidence -> League Market / Owner Intelligence -> Trade Decision -> Market/Search optimization -> intelligence-surface exploitation.
 
 Do not let the non-blocking first-navigation loading polish displace the Simulation roadmap. Address it opportunistically through prefetch/cached-layout/skeleton work when measured evidence justifies the interruption.
+
+
+### Trade-decision effective-date requirement for the week-by-week Simulation engine
+
+Trade/waiver/counterfactual Simulation must be time-aware rather than applying a changed roster retroactively. For a proposal effective after Week N, completed weeks and the standings/points they produced are immutable and identical in baseline and scenario worlds; the changed roster may affect only future eligible fantasy weeks from the transaction's effective coordinate onward. Therefore competitive trade deltas (expected final wins, playoff/title odds, scoring distribution) should naturally shrink or change shape as fewer games remain, without an arbitrary late-season discount multiplier. Long-horizon Market/Intrinsic/future-pick economics remain separate channels and are not mechanically discounted merely because the current-season competitive window is shorter. This is an explicit acceptance criterion for the week-by-week current-season engine and downstream Trade Decision counterfactual bridge.
