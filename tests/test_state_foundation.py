@@ -13,6 +13,7 @@ from fsffl.state.models import (
     Player,
     PlayerState,
     PlayerStatus,
+    PlayerWeekAvailability,
     Position,
     Provenance,
     RosterEntry,
@@ -20,6 +21,7 @@ from fsffl.state.models import (
     ScoringRule,
     Team,
     TeamState,
+    WeeklyAvailabilityStatus,
 )
 from fsffl.state.serialization import canonical_state_json, load_state_json
 
@@ -130,4 +132,68 @@ def test_optional_matchup_completion_coordinate_is_backward_compatible_but_autho
     completed_canonical = canonical_state_json(completed)
     assert '"completed_through_week":2' in completed_canonical
     assert completed.state_id != legacy.state_id
+
+
+def test_optional_weekly_availability_is_backward_compatible_but_authoritative_when_present() -> None:
+    legacy = make_state()
+    canonical = canonical_state_json(legacy)
+    assert '"player_week_availability"' not in canonical
+
+    availability = (
+        PlayerWeekAvailability(
+            player_id="player:1",
+            week=1,
+            status=WeeklyAvailabilityStatus.UNAVAILABLE,
+            provenance=legacy.provenance[0],
+        ),
+        PlayerWeekAvailability(
+            player_id="player:2",
+            week=2,
+            status=WeeklyAvailabilityStatus.AVAILABLE,
+            provenance=legacy.provenance[0],
+        ),
+    )
+    with_availability = legacy.model_copy(
+        update={"player_week_availability": availability}
+    )
+    reversed_availability = legacy.model_copy(
+        update={"player_week_availability": tuple(reversed(availability))}
+    )
+
+    serialized = canonical_state_json(with_availability)
+    assert '"player_week_availability"' in serialized
+    assert with_availability.state_id != legacy.state_id
+    assert reversed_availability.state_id == with_availability.state_id
+
+
+def test_weekly_availability_rejects_unknown_player_and_duplicate_player_week() -> None:
+    state = make_state()
+    with pytest.raises(ValueError, match="availability references unknown player"):
+        LeagueState.model_validate(
+            {
+                **state.model_dump(),
+                "player_week_availability": (
+                    PlayerWeekAvailability(
+                        player_id="unknown",
+                        week=1,
+                        status=WeeklyAvailabilityStatus.UNAVAILABLE,
+                        provenance=state.provenance[0],
+                    ),
+                ),
+            }
+        )
+
+    duplicate = PlayerWeekAvailability(
+        player_id="player:1",
+        week=1,
+        status=WeeklyAvailabilityStatus.UNAVAILABLE,
+        provenance=state.provenance[0],
+    )
+    with pytest.raises(ValueError, match="only one fact per player/week"):
+        LeagueState.model_validate(
+            {
+                **state.model_dump(),
+                "player_week_availability": (duplicate, duplicate),
+            }
+        )
 
