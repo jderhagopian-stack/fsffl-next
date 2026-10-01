@@ -15,6 +15,15 @@ def _sorted_payload(state: LeagueState) -> dict[str, Any]:
     # non-null coordinate remains canonical State evidence and changes identity.
     if payload.get("completed_through_week") is None:
         payload.pop("completed_through_week", None)
+    # Preserve identity for durable snapshots written before exact weekly
+    # availability evidence existed. Pop only the empty additive coordinate.
+    if not payload.get("player_week_availability"):
+        payload.pop("player_week_availability", None)
+    else:
+        payload["player_week_availability"] = sorted(
+            payload["player_week_availability"],
+            key=lambda item: (item["week"], item["player_id"]),
+        )
     payload["teams"] = sorted(payload["teams"], key=lambda item: item["team_id"])
     payload["team_states"] = sorted(payload["team_states"], key=lambda item: item["team_id"])
     for team_state in payload["team_states"]:
