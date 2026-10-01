@@ -2140,3 +2140,12 @@ Live evidence: League Atlas served the prior published State `a2ad414e...` with 
 Keep the correction bounded to restart/restore + served-generation binding and readiness convergence. Do not reopen #321 postseason semantics or unrelated Simulation/Forecast math. Reconcile against the existing served-generation/atomic-publication work (including any still-relevant open continuity PR/history) rather than inventing a second architecture. Required focused regression: process restart -> restore published generation -> automatic provider revalidation/material State replacement -> every product surface coherently serves the same last-good publication until replacement publishes; after promotion all surfaces converge to the new generation. 
 
 **Status: #322 MERGED/DEPLOYED, PHYSICAL ACCEPTANCE FAILED; bounded continuity work remains ACTIVE.** Do not advance to the week-by-week Simulation engine until this targeted continuity gate passes. After it passes, resume the canonical roadmap immediately.
+
+
+### 2026-10-01 — #322 physical follow-up: eventual convergence confirmed, continuity failure remains
+
+Follow-up observation clarifies that the #322 failure is **transient continuity degradation, not permanent loss or a stuck rebuild**. After the restart/revalidation sequence, Intrinsic reconciliation completed at 20:03:26.98Z; League Atlas then served replacement State `cc094159...` with `simulation=True` at 20:03:44.68Z; atomic publication completed at 20:04:37.18Z. By ~20:06 the product had returned to current/usable status.
+
+The acceptance still fails because the user-visible transition was not coherent: after an initial cold-start/auth wait, the restored Home initially looked healthy/full, but navigation during automatic revalidation exposed mixed-generation behavior. League could explicitly serve last-good while Franchise temporarily degraded to Not Classified with Forecast/Simulation/Market/Intrinsic-derived fields unavailable. The top readiness indicator could still say `Intelligence current` during that interval. The correction therefore does **not** need to make recovery faster to pass; it must keep all affected derived-intelligence surfaces pinned to the usable served generation throughout the legitimate replacement build, then switch atomically when the replacement is complete.
+
+Do not misclassify the eventual 20:04:37 publication as acceptance of the transition. Recovery convergence is now proven; cross-surface continuity during the transition remains the bounded blocker.
