@@ -143,8 +143,15 @@ def _simulation_rows(
                 "expected_wins": outcome.expected_wins,
                 "wins_stddev": outcome.wins_stddev,
                 "playoff_probability": outcome.playoff_probability,
+                "playoff_seed_probabilities": list(
+                    getattr(outcome, "playoff_seed_probabilities", ()) or ()
+                ),
                 "playoff_unavailability_reason": getattr(
                     outcome, "playoff_unavailability_reason", None
+                ),
+                "bye_probability": getattr(outcome, "bye_probability", None),
+                "bye_unavailability_reason": getattr(
+                    outcome, "bye_unavailability_reason", None
                 ),
                 "first_place_probability": outcome.first_place_probability,
                 "championship_probability": outcome.championship_probability,
@@ -154,6 +161,14 @@ def _simulation_rows(
                 "simulation_count": outcome.simulation_count,
                 "simulation_model_version": outcome.simulation_model_version,
                 "expected_finish": projected_rank,
+                "median_finish": (
+                    getattr(finish, "median_finish", None)
+                    if finish is not None
+                    else None
+                ),
+                "finish_rank_probabilities": list(
+                    getattr(finish, "rank_probabilities", ()) or ()
+                ),
                 "current_rank": current,
                 "movement_vs_current_rank": (
                     float(current) - projected_rank if current is not None else None
