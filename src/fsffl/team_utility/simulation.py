@@ -941,6 +941,97 @@ def simulate_regular_season(
         if championship_supported
         else None
     )
+
+    # Common-world coordinates intentionally fingerprint only the factual baseline,
+    # ordered draw topology and governed league structure. Forecast means/standard
+    # deviations are excluded except for the deterministic-vs-stochastic mask,
+    # because changed strength is the counterfactual signal while draw alignment is
+    # the variance-reduction contract.
+    regular_common_world_payload = {
+        "team_ids": team_ids,
+        "completed_matchups": [
+            item.model_dump(mode="json") for item in request.completed_matchups
+        ],
+        "schedule_draw_topology": [
+            {
+                "week": matchup.week,
+                "home_team_id": matchup.home_team_id,
+                "away_team_id": matchup.away_team_id,
+                "home_stochastic": row[3] != 0.0,
+                "away_stochastic": row[5] != 0.0,
+            }
+            for matchup, row in zip(request.schedule, compiled_schedule, strict=True)
+        ],
+        "playoff_team_count": request.playoff_team_count,
+        "qualification_rules": (
+            {
+                "playoff_team_count": request.playoff_rules.playoff_team_count,
+                "playoff_start_week": request.playoff_rules.playoff_start_week,
+                "bye_seeds": request.playoff_rules.bye_seeds,
+                "seeding_policy": request.playoff_rules.seeding_policy,
+                "standings_tiebreak_policy": (
+                    request.playoff_rules.standings_tiebreak_policy
+                ),
+            }
+            if request.playoff_rules is not None
+            else None
+        ),
+    }
+    common_world_regular_season_coordinate = hashlib.sha256(
+        json.dumps(
+            regular_common_world_payload,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+
+    common_world_postseason_coordinate = None
+    common_world_postseason_unavailability_reason = None
+    if not championship_supported:
+        common_world_postseason_unavailability_reason = (
+            championship_unavailability_reason
+            or "championship_simulation_unavailable"
+        )
+    elif playoff_scoring is None or request.playoff_rules is None:
+        common_world_postseason_unavailability_reason = (
+            "postseason_scoring_or_rules_unavailable"
+        )
+    else:
+        postseason_stochastic_flags = tuple(
+            stddev != 0.0
+            for week in request.playoff_rules.round_weeks
+            for _mean, stddev in playoff_scoring[week]
+        )
+        # If some possible playoff participants consume RNG and others do not,
+        # advancement can change the number of draws between alternate States.
+        # Same seed is then not sufficient to prove paired postseason worlds.
+        if len(set(postseason_stochastic_flags)) > 1:
+            common_world_postseason_unavailability_reason = (
+                "mixed_deterministic_stochastic_playoff_draws"
+            )
+        else:
+            postseason_common_world_payload = {
+                "regular_coordinate": common_world_regular_season_coordinate,
+                "playoff_rules": request.playoff_rules.model_dump(mode="json"),
+                "canonical_execution_matchups": [
+                    item.model_dump(mode="json")
+                    for item in request.playoff_rules.canonical_execution_matchups()
+                ],
+                "postseason_randomness": (
+                    "all_stochastic"
+                    if postseason_stochastic_flags
+                    and postseason_stochastic_flags[0]
+                    else "all_deterministic"
+                ),
+            }
+            common_world_postseason_coordinate = hashlib.sha256(
+                json.dumps(
+                    postseason_common_world_payload,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest()
+
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
 
@@ -1142,6 +1233,13 @@ def simulate_regular_season(
         rng_draw_layout=draw_layout,
         rng_seed_derivation=seed_derivation,
         simulation_input_fingerprint=input_fingerprint,
+        common_world_regular_season_coordinate=(
+            common_world_regular_season_coordinate
+        ),
+        common_world_postseason_coordinate=common_world_postseason_coordinate,
+        common_world_postseason_unavailability_reason=(
+            common_world_postseason_unavailability_reason
+        ),
     )
     if result_started is not None:
         result_ended = _profile_clock()
