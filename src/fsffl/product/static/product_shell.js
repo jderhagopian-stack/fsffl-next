@@ -232,8 +232,9 @@ function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
     :'<button type="button" class="fsffl-shared-readiness-refresh">Refresh Intelligence</button>';
   const chips='<span class="fsffl-capability-summary">'+fsfflCapabilityChip('Current Forecast','forecast')+fsfflCapabilityChip('Simulation','simulation')+fsfflCapabilityChip('Current Value','current_value')+fsfflCapabilityChip('Intrinsic','intrinsic')+'</span>';
   const asOf=status.asOf?' · As of '+status.asOf:'';
+  const updateHasFullPublished=Boolean(status?.capabilities?.overall_status==='full');
   const mobilePrimary=status.updating
-    ?'◐ Intelligence update running · current generation available'
+    ?(updateHasFullPublished?'◐ Intelligence update running · current generation available':'◐ Intelligence update running')
     :status.complete
       ?'✓ Intelligence current'
       :(status.rebuilding?'◐ State current · intelligence rebuilding':status.partial?'◐ Intelligence partial · '+fsfflMobileCapabilityException(status):status.failed?'Intelligence needs attention':status.step+' / '+status.total);
