@@ -6,10 +6,13 @@ from threading import Thread
 from time import monotonic, sleep
 from typing import Callable
 
+from fsffl.persistence.runtime_cache import FORECAST_MODEL_VERSION
 from fsffl.state.models import LeagueState
 
 from .background_jobs import IntelligenceJobCoordinator, IntelligenceJobStatus
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
+from .scenario_cache import _forecast_fingerprint
+from .simulation_runtime import simulation_artifact_model_version
 
 
 _logger = logging.getLogger("uvicorn.error")
@@ -54,6 +57,14 @@ def _wait_for_job(
                 "message": current.message,
                 "error": current.error,
                 "league_state_id": current.league_state_id,
+                "total_elapsed_seconds": current.total_elapsed_seconds,
+                "phase_timings": [
+                    {
+                        "phase": timing.phase.value,
+                        "elapsed_seconds": timing.elapsed_seconds,
+                    }
+                    for timing in current.phase_timings
+                ],
             }
         if current.status in {
             IntelligenceJobStatus.FAILED,
@@ -94,6 +105,7 @@ def _snapshot(
         "working_target_state_id": store.working_target_state_id(user_id),
         "forecast_evidence_basis": getattr(evidence, "evidence_basis", None),
         "forecast_runtime_model_version": getattr(runtime_result, "model_version", None),
+        "artifact_identities": _artifact_identity_snapshot(runtime),
         "fumbles_lost_supplement": {
             "authority_fingerprint": getattr(
                 runtime_result,
@@ -156,6 +168,53 @@ def _snapshot(
             ),
         },
         "capability_readiness": capability_reader(runtime),
+    }
+
+
+def _artifact_identity_snapshot(runtime: object) -> dict[str, object]:
+    """Report bounded State-bound identity fields without copying artifact payloads."""
+
+    state = getattr(runtime, "league_state", None)
+    state_id = getattr(state, "state_id", None)
+    forecast = getattr(runtime, "forecast_evidence", None)
+    simulation = getattr(runtime, "simulation_analytics", None)
+    value = getattr(runtime, "value_evidence", None)
+    forecast_identity = None
+    if state_id is not None and forecast is not None:
+        forecast_identity = {
+            "state_id": state_id,
+            "artifact_model_version": FORECAST_MODEL_VERSION,
+            "evidence_model_version": getattr(forecast, "model_version", None),
+            "evidence_basis": getattr(forecast, "evidence_basis", None),
+            "simulation_input_fingerprint": _forecast_fingerprint(forecast),
+        }
+    simulation_identity = None
+    if state_id is not None and simulation is not None:
+        result = simulation.simulation_result
+        simulation_context = getattr(
+            getattr(simulation, "league_view", None), "context", None
+        )
+        simulation_identity = {
+            "state_id": getattr(simulation_context, "league_state_id", None),
+            "artifact_model_version": simulation_artifact_model_version(result),
+            "result_model_version": getattr(result, "model_version", None),
+            "simulation_count": getattr(result, "simulation_count", None),
+            "seed": getattr(result, "seed", None),
+            "rng_protocol": getattr(result, "rng_protocol", None),
+            "rng_batch_size": getattr(result, "rng_batch_size", None),
+            "rng_runtime_version": getattr(result, "rng_runtime_version", None),
+            "input_fingerprint": getattr(
+                result, "simulation_input_fingerprint", None
+            ),
+        }
+    return {
+        "state_id": state_id,
+        "forecast": forecast_identity,
+        "simulation": simulation_identity,
+        "current_value_model_version": getattr(value, "model_version", None),
+        "publication_generation_id": getattr(
+            runtime, "publication_generation_id", None
+        ),
     }
 
 
