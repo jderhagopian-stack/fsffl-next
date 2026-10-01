@@ -2149,3 +2149,12 @@ Follow-up observation clarifies that the #322 failure is **transient continuity 
 The acceptance still fails because the user-visible transition was not coherent: after an initial cold-start/auth wait, the restored Home initially looked healthy/full, but navigation during automatic revalidation exposed mixed-generation behavior. League could explicitly serve last-good while Franchise temporarily degraded to Not Classified with Forecast/Simulation/Market/Intrinsic-derived fields unavailable. The top readiness indicator could still say `Intelligence current` during that interval. The correction therefore does **not** need to make recovery faster to pass; it must keep all affected derived-intelligence surfaces pinned to the usable served generation throughout the legitimate replacement build, then switch atomically when the replacement is complete.
 
 Do not misclassify the eventual 20:04:37 publication as acceptance of the transition. Recovery convergence is now proven; cross-surface continuity during the transition remains the bounded blocker.
+
+
+### 2026-10-01 — Management UI clarification for last-good/rebuild presentation
+
+Physical Safari review rejects the current oversized rebuild/last-good callouts on Franchise and League Atlas. While a usable published/last-good generation is being served, recovery status must be **secondary, compact, and non-blocking**. The product's primary content should remain visually dominant.
+
+Do not use large hero-sized cards such as `Replacement league intelligence is rebuilding` or `Restoring your franchise…` when last-good data is available. Replace them with the existing thin readiness/status treatment or another compact inline notice near the affected derived fields. The message should communicate that current canonical State may be newer while displayed derived intelligence is last-good/updating, without consuming substantial viewport height or making the product look unavailable.
+
+Franchise should continue to render the usable last-good roster/intelligence normally; if specific derived fields are intentionally stale, annotate those fields compactly rather than blanking the entire surface or inserting a large warning card. League Atlas should likewise keep its normal layout and use a small status line/banner for last-good/update state. This is a presentation requirement within the same bounded continuity correction, not a new architecture or separate platform project.
