@@ -418,7 +418,7 @@ def test_stale_while_revalidate_is_visible_and_explains_stored_state() -> None:
     assert completed.returncode == 0, completed.stderr
 
 
-def test_hosted_refresh_restarts_behavior_when_canonical_state_identity_changes() -> None:
+def test_hosted_refresh_uses_material_change_as_the_state_activation_boundary() -> None:
     source = open(
         "src/fsffl/product/hosted_connect.py",
         encoding="utf-8",
@@ -427,18 +427,101 @@ def test_hosted_refresh_restarts_behavior_when_canonical_state_identity_changes(
         '@application.post("/api/connect/sleeper/background/refresh")', 1
     )[1].split('@application.get("/api/connect/sleeper/background/current")', 1)[0]
 
-    # Material fingerprint remains useful for provider/change diagnostics, but the
-    # resource boundary is keyed to canonical State identity. A timestamp-only
-    # replacement State releases the prior Behavioral execution record, so the new
-    # State must restart Behavioral even when material football content is unchanged.
+    # Capture-time churn is verification only. Material football changes still
+    # activate a new canonical State and restart State-owned downstream execution.
     assert "league_material_fingerprint" in refresh
     assert "changed =" in refresh
+    assert "if not changed:" in refresh
+    assert "verified no material State change" in refresh
     assert "runtime_store.set_league_state_if_generation" in refresh
     assert "state_identity_changed =" in refresh
-    assert "previous_state.state_id != league_state.state_id" in refresh
     assert "if state_identity_changed:" in refresh
     assert "behavioral_coordinator.start" in refresh
-    assert "if changed:" not in refresh
+
+
+def test_hosted_refresh_retains_published_state_on_capture_only_change(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    league_id = "sleeper:123"
+
+    def state_at(minute: int) -> LeagueState:
+        return LeagueState(
+            league=League(
+                league_id=league_id,
+                name="League 123",
+                season=2026,
+                rules=LeagueRules(
+                    team_count=2,
+                    roster_size=1,
+                    lineup=(),
+                    scoring=(),
+                ),
+            ),
+            as_of=datetime(2026, 10, 1, 15, minute, tzinfo=UTC),
+            teams=(
+                Team(
+                    team_id=f"{league_id}:team:1",
+                    league_id=league_id,
+                    display_name="Alpha",
+                ),
+                Team(
+                    team_id=f"{league_id}:team:2",
+                    league_id=league_id,
+                    display_name="Beta",
+                ),
+            ),
+            team_states=(
+                TeamState(team_id=f"{league_id}:team:1", roster=()),
+                TeamState(team_id=f"{league_id}:team:2", roster=()),
+            ),
+            players=(),
+            player_states=(),
+        )
+
+    published = state_at(0)
+    recaptured = state_at(1)
+    assert published.state_id != recaptured.state_id
+
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", published)
+    store.select_team("local-beta-user", f"{league_id}:team:1")
+    events: list[str] = []
+
+    class Behavioral:
+        def start(self, **_kwargs):
+            events.append("behavior")
+
+    application = FastAPI()
+    coordinator = install_hosted_connect_routes(
+        application,
+        runtime_store=store,
+        state_loader=lambda _external_id: recaptured,
+        behavioral_coordinator=Behavioral(),  # type: ignore[arg-type]
+        intelligence_reconciler=lambda _user_id: events.append("intelligence"),
+    )
+    client = TestClient(application)
+    response = client.post(
+        "/api/connect/sleeper/background/refresh",
+        json={"league_external_id": "123"},
+    )
+    assert response.status_code == 200
+
+    deadline = monotonic() + 2.0
+    current = None
+    while monotonic() < deadline:
+        current = coordinator.current("local-beta-user")
+        if current is not None and current.status in {
+            LeagueConnectStatus.COMPLETED,
+            LeagueConnectStatus.FAILED,
+        }:
+            break
+        sleep(0.01)
+    assert current is not None and current.status == LeagueConnectStatus.COMPLETED
+    retained = store.get("local-beta-user")
+    assert retained.league_state is published
+    assert retained.league_state.state_id == published.state_id
+    assert events == ["intelligence"]
 
 
 def test_hosted_connect_persists_partial_state_off_request_path() -> None:
