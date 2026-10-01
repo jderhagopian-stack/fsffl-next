@@ -1566,6 +1566,22 @@ def create_app(
                 "coalesced": True,
             }
 
+        def published_generation_fully_current(context) -> bool:
+            evidence = context.forecast_evidence
+            terminal_core = bool(
+                evidence is not None
+                and context.value_evidence is not None
+                and (
+                    context.simulation_analytics is not None
+                    or not evidence.uncertainty_ready
+                )
+            )
+            return bool(
+                context.publication_generation_id
+                and terminal_core
+                and read_capabilities(context).get("overall_status") == "full"
+            )
+
         def require_active_league_identity() -> LeagueState:
             active_context = store.get(user_id)
             active_published = active_context.league_state
@@ -1596,23 +1612,13 @@ def create_app(
                     ):
                         raise IntelligenceJobInterrupted("league_switch")
                     published_now = store.get(user_id)
-                    published_terminal = bool(
-                        published_now.forecast_evidence is not None
-                        and published_now.value_evidence is not None
-                        and (
-                            published_now.simulation_analytics is not None
-                            or not published_now.forecast_evidence.uncertainty_ready
-                        )
-                    )
-                    published_readiness = read_capabilities(published_now)
                     materially_unchanged = (
                         league_material_fingerprint(active_before_write)
                         == league_material_fingerprint(synced_state)
                     )
                     if (
                         materially_unchanged
-                        and published_terminal
-                        and published_readiness.get("overall_status") == "full"
+                        and published_generation_fully_current(published_now)
                     ):
                         progress(
                             IntelligenceJobPhase.ATTACHING_RESULTS,
@@ -1655,6 +1661,17 @@ def create_app(
             else:
                 with store.lifecycle_operation(user_id):
                     require_active_league_identity()
+                    published_now = store.get(user_id)
+                    if published_generation_fully_current(published_now):
+                        progress(
+                            IntelligenceJobPhase.ATTACHING_RESULTS,
+                            "Published State and all required product intelligence "
+                            "are already current; no reconciliation is required.",
+                        )
+                        return (
+                            "Published State and all required product intelligence "
+                            "were verified current; no rebuild was required."
+                        )
                     store.begin_working_generation(
                         user_id,
                         league_state=starting_state,
