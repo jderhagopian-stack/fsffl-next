@@ -900,3 +900,11 @@ PR #320 must emit the ordinary `championship_probability` if either an exact pro
 - **Targeted hosted playoff/championship acceptance is NOT COMPLETE.** Work Mode browser policy blocked reloading the hosted FSFFL page and explicitly prohibited retrying through another browser surface or an indirect request. Render logs confirmed the unauthenticated root returned 401; this does not exercise the authenticated Atlas/Sleeper path. No hosted probability result is claimed.
 - Keep #320 at **MERGED/DEPLOYED — HOSTED ACCEPTANCE BLOCKED**, not Directive Complete. No rollback is justified by the available evidence. The only remaining #320 gate is an approved authenticated hosted run that refreshes/uses the exact current State and verifies governed playoff qualification/title outputs and explicit reasons when rules are unavailable.
 - Hold the next approved Simulation 2.0 roadmap item until that targeted gate is directly exercised. The documented next item after the playoff contract is the week-by-week current-season engine; do not re-run unrelated runtime/lifecycle acceptance.
+
+
+## 2026-10-01 — Superseding Management correction: Sleeper postseason estimates
+
+- Apply `docs/operations/directives/20261001_SLEEPER_POSTSEASON_ESTIMATE_CORRECTION.md`. This supersedes earlier #320 wording that required complete explicit qualification rules before emitting odds.
+- For ordinary Sleeper settings, derive qualification from the simulated finish distribution and top `playoff_teams`; derive standard seeded 2/4/6/8 championship odds from `playoff_week_start` when no exact provider bracket is available. Keep exact-vs-derived provenance internal and product labels ordinary.
+- Restore downstream calculated competitive-state classification from the newly available qualification odds. Missing/corrupt basic settings and genuinely unsupported structures retain explicit unavailable reasons.
+- #320 remains merged/deployed, but its old hosted gate only recorded an unavailable result under the superseded rule. The corrective implementation and one targeted hosted estimate/classification acceptance are required. Do not re-prove unrelated platform/runtime layers or advance the week-by-week engine before this acceptance is complete.

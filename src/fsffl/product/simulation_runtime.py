@@ -41,8 +41,8 @@ from fsffl.team_utility.simulation import (
 )
 from fsffl.team_utility.utility import CalculatedCompetitiveState
 
-LIVE_SIMULATION_MODEL_VERSION = "next9-live-simulation-analytics-v9:league-configured-postseason"
-EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next9-live-simulation-analytics-v9:numpy-pcg64-batched-gauss-v1:league-configured-postseason"
+LIVE_SIMULATION_MODEL_VERSION = "next10-live-simulation-analytics-v10:league-configured-postseason:sleeper-basic-settings-fallback"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next10-live-simulation-analytics-v10:numpy-pcg64-batched-gauss-v1:league-configured-postseason:sleeper-basic-settings-fallback"
 
 
 def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:

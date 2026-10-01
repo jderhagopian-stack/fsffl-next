@@ -86,7 +86,7 @@ class RegularSeasonSimulationInput(FrozenModel):
     scoring: tuple[TeamScoringDistribution, ...] = ()
     weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = ()
     schedule: tuple[ScheduledMatchup, ...]
-    playoff_team_count: Annotated[int, Field(ge=1)]
+    playoff_team_count: Annotated[int, Field(ge=1)] | None = None
     playoff_rules: LeaguePlayoffRules | None = None
     simulation_count: Annotated[int, Field(ge=1)] = 50_000
     seed: int = 20260905
@@ -111,10 +111,11 @@ class RegularSeasonSimulationInput(FrozenModel):
         known = set(ids) | {item.team_id for item in self.weekly_scoring}
         if not known:
             raise ValueError("simulation requires at least one team")
-        if self.playoff_team_count > len(known):
+        if self.playoff_team_count is not None and self.playoff_team_count > len(known):
             raise ValueError("playoff_team_count cannot exceed team count")
         if (
             self.playoff_rules is not None
+            and self.playoff_team_count is not None
             and self.playoff_rules.playoff_team_count != self.playoff_team_count
         ):
             raise ValueError("playoff_rules team count must match playoff_team_count")
@@ -234,20 +235,74 @@ def build_regular_season_simulation_input(
     ] = PYTHON_RANDOM_GAUSS_V1,
     rng_batch_size: int | None = None,
 ) -> RegularSeasonSimulationInput:
-    playoff_team_count = league_state.league.rules.playoff_team_count
-    if playoff_team_count is None:
-        raise ValueError("canonical league rules do not define playoff_team_count")
+    league_rules = league_state.league.rules
+    playoff_team_count = league_rules.playoff_team_count
+    playoff_rules = league_rules.playoff_rules
+    if (
+        playoff_team_count is not None
+        and playoff_team_count >= 2
+        and playoff_rules is None
+        and league_rules.playoff_start_week is not None
+    ):
+        playoff_rules = _settings_derived_playoff_rules(
+            playoff_team_count, league_rules.playoff_start_week
+        )
     return RegularSeasonSimulationInput(
         scoring=scoring,
         weekly_scoring=weekly_scoring,
         schedule=scheduled_matchups_from_league_state(league_state),
         playoff_team_count=playoff_team_count,
-        playoff_rules=league_state.league.rules.playoff_rules,
+        playoff_rules=playoff_rules,
         simulation_count=simulation_count,
         seed=seed,
         model_version=model_version,
         rng_protocol=rng_protocol,
         rng_batch_size=rng_batch_size,
+    )
+
+
+def _settings_derived_playoff_rules(
+    playoff_team_count: int, playoff_start_week: int
+) -> LeaguePlayoffRules | None:
+    """Build the standard fixed seeded bracket from basic canonical settings.
+
+    Sleeper exposes the playoff team count and start week for ordinary leagues.
+    Those facts support the top-N qualification assumption and, for the standard
+    2/4/6/8-team formats, a derived bracket. Other sizes retain qualification
+    odds while the title structure remains unavailable absent exact evidence.
+    """
+    if playoff_team_count in (2,):
+        round_count, bye_seeds = 1, ()
+    elif playoff_team_count == 4:
+        round_count, bye_seeds = 2, ()
+    elif playoff_team_count == 6:
+        round_count, bye_seeds = 3, (1, 2)
+    elif playoff_team_count == 8:
+        round_count, bye_seeds = 3, ()
+    else:
+        # Round count/byes are retained as an explicit unsupported standard
+        # shape. Qualification is still derived from finish rank.
+        round_count, bye_seeds = 1, ()
+    round_weeks = tuple(range(playoff_start_week, playoff_start_week + round_count))
+    if round_weeks[-1] > 22:
+        return None
+    return LeaguePlayoffRules(
+        playoff_team_count=playoff_team_count,
+        playoff_start_week=playoff_start_week,
+        round_count=round_count,
+        round_weeks=round_weeks,
+        bye_count=len(bye_seeds),
+        bye_seeds=bye_seeds,
+        seeding_policy="overall_standings",
+        standings_tiebreak_policy="wins_then_points_for_then_team_id_v1",
+        reseeding_policy="fixed_bracket",
+        bracket_authority="settings_derived_standard",
+        bracket_derivation_policy="seeded_standard_fixed_v1",
+        championship_round_number=round_count,
+        championship_week=round_weeks[-1],
+        championship_matchup_id="championship",
+        playoff_scoring_policy="same_as_league_regular_season",
+        matchup_tiebreak_policy="higher_original_seed",
     )
 
 
@@ -456,17 +511,25 @@ def simulate_regular_season(
     first_count = [0] * team_count
     champion_count = [0] * team_count
     finish_count = [[0] * team_count for _ in range(team_count)]
+    basic_playoff_config_supported = (
+        request.playoff_team_count is not None
+        and 2 <= request.playoff_team_count <= team_count
+    )
     playoff_unavailability_reason = (
         request.playoff_rules.qualification_unavailability_reason()
         if request.playoff_rules is not None
-        else "playoff_rules_unavailable"
+        else (None if basic_playoff_config_supported else "playoff_settings_unavailable")
     )
     championship_unavailability_reason = (
         request.playoff_rules.simulation_unavailability_reason()
         if request.playoff_rules is not None
-        else "playoff_rules_unavailable"
+        else (
+            "playoff_settings_unavailable"
+            if not basic_playoff_config_supported
+            else "playoff_start_week_unavailable"
+        )
     )
-    playoff_supported = playoff_unavailability_reason is None
+    playoff_supported = playoff_unavailability_reason is None and basic_playoff_config_supported
     championship_supported = championship_unavailability_reason is None
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
@@ -543,7 +606,7 @@ def simulate_regular_season(
         for rank_index, team_idx in enumerate(standings):
             finish_count[team_idx][rank_index] += 1
         if playoff_supported:
-            for index in standings[:request.playoff_team_count]:
+            for index in standings[: request.playoff_team_count]:
                 playoff_count[index] += 1
         if championship_supported:
             champion = _simulate_configured_champion(

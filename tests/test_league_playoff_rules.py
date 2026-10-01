@@ -13,6 +13,7 @@ from fsffl.team_utility import (
     TeamScoringDistribution,
     simulate_regular_season,
 )
+from fsffl.team_utility.simulation import _settings_derived_playoff_rules
 
 
 def _seed(number: int) -> PlayoffParticipantRef:
@@ -118,6 +119,7 @@ def _simulation_request(
     *,
     rules: LeaguePlayoffRules | None = None,
     stddev: float = 0.0,
+    playoff_team_count: int | None = None,
 ) -> RegularSeasonSimulationInput:
     request = RegularSeasonSimulationInput(
         scoring=tuple(
@@ -130,7 +132,7 @@ def _simulation_request(
             for index in range(team_count)
         ),
         schedule=(ScheduledMatchup(week=1, home_team_id="team-0", away_team_id="team-1"),),
-        playoff_team_count=team_count,
+        playoff_team_count=(team_count if playoff_team_count is None else playoff_team_count),
         playoff_rules=rules,
         simulation_count=10,
         seed=17,
@@ -139,19 +141,45 @@ def _simulation_request(
     return request
 
 
-def test_current_style_sleeper_rule_gap_fails_closed_for_postseason_outputs() -> None:
+def test_finish_rank_estimates_playoff_odds_without_exact_playoff_rules() -> None:
     request = _simulation_request(6)
 
     result = simulate_regular_season(request)
 
-    assert all(row.playoff_probability is None for row in result.outcomes)
+    assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert sum(row.playoff_probability or 0.0 for row in result.outcomes) == 6.0
     assert all(row.championship_probability is None for row in result.outcomes)
-    assert {
-        row.playoff_unavailability_reason for row in result.outcomes
-    } == {"playoff_rules_unavailable"}
+    assert {row.playoff_unavailability_reason for row in result.outcomes} == {None}
     assert {
         row.championship_unavailability_reason for row in result.outcomes
-    } == {"playoff_rules_unavailable"}
+    } == {"playoff_start_week_unavailable"}
+
+
+def test_missing_basic_playoff_count_withholds_estimates_with_specific_reason() -> None:
+    result = simulate_regular_season(
+        _simulation_request(6).model_copy(update={"playoff_team_count": None})
+    )
+
+    assert all(row.playoff_probability is None for row in result.outcomes)
+    assert all(row.championship_probability is None for row in result.outcomes)
+    assert {row.playoff_unavailability_reason for row in result.outcomes} == {
+        "playoff_settings_unavailable"
+    }
+    assert {row.championship_unavailability_reason for row in result.outcomes} == {
+        "playoff_settings_unavailable"
+    }
+
+
+@pytest.mark.parametrize("team_count", (2, 4, 6, 8))
+def test_basic_settings_compile_standard_seeded_championship_bracket(team_count) -> None:
+    rules = _settings_derived_playoff_rules(team_count, 15)
+    result = simulate_regular_season(_simulation_request(team_count, rules=rules))
+
+    assert rules.bracket_authority == "settings_derived_standard"
+    assert result.championship_probability_provenance == "settings_derived_standard"
+    assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert all(row.championship_probability is not None for row in result.outcomes)
+    assert sum(row.championship_probability or 0.0 for row in result.outcomes) == 1.0
 
 
 def test_unsupported_reseeding_keeps_qualification_but_withholds_title() -> None:

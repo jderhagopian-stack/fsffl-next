@@ -30,6 +30,7 @@ from fsffl.team_utility import (
     build_weekly_team_scoring_distribution,
     regular_season_game_counts,
     scheduled_matchups_from_league_state,
+    simulate_regular_season,
 )
 
 
@@ -134,12 +135,19 @@ def test_simulation_input_uses_canonical_playoff_size_and_50k_default() -> None:
     assert len(request.schedule) == 2
 
 
-def test_simulation_bridge_fails_closed_without_schedule_or_playoff_count() -> None:
+def test_simulation_bridge_preserves_regular_season_when_playoff_count_is_missing() -> None:
     scoring = (
         TeamScoringDistribution(team_id="team:a", mean_points=150.0, stddev_points=30.0, model_version="test"),
         TeamScoringDistribution(team_id="team:b", mean_points=120.0, stddev_points=20.0, model_version="test"),
     )
     with pytest.raises(ValueError, match="no regular-season schedule"):
         build_regular_season_simulation_input(state(with_schedule=False), scoring=scoring)
-    with pytest.raises(ValueError, match="playoff_team_count"):
-        build_regular_season_simulation_input(state(playoff_team_count=None), scoring=scoring)
+    request = build_regular_season_simulation_input(
+        state(playoff_team_count=None), scoring=scoring, simulation_count=20
+    )
+    assert request.playoff_team_count is None
+    result = simulate_regular_season(request)
+    assert all(row.playoff_probability is None for row in result.outcomes)
+    assert {row.playoff_unavailability_reason for row in result.outcomes} == {
+        "playoff_settings_unavailable"
+    }
