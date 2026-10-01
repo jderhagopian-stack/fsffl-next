@@ -1267,6 +1267,9 @@ def test_same_state_full_refresh_verifies_without_rebuilding_current_layers(
 ) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     state = _state("same-state-noop")
+    synced_state = _state("same-state-noop", minute=1)
+    assert synced_state.state_id != state.state_id
+    assert league_material_fingerprint(synced_state) == league_material_fingerprint(state)
     store = PrivateBetaRuntimeStore()
     store.set_league_state("local-beta-user", state)
     store.select_team("local-beta-user", state.teams[0].team_id)
@@ -1313,7 +1316,7 @@ def test_same_state_full_refresh_verifies_without_rebuilding_current_layers(
 
     def state_loader(_external_id: str) -> LeagueState:
         calls["state"] += 1
-        return state
+        return synced_state
 
     def should_not_forecast(_state: LeagueState):
         calls["forecast"] += 1
@@ -1377,6 +1380,7 @@ def test_same_state_full_refresh_verifies_without_rebuilding_current_layers(
     assert store.working_generation_active("local-beta-user") is False
     published = store.get("local-beta-user")
     assert published.publication_generation_id == "published-generation-1"
+    assert published.league_state is state
     assert published.forecast_evidence is forecast
     assert published.simulation_analytics is simulation
     assert published.value_evidence is values
