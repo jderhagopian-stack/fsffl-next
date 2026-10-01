@@ -1579,6 +1579,7 @@ def create_app(
             return bool(
                 context.publication_generation_id
                 and terminal_core
+                and not store.working_generation_active(user_id)
                 and read_capabilities(context).get("overall_status") == "full"
             )
 
