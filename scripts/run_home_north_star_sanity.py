@@ -184,10 +184,14 @@ def main() -> None:
         failures.append("Atlas does not expose the same 50,000-run Simulation")
     if abs(float(sim_row["expected_wins"]) - float(outcome.expected_wins)) > 1e-12:
         failures.append("expected wins diverge from Simulation authority")
-    if abs(float(sim_row["playoff_probability"]) - float(outcome.playoff_probability)) > 1e-12:
-        failures.append("playoff probability diverges from Simulation authority")
-    if abs(float(sim_row["championship_probability"]) - float(outcome.championship_probability)) > 1e-12:
-        failures.append("championship probability diverges from Simulation authority")
+    for metric in ("playoff_probability", "championship_probability"):
+        presented = sim_row[metric]
+        authoritative = getattr(outcome, metric)
+        if presented is None or authoritative is None:
+            if presented is not authoritative:
+                failures.append(f"{metric} availability diverges from Simulation authority")
+        elif abs(float(presented) - float(authoritative)) > 1e-12:
+            failures.append(f"{metric} diverges from Simulation authority")
     if abs(float(sim_row["expected_finish"]) - float(finish.expected_finish)) > 1e-12:
         failures.append("expected finish diverges from Simulation authority")
     if weakest is None:

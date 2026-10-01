@@ -257,3 +257,13 @@ Before Simulation 2.0 becomes production authority:
 - no arbitrary future-team strength weights;
 - no reduction of current 50,000-run authority merely for speed;
 - no port of legacy code without revalidation.
+
+## Management clarification — league-governed postseason authority (2026-10-01)
+
+The generic 2/4/6/8-team bracket path is an interim capability only. Final Simulation 2.0 postseason outputs must derive from each exact League State's governed postseason rules; the FSFFL league's weeks, round count, bye structure, seed behavior, or bracket shape are never global defaults.
+
+Canonical League State / LeagueRules must retain, or explicitly mark unknown/unsupported, regular-season end and playoff start, qualifying-team count, playoff round count and week map, bye count and seeds, seeding/tiebreak and reseeding policy, matchup graph, championship matchup timing, and any league-specific scoring/tiebreak behavior that materially changes advancement. Normalize provider data into this provider-neutral contract; the Simulation kernel consumes only canonical rules. A missing/unsupported material rule makes bracket/championship probabilities unavailable with a reason. It must never make stale or assumed output look ready.
+
+Championship probability is the ordinary Simulation estimate when either the exact provider bracket is observed or governed league settings plus a well-supported standard bracket rule defensibly determine the graph. Preserve those two authorities as internal provenance (`provider_observed_exact` or `settings_derived_standard`); do not create a separately labeled or visually downgraded “provisional” product metric. Keep playoff qualification independently available whenever its rules are known. Withhold championship probability only when material ambiguity or unsupported/custom structure prevents a defensible bracket.
+
+Fixtures must prove materially different league structures, including different qualifier counts, start weeks, bye structures, and a non-FSFFL bracket. A configured structure is executable only when every material rule is supported; otherwise preserve it as known configuration and fail closed for affected outputs. This clarifies, and does not reorder, the accepted capability sequence in this directive.

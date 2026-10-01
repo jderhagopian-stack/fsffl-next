@@ -183,3 +183,14 @@ The review must cover at minimum horizontal web scaling, durable/idempotent back
 
 ### Immediate beta constraint
 Before public-scale work begins, FSFFL NEXT must first be reliably usable on the current free Render private-beta footprint for normal single-user testing. Public-scale readiness must not delay that acceptance gate.
+
+
+## 2026-10-01 Simulation 2.0 execution checkpoint
+
+Follow the accepted sequence in `directives/20260928_SIMULATION_2_0_PROGRAM.md`: measured engine modernization first, then the already-approved capability recovery in its documented order (week-by-week current-season engine; legal lineups/availability/substitution; league-specific finish/playoff outputs; counterfactual deltas; origin-team pick distributions; replayable Multiverse/common worlds; selective recomputation/progressive scenarios; convergence and PIT calibration). Do not replace this list with an ad hoc feature sequence.
+
+PR #318 is accepted and hosted-validated. PR #319 is the next measured engine slice: it reduces repeated lineup-panel allocation/materialization while preserving exact outputs and replay identity. Hosted acceptance measured the weekly-panel phase at 11.408s / 1.716 CPU seconds versus the prior recorded 25.111s / 3.778 CPU seconds, with 500×168 float64 batches (672,000 bytes); local 48-scenario exact-output benchmark showed median 1.507270s → 0.454371s. See the latest CURRENT_STATE entry for hosted refresh, foreground, memory, and Render cleanup evidence. Continue only with material measured gains.
+
+The next capability contract is league-governed playoffs. The generic bracket is interim only: no FSFFL defaults for playoff timing, qualifier count, rounds, byes, seeding/reseeding, matchups, or scoring/tiebreaks. Persist canonical LeagueRules, consume them in Simulation, and fail closed on unsupported postseason outputs. This is clarification of the accepted Simulation program, not a change in roadmap ordering.
+
+Management clarification: Championship probability remains the ordinary Simulation estimate for either an exact observed provider bracket or a defensible standard bracket derived from governed league settings. Record the authority internally; do not introduce a provisional product-facing probability class or visual downgrade. Preserve qualification probability independently, and withhold the title estimate only when material bracket ambiguity/custom rules cannot be resolved.

@@ -137,7 +137,12 @@ def _run(request: RegularSeasonSimulationInput, protocol: str, *, observe: bool)
             if abs(float(wins[:, team_index].mean()) - outcome_by_team[team_id].expected_wins) > 1e-10:
                 raise AssertionError("per-trial wins trace disagrees with published expected wins")
             observed_champion_rate = float(np.mean(champions == team_index))
-            if abs(observed_champion_rate - outcome_by_team[team_id].championship_probability) > 1e-10:
+            published_champion_rate = outcome_by_team[team_id].championship_probability
+            if published_champion_rate is None:
+                if np.any(champions >= 0):
+                    raise AssertionError("per-trial trace published a champion while championship probability is unavailable")
+                continue
+            if abs(observed_champion_rate - published_champion_rate) > 1e-10:
                 raise AssertionError("per-trial champion trace disagrees with published championship probability")
         summary["traced_rank_probabilities"] = traced_ranks
         summary["team_score_quantiles"] = {
@@ -162,10 +167,17 @@ def _run(request: RegularSeasonSimulationInput, protocol: str, *, observe: bool)
             team_id: float(wins[:, index].std(ddof=1))
             for index, team_id in enumerate(team_ids)
         }
-        summary["champion_frequency_from_trials"] = {
-            team_id: float(np.mean(champions == index))
-            for index, team_id in enumerate(team_ids)
-        }
+        championship_available = all(
+            outcome.championship_probability is not None for outcome in result.outcomes
+        )
+        summary["champion_frequency_from_trials"] = (
+            {
+                team_id: float(np.mean(champions == index))
+                for index, team_id in enumerate(team_ids)
+            }
+            if championship_available
+            else {team_id: None for team_id in team_ids}
+        )
         summary["win_percentile_quantiles"] = {
             team_id: {
                 str(q): float(np.quantile(wins[:, index], q))
@@ -188,13 +200,15 @@ def _scalar_metrics(summary):
             "first_place_probability",
             "championship_probability",
         ):
-            values[f"{team}.{field}"] = row[field]
+            if row[field] is not None:
+                values[f"{team}.{field}"] = row[field]
         values[f"{team}.expected_wins_mcse"] = row["wins_stddev"] / simulation_count**0.5
         for field in PROBABILITY_METRICS:
             probability = row[field]
-            values[f"{team}.{field}_mcse"] = (
-                probability * (1 - probability) / simulation_count
-            ) ** 0.5
+            if probability is not None:
+                values[f"{team}.{field}_mcse"] = (
+                    probability * (1 - probability) / simulation_count
+                ) ** 0.5
     for row in summary["finish_distributions"]:
         team = row["team_id"]
         values[f"{team}.expected_finish"] = row["expected_finish"]
@@ -227,14 +241,18 @@ def _scalar_metrics(summary):
         "champion_frequency_from_trials",
     ):
         for team, value in summary.get(group, {}).items():
-            values[f"{team}.{group}"] = value
+            if value is not None:
+                values[f"{team}.{group}"] = value
     return values
 
 
 def _equivalence_report(python_summaries, numpy_summaries):
     python_rows = [_scalar_metrics(row) for row in python_summaries]
     numpy_rows = [_scalar_metrics(row) for row in numpy_summaries]
-    keys = sorted(python_rows[0].keys())
+    key_sets = [set(row) for row in (*python_rows, *numpy_rows)]
+    if any(keys != key_sets[0] for keys in key_sets[1:]):
+        raise ValueError("RNG protocols do not expose the same available Simulation metrics")
+    keys = sorted(key_sets[0])
     team_count = len(python_summaries[0]["outcomes"])
     rank_count = len(python_summaries[0]["finish_distributions"][0]["rank_probabilities"])
     comparison_count = max(1, len(keys) + 2 * team_count)

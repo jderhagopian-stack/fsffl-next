@@ -168,6 +168,13 @@ class SleeperNormalizer:
         faab_budget = int(settings.get("waiver_budget") or 0)
         raw_playoff_teams = settings.get("playoff_teams")
         playoff_team_count = int(raw_playoff_teams) if raw_playoff_teams else None
+        raw_playoff_start = settings.get("playoff_week_start")
+        try:
+            playoff_start_week = int(raw_playoff_start) if raw_playoff_start not in (None, "", 0) else None
+        except (TypeError, ValueError):
+            playoff_start_week = None
+        if playoff_start_week is not None and not 2 <= playoff_start_week <= 19:
+            playoff_start_week = None
 
         league = League(
             league_id=league_id,
@@ -180,6 +187,10 @@ class SleeperNormalizer:
                 ir_size=int(settings.get("reserve_slots") or 0),
                 rookie_draft_rounds=int(settings.get("draft_rounds") or 0),
                 playoff_team_count=playoff_team_count,
+                fantasy_regular_season_end_week=(
+                    playoff_start_week - 1 if playoff_start_week is not None else None
+                ),
+                playoff_start_week=playoff_start_week,
                 lineup=lineup,
                 scoring=scoring,
             ),

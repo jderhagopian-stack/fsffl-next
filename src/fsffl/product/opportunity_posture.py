@@ -39,6 +39,15 @@ def calculated_competitive_state(runtime: UserRuntimeContext) -> CalculatedCompe
     )
     if outcome is None:
         return CalculatedCompetitiveState.UNKNOWN
+    # League-relative posture thresholds are only meaningful when every team has
+    # governed qualification odds. Postseason rules can legitimately be missing,
+    # in which case Market and Trade Finder should keep an explicit unknown state
+    # instead of turning an unavailable Simulation field into a request failure.
+    if any(
+        row.playoff_probability is None
+        for row in simulation.simulation_result.outcomes
+    ):
+        return CalculatedCompetitiveState.UNKNOWN
     policy = derive_league_relative_competitive_state_policy(
         simulation.simulation_result.outcomes,
         as_of=league_state.as_of,

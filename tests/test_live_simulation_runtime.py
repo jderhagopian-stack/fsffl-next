@@ -128,14 +128,15 @@ def test_live_simulation_runtime_populates_next7_competitive_metrics() -> None:
     assert result.simulation_result.simulation_count == 2_000
     rows = {row.team_id: row for row in result.league_view.teams}
     assert rows["a"].expected_wins is not None
-    assert rows["a"].playoff_probability is not None
+    assert rows["a"].playoff_probability is None
     assert rows["a"].first_place_probability is not None
     assert rows["a"].optimized_expected_points == 400.0
     assert rows["a"].expected_wins > rows["b"].expected_wins
-    assert rows["a"].playoff_probability > rows["b"].playoff_probability
+    assert rows["a"].playoff_unavailability_reason == "playoff_rules_unavailable"
     assert "empirical-weekly-volatility" in result.simulation_result.model_version
     assert any(warning.code == "weekly_mean_decomposition_provisional" for warning in result.league_view.context.warnings)
-    assert any(warning.code == "competitive_state_policy_league_relative" for warning in result.league_view.context.warnings)
+    assert any(warning.code == "league_playoff_rules_unavailable" for warning in result.league_view.context.warnings)
+    assert not any(warning.code == "competitive_state_policy_league_relative" for warning in result.league_view.context.warnings)
     assert not any(warning.code == "competitive_state_policy_not_attached" for warning in result.league_view.context.warnings)
     assert any(
         entry.component == "weekly_volatility" and "next2-weekly-volatility" in entry.model_version
@@ -143,8 +144,8 @@ def test_live_simulation_runtime_populates_next7_competitive_metrics() -> None:
     )
     assert any(entry.component == "competitive_state_policy" for entry in result.league_view.context.lineage)
     states = {row.team_id: row.utility.calculated_competitive_state for row in result.team_views}
-    assert states["a"].value != "unknown"
-    assert states["b"].value != "unknown"
+    assert states["a"].value == "unknown"
+    assert states["b"].value == "unknown"
 
 
 def test_default_hosted_simulation_loader_resolves_foreground_pressure_callback() -> None:
@@ -196,7 +197,8 @@ def test_experimental_rng_keeps_player_forecasts_and_persists_distinct_identity(
 
     assert player_projection(legacy) == player_projection(experimental)
     assert legacy.model_version != experimental.model_version
-    assert experimental.model_version.endswith("numpy-pcg64-batched-gauss-v1")
+    assert "numpy-pcg64-batched-gauss-v1" in experimental.model_version
+    assert "league-configured-postseason" in experimental.model_version
     legacy_artifact = simulation_artifact(
         league_state_id=state.state_id,
         forecast_fingerprint="forecast-fixture",
@@ -300,12 +302,13 @@ def test_experimental_50k_runtime_preserves_forecast_and_search_inputs() -> None
         for team in experimental.team_views
     )
     assert tuple(
-        (row.team_id, row.expected_wins > 2.0, row.playoff_probability > 0.5)
+        (row.team_id, row.expected_wins > 2.0, row.playoff_probability)
         for row in legacy.league_view.teams
     ) == tuple(
-        (row.team_id, row.expected_wins > 2.0, row.playoff_probability > 0.5)
+        (row.team_id, row.expected_wins > 2.0, row.playoff_probability)
         for row in experimental.league_view.teams
     )
+    assert all(row.playoff_probability is None for row in legacy.league_view.teams)
 
 
 def test_hosted_rng_protocol_configuration_is_explicit_and_fail_closed() -> None:
@@ -501,10 +504,10 @@ def test_changed_state_utility_decision_and_lineup_replay_across_rng_versions() 
         )
         for result in (legacy_decision, numpy_decision):
             assert result.side_a.expected_wins == expected_direction
-            assert result.side_a.playoff_probability == expected_direction
+            assert result.side_a.playoff_probability == Direction.UNAVAILABLE
             assert result.side_a.first_place_probability == expected_direction
             assert result.side_b.expected_wins == expected_counterparty_direction
-            assert result.side_b.playoff_probability == expected_counterparty_direction
+            assert result.side_b.playoff_probability == Direction.UNAVAILABLE
             assert result.side_b.first_place_probability == expected_counterparty_direction
 
         # The test intentionally reports both signed effects for boundary cases;

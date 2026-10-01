@@ -2,6 +2,8 @@ from collections import defaultdict
 from math import sqrt
 from random import Random
 
+import pytest
+
 from fsffl.team_utility import (
     RegularSeasonSimulationInput,
     ScheduledMatchup,
@@ -106,9 +108,9 @@ def test_optimized_hot_loop_is_exactly_equivalent_to_reference_rng_and_standings
         assert (
             row.expected_wins,
             row.wins_stddev,
-            row.playoff_probability,
             row.first_place_probability,
-        ) == reference
+        ) == (reference[0], reference[1], reference[3])
+        assert row.playoff_probability is None
 
 
 def test_optimized_hot_loop_preserves_zero_variance_rng_behavior() -> None:
@@ -123,15 +125,67 @@ def test_optimized_hot_loop_preserves_zero_variance_rng_behavior() -> None:
         seed=22,
         model_version="zero-variance-v1",
     )
-    assert _reference(request) == {
+    expected = _reference(request)
+    actual = {
         row.team_id: (
             row.expected_wins,
             row.wins_stddev,
-            row.playoff_probability,
             row.first_place_probability,
         )
         for row in simulate_regular_season(request).outcomes
     }
+    assert {
+        team_id: (row[0], row[1], row[3]) for team_id, row in expected.items()
+    } == actual
+    assert all(
+        row.playoff_probability is None
+        for row in simulate_regular_season(request).outcomes
+    )
+
+
+def test_performance_benchmark_reference_respects_unavailable_playoff_rules() -> None:
+    from scripts.benchmark_simulation_performance import (
+        _regular_outcome_signature,
+        _reference as benchmark_reference,
+        _request,
+    )
+
+    request = _request(simulation_count=100)
+    reference = benchmark_reference(request)
+    actual = simulate_regular_season(request).outcomes
+    assert all(row.playoff_probability is None for row in reference)
+    assert _regular_outcome_signature(reference) == _regular_outcome_signature(actual)
+
+
+def test_rng_equivalence_report_omits_unavailable_metrics_and_checks_availability_parity() -> None:
+    from scripts.run_simulation_rng_equivalence_study import _equivalence_report
+
+    histogram = [0] * 256
+    histogram[0] = 100
+    summary = {
+        "simulation_count": 100,
+        "outcomes": [
+            {"team_id": team, "expected_wins": wins, "wins_stddev": 1.0,
+             "playoff_probability": None, "first_place_probability": 0.5,
+             "championship_probability": None}
+            for team, wins in (("a", 4.0), ("b", 3.0))
+        ],
+        "finish_distributions": [
+            {"team_id": team, "expected_finish": rank,
+             "rank_probabilities": probs}
+            for team, rank, probs in (("a", 1.5, (0.5, 0.5)), ("b", 1.5, (0.5, 0.5)))
+        ],
+        "team_score_histogram_range": {"a": [0.0, 100.0, 256], "b": [0.0, 100.0, 256]},
+        "team_score_histograms": {"a": histogram, "b": histogram},
+    }
+    report = _equivalence_report([summary, summary], [summary, summary])
+    assert "a.playoff_probability" not in report["team_metrics"]
+    assert "a.championship_probability" not in report["team_metrics"]
+
+    available = {**summary, "outcomes": [dict(row) for row in summary["outcomes"]]}
+    available["outcomes"][0]["championship_probability"] = 0.25
+    with pytest.raises(ValueError, match="same available Simulation metrics"):
+        _equivalence_report([summary, summary], [available, available])
 
 
 def test_cooperative_checkpoint_preserves_exact_simulation_output() -> None:
@@ -267,8 +321,8 @@ def test_numpy_matchup_batch_preserves_scalar_addition_order_and_ties() -> None:
     assert actual_points.tolist() == expected_points
 
 
-def test_50000_run_production_output_remains_bit_identical() -> None:
-    """Guard the complete canonical 50k output while allowing exact Tier A tuning."""
+def test_50000_run_output_matches_governed_postseason_fail_closed_baseline() -> None:
+    """Guard complete canonical output, including explicit unavailable playoffs."""
     import hashlib
     import json
     import sys
@@ -283,8 +337,8 @@ def test_50000_run_production_output_remains_bit_identical() -> None:
     dumped["rng_runtime_version"] = f"python-{sys.version_info.major}.{sys.version_info.minor}"
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
-        (3, 11): "63660717b6f9d6cd71142fe16dd27c3146a8a24058c2a5c951ea08f32d4a76c2",
-        (3, 12): "27fb34b4ae076a70e9767f148656c3c2e5c5251c8bfb12759c43f9fcbd7cbd68",
+        (3, 11): "c69d6fae4ccbe2e8f7e160659d190f62ed78069cb92b76be53622f1e95af3897",
+        (3, 12): "5a891eb957e1758d136251dc5cd4f74badece6c91e43ffcf04b3660cb5434c16",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (

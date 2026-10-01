@@ -23,15 +23,17 @@ from .simulation_runtime import LiveSimulationAnalyticsResult
 
 
 LEAGUE_ATLAS_PRESEASON_ARTIFACT_KIND = "league_atlas_preseason_baseline"
-LEAGUE_ATLAS_PRESEASON_MODEL_VERSION = "phase3-league-atlas-preseason-v1"
+LEAGUE_ATLAS_PRESEASON_MODEL_VERSION = "phase3-league-atlas-preseason-v2:governed-postseason"
 
 
 class LeagueAtlasPreseasonTeam(FrozenModel):
     team_id: str
     projected_starter_points: float
     rank: int
-    playoff_probability: float
-    championship_probability: float
+    playoff_probability: float | None = None
+    playoff_unavailability_reason: str | None = None
+    championship_probability: float | None = None
+    championship_unavailability_reason: str | None = None
     first_place_probability: float
     expected_wins: float
     expected_finish: float
@@ -46,6 +48,7 @@ class LeagueAtlasPreseasonBaseline(FrozenModel):
     forecast_model_version: str
     simulation_model_version: str
     simulation_count: int
+    championship_probability_provenance: str | None = None
     opener_date: str
     opener_coordinate_source: str
     status: str = "frozen"
@@ -91,7 +94,9 @@ def _team_rows(
                 projected_starter_points=starter_points[team_id],
                 rank=rank_by_team[team_id],
                 playoff_probability=outcome.playoff_probability,
+                playoff_unavailability_reason=outcome.playoff_unavailability_reason,
                 championship_probability=outcome.championship_probability,
+                championship_unavailability_reason=outcome.championship_unavailability_reason,
                 first_place_probability=outcome.first_place_probability,
                 expected_wins=outcome.expected_wins,
                 expected_finish=(
@@ -153,6 +158,9 @@ def capture_preseason_baseline_if_eligible(
         forecast_model_version=forecast.model_version,
         simulation_model_version=simulation.simulation_result.model_version,
         simulation_count=simulation.simulation_result.simulation_count,
+        championship_probability_provenance=(
+            simulation.simulation_result.championship_probability_provenance
+        ),
         opener_date=snapshot.opener_date.isoformat(),
         opener_coordinate_source=snapshot.opener_coordinate_source,
         teams=teams,
