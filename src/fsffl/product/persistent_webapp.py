@@ -81,7 +81,10 @@ from .resource_coordinator import (
 from .runtime import default_sleeper_state_loader
 from .scenario_cache import configure_scenario_cache_persistence
 from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
-from .state_first_acceptance import run_state_first_production_acceptance
+from .state_first_acceptance import (
+    run_state_first_production_acceptance,
+    run_state_first_restored_refresh_acceptance,
+)
 
 
 # Hosted private-beta observability only. The coordinator already records exact
@@ -813,6 +816,7 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
         )
         if state_only
         else (
+            ("context", "/api/product-context", {}),
             ("home", "/api/home", {}),
             ("franchise", "/api/my-team", {}),
             ("league", "/api/league/atlas", {}),
@@ -1050,7 +1054,7 @@ def _maybe_start_state_first_production_acceptance() -> None:
         "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_MODE",
         "full",
     ).strip().lower()
-    if acceptance_mode not in {"full", "journey", "restore"}:
+    if acceptance_mode not in {"full", "journey", "restore", "restored_refresh"}:
         _runtime_availability_acceptance_state.update(
             status="fail",
             reason=f"Unsupported runtime acceptance mode: {acceptance_mode}",
@@ -1071,22 +1075,33 @@ def _maybe_start_state_first_production_acceptance() -> None:
             if not _startup_restore_complete.wait(timeout=180.0):
                 raise RuntimeError("Hosted lightweight startup restore did not complete")
             _runtime_availability_acceptance_state["status"] = "running"
-            report = run_state_first_production_acceptance(
-                store=_runtime_store,
-                user_id=acceptance_user,
-                state_loader=default_sleeper_state_loader,
-                start_reconciliation=app.state.start_intelligence_reconciliation,
-                start_sync_reconciliation=app.state.start_intelligence_sync_reconciliation,
-                jobs=app.state.intelligence_jobs,
-                capability_reader=app.state.capability_readiness_reader,
-                surface_probe=_acceptance_surface_probe,
-                history_probe=_acceptance_history_probe,
-                resource_reader=_runtime_acceptance_resource_reader,
-                process_identity_reader=_runtime_acceptance_process_identity,
-                state_activator=app.state.activate_state_with_resource_boundary,
-                restore_only=acceptance_mode == "restore",
-                journey_only=acceptance_mode == "journey",
-            )
+            if acceptance_mode == "restored_refresh":
+                report = run_state_first_restored_refresh_acceptance(
+                    store=_runtime_store,
+                    user_id=acceptance_user,
+                    start_sync_reconciliation=app.state.start_intelligence_sync_reconciliation,
+                    jobs=app.state.intelligence_jobs,
+                    capability_reader=app.state.capability_readiness_reader,
+                    surface_probe=_acceptance_surface_probe,
+                    resource_reader=_runtime_acceptance_resource_reader,
+                )
+            else:
+                report = run_state_first_production_acceptance(
+                    store=_runtime_store,
+                    user_id=acceptance_user,
+                    state_loader=default_sleeper_state_loader,
+                    start_reconciliation=app.state.start_intelligence_reconciliation,
+                    start_sync_reconciliation=app.state.start_intelligence_sync_reconciliation,
+                    jobs=app.state.intelligence_jobs,
+                    capability_reader=app.state.capability_readiness_reader,
+                    surface_probe=_acceptance_surface_probe,
+                    history_probe=_acceptance_history_probe,
+                    resource_reader=_runtime_acceptance_resource_reader,
+                    process_identity_reader=_runtime_acceptance_process_identity,
+                    state_activator=app.state.activate_state_with_resource_boundary,
+                    restore_only=acceptance_mode == "restore",
+                    journey_only=acceptance_mode == "journey",
+                )
             _runtime_availability_acceptance_state.clear()
             _runtime_availability_acceptance_state.update(
                 status="pass",
