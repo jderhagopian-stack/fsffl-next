@@ -52,7 +52,7 @@ def test_post_trade_static_assets_share_one_cache_busting_version() -> None:
     )
     versions = []
     for asset in assets:
-        match = re.search(rf"/static/{re.escape(asset)}\?v=([^\"']+)", html)
+        match = re.search(rf"/static/{re.escape(asset)}\?v=([^&\"']+)", html)
         assert match is not None
         versions.append(match.group(1))
     assert len(set(versions)) == 1

@@ -605,7 +605,7 @@ def test_physical_connect_busts_hosted_release_cache_coherently() -> None:
     for asset in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
         assert f"/static/{asset}?v={release}" in source
     versions = {
-        token.split("?v=")[1].split('"')[0]
+        token.split("?v=")[1].split('"')[0].split("&")[0]
         for token in source.split()
         if "?v=" in token
     }

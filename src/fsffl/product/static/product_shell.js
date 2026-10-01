@@ -25,10 +25,10 @@ const fsfflProductSurfaceCopy={
 };
 
 const fsfflStaticVersion='20260927-dualstate1';
-const leagueAtlasStaticVersion='20260927-dualstate1';
+const leagueAtlasStaticVersion='20261001-continuity2';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260927-dualstate1';
-const franchiseNorthStarStaticVersion='20260927-dualstate1';
+const homeNorthStarStaticVersion='20261001-continuity2';
+const franchiseNorthStarStaticVersion='20261001-continuity2';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;

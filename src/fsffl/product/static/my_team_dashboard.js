@@ -413,7 +413,7 @@ function renderFranchiseNorthStar(){
       myTeamTabButton('roster','Roster',fsfflMyTeamState.franchiseTab==='roster')+
       myTeamTabButton('assets','Assets & Picks',fsfflMyTeamState.franchiseTab==='assets')+
     '</nav>'+
-    (view.intelligence_freshness?.stale?'<aside class="franchise-ns-forecast-strip fallback" role="status"><strong>State current · last-good intelligence shown</strong><span>Canonical roster is current. Derived fields are from '+myTeamEsc(view.intelligence_freshness.served_as_of||"the last-good snapshot")+' while replacement intelligence rebuilds.</span></aside>':stateOnly?'<aside class="franchise-ns-forecast-strip state-only" role="status"><strong>Roster State current · '+myTeamRosterRows(view.players||[]).length+' players</strong><span>Forecast / Simulation-derived fields are unavailable. The canonical roster remains usable; see readiness for the exact blocker.</span></aside>':(fallback?'<aside class="franchise-ns-forecast-strip" role="status"><strong>Forecast fallback active</strong><span>Preserved preseason projections in use · live source-health degraded.</span></aside>':''))+
+    (view.intelligence_freshness?.stale?'<aside class="franchise-ns-forecast-strip fallback" role="status"><strong>State current · last-good intelligence shown</strong><span>Derived fields as of '+myTeamEsc(view.intelligence_freshness.served_as_of||"the last-good snapshot")+'.</span></aside>':stateOnly?'<aside class="franchise-ns-forecast-strip state-only" role="status"><strong>Roster State current · '+myTeamRosterRows(view.players||[]).length+' players</strong><span>Forecast / Simulation-derived fields are unavailable. The canonical roster remains usable; see readiness for the exact blocker.</span></aside>':(fallback?'<aside class="franchise-ns-forecast-strip" role="status"><strong>Forecast fallback active</strong><span>Preserved preseason projections in use · live source-health degraded.</span></aside>':''))+
     (fsfflMyTeamState.franchiseTab==='overview'?franchiseNSOverview():fsfflMyTeamState.franchiseTab==='roster'?franchiseNSRoster():franchiseNSAssets())+
   '</div>';
   panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchiseTab=button.dataset.franchiseTab;renderFranchiseNorthStar()}));
@@ -465,7 +465,7 @@ async function loadFranchiseNorthStar(){
   if(hasLastGood){
     renderFranchiseNorthStar();
   }else if(panel){
-    panel.innerHTML='<div class="franchise-ns-shell franchise-ns-loading"><p class="eyebrow">Franchise</p><h2>Restoring your franchise…</h2><p>Using the last compatible league context while current evidence is checked.</p></div>';
+    panel.innerHTML='<div class="franchise-ns-shell"><aside class="franchise-ns-forecast-strip" role="status"><strong>Loading Franchise</strong><span>Checking current or last-good published intelligence…</span></aside></div>';
   }
   try{
     const results=await Promise.all([
@@ -487,7 +487,11 @@ async function loadFranchiseNorthStar(){
     renderFranchiseNorthStar();
     void loadFranchiseNorthStarValueLenses(expectedStateId);
   }catch(error){
-    if(panel)panel.innerHTML='<div class="franchise-ns-shell"><p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2><p class="lead">'+myTeamEsc(error?.message||String(error))+'</p></div>';
+    if(fsfflMyTeamState.view){
+      renderFranchiseNorthStar();
+    }else if(panel){
+      panel.innerHTML='<div class="franchise-ns-shell"><aside class="franchise-ns-forecast-strip state-only" role="status"><strong>Franchise temporarily unavailable</strong><span>'+myTeamEsc(error?.message||String(error))+'</span></aside></div>';
+    }
   }
 }
 window.renderFsfflMyTeam=loadFranchiseNorthStar;

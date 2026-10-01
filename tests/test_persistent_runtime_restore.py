@@ -39,7 +39,7 @@ from fsffl.product.presentation_continuity import (
     PresentationContinuityStore,
     REQUIRED_PRESENTATION_SURFACES,
 )
-from fsffl.product.runtime import LiveForecastEvidence
+from fsffl.product.runtime import LiveForecastEvidence, UserRuntimeContext, league_material_fingerprint
 from fsffl.product import simulation_runtime
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.state.history import InMemorySnapshotStore
@@ -2354,6 +2354,152 @@ def test_cold_set_league_state_restores_published_team_and_generation_identity()
         runtime.get("cold-published-identity").publication_generation_id
         == "generation-restored"
     )
+
+
+
+def test_restart_then_material_revalidation_pins_all_surfaces_until_replacement_promotion() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    user_id = "restart-revalidation-continuity"
+    published_state = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    )
+    forecast = _stale_forecast_without_first_party_fumbles_lost(published_state)
+    value = _empty_value(published_state)
+
+    def builders(label: str):
+        return tuple(
+            (
+                surface,
+                lambda surface=surface, label=label: {
+                    "surface": surface,
+                    "generation_label": label,
+                    "league_state_id": published_state.state_id
+                    if label == "published"
+                    else target_state.state_id,
+                },
+            )
+            for surface in REQUIRED_PRESENTATION_SURFACES
+        )
+
+    seed_runtime = UserRuntimeContext(
+        user_id=user_id,
+        league_state=published_state,
+        selected_team_id="t2",
+    )
+    published_presentation = continuity.promote(
+        user_id=user_id,
+        runtime=seed_runtime,
+        builders=builders("published"),
+    )
+    assert published_presentation is not None
+    persist_runtime_snapshot(
+        persistence,
+        user_id=user_id,
+        league_state=published_state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id=published_presentation.publication_generation_id,
+    )
+
+    # Process restart first restores the coherent published generation.
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = restarted.restore_user(user_id)
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == published_state.state_id
+    assert (
+        restored.publication_generation_id
+        == published_presentation.publication_generation_id
+    )
+
+    # Automatic provider revalidation then advances canonical State materially.
+    # Derived presentation must remain pinned to the prior publication until the
+    # replacement generation is atomically promoted.
+    target_state = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
+    ).model_copy(
+        update={
+            "teams": (
+                Team(
+                    team_id="t1",
+                    league_id=published_state.league.league_id,
+                    display_name="One Updated",
+                ),
+                published_state.teams[1],
+            )
+        }
+    )
+    assert target_state.state_id != published_state.state_id
+    assert (
+        league_material_fingerprint(target_state)
+        != league_material_fingerprint(published_state)
+    )
+    transitional = restarted.set_league_state(user_id, target_state)
+    assert transitional.league_state is not None
+    assert transitional.league_state.state_id == target_state.state_id
+    assert transitional.publication_generation_id is None
+    assert transitional.served_intelligence is not None
+    assert (
+        transitional.served_intelligence.publication_generation_id
+        == published_presentation.publication_generation_id
+    )
+
+    stale_payloads = {
+        surface: continuity.load_for_runtime(
+            user_id=user_id,
+            runtime=transitional,
+            surface=surface,
+        )
+        for surface in REQUIRED_PRESENTATION_SURFACES
+    }
+    assert all(payload is not None for payload in stale_payloads.values())
+    assert {
+        payload["publication_generation_id"]
+        for payload in stale_payloads.values()
+        if payload is not None
+    } == {published_presentation.publication_generation_id}
+    assert {
+        payload["presentation_continuity"]["mode"]
+        for payload in stale_payloads.values()
+        if payload is not None
+    } == {"stale_last_good"}
+    assert {
+        payload["intelligence_freshness"]["target_state_id"]
+        for payload in stale_payloads.values()
+        if payload is not None
+    } == {target_state.state_id}
+
+    replacement_presentation = continuity.promote(
+        user_id=user_id,
+        runtime=transitional,
+        builders=builders("replacement"),
+    )
+    assert replacement_presentation is not None
+    published_target = replace(
+        transitional,
+        served_intelligence=None,
+        publication_generation_id=replacement_presentation.publication_generation_id,
+    )
+    current_payloads = {
+        surface: continuity.load_for_runtime(
+            user_id=user_id,
+            runtime=published_target,
+            surface=surface,
+        )
+        for surface in REQUIRED_PRESENTATION_SURFACES
+    }
+    assert all(payload is not None for payload in current_payloads.values())
+    assert {
+        payload["publication_generation_id"]
+        for payload in current_payloads.values()
+        if payload is not None
+    } == {replacement_presentation.publication_generation_id}
+    assert {
+        payload["presentation_continuity"]["mode"]
+        for payload in current_payloads.values()
+        if payload is not None
+    } == {"published"}
 
 
 def test_changed_state_restore_carries_only_team_matched_served_publication_generation() -> None:

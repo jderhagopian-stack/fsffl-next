@@ -29,7 +29,7 @@ def test_core_beta_assets_are_versioned_to_break_mobile_cache() -> None:
     )
     versions = []
     for asset in assets:
-        match = re.search(rf"/static/{re.escape(asset)}\?v=([^\"']+)", html)
+        match = re.search(rf"/static/{re.escape(asset)}\?v=([^&\"']+)", html)
         assert match is not None, f"{asset} must carry an explicit cache-busting version"
         versions.append(match.group(1))
     assert len(set(versions)) == 1, "core beta assets must use one coherent deployment version"

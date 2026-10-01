@@ -392,6 +392,102 @@ def test_stale_read_is_pinned_to_served_publication_generation() -> None:
     ) is None
 
 
+
+def test_unproven_current_publication_falls_back_to_proven_served_generation() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    promoted = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(old),
+        builders=_builders("old"),
+    )
+    assert promoted is not None
+
+    current = _state(old.as_of + timedelta(minutes=5))
+    transitional = replace(
+        _runtime(
+            current,
+            served=old,
+            served_generation_id=promoted.publication_generation_id,
+        ),
+        # Restart/revalidation can temporarily expose a runtime/core publication
+        # identity before an exact current-State presentation manifest is provable.
+        publication_generation_id="unproven-current-generation",
+    )
+
+    loaded = {
+        surface: continuity.load_for_runtime(
+            user_id="jimmy",
+            runtime=transitional,
+            surface=surface,
+        )
+        for surface in REQUIRED_PRESENTATION_SURFACES
+    }
+
+    assert all(payload is not None for payload in loaded.values())
+    assert {
+        payload["publication_generation_id"]
+        for payload in loaded.values()
+        if payload is not None
+    } == {promoted.publication_generation_id}
+    assert {
+        payload["presentation_continuity"]["mode"]
+        for payload in loaded.values()
+        if payload is not None
+    } == {"stale_last_good"}
+    assert {
+        payload["intelligence_freshness"]["served_state_id"]
+        for payload in loaded.values()
+        if payload is not None
+    } == {old.state_id}
+    assert {
+        payload["intelligence_freshness"]["target_state_id"]
+        for payload in loaded.values()
+        if payload is not None
+    } == {current.state_id}
+
+
+def test_proven_current_publication_wins_after_atomic_promotion() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    old_promoted = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(old),
+        builders=_builders("old"),
+    )
+    assert old_promoted is not None
+
+    current = _state(old.as_of + timedelta(minutes=5))
+    current_runtime = _runtime(
+        current,
+        served=old,
+        served_generation_id=old_promoted.publication_generation_id,
+    )
+    current_promoted = continuity.promote(
+        user_id="jimmy",
+        runtime=current_runtime,
+        builders=_builders("current"),
+    )
+    assert current_promoted is not None
+
+    published = replace(
+        current_runtime,
+        publication_generation_id=current_promoted.publication_generation_id,
+    )
+    loaded = continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=published,
+        surface=FRANCHISE_SURFACE,
+    )
+
+    assert loaded is not None
+    assert loaded["publication_generation_id"] == current_promoted.publication_generation_id
+    assert loaded["presentation_continuity"]["mode"] == "published"
+    assert loaded["intelligence_freshness"]["status"] == "current"
+
+
 def test_interrupted_promotion_never_exposes_partial_manifest() -> None:
     persistence = MemoryPersistence()
     continuity = PresentationContinuityStore(persistence)

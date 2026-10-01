@@ -33,5 +33,5 @@ def test_market_recovery_is_presentation_and_session_only() -> None:
 def test_hosted_release_eagerly_loads_market_recovery_with_one_asset_generation() -> None:
     source = _source(INDEX)
     assert f"market_session_recovery.js?v={RELEASE}" in source
-    versions = {token.split("?v=")[1].split('"')[0] for token in source.split() if "?v=" in token}
+    versions = {token.split("?v=")[1].split('"')[0].split("&")[0] for token in source.split() if "?v=" in token}
     assert versions == {RELEASE}

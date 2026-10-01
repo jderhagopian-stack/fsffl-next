@@ -53,5 +53,6 @@ def test_league_atlas_explicitly_labels_stale_last_good_during_target_rebuild() 
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "intelligence_freshness||{}" in source
     assert "State current · last-good intelligence" in source
-    assert "Replacement league intelligence is rebuilding." in source
-    assert "Current standings, roster membership and draft ownership remain canonical." in source
+    assert "league-last-good-status" in source
+    assert "Derived fields as of " in source
+    assert "Replacement league intelligence is rebuilding." not in source
