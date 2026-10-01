@@ -101,6 +101,20 @@ Before telling the user or another worker that a gate is complete, Management mu
 
 If any answer is no, do not promote.
 
+## Risk-proportionate promotion
+The acceptance burden must be proportional to the actual blast radius of a change. Architectural importance alone does not make every change a whole-platform event.
+
+Classify each change before implementation/promotion:
+
+- **Tier A — localized implementation change:** bounded logic/performance/refactor inside an already-proven contract, with no authority, persistence, lifecycle, or public contract change. Required evidence: focused contract/regression tests, ordinary CI, and code review. Hosted/full-platform acceptance is not required unless the changed behavior only exists on the hosted path.
+- **Tier B — capability/model change:** adds or materially changes an authoritative capability or model output while preserving platform/runtime contracts. Required evidence: focused capability tests, full CI, review, and one targeted end-to-end acceptance of the affected capability. Do not re-prove unrelated platform layers.
+- **Tier C — authority/runtime/persistence change:** changes ownership/authority boundaries, State/Forecast/Simulation/Value identity semantics, cache/persistence/restore/publication behavior, heavy-resource lifecycle, or cross-league/user isolation. Required evidence may include hosted lifecycle, restart/restore, publication identity, memory/resource gates, and affected surface continuity.
+- **Tier D — foundation/system change:** cross-cutting architecture or infrastructure change with broad blast radius. Whole-system acceptance is appropriate only here or when direct evidence shows a lower-tier change has broader effects than expected.
+
+Once a boundary has been directly validated and deterministic regressions protect it, those tests are the standing proof of that boundary. Do not manually re-prove unrelated accepted layers for every downstream change. Escalate a change to a heavier tier only when its actual dependencies, runtime behavior, or contradictory evidence justify it.
+
+The default posture is **fast by default, heavy when warranted**: small reviewable changes should remain small, useful estimates should expose uncertainty rather than disappear solely because evidence is imperfect, and incident-response safeguards must not become permanent whole-platform ceremony for unrelated work.
+
 ## Private-beta availability discipline
 FSFFL NEXT is a live private beta, not only an implementation workspace. Management must preserve the user's ability to exercise the product while deeper work continues.
 
