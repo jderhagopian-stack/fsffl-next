@@ -242,7 +242,8 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "with store._lock:" not in source
     assert "team_interleaving" in source
     assert 'team_surface.get("franchise_team_id")' in source
-    assert 'same_promoted.get("franchise_team_id")' in source
+    assert 'same_verified.get("franchise_team_id")' in source
+    assert "fsffl_same_state_noop_verification" in source
     assert '"selected_team_id": runtime.selected_team_id' in source
     assert "within_memory_budget" in source
     assert "peak_rss_bytes" in source
