@@ -114,7 +114,7 @@ function renderFsfflHomeNorthStar(){
 
   const standing=homeStanding(),simulation=homeSimulation(),pressure=homePressurePoint(),fragility=homeFragility(),adjacent=homeAdjacentStandings(),positions=homePositionRows();
   const freshness=payload.intelligence_freshness||{};
-  const staleBanner=freshness.stale?'<aside class="home-last-good-status" role="status"><strong>Last-good intelligence · update in progress</strong><span>Derived fields as of '+homeEscape(freshness.served_as_of||'the last-good snapshot')+'.</span></aside>':'';
+  const staleBanner=freshness.stale?'<aside class="home-last-good-status" role="status"><strong>State current · last-good intelligence</strong><span>Derived fields as of '+homeEscape(freshness.served_as_of||'the last-good snapshot')+'.</span></aside>':'';
   const competitiveState=homeStateLabel(view.utility?.calculated_competitive_state);
   const simulationReady=payload.simulation?.status==='ready'&&simulation;
   const lens=fsfflHomeNorthStarState.positionLens;
