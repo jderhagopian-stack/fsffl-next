@@ -438,4 +438,3 @@ def test_cross_league_hosted_switch_reclaims_execution_caches_before_intelligenc
     assert '"state_transition_reclaims": []' in acceptance_source
     assert 'sample_resources(f"{label}_pre_state_activation")' in acceptance_source
     assert 'sample_resources(f"{label}_post_resource_boundary")' in acceptance_source
-

@@ -75,8 +75,6 @@ def configured_simulation_rng() -> tuple[str, int | None]:
 def configured_simulation_model_version() -> str:
     protocol, _ = configured_simulation_rng()
     model_version = simulation_model_version_for_rng_protocol(protocol)
-    if protocol == PYTHON_RANDOM_GAUSS_V1:
-        return model_version
     return f"{model_version}:{configured_simulation_cache_identity()}"
 
 
@@ -84,7 +82,17 @@ def simulation_artifact_model_version(result: object) -> str:
     protocol = getattr(result, "rng_protocol", None)
     model_version = simulation_model_version_for_rng_protocol(protocol)
     if protocol == PYTHON_RANDOM_GAUSS_V1:
-        return model_version
+        runtime = str(getattr(result, "rng_runtime_version", ""))
+        if runtime == "legacy-unrecorded":
+            # Preserve lookup compatibility for pre-identity Python artifacts.
+            return model_version
+        if not runtime.startswith("python-"):
+            return f"{model_version}:invalid-runtime-identity"
+        return (
+            f"{model_version}:{protocol};batch=None;"
+            f"count={getattr(result, 'simulation_count', None)};"
+            f"seed={getattr(result, 'seed', None)};runtime={runtime}"
+        )
     runtime = str(getattr(result, "rng_runtime_version", ""))
     numpy_runtime, separator, python_runtime = runtime.partition(";")
     if not separator or not numpy_runtime.startswith("numpy-") or not python_runtime.startswith("python-"):

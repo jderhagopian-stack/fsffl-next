@@ -1637,16 +1637,16 @@ def test_restore_finds_older_simulation_with_exact_current_forecast_dependency()
         state,
         forecasts=_simulation_forecasts(state),
         forecast_model_version="forecast-a",
-        simulation_count=100,
-        seed=7,
+        simulation_count=50_000,
+        seed=20260905,
         generated_at=state.as_of,
     )
     simulation_b = build_live_simulation_analytics(
         state,
         forecasts=_simulation_forecasts(state),
         forecast_model_version="forecast-b",
-        simulation_count=100,
-        seed=11,
+        simulation_count=50_000,
+        seed=20260905,
         generated_at=state.as_of,
     )
 
@@ -1830,6 +1830,112 @@ def test_numpy_snapshot_restore_uses_exact_artifact_and_current_rng_identity(mon
     )
     assert after_rollback[3] == "legacy-generation-after-rollback"
     assert after_rollback[1] is None
+
+
+def test_interrupted_python_runtime_upgrade_cannot_overwrite_published_simulation(
+    monkeypatch,
+) -> None:
+    base_state = _simulation_state()
+    state = base_state.model_copy(
+        update={
+            "league": base_state.league.model_copy(
+                update={"rules": base_state.league.rules.model_copy(update={"scoring": ()})}
+            )
+        }
+    )
+    forecast = replace(
+        _stale_forecast_without_first_party_fumbles_lost(state),
+        league_scored_forecasts=_simulation_forecasts(state),
+    )
+    monkeypatch.setattr(
+        simulation_runtime,
+        "_CONFIGURED_SIMULATION_RNG",
+        ("python-random-gauss-v1", None),
+    )
+    monkeypatch.setattr(
+        simulation_runtime.platform,
+        "python_version",
+        lambda: "3.12.0",
+    )
+    old_model_version = simulation_runtime.configured_simulation_model_version()
+    assert ";count=50000;seed=20260905;runtime=python-3.12.0" in old_model_version
+    monkeypatch.setattr(persistence_runtime_cache, "SIMULATION_MODEL_VERSION", old_model_version)
+    monkeypatch.setattr(session_module, "SIMULATION_MODEL_VERSION", old_model_version)
+    old_simulation = build_live_simulation_analytics(
+        state,
+        forecasts=forecast.league_scored_forecasts,
+        forecast_model_version=forecast.model_version,
+        simulation_count=50_000,
+        seed=20260905,
+        generated_at=state.as_of,
+    )
+    persistence = MemoryPersistence()
+    persist_runtime_snapshot(
+        persistence,
+        user_id="python-runtime-upgrade",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=forecast,
+        simulation_analytics=old_simulation,
+        value_evidence=_empty_value(state),
+        publication_generation_id="published-python-3.12.0",
+    )
+
+    monkeypatch.setattr(
+        simulation_runtime.platform,
+        "python_version",
+        lambda: "3.12.1",
+    )
+    new_model_version = simulation_runtime.configured_simulation_model_version()
+    assert old_model_version != new_model_version
+    assert ";count=50000;seed=20260905;runtime=python-3.12.1" in new_model_version
+    monkeypatch.setattr(persistence_runtime_cache, "SIMULATION_MODEL_VERSION", new_model_version)
+    monkeypatch.setattr(session_module, "SIMULATION_MODEL_VERSION", new_model_version)
+    new_simulation = build_live_simulation_analytics(
+        state,
+        forecasts=forecast.league_scored_forecasts,
+        forecast_model_version=forecast.model_version,
+        simulation_count=50_000,
+        seed=20260905,
+        generated_at=state.as_of,
+    )
+    # This is the durable working-checkpoint write immediately before a crash:
+    # keep the old publication manifest while staging the new runtime artifact.
+    persist_runtime_snapshot(
+        persistence,
+        user_id="python-runtime-upgrade",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=forecast,
+        simulation_analytics=new_simulation,
+        publish_context=False,
+    )
+
+    from fsffl.persistence.runtime_cache import SIMULATION_ARTIFACT_KIND
+
+    simulation_records = [
+        row for row in persistence.artifacts
+        if row.key.artifact_kind == SIMULATION_ARTIFACT_KIND
+    ]
+    assert {row.key.model_version for row in simulation_records} == {
+        old_model_version,
+        new_model_version,
+    }
+    published_manifest = next(
+        row for row in persistence.artifacts
+        if row.key.artifact_kind == PUBLISHED_GENERATION_ARTIFACT_KIND
+    )
+    assert published_manifest.payload["simulation_model_version"] == old_model_version
+
+    old_restore = restore_published_state_bound_intelligence(
+        persistence,
+        user_id="python-runtime-upgrade",
+        league_state=state,
+    )
+    assert old_restore[3] == "published-python-3.12.0"
+    # The old manifest cannot accidentally resolve the unpublished 3.12.1
+    # payload. The old result is rejected under the new replay identity instead.
+    assert old_restore[1] is None
 
 
 def test_same_state_forecast_replay_interruption_restart_rejects_stale_simulation(

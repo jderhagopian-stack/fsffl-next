@@ -178,9 +178,9 @@ def simulation_artifact(
     result: LiveSimulationAnalyticsResult,
 ) -> ReusableArtifactRecord:
     payload = encode_simulation(result)
-    # Model version carries the explicit protocol/runtime/batch replay identity for
-    # experimental outputs, leaving the dependency fingerprint directly queryable
-    # from State + exact Forecast as it is for legacy restore.
+    # Model version carries the explicit RNG/runtime/count/seed replay identity for
+    # newly generated outputs, leaving the dependency fingerprint directly
+    # queryable from State + exact Forecast as it is for legacy restore.
     model_version = simulation_artifact_model_version(result.simulation_result)
     input_fingerprint = canonical_fingerprint(league_state_id, forecast_fingerprint)
     return ReusableArtifactRecord(

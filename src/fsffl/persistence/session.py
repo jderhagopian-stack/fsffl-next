@@ -13,7 +13,10 @@ from fsffl.forecast.fumbles_lost_materiality import (
 from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.state.models import LeagueState
 from fsffl.team_utility.simulation import PYTHON_RANDOM_GAUSS_V1
-from fsffl.product.simulation_runtime import simulation_model_version_for_rng_protocol
+from fsffl.product.simulation_runtime import (
+    configured_simulation_rng,
+    simulation_model_version_for_rng_protocol,
+)
 
 from .contracts import (
     ArtifactKey,
@@ -790,15 +793,36 @@ def restore_state_bound_intelligence(
             league_state.state_id,
             current_forecast_record.key.input_fingerprint,
         )
-        simulation_record = store.get_reusable_artifact(
-            ArtifactKey(
-                artifact_kind=SIMULATION_ARTIFACT_KIND,
-                scope_kind=LEAGUE_SCOPE_KIND,
-                scope_id=league_state.state_id,
-                input_fingerprint=expected_simulation_input_fingerprint,
-                model_version=SIMULATION_MODEL_VERSION,
-            )
+        simulation_key = ArtifactKey(
+            artifact_kind=SIMULATION_ARTIFACT_KIND,
+            scope_kind=LEAGUE_SCOPE_KIND,
+            scope_id=league_state.state_id,
+            input_fingerprint=expected_simulation_input_fingerprint,
+            model_version=SIMULATION_MODEL_VERSION,
         )
+        simulation_record = store.get_reusable_artifact(simulation_key)
+        if (
+            simulation_record is None
+            and configured_simulation_rng()[0] == PYTHON_RANDOM_GAUSS_V1
+            and (
+                simulation_key.model_version
+                != simulation_model_version_for_rng_protocol(PYTHON_RANDOM_GAUSS_V1)
+            )
+        ):
+            # Pre-identity legacy Python artifacts used the base model version.
+            # Keep that read-only compatibility path, but never write new replay
+            # identities back under the shared legacy key.
+            simulation_record = store.get_reusable_artifact(
+                ArtifactKey(
+                    artifact_kind=SIMULATION_ARTIFACT_KIND,
+                    scope_kind=LEAGUE_SCOPE_KIND,
+                    scope_id=league_state.state_id,
+                    input_fingerprint=expected_simulation_input_fingerprint,
+                    model_version=simulation_model_version_for_rng_protocol(
+                        PYTHON_RANDOM_GAUSS_V1
+                    ),
+                )
+            )
         if simulation_record is not None:
             try:
                 candidate = decode_simulation(dict(simulation_record.payload))
