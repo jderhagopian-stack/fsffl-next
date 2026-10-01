@@ -981,3 +981,5 @@ Validation on corrected source/test head `508237237ffd7a50d261d59d26abf9bac97014
 
 Next gate: freeze the docs-complete exact head, rerun ordinary exact-head workflows, request fresh Codex review, and close any remaining P1/P2 before merge/deploy. Keep promotion risk-proportionate; do not reopen #321 postseason structure, #323 continuity, Forecast model authority, or unrelated platform layers.
 
+
+- #324 reached a valid published current-season result in physical Safari (2-1, Contender, 9.2 wins / 91% playoffs / 12% championship), but repeated API redeployments of the identical merged commit restarted the runtime again. Finish #324 acceptance on one stable deployment; do not reset the instance absent a code/config change. This is acceptance-execution churn, not evidence to reopen Simulation math.
