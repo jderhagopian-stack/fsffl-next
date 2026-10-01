@@ -789,7 +789,7 @@ def test_material_same_league_refresh_runs_boundary_before_new_behavioral_work(
     assert store.get("local-beta-user").league_state.state_id == state_a2.state_id
 
 
-def test_timestamp_only_same_league_refresh_restarts_behavior_after_boundary(
+def test_timestamp_only_same_league_refresh_retains_resource_boundary(
     monkeypatch,
 ) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
@@ -835,11 +835,8 @@ def test_timestamp_only_same_league_refresh_restarts_behavior_after_boundary(
     assert response.status_code == 200
     _wait_connect(coordinator)
 
-    assert events == [
-        ("boundary", state_a_timestamp_only.state_id),
-        ("behavior", state_a_timestamp_only.state_id),
-    ]
-    assert store.get("local-beta-user").league_state.state_id == state_a_timestamp_only.state_id
+    assert events == []
+    assert store.get("local-beta-user").league_state.state_id == state_a.state_id
 
 
 def test_hosted_composition_registers_complete_user_execution_boundary() -> None:
@@ -1004,7 +1001,7 @@ def test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layer
 
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     original = _state("a", minute=0)
-    refreshed = _state("a", minute=1)
+    refreshed = _state("a", team_suffix=" changed", minute=1)
     state_to_load = [refreshed]
     store = PrivateBetaRuntimeStore()
     store.set_league_state("local-beta-user", original)
