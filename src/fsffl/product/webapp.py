@@ -64,6 +64,7 @@ from .runtime import (
     PrivateBetaRuntimeStore,
     UserRuntimeContext,
     default_live_forecast_loader,
+    league_material_fingerprint,
     default_live_value_loader,
     default_sleeper_state_loader,
 )
@@ -1604,8 +1605,12 @@ def create_app(
                         )
                     )
                     published_readiness = read_capabilities(published_now)
+                    materially_unchanged = (
+                        league_material_fingerprint(active_before_write)
+                        == league_material_fingerprint(synced_state)
+                    )
                     if (
-                        active_before_write.state_id == synced_state.state_id
+                        materially_unchanged
                         and published_terminal
                         and published_readiness.get("overall_status") == "full"
                     ):
