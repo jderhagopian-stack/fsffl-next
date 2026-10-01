@@ -833,3 +833,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - If no, fix the independently proven Forecast/player-history owner narrowly.
 - Do not rewrite the whole engine or reduce 50k/model fidelity.
 - Then exact-head CI/review → reversible batch-500 Render rerun → concurrent foreground/readiness/restart/RSS evidence → rollback → Management gate if still over limit.
+
+
+## 2026-10-01 — Immediate executable: external hosted concurrency acceptance
+- PR #311 code/review is clean enough for final hosted measurement.
+- Browser policy is no longer a reason to park the workstream.
+- Build/use a short-lived external runner to issue genuine concurrent Home / My Team / Product Context HTTP reads against the actual Render host while batch-500 50k refresh runs.
+- Capture exact RSS/high-water, readiness/publication, restart restore, then roll back to main.
+- PASS -> Management adoption decision immediately. Memory > 536,870,900 bytes -> Management capacity gate. Auth path unavailable -> INPUT GATE with the smallest explicit user action requested.
