@@ -38,8 +38,10 @@ def test_regular_season_simulation_retains_exact_finish_rank_distribution() -> N
 
     assert by_team["team:a"].rank_probabilities == (1.0, 0.0)
     assert by_team["team:a"].expected_finish == pytest.approx(1.0)
+    assert by_team["team:a"].median_finish == 1
     assert by_team["team:b"].rank_probabilities == (0.0, 1.0)
     assert by_team["team:b"].expected_finish == pytest.approx(2.0)
+    assert by_team["team:b"].median_finish == 2
     assert all(sum(row.rank_probabilities) == pytest.approx(1.0) for row in by_team.values())
 
 
