@@ -96,7 +96,7 @@ def test_market_navigation_stops_after_shell_read_until_explicit_search() -> Non
 
 def test_progressive_assets_use_one_fresh_hosted_release_generation() -> None:
     html = _text(STATIC / "index.html")
-    versions = {token.split("?v=")[1].split('"')[0] for token in html.split() if "?v=" in token}
+    versions = {token.split("?v=")[1].split('"')[0].split("&")[0] for token in html.split() if "?v=" in token}
     assert versions == {RELEASE}
     assert f"progressive_delivery.css?v={RELEASE}" in html
     assert f"progressive_delivery.js?v={RELEASE}" in html
