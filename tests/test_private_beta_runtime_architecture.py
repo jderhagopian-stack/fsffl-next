@@ -185,10 +185,8 @@ def test_readiness_has_one_server_capability_authority_without_legacy_boolean_fa
 
     assert "const serverFull=capabilities?.overall_status==='full';" in shell
     assert "!capabilities?.overall_status&&Boolean" not in shell
-    assert (
-        "context?.capability_readiness?.overall_status==='full'"
-        in refresh
-    )
+    assert "readiness?.overall_status==='full'" in refresh
+    assert "!readiness?.publication?.working_generation_active" in refresh
     ready_fn = refresh.split("function intelligencePipelineReady", 1)[1].split(
         "function ensureIntelligenceRefreshButton", 1
     )[0]
