@@ -2158,3 +2158,14 @@ Physical Safari review rejects the current oversized rebuild/last-good callouts 
 Do not use large hero-sized cards such as `Replacement league intelligence is rebuilding` or `Restoring your franchise…` when last-good data is available. Replace them with the existing thin readiness/status treatment or another compact inline notice near the affected derived fields. The message should communicate that current canonical State may be newer while displayed derived intelligence is last-good/updating, without consuming substantial viewport height or making the product look unavailable.
 
 Franchise should continue to render the usable last-good roster/intelligence normally; if specific derived fields are intentionally stale, annotate those fields compactly rather than blanking the entire surface or inserting a large warning card. League Atlas should likewise keep its normal layout and use a small status line/banner for last-good/update state. This is a presentation requirement within the same bounded continuity correction, not a new architecture or separate platform project.
+
+
+### 2026-10-01 — PR #323 physical acceptance: continuity/compact recovery behavior passes; first-navigation loading remains polish
+
+Authenticated Safari follow-up on live #323 shows the intended continuity correction working materially better: published/current intelligence remains available without the prior cross-surface degradation, and the oversized Franchise/League recovery takeover cards are gone. The product no longer drops from usable last-good intelligence into missing Forecast/Simulation/Market/Intrinsic merely because replacement/revalidation work is occurring.
+
+A remaining UX observation is **first-navigation loading presentation**, not a continuity/authority failure. On the first tap into Franchise, the surface briefly shows a compact `Loading Franchise · Checking current or last-good published intelligence…` placeholder before the real page arrives. On first entry to League, a mostly blank/skeleton surface can appear until the page payload arrives. The corresponding hosted requests complete successfully (e.g. `GET /api/my-team 200`); no new loss-of-authority/degradation was observed.
+
+Treat this as non-blocking presentation/perceived-latency polish unless measured load duration becomes materially excessive. Preferred future improvement: prefetch likely next-surface payloads after Home becomes interactive and/or render layout-shaped skeletons/last-rendered cached content rather than a blank viewport. Do not reopen #323 continuity architecture for this alone.
+
+**Status: #323 targeted physical continuity/compact-presentation acceptance PASS.** Resume the canonical Simulation 2.0 roadmap immediately. Keep first-navigation loading UX as a bounded follow-up/optimization item, not a roadmap blocker.
