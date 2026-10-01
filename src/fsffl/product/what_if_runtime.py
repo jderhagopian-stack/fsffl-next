@@ -3,7 +3,10 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from fsffl.state.models import LeagueState, RosterSlot
-from fsffl.team_utility import compare_team_utility_vectors
+from fsffl.team_utility import (
+    compare_counterfactual_simulation_results,
+    compare_team_utility_vectors,
+)
 
 from .runtime import LiveForecastEvidence
 from .scenario_cache import run_cached_scenario_simulation
@@ -90,9 +93,16 @@ def build_players_unavailable_scenario(
     )
     baseline_utility = _utility_for_team(baseline, team_id)
     changed_utility = _utility_for_team(changed, team_id)
+    simulation_delta = compare_counterfactual_simulation_results(
+        baseline.simulation_result,
+        changed.simulation_result,
+        team_id=team_id,
+        model_version=f"{_PRODUCT_MODEL_VERSION}:simulation-delta",
+    )
     delta = compare_team_utility_vectors(
         baseline_utility,
         changed_utility,
+        competitive_override=simulation_delta,
         model_version=f"{_PRODUCT_MODEL_VERSION}:team-delta",
     )
     players_by_id = {item.player_id: item for item in league_state.players}
@@ -116,6 +126,7 @@ def build_players_unavailable_scenario(
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "scenario_cache_hit": cache_hit,
+        "simulation_counterfactual_delta": simulation_delta.model_dump(mode="json"),
         "team_delta": delta.model_dump(mode="json"),
         "calculated_state_before": baseline_utility.calculated_competitive_state.value,
         "calculated_state_after": changed_utility.calculated_competitive_state.value,
@@ -123,7 +134,8 @@ def build_players_unavailable_scenario(
             "scenario_state": "NEXT-1 point-in-time State hypothetical",
             "forecast": "NEXT-2 Forecast unchanged",
             "competitive_outcomes": "NEXT-4 Simulation",
-            "scenario_delta": "NEXT-4 Team Utility",
+            "competitive_delta": "NEXT-4 Simulation common-world comparison when replay/topology coordinates match",
+            "scenario_delta": "NEXT-4 Team Utility consumes Simulation competitive delta and adds resilience",
             "scenario_cache": "performance-only exact-result reuse",
             "value": "unchanged; ownership is preserved",
             "presentation_calculation": False,
