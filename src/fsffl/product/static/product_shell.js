@@ -170,9 +170,10 @@ function fsfflSharedReadinessSnapshot(){
     const lastGoodAvailable=Boolean(capabilities?.served_last_good?.available);
     const label=lifecycleComplete
       ?(capabilityFull?'Build complete · Current core runtime fully available · product intelligence verified':surfaceIssue?'Build complete · '+surfaceIssue:'Build complete · intelligence partially available')
-      :phaseLabel+(lastGoodAvailable?' · Last-good available':'');
-    return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete,partial,capabilities,asOf};
+      :phaseLabel+(capabilityFull?' · Current intelligence remains available':lastGoodAvailable?' · Last-good available':'');
+    return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:lifecycleComplete&&capabilityFull,lifecycleComplete,partial,updating:!lifecycleComplete,capabilities,asOf};
   }
+  const reconciliationActive=Boolean(capabilities?.publication?.working_generation_active);
   const rebuilding=capabilities?.overall_status==='rebuilding';
   let step=1;
   if(context?.forecast_ready)step=Math.max(step,2);
@@ -181,23 +182,25 @@ function fsfflSharedReadinessSnapshot(){
   if(capabilityFull)step=FSFFL_SHARED_READINESS_STEPS;
   fsfflSharedReadinessState.lastStep=step;
   const intrinsicStatus=fsfflCapabilityStatus('intrinsic');
-  const label=capabilityFull
-    ?'Current core runtime fully available · product intelligence verified'
-    :rebuilding
-      ?'State current · intelligence rebuilding · last-good identity remains durable'
-    :surfaceIssue
-      ?'Core intelligence current · '+surfaceIssue
-      :intrinsicStatus==='building'
-        ?'Core intelligence current · Building FSFFL Intrinsic…'
-        :intrinsicStatus==='unavailable'
-          ?'Core intelligence current · FSFFL Intrinsic unavailable'
-          :intrinsicStatus==='partial_provisional'
-            ?'Core intelligence current · FSFFL Intrinsic partial'
-            :!context?.forecast_ready?'Building projections…'
-            :!context?.simulation_ready?'Simulation unavailable under current authority'
-            :!context?.value_ready?'Building market values…'
-            :'Intelligence partially available';
-  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete:capabilityFull,partial:capabilities?.overall_status==='partial'||rebuilding||Boolean(surfaceIssue),rebuilding,capabilities,asOf};
+  const label=reconciliationActive&&capabilityFull
+    ?'Current intelligence remains available · update in progress'
+    :capabilityFull
+      ?'Current core runtime fully available · product intelligence verified'
+      :rebuilding
+        ?'State current · intelligence rebuilding · last-good identity remains durable'
+      :surfaceIssue
+        ?'Core intelligence current · '+surfaceIssue
+        :intrinsicStatus==='building'
+          ?'Core intelligence current · Building FSFFL Intrinsic…'
+          :intrinsicStatus==='unavailable'
+            ?'Core intelligence current · FSFFL Intrinsic unavailable'
+            :intrinsicStatus==='partial_provisional'
+              ?'Core intelligence current · FSFFL Intrinsic partial'
+              :!context?.forecast_ready?'Building projections…'
+              :!context?.simulation_ready?'Simulation unavailable under current authority'
+              :!context?.value_ready?'Building market values…'
+              :'Intelligence partially available';
+  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull&&!reconciliationActive,lifecycleComplete:capabilityFull&&!reconciliationActive,partial:capabilities?.overall_status==='partial'||rebuilding||Boolean(surfaceIssue),rebuilding,updating:reconciliationActive,capabilities,asOf};
 }
 function fsfflCapabilityChip(label,key){
   const status=fsfflCapabilityStatus(key);
@@ -229,9 +232,11 @@ function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
     :'<button type="button" class="fsffl-shared-readiness-refresh">Refresh Intelligence</button>';
   const chips='<span class="fsffl-capability-summary">'+fsfflCapabilityChip('Current Forecast','forecast')+fsfflCapabilityChip('Simulation','simulation')+fsfflCapabilityChip('Current Value','current_value')+fsfflCapabilityChip('Intrinsic','intrinsic')+'</span>';
   const asOf=status.asOf?' · As of '+status.asOf:'';
-  const mobilePrimary=status.complete
-    ?'✓ Intelligence current'
-    :(status.rebuilding?'◐ State current · intelligence rebuilding':status.partial?'◐ Intelligence partial · '+fsfflMobileCapabilityException(status):status.failed?'Intelligence needs attention':status.step+' / '+status.total);
+  const mobilePrimary=status.updating
+    ?'◐ Intelligence update running · current generation available'
+    :status.complete
+      ?'✓ Intelligence current'
+      :(status.rebuilding?'◐ State current · intelligence rebuilding':status.partial?'◐ Intelligence partial · '+fsfflMobileCapabilityException(status):status.failed?'Intelligence needs attention':status.step+' / '+status.total);
   return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.partial?'partial ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':status.partial?'◐':'●')+'</span><strong><span class="fsffl-readiness-desktop-step">'+status.step+' / '+status.total+' build</span><span class="fsffl-readiness-mobile-step">'+fsfflSharedReadinessEscape(mobilePrimary)+'</span></strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+(status.asOf?'<span class="fsffl-readiness-asof">As of '+fsfflSharedReadinessEscape(status.asOf)+'</span>':'')+chips+'</span>'+refreshAction+'</div>';
 }
 function fsfflSharedReadinessHost(){
