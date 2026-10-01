@@ -3,7 +3,10 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from fsffl.opportunity.waiver import WaiverMove, apply_waiver_move
-from fsffl.team_utility import compare_team_utility_vectors
+from fsffl.team_utility import (
+    compare_counterfactual_simulation_results,
+    compare_team_utility_vectors,
+)
 
 from .runtime import LiveForecastEvidence
 from .scenario_cache import run_cached_scenario_simulation
@@ -57,9 +60,16 @@ def build_waiver_simulation_comparison(
     )
     baseline_utility = _utility_for_team(baseline, move.focal_team_id)
     changed_utility = _utility_for_team(changed, move.focal_team_id)
+    simulation_delta = compare_counterfactual_simulation_results(
+        baseline.simulation_result,
+        changed.simulation_result,
+        team_id=move.focal_team_id,
+        model_version=f"{_PRODUCT_MODEL_VERSION}:simulation-delta",
+    )
     delta = compare_team_utility_vectors(
         baseline_utility,
         changed_utility,
+        competitive_override=simulation_delta,
         model_version=f"{_PRODUCT_MODEL_VERSION}:team-delta",
     )
 
@@ -71,13 +81,15 @@ def build_waiver_simulation_comparison(
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "scenario_cache_hit": cache_hit,
+        "simulation_counterfactual_delta": simulation_delta.model_dump(mode="json"),
         "team_delta": delta.model_dump(mode="json"),
         "materiality": None,
         "authority": {
             "candidate_search": "NEXT-6 Opportunity",
             "state_transition": "NEXT-6 Waiver scenario",
             "competitive_outcomes": "NEXT-4 Simulation",
-            "scenario_delta": "NEXT-4 Team Utility",
+            "competitive_delta": "NEXT-4 Simulation common-world comparison when replay/topology coordinates match",
+            "scenario_delta": "NEXT-4 Team Utility consumes Simulation competitive delta and adds resilience",
             "scenario_cache": "performance-only exact-result reuse",
             "materiality_evaluated": False,
             "presentation_calculation": False,
