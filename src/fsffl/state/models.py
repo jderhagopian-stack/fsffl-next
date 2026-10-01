@@ -147,6 +147,8 @@ class LeaguePlayoffRules(FrozenModel):
         def game(key: str, rnd: int, a: PlayoffParticipantRef, b: PlayoffParticipantRef) -> PlayoffMatchupRule:
             return PlayoffMatchupRule(matchup_id=key, round_number=rnd, week=self.round_weeks[rnd - 1], participant_a=a, participant_b=b)
         # Standard fixed seeded conventions. League size, weeks and bye seeds remain governed inputs.
+        if self.playoff_team_count == 2 and not self.bye_seeds and self.round_count == 1:
+            return (game(self.championship_matchup_id, 1, seed(1), seed(2)),)
         if self.playoff_team_count == 4 and not self.bye_seeds and self.round_count == 2:
             return (game("semi-a", 1, seed(1), seed(4)), game("semi-b", 1, seed(2), seed(3)), game(self.championship_matchup_id, 2, winner("semi-a"), winner("semi-b")))
         if self.playoff_team_count == 6 and set(self.bye_seeds) == {1, 2} and self.round_count == 3:
@@ -154,6 +156,39 @@ class LeaguePlayoffRules(FrozenModel):
         if self.playoff_team_count == 8 and not self.bye_seeds and self.round_count == 3:
             return (game("qf-a", 1, seed(1), seed(8)), game("qf-b", 1, seed(4), seed(5)), game("qf-c", 1, seed(2), seed(7)), game("qf-d", 1, seed(3), seed(6)), game("sf-a", 2, winner("qf-a"), winner("qf-b")), game("sf-b", 2, winner("qf-c"), winner("qf-d")), game(self.championship_matchup_id, 3, winner("sf-a"), winner("sf-b")))
         return ()
+
+    def canonical_execution_matchups(self) -> tuple[PlayoffMatchupRule, ...]:
+        """Order games and sides structurally, independent of provider matchup IDs."""
+        matchups = self.effective_matchups()
+        by_id = {row.matchup_id: row for row in matchups}
+        participant_cache: dict[tuple[str, int | str], tuple] = {}
+        matchup_cache: dict[str, tuple] = {}
+
+        def participant_key(reference: PlayoffParticipantRef) -> tuple:
+            if reference.seed_number is not None:
+                return (0, reference.seed_number)
+            matchup_id = reference.winner_of_matchup_id
+            if matchup_id not in participant_cache:
+                participant_cache[matchup_id] = (1, matchup_key(by_id[matchup_id]))
+            return participant_cache[matchup_id]
+
+        def matchup_key(matchup: PlayoffMatchupRule) -> tuple:
+            if matchup.matchup_id not in matchup_cache:
+                sides = sorted((participant_key(matchup.participant_a), participant_key(matchup.participant_b)))
+                matchup_cache[matchup.matchup_id] = (matchup.round_number, sides[0], sides[1])
+            return matchup_cache[matchup.matchup_id]
+
+        ordered = sorted(matchups, key=matchup_key)
+        return tuple(
+            row.model_copy(update={
+                "participant_a": left,
+                "participant_b": right,
+            })
+            for row in ordered
+            for left, right in [sorted(
+                (row.participant_a, row.participant_b), key=participant_key
+            )]
+        )
 
     @model_validator(mode="after")
     def validate_structure(self) -> "LeaguePlayoffRules":

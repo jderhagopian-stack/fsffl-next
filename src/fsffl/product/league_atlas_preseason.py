@@ -48,6 +48,7 @@ class LeagueAtlasPreseasonBaseline(FrozenModel):
     forecast_model_version: str
     simulation_model_version: str
     simulation_count: int
+    championship_probability_provenance: str | None = None
     opener_date: str
     opener_coordinate_source: str
     status: str = "frozen"
@@ -157,6 +158,9 @@ def capture_preseason_baseline_if_eligible(
         forecast_model_version=forecast.model_version,
         simulation_model_version=simulation.simulation_result.model_version,
         simulation_count=simulation.simulation_result.simulation_count,
+        championship_probability_provenance=(
+            simulation.simulation_result.championship_probability_provenance
+        ),
         opener_date=snapshot.opener_date.isoformat(),
         opener_coordinate_source=snapshot.opener_coordinate_source,
         teams=teams,

@@ -117,13 +117,14 @@ def _simulation_request(
     team_count: int,
     *,
     rules: LeaguePlayoffRules | None = None,
+    stddev: float = 0.0,
 ) -> RegularSeasonSimulationInput:
     request = RegularSeasonSimulationInput(
         scoring=tuple(
             TeamScoringDistribution(
                 team_id=f"team-{index}",
                 mean_points=100.0 + index,
-                stddev_points=0,
+                stddev_points=stddev,
                 model_version="playoff-rules-test",
             )
             for index in range(team_count)
@@ -234,12 +235,59 @@ def test_settings_derived_standard_bracket_returns_normal_championship_probabili
         key: row.championship_probability for key, row in compiled.items()
     }
     assert all(row.championship_probability is not None for row in compiled.values())
-    assert {row.championship_probability_provenance for row in observed.values()} == {
-        "provider_observed_exact"
-    }
-    assert {row.championship_probability_provenance for row in compiled.values()} == {
-        "settings_derived_standard"
-    }
+    assert observed_result.championship_probability_provenance == "provider_observed_exact"
+    assert derived_result.championship_probability_provenance == "settings_derived_standard"
+    assert "championship_probability_provenance" not in observed_result.outcomes[0].model_dump()
+    assert "championship_probability_provenance" in observed_result.model_dump()
+
+
+def test_observed_standard_bracket_draws_are_independent_of_provider_ids_and_side_order() -> None:
+    payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
+    id_map = {"qf-a": "match-8", "qf-b": "match-3", "sf-a": "match-5", "sf-b": "match-1", "final": "championship"}
+    for matchup in payload["matchups"]:
+        matchup["matchup_id"] = id_map[matchup["matchup_id"]]
+        for name in ("participant_a", "participant_b"):
+            participant = matchup[name]
+            if participant.get("winner_of_matchup_id") is not None:
+                participant["winner_of_matchup_id"] = id_map[participant["winner_of_matchup_id"]]
+        matchup["participant_a"], matchup["participant_b"] = (
+            matchup["participant_b"], matchup["participant_a"]
+        )
+    payload["championship_matchup_id"] = id_map[payload["championship_matchup_id"]]
+    relabelled = LeaguePlayoffRules.model_validate(payload)
+
+    original_result = simulate_regular_season(
+        _simulation_request(6, rules=SIX_TEAM_BYE_BRACKET, stddev=10.0)
+    )
+    relabelled_result = simulate_regular_season(
+        _simulation_request(6, rules=relabelled, stddev=10.0)
+    )
+    assert [row.championship_probability for row in original_result.outcomes] == [
+        row.championship_probability for row in relabelled_result.outcomes
+    ]
+
+
+def test_two_team_standard_bracket_produces_normal_championship_probability() -> None:
+    payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
+    payload.update(
+        bracket_authority="settings_derived_standard",
+        bracket_derivation_policy="seeded_standard_fixed_v1",
+        playoff_team_count=2,
+        playoff_start_week=16,
+        round_count=1,
+        round_weeks=(16,),
+        bye_count=0,
+        bye_seeds=(),
+        matchups=(),
+        championship_round_number=1,
+        championship_week=16,
+        championship_matchup_id="title-game",
+    )
+    rules = LeaguePlayoffRules.model_validate(payload)
+    result = simulate_regular_season(_simulation_request(2, rules=rules))
+    assert result.championship_probability_provenance == "settings_derived_standard"
+    assert all(row.championship_probability is not None for row in result.outcomes)
+    assert sum(row.championship_probability or 0.0 for row in result.outcomes) == 1.0
 
 
 def test_unrecognized_standard_structure_keeps_qualification_but_withholds_title() -> None:
@@ -261,7 +309,7 @@ def test_unrecognized_standard_structure_keeps_qualification_but_withholds_title
     result = simulate_regular_season(_simulation_request(5, rules=rules))
     assert all(row.playoff_probability is not None for row in result.outcomes)
     assert all(row.championship_probability is None for row in result.outcomes)
-    assert all(row.championship_probability_provenance is None for row in result.outcomes)
+    assert result.championship_probability_provenance is None
     assert {row.championship_unavailability_reason for row in result.outcomes} == {
         "playoff_rules_unsupported:bracket_structure"
     }
