@@ -428,6 +428,34 @@ class PlayerState(FrozenModel):
         return value
 
 
+class WeeklyAvailabilityStatus(StrEnum):
+    """Exact week-specific player availability fact carried by canonical State."""
+
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+
+
+class PlayerWeekAvailability(FrozenModel):
+    """Provider-neutral exact availability fact for one player/fantasy week.
+
+    Absence of a row means availability is not known exactly. Probabilistic
+    missed-game evidence belongs to Forecast/Simulation, not canonical State.
+    """
+
+    player_id: str
+    week: Annotated[int, Field(ge=1, le=18)]
+    status: WeeklyAvailabilityStatus
+    provenance: Provenance
+
+    @field_validator("player_id")
+    @classmethod
+    def require_player_id(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("player_id cannot be blank")
+        return value
+
+
 class NflTeamBye(FrozenModel):
     """Canonical scheduled NFL bye-week fact for one team and season."""
 
@@ -556,6 +584,7 @@ class LeagueState(FrozenModel):
     matchups: tuple[LeagueMatchup, ...] = ()
     completed_through_week: Annotated[int, Field(ge=0, le=18)] | None = None
     nfl_team_byes: tuple[NflTeamBye, ...] = ()
+    player_week_availability: tuple[PlayerWeekAvailability, ...] = ()
     provenance: tuple[Provenance, ...] = ()
 
     @field_validator("as_of")
@@ -618,6 +647,15 @@ class LeagueState(FrozenModel):
             raise ValueError("an NFL team may have only one bye week per season")
         if any(bye.season != self.league.season for bye in self.nfl_team_byes):
             raise ValueError("NFL bye state must match league season")
+        availability_keys = [
+            (item.week, item.player_id) for item in self.player_week_availability
+        ]
+        if len(availability_keys) != len(set(availability_keys)):
+            raise ValueError("player availability may have only one fact per player/week")
+        if any(
+            item.player_id not in player_ids for item in self.player_week_availability
+        ):
+            raise ValueError("player availability references unknown player")
         return self
 
     def canonical_json(self) -> str:
