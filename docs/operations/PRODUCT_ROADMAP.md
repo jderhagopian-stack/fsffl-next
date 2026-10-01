@@ -199,3 +199,23 @@ Management clarification: Championship probability remains the ordinary Simulati
 ## 2026-10-01 Management correction — postseason estimate availability
 
 For ordinary Sleeper leagues, `playoff_week_start` and `playoff_teams` support ordinary playoff qualification and standard seeded championship estimates without requiring an exact provider bracket. Derive playoff probability from the simulated regular-season finish distribution and use a standard fixed 2/4/6/8-team bracket for title odds. Preserve exact-versus-derived provenance internally only. Unavailable metrics remain for missing/corrupt basic settings or genuinely unmodelable qualification/bracket structures. This restores the already-approved Simulation 2.0 postseason capability; it does not reorder the roadmap. The next listed item remains the week-by-week current-season engine after corrected hosted odds and classification are accepted.
+
+
+## 2026-10-01 — Simulation 2.0 roadmap resumes after #323 continuity closeout
+
+Physical Safari acceptance now passes the #323 restart/served-generation continuity and compact-recovery presentation correction. Postseason estimates/classification from #321 remain accepted. First-entry Franchise/League loading placeholders are retained as non-blocking perceived-latency polish; they do not hold the capability roadmap unless measured latency becomes materially excessive.
+
+**Active roadmap position:** resume `directives/20260928_SIMULATION_2_0_PROGRAM.md` at the week-by-week current-season canonical engine. Preserve the accepted sequence rather than inventing a replacement program:
+
+1. week-by-week current-season engine using immutable completed results plus governed ROS Forecast distributions and the actual remaining fantasy schedule;
+2. legal lineup optimization, availability/missed-game uncertainty, bye handling, empty-slot behavior, and legal bench substitution;
+3. finish/seed distributions and the full league-governed postseason outputs on top of that weekly engine, retaining the already-accepted ordinary playoff/championship estimate behavior;
+4. governed counterfactual competitive-outcome deltas using common worlds/selective recomputation where valid;
+5. team-of-origin future-pick distributions under actual league draft-order rules;
+6. replayable Multiverse/common-world explainability and representative tail outcomes;
+7. progressive scenario computation plus dependency-based selective recomputation for interactive consumers;
+8. convergence study and PIT calibration before broader Simulation 2.0 authority closeout.
+
+After the Simulation 2.0 program reaches its promotion gates, continue the accepted higher-level sequence: origin-aware draft-pick Value -> Long-Term Intrinsic -> PIT historical market evidence -> League Market / Owner Intelligence -> Trade Decision -> Market/Search optimization -> intelligence-surface exploitation.
+
+Do not let the non-blocking first-navigation loading polish displace the Simulation roadmap. Address it opportunistically through prefetch/cached-layout/skeleton work when measured evidence justifies the interruption.
