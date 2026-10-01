@@ -343,6 +343,29 @@ def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
         remaining -= count
 
 
+def _numpy_regular_season_matchup_batches(scores, compiled_schedule, team_count):
+    """Accumulate one bounded batch in the same matchup-addition order."""
+    import numpy as np
+
+    wins = np.zeros((scores.shape[0], team_count), dtype=np.float64)
+    points_for = np.zeros((scores.shape[0], team_count), dtype=np.float64)
+    for matchup_index, (home_idx, away_idx, *_draw_parameters) in enumerate(
+        compiled_schedule
+    ):
+        home = scores[:, 2 * matchup_index]
+        away = scores[:, 2 * matchup_index + 1]
+        points_for[:, home_idx] += home
+        points_for[:, away_idx] += away
+        home_wins = home > away
+        away_wins = away > home
+        ties = ~(home_wins | away_wins)
+        wins[:, home_idx] += home_wins
+        wins[:, away_idx] += away_wins
+        wins[:, home_idx] += ties * 0.5
+        wins[:, away_idx] += ties * 0.5
+    return wins, points_for
+
+
 def simulate_regular_season(
     request: RegularSeasonSimulationInput,
     *,
@@ -409,9 +432,12 @@ def simulate_regular_season(
     )
     score_batch = None
     score_batch_offset = 0
+    numpy_batch_wins = None
+    numpy_batch_points = None
     rng_wall_seconds = 0.0
     rng_cpu_seconds = 0.0
     matchup_wall_seconds = 0.0
+    matchup_cpu_seconds = 0.0
     aggregation_wall_seconds = 0.0
     profile_sample_interval = 100
     profile_sample_count = 0
@@ -441,39 +467,55 @@ def simulate_regular_season(
                     rng_ended = _profile_clock()
                     rng_wall_seconds += rng_ended[0] - rng_started[0]
                     rng_cpu_seconds += rng_ended[1] - rng_started[1]
+                matchup_started = _profile_clock() if profile_enabled else None
+                numpy_batch_wins, numpy_batch_points = (
+                    _numpy_regular_season_matchup_batches(
+                        score_batch, compiled_schedule, team_count
+                    )
+                )
+                if matchup_started is not None:
+                    matchup_ended = _profile_clock()
+                    matchup_wall_seconds += matchup_ended[0] - matchup_started[0]
+                    matchup_cpu_seconds += matchup_ended[1] - matchup_started[1]
                 score_batch_offset = 0
-            trial_scores = score_batch[score_batch_offset]
+            trial_wins = numpy_batch_wins[score_batch_offset].tolist()
+            trial_points = numpy_batch_points[score_batch_offset].tolist()
             score_batch_offset += 1
         else:
-            trial_scores = None
+            trial_wins = [0.0] * team_count
+            trial_points = [0.0] * team_count
         sample_trial = bool(
             profile_enabled and trial_index % profile_sample_interval == 0
         )
-        matchup_started = _profile_wall_clock() if sample_trial else None
-        for matchup_index, (home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev) in enumerate(compiled_schedule):
-            if trial_scores is None:
+        sample_weight = min(
+            profile_sample_interval,
+            request.simulation_count - trial_index,
+        )
+        matchup_started = (
+            _profile_wall_clock() if sample_trial and not is_batched else None
+        )
+        if not is_batched:
+            wins = trial_wins
+            points_for = trial_points
+            for home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev in compiled_schedule:
                 home = home_mean if home_stddev == 0 else gauss(home_mean, home_stddev)
                 away = away_mean if away_stddev == 0 else gauss(away_mean, away_stddev)
                 home = floor_at_zero(0.0, home)
                 away = floor_at_zero(0.0, away)
-            else:
-                home = float(trial_scores[2 * matchup_index])
-                away = float(trial_scores[2 * matchup_index + 1])
-            points_for[home_idx] += home
-            points_for[away_idx] += away
-            if home > away:
-                wins[home_idx] += 1.0
-            elif away > home:
-                wins[away_idx] += 1.0
-            else:
-                wins[home_idx] += 0.5
-                wins[away_idx] += 0.5
+                points_for[home_idx] += home
+                points_for[away_idx] += away
+                if home > away:
+                    wins[home_idx] += 1.0
+                elif away > home:
+                    wins[away_idx] += 1.0
+                else:
+                    wins[home_idx] += 0.5
+                    wins[away_idx] += 0.5
+        else:
+            wins = trial_wins
+            points_for = trial_points
         if matchup_started is not None:
             matchup_ended = _profile_wall_clock()
-            sample_weight = min(
-                profile_sample_interval,
-                request.simulation_count - trial_index,
-            )
             matchup_wall_seconds += (matchup_ended - matchup_started) * sample_weight
         aggregation_started = _profile_wall_clock() if sample_trial else None
         standings = sorted(ranking_indexes, key=lambda index: (-wins[index], -points_for[index], team_ids[index]))
@@ -564,12 +606,13 @@ def simulate_regular_season(
         result_ended = _profile_clock()
         _logger.info(
             "FSFFL simulation profile phase=kernel_summary trials=%s rng_protocol=%s batch=%s "
-            "rng_wall=%.6f rng_cpu=%.6f matchup_wall_estimate=%.6f "
+            "rng_wall=%.6f rng_cpu=%.6f matchup_wall=%.6f matchup_cpu=%.6f "
             "standings_playoff_aggregation_wall_estimate=%.6f sample_interval=%s samples=%s "
             "result_materialization_wall=%.6f result_materialization_cpu=%.6f",
             request.simulation_count, request.rng_protocol, batch_size,
             rng_wall_seconds, rng_cpu_seconds, matchup_wall_seconds,
-            aggregation_wall_seconds, profile_sample_interval, profile_sample_count,
+            matchup_cpu_seconds, aggregation_wall_seconds, profile_sample_interval,
+            profile_sample_count,
             result_ended[0] - result_started[0], result_ended[1] - result_started[1],
         )
     return result

@@ -12,6 +12,7 @@ from fsffl.team_utility import (
 from fsffl.team_utility.simulation import (
     NUMPY_PCG64_BATCHED_GAUSS_V1,
     PYTHON_RANDOM_GAUSS_V1,
+    _numpy_regular_season_matchup_batches,
 )
 
 
@@ -221,6 +222,49 @@ def test_numpy_rng_preserves_zero_variance_and_floor_semantics() -> None:
     )
     assert [row.expected_wins for row in legacy.outcomes] == [row.expected_wins for row in numpy_result.outcomes]
     assert [row.playoff_probability for row in legacy.outcomes] == [row.playoff_probability for row in numpy_result.outcomes]
+
+
+def test_numpy_matchup_batch_preserves_scalar_addition_order_and_ties() -> None:
+    import numpy as np
+
+    compiled_schedule = (
+        (0, 1, 0.0, 0.0, 0.0, 0.0),
+        (0, 2, 0.0, 0.0, 0.0, 0.0),
+        (1, 2, 0.0, 0.0, 0.0, 0.0),
+    )
+    scores = np.asarray(
+        (
+            (1.0, 1.0, 3.0, 2.0, 2.0, 2.0),
+            (0.0, 4.0, 1.5, 1.0, 7.0, 6.0),
+        ),
+        dtype=np.float64,
+    )
+
+    actual_wins, actual_points = _numpy_regular_season_matchup_batches(
+        scores, compiled_schedule, team_count=3
+    )
+    expected_wins = []
+    expected_points = []
+    for row in scores:
+        wins = [0.0, 0.0, 0.0]
+        points = [0.0, 0.0, 0.0]
+        for index, (home, away, *_draw_parameters) in enumerate(compiled_schedule):
+            home_score = float(row[2 * index])
+            away_score = float(row[2 * index + 1])
+            points[home] += home_score
+            points[away] += away_score
+            if home_score > away_score:
+                wins[home] += 1.0
+            elif away_score > home_score:
+                wins[away] += 1.0
+            else:
+                wins[home] += 0.5
+                wins[away] += 0.5
+        expected_wins.append(wins)
+        expected_points.append(points)
+
+    assert actual_wins.tolist() == expected_wins
+    assert actual_points.tolist() == expected_points
 
 
 def test_50000_run_production_output_remains_bit_identical() -> None:
