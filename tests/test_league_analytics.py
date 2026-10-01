@@ -22,13 +22,22 @@ CONTEXT = AnalyticsContext(
 )
 
 
-def _row(team_id: str, *, wins=None, portfolio=None, scale=None, concept="intrinsic"):
+def _row(
+    team_id: str,
+    *,
+    wins=None,
+    bye=None,
+    portfolio=None,
+    scale=None,
+    concept="intrinsic",
+):
     return LeagueTeamAnalyticsRow(
         team_id=team_id,
         display_name=team_id.upper(),
         player_count=18,
         draft_pick_count=2,
         expected_wins=wins,
+        bye_probability=bye,
         asset_portfolio_mean=portfolio,
         asset_value_scale=scale,
         asset_value_concept=concept if portfolio is not None else None,
@@ -51,6 +60,26 @@ def test_rank_named_metric_without_master_score() -> None:
         (1, "b", 10.0),
         (2, "a", 8.0),
         (3, "c", 6.0),
+    ]
+
+
+def test_rank_bye_probability_as_named_competitive_metric() -> None:
+    view = LeagueAnalyticsView(
+        context=CONTEXT,
+        teams=(
+            _row("a", wins=8.0, bye=0.15),
+            _row("b", wins=10.0, bye=0.55),
+            _row("c", wins=6.0, bye=0.02),
+        ),
+    )
+
+    ranking = rank_league_metric(view, metric=LeagueMetric.BYE_PROBABILITY)
+
+    assert ranking.direction == MetricDirection.HIGHER_IS_BETTER
+    assert [(row.team_id, row.value) for row in ranking.rows] == [
+        ("b", 0.55),
+        ("a", 0.15),
+        ("c", 0.02),
     ]
 
 

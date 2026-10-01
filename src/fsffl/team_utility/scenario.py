@@ -13,6 +13,7 @@ class CompetitiveOutcomeDelta(FrozenModel):
     expected_wins: float | None = None
     expected_remaining_wins: float | None = None
     playoff_probability: float | None = None
+    bye_probability: float | None = None
     first_place_probability: float | None = None
     championship_probability: float | None = None
 
@@ -80,6 +81,10 @@ def compare_team_utility_vectors(
             playoff_probability=_optional_delta(
                 scenario.competitive_outcome.playoff_probability,
                 baseline.competitive_outcome.playoff_probability,
+            ),
+            bye_probability=_optional_delta(
+                scenario.competitive_outcome.bye_probability,
+                baseline.competitive_outcome.bye_probability,
             ),
             first_place_probability=scenario.competitive_outcome.first_place_probability - baseline.competitive_outcome.first_place_probability,
             championship_probability=_optional_delta(

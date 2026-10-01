@@ -212,7 +212,12 @@ class TeamCompetitiveOutcome(FrozenModel):
     expected_remaining_wins: Annotated[float, Field(ge=0)] | None = None
     wins_stddev: Annotated[float, Field(ge=0)]
     playoff_probability: Annotated[float, Field(ge=0, le=1)] | None = None
+    playoff_seed_probabilities: tuple[
+        Annotated[float, Field(ge=0, le=1)], ...
+    ] | None = None
     playoff_unavailability_reason: str | None = None
+    bye_probability: Annotated[float, Field(ge=0, le=1)] | None = None
+    bye_unavailability_reason: str | None = None
     first_place_probability: Annotated[float, Field(ge=0, le=1)]
     championship_probability: Annotated[float | None, Field(ge=0, le=1)] = None
     championship_unavailability_reason: str | None = None
@@ -231,6 +236,7 @@ class TeamFinishDistribution(FrozenModel):
 
     team_id: str
     expected_finish: Annotated[float, Field(ge=1)]
+    median_finish: Annotated[int, Field(ge=1)] | None = None
     rank_probabilities: tuple[float, ...]
     simulation_count: Annotated[int, Field(ge=1)]
     simulation_model_version: str
@@ -247,6 +253,10 @@ class TeamFinishDistribution(FrozenModel):
             raise ValueError("finish probabilities must sum to one")
         if self.expected_finish > len(self.rank_probabilities):
             raise ValueError("expected finish cannot exceed team count")
+        if self.median_finish is not None and self.median_finish > len(
+            self.rank_probabilities
+        ):
+            raise ValueError("median finish cannot exceed team count")
         return self
 
 
@@ -705,6 +715,20 @@ def simulate_regular_season(
         )
     )
     playoff_supported = playoff_unavailability_reason is None and basic_playoff_config_supported
+    bye_unavailability_reason = (
+        playoff_unavailability_reason
+        if not playoff_supported
+        else (
+            "playoff_start_week_unavailable"
+            if request.playoff_rules is None
+            else (
+                None
+                if request.playoff_rules.effective_matchups()
+                else "playoff_rules_unsupported:bracket_structure"
+            )
+        )
+    )
+    bye_supported = bye_unavailability_reason is None
     championship_supported = championship_unavailability_reason is None
     playoff_scoring = (
         _playoff_distributions(
@@ -828,25 +852,49 @@ def simulate_regular_season(
     for index, team_id in enumerate(team_ids):
         expected = wins_sum[index] / n
         variance = max(0.0, wins_sq_sum[index] / n - expected * expected)
+        probabilities = tuple(count / n for count in finish_count[index])
+        playoff_seed_probabilities = (
+            probabilities[: request.playoff_team_count]
+            if playoff_supported and request.playoff_team_count is not None
+            else None
+        )
+        bye_probability = (
+            sum(
+                probabilities[seed - 1]
+                for seed in request.playoff_rules.bye_seeds
+            )
+            if bye_supported and request.playoff_rules is not None
+            else None
+        )
         outcomes.append(TeamCompetitiveOutcome(
             team_id=team_id,
             expected_wins=expected,
             expected_remaining_wins=remaining_wins_sum[index] / n,
             wins_stddev=sqrt(variance),
             playoff_probability=(playoff_count[index] / n if playoff_supported else None),
+            playoff_seed_probabilities=playoff_seed_probabilities,
             playoff_unavailability_reason=playoff_unavailability_reason,
+            bye_probability=bye_probability,
+            bye_unavailability_reason=bye_unavailability_reason,
             first_place_probability=first_count[index] / n,
             championship_probability=(champion_count[index] / n if championship_supported else None),
             championship_unavailability_reason=championship_unavailability_reason,
             simulation_count=n,
             simulation_model_version=request.model_version,
         ))
-        probabilities = tuple(count / n for count in finish_count[index])
         expected_finish = sum((rank + 1) * probability for rank, probability in enumerate(probabilities))
+        cumulative = 0.0
+        median_finish = len(probabilities)
+        for rank, probability in enumerate(probabilities, start=1):
+            cumulative += probability
+            if cumulative >= 0.5:
+                median_finish = rank
+                break
         finish_distributions.append(
             TeamFinishDistribution(
                 team_id=team_id,
                 expected_finish=expected_finish,
+                median_finish=median_finish,
                 rank_probabilities=probabilities,
                 simulation_count=n,
                 simulation_model_version=request.model_version,

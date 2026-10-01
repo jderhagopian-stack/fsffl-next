@@ -207,6 +207,9 @@ def test_simulation_is_presented_without_recomputing_or_inventing_a_power_score(
             expected_wins=10.2,
             wins_stddev=1.4,
             playoff_probability=0.82,
+            playoff_seed_probabilities=(0.55, 0.27),
+            bye_probability=0.55,
+            bye_unavailability_reason=None,
             first_place_probability=0.55,
             championship_probability=0.31,
             simulation_count=50_000,
@@ -224,8 +227,18 @@ def test_simulation_is_presented_without_recomputing_or_inventing_a_power_score(
         ),
     )
     finish = (
-        SimpleNamespace(team_id="a", expected_finish=1.2),
-        SimpleNamespace(team_id="b", expected_finish=1.8),
+        SimpleNamespace(
+            team_id="a",
+            expected_finish=1.2,
+            median_finish=1,
+            rank_probabilities=(0.80, 0.20),
+        ),
+        SimpleNamespace(
+            team_id="b",
+            expected_finish=1.8,
+            median_finish=2,
+            rank_probabilities=(0.20, 0.80),
+        ),
     )
     team_views = (
         SimpleNamespace(
@@ -263,6 +276,12 @@ def test_simulation_is_presented_without_recomputing_or_inventing_a_power_score(
     assert payload["simulation"]["status"] == "ready"
     assert payload["simulation"]["simulation_count"] == 50_000
     assert rows["a"]["playoff_probability"] == 0.82
+    assert rows["a"]["playoff_seed_probabilities"] == [0.55, 0.27]
+    assert rows["a"]["bye_probability"] == 0.55
+    assert rows["a"]["expected_finish"] == pytest.approx(1.2)
+    assert rows["a"]["median_finish"] == 1
+    assert rows["a"]["finish_rank_probabilities"] == [0.80, 0.20]
+    assert rows["b"]["playoff_seed_probabilities"] is None
     assert rows["a"]["competitive_state"] == "contender"
     assert rows["a"]["current_rank"] == 1
     assert rows["a"]["movement_vs_current_rank"] == pytest.approx(-0.2)

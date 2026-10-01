@@ -22,6 +22,7 @@ def vector(
     wins: float,
     playoff: float,
     first: float,
+    bye: float | None = None,
     drop: float,
     bench: int,
     mean_value: float,
@@ -36,6 +37,7 @@ def vector(
             expected_wins=wins,
             wins_stddev=1.0,
             playoff_probability=playoff,
+            bye_probability=bye,
             first_place_probability=first,
             simulation_count=50_000,
             simulation_model_version="sim-v1",
@@ -62,11 +64,20 @@ def vector(
 
 
 def test_scenario_delta_keeps_channels_separate() -> None:
-    baseline = vector(wins=7.0, playoff=0.45, first=0.10, drop=8.0, bench=4, mean_value=5000.0)
+    baseline = vector(
+        wins=7.0,
+        playoff=0.45,
+        first=0.10,
+        bye=0.08,
+        drop=8.0,
+        bench=4,
+        mean_value=5000.0,
+    )
     scenario = vector(
         wins=8.2,
         playoff=0.62,
         first=0.18,
+        bye=0.20,
         drop=6.5,
         bench=5,
         mean_value=5250.0,
@@ -78,6 +89,7 @@ def test_scenario_delta_keeps_channels_separate() -> None:
     assert result.competitive is not None
     assert result.competitive.expected_wins == pytest.approx(1.2)
     assert result.competitive.playoff_probability == pytest.approx(0.17)
+    assert result.competitive.bye_probability == pytest.approx(0.12)
     assert result.resilience is not None
     assert result.resilience.largest_single_player_lineup_drop == pytest.approx(-1.5)
     assert result.resilience.bench_forecasted_count == 1

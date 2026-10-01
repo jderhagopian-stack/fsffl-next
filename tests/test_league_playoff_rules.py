@@ -148,6 +148,17 @@ def test_finish_rank_estimates_playoff_odds_without_exact_playoff_rules() -> Non
 
     assert all(row.playoff_probability is not None for row in result.outcomes)
     assert sum(row.playoff_probability or 0.0 for row in result.outcomes) == 6.0
+    assert all(row.playoff_seed_probabilities is not None for row in result.outcomes)
+    assert all(
+        sum(row.playoff_seed_probabilities or ()) == pytest.approx(
+            row.playoff_probability or 0.0
+        )
+        for row in result.outcomes
+    )
+    assert all(row.bye_probability is None for row in result.outcomes)
+    assert {row.bye_unavailability_reason for row in result.outcomes} == {
+        "playoff_start_week_unavailable"
+    }
     assert all(row.championship_probability is None for row in result.outcomes)
     assert {row.playoff_unavailability_reason for row in result.outcomes} == {None}
     assert {
@@ -161,6 +172,8 @@ def test_missing_basic_playoff_count_withholds_estimates_with_specific_reason() 
     )
 
     assert all(row.playoff_probability is None for row in result.outcomes)
+    assert all(row.playoff_seed_probabilities is None for row in result.outcomes)
+    assert all(row.bye_probability is None for row in result.outcomes)
     assert all(row.championship_probability is None for row in result.outcomes)
     assert {row.playoff_unavailability_reason for row in result.outcomes} == {
         "playoff_settings_unavailable"
@@ -178,6 +191,18 @@ def test_basic_settings_compile_standard_seeded_championship_bracket(team_count)
     assert rules.bracket_authority == "settings_derived_standard"
     assert result.championship_probability_provenance == "settings_derived_standard"
     assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert all(row.playoff_seed_probabilities is not None for row in result.outcomes)
+    assert all(
+        sum(row.playoff_seed_probabilities or ()) == pytest.approx(
+            row.playoff_probability or 0.0
+        )
+        for row in result.outcomes
+    )
+    assert all(row.bye_probability is not None for row in result.outcomes)
+    expected_byes = rules.bye_count
+    assert sum(row.bye_probability or 0.0 for row in result.outcomes) == pytest.approx(
+        expected_byes
+    )
     assert all(row.championship_probability is not None for row in result.outcomes)
     assert sum(row.championship_probability or 0.0 for row in result.outcomes) == 1.0
 
@@ -189,6 +214,9 @@ def test_unsupported_reseeding_keeps_qualification_but_withholds_title() -> None
     result = simulate_regular_season(_simulation_request(6, rules=reseeded))
 
     assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert all(row.playoff_seed_probabilities is not None for row in result.outcomes)
+    assert all(row.bye_probability is not None for row in result.outcomes)
+    assert sum(row.bye_probability or 0.0 for row in result.outcomes) == pytest.approx(2.0)
     assert all(row.championship_probability is None for row in result.outcomes)
     assert {row.playoff_unavailability_reason for row in result.outcomes} == {None}
     assert {
@@ -205,6 +233,11 @@ def test_unsupported_qualification_seeding_withholds_both_playoff_outputs() -> N
     )
 
     assert all(row.playoff_probability is None for row in result.outcomes)
+    assert all(row.playoff_seed_probabilities is None for row in result.outcomes)
+    assert all(row.bye_probability is None for row in result.outcomes)
+    assert {
+        row.bye_unavailability_reason for row in result.outcomes
+    } == {"playoff_rules_unsupported:seeding_policy"}
     assert all(row.championship_probability is None for row in result.outcomes)
     assert {
         row.playoff_unavailability_reason for row in result.outcomes
