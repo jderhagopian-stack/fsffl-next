@@ -103,6 +103,7 @@ class CompletedMatchup(FrozenModel):
 class RegularSeasonSimulationInput(FrozenModel):
     scoring: tuple[TeamScoringDistribution, ...] = ()
     weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = ()
+    playoff_weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = ()
     completed_matchups: tuple[CompletedMatchup, ...] = ()
     schedule: tuple[ScheduledMatchup, ...]
     playoff_team_count: Annotated[int, Field(ge=1)] | None = None
@@ -127,9 +128,17 @@ class RegularSeasonSimulationInput(FrozenModel):
         weekly_keys = [(item.week, item.team_id) for item in self.weekly_scoring]
         if len(weekly_keys) != len(set(weekly_keys)):
             raise ValueError("weekly team scoring distributions must have unique week/team keys")
+        playoff_weekly_keys = [
+            (item.week, item.team_id) for item in self.playoff_weekly_scoring
+        ]
+        if len(playoff_weekly_keys) != len(set(playoff_weekly_keys)):
+            raise ValueError(
+                "playoff weekly team scoring distributions must have unique week/team keys"
+            )
         known = (
             set(ids)
             | {item.team_id for item in self.weekly_scoring}
+            | {item.team_id for item in self.playoff_weekly_scoring}
             | {
                 team_id
                 for matchup in self.completed_matchups
@@ -171,6 +180,28 @@ class RegularSeasonSimulationInput(FrozenModel):
             missing = sorted(required_weekly - set(weekly_keys))
             extra = sorted(set(weekly_keys) - required_weekly)
             raise ValueError(f"weekly scoring must exactly cover schedule; missing={missing} extra={extra}")
+        if self.playoff_weekly_scoring:
+            if self.playoff_rules is None:
+                raise ValueError("playoff weekly scoring requires configured playoff rules")
+            required_playoff_weekly = {
+                (week, team_id)
+                for week in self.playoff_rules.round_weeks
+                for team_id in known
+            }
+            if set(playoff_weekly_keys) != required_playoff_weekly:
+                missing = sorted(required_playoff_weekly - set(playoff_weekly_keys))
+                extra = sorted(set(playoff_weekly_keys) - required_playoff_weekly)
+                raise ValueError(
+                    "playoff weekly scoring must exactly cover configured playoff weeks; "
+                    f"missing={missing} extra={extra}"
+                )
+        if (
+            self.playoff_rules is not None
+            and self.playoff_rules.simulation_unavailability_reason() is None
+            and not self.scoring
+            and not self.playoff_weekly_scoring
+        ):
+            raise ValueError("configured championship simulation requires playoff scoring evidence")
         return self
 
 
@@ -303,11 +334,32 @@ def regular_season_game_counts(league_state: LeagueState) -> dict[str, int]:
     return counts
 
 
+def resolved_playoff_rules_from_league_state(
+    league_state: LeagueState,
+) -> LeaguePlayoffRules | None:
+    """Return exact or defensibly settings-derived canonical postseason rules."""
+
+    league_rules = league_state.league.rules
+    playoff_team_count = league_rules.playoff_team_count
+    playoff_rules = league_rules.playoff_rules
+    if (
+        playoff_team_count is not None
+        and playoff_team_count >= 2
+        and playoff_rules is None
+        and league_rules.playoff_start_week is not None
+    ):
+        playoff_rules = _settings_derived_playoff_rules(
+            playoff_team_count, league_rules.playoff_start_week
+        )
+    return playoff_rules
+
+
 def build_regular_season_simulation_input(
     league_state: LeagueState,
     *,
     scoring: tuple[TeamScoringDistribution, ...] = (),
     weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = (),
+    playoff_weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = (),
     simulation_count: int = 50_000,
     seed: int = 20260905,
     model_version: str = "next4-live-season-plus-playoffs-v2",
@@ -321,19 +373,11 @@ def build_regular_season_simulation_input(
         league_state
     )
     playoff_team_count = league_rules.playoff_team_count
-    playoff_rules = league_rules.playoff_rules
-    if (
-        playoff_team_count is not None
-        and playoff_team_count >= 2
-        and playoff_rules is None
-        and league_rules.playoff_start_week is not None
-    ):
-        playoff_rules = _settings_derived_playoff_rules(
-            playoff_team_count, league_rules.playoff_start_week
-        )
+    playoff_rules = resolved_playoff_rules_from_league_state(league_state)
     return RegularSeasonSimulationInput(
         scoring=scoring,
         weekly_scoring=weekly_scoring,
+        playoff_weekly_scoring=playoff_weekly_scoring,
         completed_matchups=completed_matchups,
         schedule=remaining_schedule,
         playoff_team_count=playoff_team_count,
@@ -391,28 +435,42 @@ def _settings_derived_playoff_rules(
     )
 
 
-def _playoff_distributions(team_ids, scoring, weekly_scoring):
+def _playoff_distributions(
+    team_ids,
+    scoring,
+    playoff_weekly_scoring,
+    playoff_rules,
+):
+    if playoff_rules is None:
+        raise ValueError("playoff scoring requires configured playoff rules")
+    if playoff_weekly_scoring:
+        result = {}
+        for week in playoff_rules.round_weeks:
+            rows = []
+            for team_id in team_ids:
+                item = playoff_weekly_scoring.get((week, team_id))
+                if item is None:
+                    raise ValueError(
+                        f"playoff scoring evidence unavailable for {team_id} week {week}"
+                    )
+                rows.append((item.mean_points, item.stddev_points))
+            result[week] = tuple(rows)
+        return result
     if scoring:
-        return tuple((scoring[team_id].mean_points, scoring[team_id].stddev_points) for team_id in team_ids)
-    by_team = {team_id: [] for team_id in team_ids}
-    for item in weekly_scoring.values():
-        by_team[item.team_id].append(item)
-    result = []
-    for team_id in team_ids:
-        rows = by_team[team_id]
-        if not rows:
-            raise ValueError(f"playoff scoring evidence unavailable for {team_id}")
-        mean = sum(item.mean_points for item in rows) / len(rows)
-        variance = sum(item.stddev_points * item.stddev_points for item in rows) / len(rows)
-        result.append((mean, sqrt(max(0.0, variance))))
-    return tuple(result)
+        static = tuple(
+            (scoring[team_id].mean_points, scoring[team_id].stddev_points)
+            for team_id in team_ids
+        )
+        return {week: static for week in playoff_rules.round_weeks}
+    raise ValueError("configured championship simulation requires playoff scoring evidence")
 
 
-def _playoff_game(left, right, playoff_scoring, gauss):
+def _playoff_game(left, right, playoff_scoring, week, gauss):
     left_idx, left_seed = left
     right_idx, right_seed = right
-    left_mean, left_std = playoff_scoring[left_idx]
-    right_mean, right_std = playoff_scoring[right_idx]
+    week_scoring = playoff_scoring[week]
+    left_mean, left_std = week_scoring[left_idx]
+    right_mean, right_std = week_scoring[right_idx]
     left_points = left_mean if left_std == 0 else max(0.0, gauss(left_mean, left_std))
     right_points = right_mean if right_std == 0 else max(0.0, gauss(right_mean, right_std))
     if left_points > right_points:
@@ -441,7 +499,9 @@ def _simulate_configured_champion(standings, playoff_rules, playoff_scoring, gau
             if matchup.participant_b.seed_number is not None
             else winners[matchup.participant_b.winner_of_matchup_id]
         )
-        winners[matchup.matchup_id] = _playoff_game(left, right, playoff_scoring, gauss)
+        winners[matchup.matchup_id] = _playoff_game(
+            left, right, playoff_scoring, matchup.week, gauss
+        )
     return winners[playoff_rules.championship_matchup_id][0]
 
 
@@ -537,10 +597,14 @@ def simulate_regular_season(
     compile_started = _profile_clock() if profile_enabled else None
     by_team = {item.team_id: item for item in request.scoring}
     by_week_team = {(item.week, item.team_id): item for item in request.weekly_scoring}
+    by_playoff_week_team = {
+        (item.week, item.team_id): item for item in request.playoff_weekly_scoring
+    }
     team_ids = tuple(
         sorted(
             set(by_team)
             | {item.team_id for item in request.weekly_scoring}
+            | {item.team_id for item in request.playoff_weekly_scoring}
             | {
                 team_id
                 for matchup in request.completed_matchups
@@ -550,7 +614,6 @@ def simulate_regular_season(
     )
     team_index = {team_id: index for index, team_id in enumerate(team_ids)}
     team_count = len(team_ids)
-    playoff_scoring = _playoff_distributions(team_ids, by_team, by_week_team)
     actual_wins = [0.0] * team_count
     actual_points_for = [0.0] * team_count
     for matchup in request.completed_matchups:
@@ -643,6 +706,16 @@ def simulate_regular_season(
     )
     playoff_supported = playoff_unavailability_reason is None and basic_playoff_config_supported
     championship_supported = championship_unavailability_reason is None
+    playoff_scoring = (
+        _playoff_distributions(
+            team_ids,
+            by_team,
+            by_playoff_week_team,
+            request.playoff_rules,
+        )
+        if championship_supported
+        else None
+    )
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
 
@@ -780,6 +853,11 @@ def simulate_regular_season(
             )
         )
     identity_payload = request.model_dump(mode="json")
+    if not request.playoff_weekly_scoring:
+        # Preserve replay identity for requests whose semantics did not gain
+        # separate postseason evidence; populated postseason evidence remains
+        # fingerprinted in full.
+        identity_payload.pop("playoff_weekly_scoring", None)
     identity_payload["rng_batch_size"] = batch_size
     identity_payload["effective_rng_batch_size"] = batch_size
     input_fingerprint = hashlib.sha256(
