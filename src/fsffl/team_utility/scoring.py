@@ -208,7 +208,14 @@ def build_bye_aware_weekly_team_scoring_panel(
             for item in league_state.nfl_team_byes
             if item.season == league_state.league.season and item.week == week
         )
-    requested_weeks = set(weeks)
+    availability_fact_player_ids_by_week = {
+        week: frozenset(
+            item.player_id
+            for item in league_state.player_week_availability
+            if item.week == week
+        )
+        for week in weeks
+    }
     unavailable_player_ids_by_week = {
         week: frozenset(
             item.player_id
@@ -220,10 +227,6 @@ def build_bye_aware_weekly_team_scoring_panel(
         )
         for week in weeks
     }
-    state_availability_present = any(
-        item.week in requested_weeks
-        for item in league_state.player_week_availability
-    )
 
     cache: dict[tuple[str, frozenset[str]], OptimizedTeamLineup] = {}
     if baseline_lineups:
@@ -265,6 +268,9 @@ def build_bye_aware_weekly_team_scoring_panel(
                     model_version="next4-lineup-v3:bye-aware",
                 )
                 cache[key] = lineup
+            team_week_has_availability_fact = bool(
+                roster_ids & availability_fact_player_ids_by_week[week]
+            )
             rows.append(
                 _weekly_distribution_from_lineup(
                     lineup,
@@ -272,7 +278,7 @@ def build_bye_aware_weekly_team_scoring_panel(
                     latest=latest,
                     model_version=(
                         f"{model_version}:state_weekly_availability"
-                        if state_availability_present
+                        if team_week_has_availability_fact
                         else model_version
                     ),
                 )
