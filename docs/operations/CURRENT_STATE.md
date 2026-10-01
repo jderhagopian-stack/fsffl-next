@@ -1930,3 +1930,7 @@ Do not optimize for an arbitrary “save 40 MB” target with disposable patches
 If attribution instead proves a Forecast/player-history-only owner unrelated to Simulation 2.0, correct that owner narrowly.
 
 Then rerun full CI/review and the controlled batch-500 Render journey with true concurrent foreground reads, full publication/readiness, restart restore, exact RSS/high-water evidence, and rollback. Preserve 50k, semantics, replay/versioning, and legacy Python replay throughout.
+
+
+## 2026-10-01 — Final PR #311 hosted validation unblocked from Work browser
+Exact head review/CI is clean. Work Mode browser policy cannot perform the required exact-host concurrent foreground requests. Management therefore authorizes a short-lived external acceptance runner (prefer GitHub Actions or equivalent repo-owned client) to hit the actual Render private-beta host concurrently during the reversible batch-500 experiment. This is testing infrastructure only, not product architecture. Use existing secure auth/session handling, never expose credentials, and stop only if authenticated external execution is genuinely unavailable. On pass, return directly to Management for #311 adoption; no extra generic review loop.
