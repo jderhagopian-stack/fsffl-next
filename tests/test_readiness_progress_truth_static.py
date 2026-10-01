@@ -60,8 +60,8 @@ def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell
     index = _index()
     shell = _shell()
     assert "/static/forecast_refresh.js?v=20260929-physical-connect1" in index
-    assert "/static/product_shell.js?v=20261001-continuity2" in index
-    assert "/static/home_dashboard.js?v=20261001-continuity2" in index
+    assert "/static/product_shell.js?v=20260929-physical-connect1&c=20261001-continuity2" in index
+    assert "/static/home_dashboard.js?v=20260929-physical-connect1&c=20261001-continuity2" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
     assert "As of " in shell
@@ -242,8 +242,8 @@ def test_continuity_release_busts_recovery_presentation_assets() -> None:
     for script in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
         assert f"/static/{script}?v=20260929-physical-connect1" in index
     assert "/static/session_recovery.js?v=20260929-physical-connect1" in index
-    assert "/static/home_dashboard.js?v=20261001-continuity2" in index
-    assert "/static/product_shell.js?v=20261001-continuity2" in index
+    assert "/static/home_dashboard.js?v=20260929-physical-connect1&c=20261001-continuity2" in index
+    assert "/static/product_shell.js?v=20260929-physical-connect1&c=20261001-continuity2" in index
 
 
 def test_last_good_recovery_is_compact_and_never_uses_blocking_takeover_copy() -> None:
@@ -255,9 +255,9 @@ def test_last_good_recovery_is_compact_and_never_uses_blocking_takeover_copy() -
     assert "home-last-good-status" in home
     assert "league-last-good-status" in league
     assert "franchise-ns-forecast-strip fallback" in franchise
-    assert "Last-good intelligence · update in progress" in home
-    assert "Last-good intelligence · update in progress" in franchise
-    assert "Last-good intelligence · update in progress" in league
+    assert "State current · last-good intelligence" in home
+    assert "State current · last-good intelligence shown" in franchise
+    assert "State current · last-good intelligence" in league
 
     assert "Replacement intelligence is rebuilding." not in home
     assert "Replacement league intelligence is rebuilding." not in league
