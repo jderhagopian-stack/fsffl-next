@@ -240,6 +240,38 @@ def test_exact_weekly_unavailability_triggers_legal_bench_substitution() -> None
     assert next_week.mean_points == pytest.approx(340.0 / 17.0)
 
 
+def test_availability_lineage_is_scoped_to_the_affected_team_week() -> None:
+    state = _state().model_copy(
+        update={
+            "player_week_availability": (
+                PlayerWeekAvailability(
+                    player_id="starter",
+                    week=6,
+                    status=WeeklyAvailabilityStatus.UNAVAILABLE,
+                    provenance=PROV,
+                ),
+            )
+        }
+    )
+    forecasts = (
+        _forecast("starter", 340.0, 68.0),
+        _forecast("bench", 170.0, 51.0),
+        _forecast("opp", 255.0, 60.0),
+    )
+
+    panel = build_bye_aware_weekly_team_scoring_panel(
+        state,
+        forecasts,
+        team_ids=("a", "b"),
+        weeks=(6,),
+        as_of=AS_OF,
+    )
+    by_team = {row.team_id: row for row in panel}
+
+    assert "state_weekly_availability" in by_team["a"].model_version
+    assert "state_weekly_availability" not in by_team["b"].model_version
+
+
 def test_bye_and_exact_unavailability_compose_and_can_leave_explicit_zero_slot() -> None:
     state = _state().model_copy(
         update={
