@@ -13,6 +13,18 @@ def _index() -> str:
     return Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
 
 
+def _home() -> str:
+    return Path("src/fsffl/product/static/home_dashboard.js").read_text(encoding="utf-8")
+
+
+def _franchise() -> str:
+    return Path("src/fsffl/product/static/my_team_dashboard.js").read_text(encoding="utf-8")
+
+
+def _league() -> str:
+    return Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+
+
 def test_shared_readiness_maps_authoritative_lifecycle_phases() -> None:
     source = _shell()
     assert "state.intelligence=await api('/api/intelligence/status')" in source
@@ -48,13 +60,15 @@ def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell
     index = _index()
     shell = _shell()
     assert "/static/forecast_refresh.js?v=20260929-physical-connect1" in index
-    assert "/static/product_shell.js?v=20260929-physical-connect1" in index
-    assert "/static/home_dashboard.js?v=20260929-physical-connect1" in index
+    assert "/static/product_shell.js?v=20261001-continuity2" in index
+    assert "/static/home_dashboard.js?v=20261001-continuity2" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
     assert "As of " in shell
     assert "const fsfflStaticVersion='20260927-dualstate1';" in shell
-    assert "const leagueAtlasStaticVersion='20260927-dualstate1';" in shell
+    assert "const leagueAtlasStaticVersion='20261001-continuity2';" in shell
+    assert "const homeNorthStarStaticVersion='20261001-continuity2';" in shell
+    assert "const franchiseNorthStarStaticVersion='20261001-continuity2';" in shell
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
@@ -223,9 +237,36 @@ def test_dual_state_rebuild_never_renders_false_green_current_status() -> None:
     assert "✓ Intelligence current" in markup
 
 
-def test_first_load_release_busts_only_changed_session_flow_assets() -> None:
+def test_continuity_release_busts_recovery_presentation_assets() -> None:
     index = _index()
     for script in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
         assert f"/static/{script}?v=20260929-physical-connect1" in index
-    for script in ("session_recovery.js", "home_dashboard.js", "product_shell.js"):
-        assert f"/static/{script}?v=20260929-physical-connect1" in index
+    assert "/static/session_recovery.js?v=20260929-physical-connect1" in index
+    assert "/static/home_dashboard.js?v=20261001-continuity2" in index
+    assert "/static/product_shell.js?v=20261001-continuity2" in index
+
+
+def test_last_good_recovery_is_compact_and_never_uses_blocking_takeover_copy() -> None:
+    home = _home()
+    franchise = _franchise()
+    league = _league()
+    shell = _shell()
+
+    assert "home-last-good-status" in home
+    assert "league-last-good-status" in league
+    assert "franchise-ns-forecast-strip fallback" in franchise
+    assert "Last-good intelligence · update in progress" in home
+    assert "Last-good intelligence · update in progress" in franchise
+    assert "Last-good intelligence · update in progress" in league
+
+    assert "Replacement intelligence is rebuilding." not in home
+    assert "Replacement league intelligence is rebuilding." not in league
+    assert "Restoring your franchise…" not in franchise
+    assert "franchise-ns-loading" not in franchise.split(
+        "async function loadFranchiseNorthStar()", 1
+    )[1].split("window.renderFsfflMyTeam", 1)[0]
+
+    # Recovery status remains secondary to the ordinary content and shared readiness.
+    assert "fsffl-shared-readiness-strip" in shell
+    assert "panel.innerHTML=staleBanner+laAtlasHeader()" in league
+    assert "renderFranchiseNorthStar();" in franchise
