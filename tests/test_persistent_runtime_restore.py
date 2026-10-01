@@ -2129,6 +2129,34 @@ def test_same_state_working_artifacts_never_gain_restart_authority_before_manife
     assert after_restart.value_evidence is not None
 
 
+def test_async_context_checkpoint_preserves_published_generation_identity() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    generation_id = "hosted-published-generation"
+    persist_runtime_snapshot(
+        persistence,
+        user_id="checkpoint-generation",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=_stale_forecast_without_first_party_fumbles_lost(state),
+        value_evidence=_empty_value(state),
+        publication_generation_id=generation_id,
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("checkpoint-generation")
+    assert restored.publication_generation_id == generation_id
+
+    # Ordinary asynchronous runtime checkpoints must preserve the generation
+    # committed by publication instead of synthesizing a new one from artifact keys.
+    runtime._checkpoint_async("checkpoint-generation", restored)
+    assert runtime.wait_for_checkpoint("checkpoint-generation", timeout=2.0)
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user("checkpoint-generation")
+    assert after_restart.publication_generation_id == generation_id
+
+
 class BlockingPublicationPersistence(MemoryPersistence):
     """Pause one named generation after its manifest write for race testing."""
 
