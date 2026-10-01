@@ -1206,7 +1206,7 @@ def test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layer
     # A direct refresh owns its own State sync. Once that sync reaches a different
     # State, persist the new job identity before downstream phases so a restart can
     # match the durable job to the State it was building.
-    manually_synced = _state("a", minute=3)
+    manually_synced = _state("a", team_suffix=" manual-change", minute=3)
     state_to_load[0] = manually_synced
     manual_refresh = client.post("/api/intelligence/jobs")
     assert manual_refresh.status_code == 200
