@@ -372,9 +372,14 @@ def run_state_first_restored_refresh_acceptance(
             f"restored refresh Simulation foreground probe failed: {surface_error[0]}"
         )
 
-    if observed_surface.get("readiness_status") != "rebuilding":
+    if (
+        observed_surface.get("reconciliation_status") != "running"
+        or observed_surface.get("working_generation_active") is not True
+        or observed_surface.get("readiness_status") != "full"
+    ):
         raise StateFirstAcceptanceError(
-            f"restored refresh did not expose rebuilding readiness during Simulation: {observed_surface}"
+            "restored refresh did not preserve full published readiness while "
+            f"reporting working-generation progress: {observed_surface}"
         )
     if observed_surface.get("state_id") != before.get("state_id"):
         raise StateFirstAcceptanceError(
@@ -775,10 +780,14 @@ def run_state_first_production_acceptance(
             cold_surface = probe_surface("cold_surfaces_during_initial_reconciliation")
             if (
                 cold_surface is not None
-                and cold_surface.get("readiness_status") != "rebuilding"
+                and (
+                    cold_surface.get("reconciliation_status") != "running"
+                    or cold_surface.get("working_generation_active") is not True
+                )
             ):
                 raise StateFirstAcceptanceError(
-                    "clean first-run did not expose visible intelligence progress: "
+                    "clean first-run did not expose working-generation progress "
+                    "independently of published readiness: "
                     f"{cold_surface}"
                 )
             if history_probe is not None:
@@ -1096,10 +1105,17 @@ def run_state_first_production_acceptance(
 
     active_surface = probe_surface("reload_during_active_reconciliation")
     if working_seen and active_surface is not None:
-        if active_surface.get("readiness_status") != "rebuilding":
+        expected_published_readiness = (
+            before_auto.get("capability_readiness") or {}
+        ).get("overall_status")
+        if (
+            active_surface.get("reconciliation_status") != "running"
+            or active_surface.get("working_generation_active") is not True
+            or active_surface.get("readiness_status") != expected_published_readiness
+        ):
             raise StateFirstAcceptanceError(
-                "active reconciliation did not report published-generation rebuilding: "
-                f"{active_surface}"
+                "active reconciliation did not preserve published readiness while "
+                f"reporting replacement progress: {active_surface}"
             )
         before_generation = before_auto.get("publication_generation_id")
         active_generation = active_surface.get("publication_generation_id")
@@ -1417,9 +1433,14 @@ def run_state_first_production_acceptance(
         sleep(0.1)
     same_active = probe_surface("same_state_during_active_reconciliation")
     if store.working_generation_active(user_id) and same_active is not None:
-        if same_active.get("readiness_status") != "rebuilding":
+        if (
+            same_active.get("reconciliation_status") != "running"
+            or same_active.get("working_generation_active") is not True
+            or same_active.get("readiness_status") != "full"
+        ):
             raise StateFirstAcceptanceError(
-                "same-State working generation was not reported as rebuilding"
+                "same-State working generation did not preserve full published "
+                f"readiness with separate reconciliation progress: {same_active}"
             )
         if (
             same_active.get("publication_generation_id")
