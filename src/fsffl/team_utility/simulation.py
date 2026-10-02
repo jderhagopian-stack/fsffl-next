@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from array import array
 import hashlib
 import json
 from enum import StrEnum
@@ -286,11 +287,105 @@ class TeamFinishDistribution(FrozenModel):
         return self
 
 
+class MultiverseWorldTeamOutcome(FrozenModel):
+    """Compact final-season summary for one team in one selected world."""
+
+    team_id: str
+    final_wins: float
+    points_for: Annotated[float, Field(ge=0)]
+    regular_season_rank: Annotated[int, Field(ge=1)]
+    playoff_seed: Annotated[int, Field(ge=1)] | None = None
+    made_playoffs: bool | None = None
+    champion: bool | None = None
+
+
+class MultiverseNotableMatchup(FrozenModel):
+    """Future matchup fact used to explain an upset or blowout exemplar."""
+
+    week: Annotated[int, Field(ge=1)]
+    home_team_id: str
+    away_team_id: str
+    home_points: Annotated[float, Field(ge=0)]
+    away_points: Annotated[float, Field(ge=0)]
+    margin: Annotated[float, Field(ge=0)]
+    expected_home_points: Annotated[float, Field(ge=0)]
+    expected_away_points: Annotated[float, Field(ge=0)]
+    expected_underdog_disadvantage: Annotated[float, Field(ge=0)] = 0.0
+
+
+class MultiverseRarityContext(FrozenModel):
+    """Empirical rarity from the same canonical Monte Carlo run."""
+
+    basis: Literal[
+        "representative_typicality",
+        "empirical_upper_tail",
+        "empirical_lower_tail",
+        "empirical_event_frequency",
+    ]
+    empirical_probability: Annotated[float, Field(ge=0, le=1)] | None = None
+    empirical_percentile: Annotated[float, Field(ge=0, le=1)] | None = None
+    sample_count: Annotated[int, Field(ge=1)]
+    metric_value: float | None = None
+    label: Literal[
+        "representative", "common", "plausible", "unusual", "rare", "extreme"
+    ]
+
+
+class MultiverseWorldExample(FrozenModel):
+    """Bounded replayable exemplar selected from the authoritative worlds."""
+
+    category: Literal[
+        "expected_like",
+        "plausible_upside",
+        "plausible_downside",
+        "extreme_tail",
+        "biggest_blowout",
+        "biggest_upset",
+        "strong_team_misses_playoffs",
+        "low_seed_champion",
+    ]
+    simulation_id: str
+    world_id: str
+    world_index: Annotated[int, Field(ge=0)]
+    root_seed: int
+    rng_protocol: str
+    rng_batch_size: Annotated[int, Field(ge=1)] | None = None
+    simulation_input_fingerprint: str
+    standings: tuple[str, ...]
+    team_outcomes: tuple[MultiverseWorldTeamOutcome, ...]
+    champion_team_id: str | None = None
+    focal_team_id: str | None = None
+    notable_matchup: MultiverseNotableMatchup | None = None
+    selection_metric: float
+    rarity: MultiverseRarityContext
+    model_version: str = "next4-multiverse-world-v1"
+
+    @model_validator(mode="after")
+    def validate_world(self) -> "MultiverseWorldExample":
+        identifiers = (
+            self.simulation_id,
+            self.world_id,
+            self.rng_protocol,
+            self.simulation_input_fingerprint,
+            self.model_version,
+        )
+        if any(not value.strip() for value in identifiers):
+            raise ValueError("Multiverse replay identifiers cannot be blank")
+        if not self.standings or len(set(self.standings)) != len(self.standings):
+            raise ValueError("Multiverse standings must be non-empty and unique")
+        outcome_ids = tuple(item.team_id for item in self.team_outcomes)
+        if set(outcome_ids) != set(self.standings):
+            raise ValueError("Multiverse team outcomes must match standings")
+        return self
+
+
 class RegularSeasonSimulationResult(FrozenModel):
     outcomes: tuple[TeamCompetitiveOutcome, ...]
     finish_distributions: tuple[TeamFinishDistribution, ...] = ()
     future_pick_distributions: tuple[TeamOriginFuturePickDistribution, ...] = ()
     future_pick_unavailability_reason: str | None = None
+    multiverse_worlds: tuple[MultiverseWorldExample, ...] = ()
+    multiverse_model_version: str = "next4-multiverse-v1"
     # Persisted with the Simulation artifact; intentionally absent from per-team product views.
     championship_probability_provenance: Literal["provider_observed_exact", "settings_derived_standard"] | None = None
     simulation_count: Annotated[int, Field(ge=1)]
