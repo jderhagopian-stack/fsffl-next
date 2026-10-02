@@ -1225,6 +1225,344 @@ def test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layer
     assert max(resource.current_rss_bytes, resource.peak_rss_bytes) < DEFAULT_MEMORY_LIMIT_BYTES
 
 
+def test_material_state_refresh_skips_stale_waiting_simulation_and_publishes_once(
+    monkeypatch,
+) -> None:
+    """Reproduce cold partial restore -> State refresh while old Simulation waits."""
+
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    original = _state("race", minute=0)
+    refreshed = _state("race", team_suffix=" material-change", minute=1)
+    assert league_material_fingerprint(original) != league_material_fingerprint(refreshed)
+
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", original)
+    store.select_team("local-beta-user", original.teams[0].team_id)
+
+    observation = SimpleNamespace(as_of=original.as_of, player_id="fixture-player")
+    forecast = SimpleNamespace(
+        raw_forecasts=(observation,),
+        league_scored_forecasts=(observation,),
+        successful_source_ids=("fixture-source",),
+        failed_sources=(),
+        uncertainty_ready=True,
+        evidence_basis="fixture-governed",
+        runtime_result=SimpleNamespace(
+            simulation_authority_blockers=(),
+            partial_fantasy_point_forecasts=(),
+            simulation_material_partial_player_ids=(),
+            fumbles_lost_non_material_partial_player_ids=(),
+            fumbles_lost_material_partial_player_ids=(),
+            family_coverage=(),
+            evaluation_as_of=original.as_of,
+        ),
+    )
+
+    def value_for(state: LeagueState):
+        return SimpleNamespace(
+            league_state_id=state.state_id,
+            estimates=(SimpleNamespace(as_of=state.as_of),),
+            fsffl_cardinal_values=(),
+            pick_variant_market_values=(),
+            successful_source_ids=("fixture-value-source",),
+            coverage=1.0,
+            cardinal_player_coverage=1.0,
+        )
+
+    store.set_forecast_evidence("local-beta-user", forecast)
+    store.set_value_evidence("local-beta-user", value_for(original))
+
+    heavy = HeavyWorkCoordinator(memory_limit_bytes=DEFAULT_MEMORY_LIMIT_BYTES)
+    blocker_entered = Event()
+    release_blocker = Event()
+
+    def hold_state_materialization_lane() -> None:
+        with heavy.claim(kind="state_sync", key="race:state-sync"):
+            blocker_entered.set()
+            assert release_blocker.wait(timeout=5.0)
+
+    blocker = Thread(target=hold_state_materialization_lane, daemon=True)
+    blocker.start()
+    assert blocker_entered.wait(timeout=1.0)
+
+    simulation_calls: list[str] = []
+    replacement_simulation_entered = Event()
+    release_replacement_simulation = Event()
+
+    def simulation_loader(state: LeagueState, _forecast):
+        simulation_calls.append(state.state_id)
+        replacement_simulation_entered.set()
+        assert release_replacement_simulation.wait(timeout=5.0)
+        return SimpleNamespace(
+            league_view=SimpleNamespace(
+                context=SimpleNamespace(league_state_id=state.state_id)
+            ),
+            simulation_result=SimpleNamespace(simulation_count=50_000),
+        )
+
+    forecast_calls: list[str] = []
+
+    def forecast_loader(state: LeagueState):
+        forecast_calls.append(state.state_id)
+        return forecast
+
+    app = create_app(
+        runtime_store=store,
+        forecast_loader=forecast_loader,
+        simulation_loader=simulation_loader,
+        value_loader=value_for,
+        product_capability_reconciler=lambda _runtime: {"status": "full"},
+        heavy_work_coordinator=heavy,
+    )
+    client = TestClient(app)
+
+    first = app.state.start_intelligence_reconciliation("local-beta-user")
+    first_job_id = first["job_id"]
+    deadline = __import__("time").monotonic() + 2.0
+    while __import__("time").monotonic() < deadline:
+        old_job = app.state.intelligence_jobs.get(first_job_id)
+        resource = heavy.snapshot()
+        if (
+            old_job is not None
+            and old_job.phase == IntelligenceJobPhase.RUNNING_SIMULATION
+            and resource.waiting_count >= 1
+        ):
+            break
+        sleep(0.01)
+    assert old_job is not None
+    assert old_job.phase == IntelligenceJobPhase.RUNNING_SIMULATION
+    assert heavy.snapshot().waiting_count >= 1
+    assert simulation_calls == []
+
+    old_generation = store.league_generation("local-beta-user")
+    activated = app.state.activate_state_with_resource_boundary(
+        "local-beta-user",
+        refreshed,
+        reason="test_material_refresh",
+        expected_generation=old_generation,
+        expected_league_id=original.league.league_id,
+    )
+    assert activated is not None
+    assert store.league_generation("local-beta-user") != old_generation
+
+    replacement = app.state.start_intelligence_reconciliation("local-beta-user")
+    replacement_job_id = replacement["job_id"]
+    assert replacement_job_id != first_job_id
+
+    # Polling is observational: it follows the replacement owner without creating
+    # another reconciliation or changing State generation.
+    generation_after_activation = store.league_generation("local-beta-user")
+    for _ in range(3):
+        payload = client.get("/api/intelligence/jobs/current").json()
+        assert payload["job_id"] == replacement_job_id
+        assert store.league_generation("local-beta-user") == generation_after_activation
+
+    release_blocker.set()
+    blocker.join(timeout=2.0)
+
+    # The stale waiter must acquire admission, notice that its generation already
+    # lost authority, and exit before invoking the 50,000-run Simulation loader.
+    deadline = __import__("time").monotonic() + 3.0
+    while __import__("time").monotonic() < deadline:
+        old_job = app.state.intelligence_jobs.get(first_job_id)
+        if old_job is not None and old_job.status == IntelligenceJobStatus.INTERRUPTED:
+            break
+        sleep(0.01)
+    assert old_job is not None
+    assert old_job.status == IntelligenceJobStatus.INTERRUPTED
+    assert old_job.error == "league_generation_changed_before_simulation"
+
+    # The replacement generation is the only owner allowed to spend Simulation.
+    assert replacement_simulation_entered.wait(timeout=3.0)
+    assert simulation_calls == [refreshed.state_id]
+
+    behavioral_entered = Event()
+    release_behavioral = Event()
+
+    def behavioral_waiter() -> None:
+        with heavy.claim(kind="behavioral", key="race:behavioral"):
+            behavioral_entered.set()
+            assert release_behavioral.wait(timeout=5.0)
+
+    behavioral = Thread(target=behavioral_waiter, daemon=True)
+    behavioral.start()
+    deadline = __import__("time").monotonic() + 2.0
+    while __import__("time").monotonic() < deadline:
+        if heavy.snapshot().waiting_count >= 1:
+            break
+        sleep(0.01)
+    assert heavy.snapshot().waiting_count >= 1
+
+    release_replacement_simulation.set()
+    assert behavioral_entered.wait(timeout=3.0)
+    # Behavioral may own the heavy lane immediately after Simulation release, but
+    # it cannot supersede the intelligence lifecycle or erase the attached result.
+    current_job = app.state.intelligence_jobs.current("local-beta-user")
+    assert current_job is not None
+    assert current_job.job_id == replacement_job_id
+    assert current_job.status in {
+        IntelligenceJobStatus.RUNNING,
+        IntelligenceJobStatus.QUEUED,
+    }
+    assert store.league_generation("local-beta-user") == generation_after_activation
+
+    release_behavioral.set()
+    behavioral.join(timeout=2.0)
+    deadline = __import__("time").monotonic() + 5.0
+    while __import__("time").monotonic() < deadline:
+        current_job = app.state.intelligence_jobs.current("local-beta-user")
+        if current_job is not None and current_job.status == IntelligenceJobStatus.COMPLETED:
+            break
+        sleep(0.01)
+
+    assert current_job is not None
+    assert current_job.job_id == replacement_job_id
+    assert current_job.status == IntelligenceJobStatus.COMPLETED
+    assert simulation_calls == [refreshed.state_id]
+    published = store.get("local-beta-user")
+    assert published.league_state is not None
+    assert published.league_state.state_id == refreshed.state_id
+    assert published.simulation_analytics is not None
+    assert published.value_evidence is not None
+    assert store.working_generation_active("local-beta-user") is False
+
+
+def test_equivalent_reconciliation_triggers_coalesce_at_final_job_admission(
+    monkeypatch,
+) -> None:
+    """Two near-simultaneous startup/browser triggers create one owner."""
+
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _state("coalesce")
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", state)
+    store.select_team("local-beta-user", state.teams[0].team_id)
+
+    heavy = HeavyWorkCoordinator(memory_limit_bytes=DEFAULT_MEMORY_LIMIT_BYTES)
+    blocker_entered = Event()
+    release_blocker = Event()
+
+    def hold_lane() -> None:
+        with heavy.claim(kind="state_sync", key="coalesce:blocker"):
+            blocker_entered.set()
+            assert release_blocker.wait(timeout=5.0)
+
+    blocker = Thread(target=hold_lane, daemon=True)
+    blocker.start()
+    assert blocker_entered.wait(timeout=1.0)
+
+    observation = SimpleNamespace(as_of=state.as_of, player_id="fixture-player")
+    forecast = SimpleNamespace(
+        raw_forecasts=(observation,),
+        league_scored_forecasts=(observation,),
+        successful_source_ids=("fixture-source",),
+        failed_sources=(),
+        uncertainty_ready=True,
+        evidence_basis="fixture-governed",
+        runtime_result=SimpleNamespace(
+            simulation_authority_blockers=(),
+            partial_fantasy_point_forecasts=(),
+            simulation_material_partial_player_ids=(),
+            fumbles_lost_non_material_partial_player_ids=(),
+            fumbles_lost_material_partial_player_ids=(),
+            family_coverage=(),
+            evaluation_as_of=state.as_of,
+        ),
+    )
+
+    app = create_app(
+        runtime_store=store,
+        forecast_loader=lambda _state: forecast,
+        simulation_loader=lambda current, _evidence: SimpleNamespace(
+            league_view=SimpleNamespace(
+                context=SimpleNamespace(league_state_id=current.state_id)
+            ),
+            simulation_result=SimpleNamespace(simulation_count=50_000),
+        ),
+        value_loader=lambda current: SimpleNamespace(
+            league_state_id=current.state_id,
+            estimates=(SimpleNamespace(as_of=current.as_of),),
+            fsffl_cardinal_values=(),
+            pick_variant_market_values=(),
+            successful_source_ids=("fixture-value-source",),
+            coverage=1.0,
+            cardinal_player_coverage=1.0,
+        ),
+        product_capability_reconciler=lambda _runtime: {"status": "full"},
+        heavy_work_coordinator=heavy,
+    )
+
+    coordinator = app.state.intelligence_jobs
+    real_start = coordinator.start
+    first_admitted = Event()
+    release_first_start = Event()
+    start_calls = 0
+
+    def delayed_start(**kwargs):
+        nonlocal start_calls
+        start_calls += 1
+        job = real_start(**kwargs)
+        if start_calls == 1:
+            first_admitted.set()
+            assert release_first_start.wait(timeout=5.0)
+        return job
+
+    monkeypatch.setattr(coordinator, "start", delayed_start)
+    results: list[dict[str, object]] = []
+
+    first_thread = Thread(
+        target=lambda: results.append(
+            app.state.start_intelligence_reconciliation("local-beta-user")
+        ),
+        daemon=True,
+    )
+    first_thread.start()
+    assert first_admitted.wait(timeout=2.0)
+
+    second_thread = Thread(
+        target=lambda: results.append(
+            app.state.start_intelligence_reconciliation("local-beta-user")
+        ),
+        daemon=True,
+    )
+    second_thread.start()
+    sleep(0.05)
+    release_first_start.set()
+    first_thread.join(timeout=2.0)
+    second_thread.join(timeout=2.0)
+
+    assert len(results) == 2
+    assert start_calls == 1
+    assert results[0]["job_id"] == results[1]["job_id"]
+    assert {bool(item["coalesced"]) for item in results} == {False, True}
+
+    release_blocker.set()
+    blocker.join(timeout=2.0)
+
+
+def test_stale_generation_cleanup_cannot_erase_replacement_working_generation() -> None:
+    store = PrivateBetaRuntimeStore()
+    original = _state("cleanup", minute=0)
+    replacement = _state("cleanup", team_suffix=" replacement", minute=1)
+    store.set_league_state("u", original)
+    store.select_team("u", original.teams[0].team_id)
+    stale_generation = store.league_generation("u")
+    store.begin_working_generation("u", league_state=original)
+
+    store.set_league_state("u", replacement)
+    replacement_generation = store.league_generation("u")
+    assert replacement_generation != stale_generation
+    store.begin_working_generation("u", league_state=replacement)
+
+    store.abort_working_generation_if_generation(
+        "u",
+        expected_generation=stale_generation,
+    )
+
+    assert store.working_generation_active("u") is True
+    assert store.working_target_state_id("u") == replacement.state_id
+
+
 def test_published_full_readiness_stays_full_during_working_reconciliation(
     monkeypatch,
 ) -> None:

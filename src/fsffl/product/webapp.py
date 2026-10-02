@@ -1624,9 +1624,6 @@ def create_app(
             and same_reconciliation_league
             and same_reconciliation_generation
         )
-        replace_stale_current = bool(
-            active_job_running and not can_coalesce_current
-        )
         if can_coalesce_current:
             return {
                 **_job_payload(active_job),
@@ -1663,6 +1660,66 @@ def create_app(
                 raise IntelligenceJobInterrupted("lifecycle_switch")
             active_working = store.working_context(user_id).league_state
             return active_working or active_published
+
+        def require_heavy_phase_ownership(
+            phase: str,
+            *,
+            expected_state_id: str,
+        ) -> None:
+            """Revalidate lifecycle ownership after heavy-work admission.
+
+            A State refresh can legitimately advance lifecycle identity while an
+            older reconciliation is waiting behind another heavy task. The older
+            waiter must therefore prove that its unpublished generation still owns
+            the target *after* admission and before spending CPU/RSS on Forecast,
+            Simulation, or Value. This is execution sequencing only; model
+            authority and inputs are unchanged.
+            """
+
+            with store.lifecycle_operation(user_id):
+                current_generation = store.league_generation(user_id)
+                published_now = store.get(user_id)
+                published_state = published_now.league_state
+                working_active = store.working_generation_active(user_id)
+                working_target = store.working_target_state_id(user_id)
+                reason = None
+                if current_generation != expected_generation:
+                    reason = "league_generation_changed"
+                elif (
+                    published_state is None
+                    or published_state.league.league_id != starting_league_id
+                ):
+                    reason = "league_changed"
+                elif published_now.selected_team_id != starting_team_id:
+                    reason = "managed_team_changed"
+                elif not working_active:
+                    reason = "working_generation_missing"
+                elif working_target != expected_state_id:
+                    reason = "working_target_changed"
+
+            if reason is not None:
+                # We are still inside the admitted heavy-work lane, but no longer
+                # hold lifecycle identity. Reclaim the just-finished prior phase
+                # before releasing admission to the replacement owner, so a stale
+                # waiter cannot hand transient RSS directly into the next build.
+                reclaim_phase_memory(
+                    f"{user_id}:{expected_state_id}:stale_{phase}_admission"
+                )
+                logging.getLogger("uvicorn.error").info(
+                    "FSFFL intelligence stale heavy phase skipped user=%s "
+                    "phase=%s reason=%s expected_generation=%s "
+                    "current_generation=%s expected_state=%s working_target=%s",
+                    user_id,
+                    phase,
+                    reason,
+                    expected_generation,
+                    current_generation,
+                    expected_state_id,
+                    working_target,
+                )
+                raise IntelligenceJobInterrupted(
+                    f"{reason}_before_{phase}"
+                )
 
         def reconcile(progress) -> str | None:
             log_reconciliation_memory(user_id, "job_start")
@@ -1815,6 +1872,10 @@ def create_app(
                     "forecast",
                     f"{user_id}:{working_state.state_id}:forecast",
                 ):
+                    require_heavy_phase_ownership(
+                        "forecast",
+                        expected_state_id=working_state.state_id,
+                    )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:before_forecast"
                     )
@@ -1849,6 +1910,10 @@ def create_app(
                     "simulation",
                     f"{user_id}:{working_state.state_id}:simulation",
                 ):
+                    require_heavy_phase_ownership(
+                        "simulation",
+                        expected_state_id=working_state.state_id,
+                    )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:before_simulation"
                     )
@@ -1884,6 +1949,10 @@ def create_app(
                     "value",
                     f"{user_id}:{working_state.state_id}:value",
                 ):
+                    require_heavy_phase_ownership(
+                        "value",
+                        expected_state_id=working_state.state_id,
+                    )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:before_value"
                     )
@@ -1966,8 +2035,19 @@ def create_app(
         def work(progress) -> str | None:
             try:
                 return reconcile(progress)
-            except BaseException:
+            except BaseException as exc:
                 log_reconciliation_memory(user_id, "job_aborted")
+                logging.getLogger("uvicorn.error").info(
+                    "FSFFL intelligence lifecycle abort user=%s reason=%s "
+                    "expected_generation=%s current_generation=%s "
+                    "expected_state=%s working_target=%s",
+                    user_id,
+                    str(exc) or type(exc).__name__,
+                    expected_generation,
+                    store.league_generation(user_id),
+                    starting_state.state_id,
+                    store.working_target_state_id(user_id),
+                )
                 store.abort_working_generation_if_generation(
                     user_id,
                     expected_generation=expected_generation,
@@ -1983,13 +2063,39 @@ def create_app(
                         expected_generation=expected_generation,
                     )
 
-        job = jobs.start(
-            user_id=user_id,
-            league_state_id=starting_state.state_id,
-            work=work,
-            coalesce_current=not replace_stale_current,
-        )
+        # Recheck/coalesce immediately before job admission while holding the
+        # reconciliation ownership lock. The early check above is a fast path; this
+        # closing check prevents two near-simultaneous startup/browser triggers from
+        # both observing stale ownership metadata and creating replacement jobs.
         with reconciliation_lock:
+            current_job = jobs.current(user_id)
+            current_running = bool(
+                current_job is not None
+                and current_job.status in {
+                    IntelligenceJobStatus.QUEUED,
+                    IntelligenceJobStatus.RUNNING,
+                }
+            )
+            current_same_owner = bool(
+                current_running
+                and reconciliation_league_by_user.get(user_id)
+                == starting_league_id
+                and reconciliation_generation_by_user.get(user_id)
+                == expected_generation
+            )
+            if current_same_owner:
+                return {
+                    **_job_payload(current_job),
+                    **runtime_context_payload(user_id),
+                    "coalesced": True,
+                }
+            replace_current = bool(current_running and not current_same_owner)
+            job = jobs.start(
+                user_id=user_id,
+                league_state_id=starting_state.state_id,
+                work=work,
+                coalesce_current=not replace_current,
+            )
             reconciliation_league_by_user[user_id] = starting_league_id
             reconciliation_generation_by_user[user_id] = expected_generation
         return {
