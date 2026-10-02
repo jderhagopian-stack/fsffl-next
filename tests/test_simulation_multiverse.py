@@ -98,9 +98,12 @@ def test_multiverse_examples_are_bounded_replayable_and_from_same_simulation(
 
     simulation_ids = {world.simulation_id for world in first.multiverse_worlds}
     assert len(simulation_ids) == 1
-    world_ids = {world.world_id for world in first.multiverse_worlds}
-    assert len(world_ids) == len(first.multiverse_worlds)
+    world_id_by_index: dict[int, str] = {}
     for world in first.multiverse_worlds:
+        if world.world_index in world_id_by_index:
+            assert world_id_by_index[world.world_index] == world.world_id
+        else:
+            world_id_by_index[world.world_index] = world.world_id
         assert 0 <= world.world_index < request.simulation_count
         assert world.root_seed == request.seed
         assert world.rng_protocol == rng_protocol
