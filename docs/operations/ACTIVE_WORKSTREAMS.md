@@ -1489,3 +1489,29 @@ Promotion classification: research/evidence/framework only. This PR does not cha
 
 **Simulation 2.0 program status after #331: COMPLETE.** The already-accepted post-Simulation sequence resumes with origin-aware draft-pick Value consuming the governed team-of-origin pick-slot distributions, followed by Long-Term Intrinsic and the later PIT historical-market foundation. Do not reopen Simulation 2.0 without contradictory evidence or a new Management directive.
 
+## 2026-10-02 — #331 ACCEPTED: Simulation 2.0 convergence / PIT closeout
+
+PR #331 was squash-merged as `505531ab389da80bd9837922113fe9888f18ff7c`. **Simulation 2.0 is complete.**
+
+Final accepted item-8 evidence:
+- exact PR head `102fffe8e50887f280730ef35bd0811dc2ec5e8f`;
+- full CI **2,009 passed**, one existing warning;
+- PR164 focused corrective regression PASS;
+- completed eight-root convergence workflow run `36999960485`, final artifact `11224026589`, digest `8116d174d9d6aef5bd9fa3c292c513718d2a98b8037337ff4b40a4f9372dbae8`;
+- 50k production error envelope versus same-root 100k reference remained small and all tested clear/near counterfactual delta signs matched across 8/8 roots;
+- bounded manual exact-head P1/P2 review found no remaining issue after Codex review was unavailable because the account/repository code-review quota was exhausted;
+- no Render deploy/physical acceptance was required because #331 is research evidence + calibration framework only and does not change production Simulation count, RNG, model/persistence identity, Decision authority, or accepted #324-#330 behavior.
+
+Authority outcome:
+- **production Simulation remains 50,000 canonical runs**;
+- no adaptive trial-count rule is promoted;
+- any future count change requires a new Management decision and its own implementation/promotion validation.
+
+PIT outcome:
+- authentic prospective 2026 State/Forecast inputs exist;
+- fully realized final-season calibration cases remain **0** while the season is active;
+- item 8 closes with the leakage-safe prospective calibration framework;
+- no historical Forecast reconstruction, current-projection backdating, archive scraping, or broader PIT hunt is authorized.
+
+Next approved program sequence: **origin-aware draft-pick Value** consuming the accepted team-of-origin pick-slot distributions -> **Long-Term Intrinsic** -> later **PIT historical market evidence**. Do not reopen #324-#331 absent contradictory evidence or a new Management directive.
+
