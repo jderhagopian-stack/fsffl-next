@@ -15,7 +15,7 @@ def test_player_unavailable_what_if_reuses_state_and_simulation_authority() -> N
     source = RUNTIME.read_text(encoding="utf-8")
     assert '"scenario_kind": "player_unavailable"' in source
     assert '"slot": RosterSlot.IR' in source
-    assert "run_cached_scenario_simulation(" in source
+    assert "run_progressive_scenario_simulation(" in source
     assert "simulation_loader=simulation_loader" in source
     assert "compare_counterfactual_simulation_results" in source
     assert "competitive_override=simulation_delta" in source
@@ -25,6 +25,9 @@ def test_player_unavailable_what_if_reuses_state_and_simulation_authority() -> N
     assert '"competitive_delta": "NEXT-4 Simulation common-world comparison when replay/topology coordinates match"' in source
     assert '"scenario_delta": "NEXT-4 Team Utility consumes Simulation competitive delta and adds resilience"' in source
     assert '"scenario_cache": "performance-only exact-result reuse"' in source
+    assert '"scenario_computation"' in source
+    assert "scenario_stage: ScenarioComputationStage" in source
+    assert "screening/provisional are explicitly non-authoritative" in source
 
 
 def test_player_unavailable_what_if_preserves_ownership_and_does_not_revalue() -> None:
