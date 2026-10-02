@@ -11,21 +11,55 @@ from fsffl.product.runtime import default_live_forecast_loader, default_sleeper_
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.team_utility.simulation import NUMPY_PCG64_BATCHED_GAUSS_V1
 from fsffl.value.fsffl_foundation3_pick_curve import (
+    FSFFL_FOUNDATION3_COMMERCIAL_RECHECK_REQUIRED,
     FSFFL_FOUNDATION3_CURVES,
     FSFFL_FOUNDATION3_CURVE_MODEL_VERSION,
+    FSFFL_FOUNDATION3_DEPLOYMENT_SCOPE,
+    FSFFL_FOUNDATION3_EVIDENCE_SHA256,
+    FSFFL_FOUNDATION3_RAW_SOURCE_RIGHTS_CLASS,
     FSFFL_FOUNDATION3_TARGET_DRAFT_SEASON,
     FSFFL_FOUNDATION3_TARGET_LEAGUE_EXTERNAL_ID,
     FSFFL_FOUNDATION3_TARGET_LEAGUE_ID,
+    foundation3_curve_economics_sha256,
 )
+from fsffl.value.historical_pick import GovernedDraftSlotValueCurve
 from fsffl.value.origin_aware_pick import OriginAwarePickValueStatus
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts/foundation3/fsffl_2027_origin_aware_sanity.json"
+EVIDENCE = ROOT / "artifacts/foundation3/fsffl_pick_slot_evidence.json"
 LEAGUE_EXTERNAL_ID = FSFFL_FOUNDATION3_TARGET_LEAGUE_EXTERNAL_ID
 
 
+def _verify_frozen_curve_matches_rebuilt_evidence() -> str:
+    if not EVIDENCE.exists():
+        raise RuntimeError(
+            "Foundation 3 retained evidence artifact is missing; build it before sanity"
+        )
+    payload = json.loads(EVIDENCE.read_text(encoding="utf-8"))
+    if payload.get("full_curve_supported") is not True:
+        raise RuntimeError("rebuilt Foundation 3 evidence does not support a full curve")
+    if (payload.get("source") or {}).get("rights_class") != (
+        FSFFL_FOUNDATION3_RAW_SOURCE_RIGHTS_CLASS.value
+    ):
+        raise RuntimeError("rebuilt raw-source rights classification diverges from governance")
+    rebuilt = tuple(
+        GovernedDraftSlotValueCurve.model_validate(row)
+        for row in payload.get("curves", ())
+    )
+    if tuple(curve.round for curve in rebuilt) != (1, 2, 3):
+        raise RuntimeError("rebuilt Foundation 3 evidence is missing governed rounds")
+    digest = foundation3_curve_economics_sha256(rebuilt)
+    if digest != FSFFL_FOUNDATION3_EVIDENCE_SHA256:
+        raise RuntimeError(
+            "frozen live Foundation 3 curve diverges from freshly rebuilt PIT evidence"
+        )
+    return digest
+
+
 def main() -> None:
+    rebuilt_evidence_sha256 = _verify_frozen_curve_matches_rebuilt_evidence()
     state = default_sleeper_state_loader(LEAGUE_EXTERNAL_ID)
     if state.league.league_id != FSFFL_FOUNDATION3_TARGET_LEAGUE_ID:
         raise RuntimeError(
@@ -185,6 +219,10 @@ def main() -> None:
         "rng_batch_size": simulation.rng_batch_size,
         "curve_model_version": FSFFL_FOUNDATION3_CURVE_MODEL_VERSION,
         "curve_scale": FSFFL_FOUNDATION3_CURVES[0].scale.model_dump(mode="json"),
+        "rebuilt_curve_economics_sha256": rebuilt_evidence_sha256,
+        "raw_source_rights_class": FSFFL_FOUNDATION3_RAW_SOURCE_RIGHTS_CLASS.value,
+        "deployment_scope": FSFFL_FOUNDATION3_DEPLOYMENT_SCOPE,
+        "commercial_recheck_required": FSFFL_FOUNDATION3_COMMERCIAL_RECHECK_REQUIRED,
         "origin_distribution_count": len(simulation.future_pick_distributions),
         "authoritative_2027_pick_count": len(sanity_rows),
         "transferred_2027_pick_count": transferred,
