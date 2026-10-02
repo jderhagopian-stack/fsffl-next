@@ -476,6 +476,31 @@ def test_dependency_plan_is_team_selective_for_rosters_and_full_for_global_rules
     assert global_plan.structure_compatible is False
     assert "global_simulation_dependency_changed" in global_plan.reasons
 
+    max_pf_changed = state.model_copy(
+        update={
+            "team_states": tuple(
+                item.model_copy(
+                    update={
+                        "max_points_for": 123.0,
+                        "max_points_for_provenance": PROVENANCE,
+                    }
+                )
+                if item.team_id == "a"
+                else item
+                for item in state.team_states
+            )
+        }
+    )
+    max_pf_plan = build_scenario_dependency_plan(
+        state,
+        max_pf_changed,
+        evidence,
+        baseline,
+        stage=ScenarioComputationStage.CONFIRMATION,
+    )
+    assert max_pf_plan.planned_mode == "full_recompute"
+    assert max_pf_plan.structure_compatible is False
+
 
 def test_dependency_plan_rejects_stale_baseline_result() -> None:
     state, forecasts = _selective_state_and_forecasts()
