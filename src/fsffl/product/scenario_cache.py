@@ -132,13 +132,22 @@ def _forecast_fingerprint(evidence: LiveForecastEvidence) -> str:
 
 
 def _loader_identity(loader: SimulationLoader) -> str:
-    """Process-local loader identity for the cheapest in-memory reuse boundary."""
+    """Process-local loader identity for exact reuse and in-flight coalescing.
+
+    Progressive stage factories create a fresh callable for each request. When a
+    loader supplies an explicit governed cache identity, that identity plus model
+    version is the contract and must remain stable across equivalent callable
+    instances. Call-object identity is retained only for ad-hoc loaders that do not
+    declare an explicit cache identity.
+    """
 
     module = getattr(loader, "__module__", type(loader).__module__)
     qualname = getattr(loader, "__qualname__", type(loader).__qualname__)
     explicit = getattr(loader, "__fsffl_cache_identity__", None)
     model_version = getattr(loader, "__fsffl_simulation_model_version__", "")
-    return f"{module}:{qualname}:{explicit or ''}:{model_version}:{id(loader)}"
+    if explicit is not None:
+        return f"{module}:{qualname}:{explicit}:{model_version}"
+    return f"{module}:{qualname}::{model_version}:{id(loader)}"
 
 
 def _durable_loader_identity(loader: SimulationLoader) -> str:
