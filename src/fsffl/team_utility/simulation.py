@@ -320,12 +320,78 @@ class CounterfactualCompetitiveOutcomeDelta(FrozenModel):
 
     @model_validator(mode="after")
     def validate_counterfactual_delta(self) -> "CounterfactualCompetitiveOutcomeDelta":
-        if not self.team_id.strip() or not self.model_version.strip():
+        identifiers = (
+            self.team_id,
+            self.model_version,
+            self.baseline_simulation_model_version,
+            self.scenario_simulation_model_version,
+            self.baseline_rng_protocol,
+            self.scenario_rng_protocol,
+            self.baseline_simulation_input_fingerprint,
+            self.scenario_simulation_input_fingerprint,
+        )
+        if any(not value.strip() for value in identifiers):
             raise ValueError("counterfactual delta identifiers cannot be blank")
-        if self.regular_season_common_worlds and self.regular_season_unavailability_reason is not None:
-            raise ValueError("common regular-season worlds cannot carry an unavailability reason")
-        if self.postseason_common_worlds and self.postseason_unavailability_reason is not None:
-            raise ValueError("common postseason worlds cannot carry an unavailability reason")
+
+        if self.regular_season_common_worlds:
+            if self.regular_season_unavailability_reason is not None:
+                raise ValueError(
+                    "common regular-season worlds cannot carry an unavailability reason"
+                )
+            if self.comparison_method != "common_random_numbers":
+                raise ValueError(
+                    "common regular-season worlds require common-random-number provenance"
+                )
+            if (
+                self.baseline_simulation_model_version
+                != self.scenario_simulation_model_version
+                or self.baseline_simulation_count != self.scenario_simulation_count
+                or self.baseline_seed != self.scenario_seed
+                or self.baseline_rng_protocol != self.scenario_rng_protocol
+            ):
+                raise ValueError(
+                    "common regular-season worlds require matching replay coordinates"
+                )
+        else:
+            if self.regular_season_unavailability_reason is None:
+                raise ValueError(
+                    "unpaired regular-season comparison requires an unavailability reason"
+                )
+            if self.comparison_method != "aggregate_difference":
+                raise ValueError(
+                    "unpaired regular-season comparison must use aggregate-difference provenance"
+                )
+
+        if self.postseason_common_worlds:
+            if not self.regular_season_common_worlds:
+                raise ValueError(
+                    "common postseason worlds require common regular-season worlds"
+                )
+            if self.postseason_unavailability_reason is not None:
+                raise ValueError(
+                    "common postseason worlds cannot carry an unavailability reason"
+                )
+            if (
+                self.championship_probability is None
+                or self.championship_comparison_method != "common_random_numbers"
+            ):
+                raise ValueError(
+                    "common postseason worlds require a paired championship delta"
+                )
+        else:
+            if self.postseason_unavailability_reason is None:
+                raise ValueError(
+                    "unpaired postseason comparison requires an unavailability reason"
+                )
+            expected_method = (
+                "unavailable"
+                if self.championship_probability is None
+                else "aggregate_difference"
+            )
+            if self.championship_comparison_method != expected_method:
+                raise ValueError(
+                    "championship comparison provenance conflicts with postseason pairing"
+                )
         return self
 
 
