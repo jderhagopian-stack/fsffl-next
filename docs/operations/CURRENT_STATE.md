@@ -2378,3 +2378,20 @@ Because the persisted Simulation result gains common-world coordinates and downs
 
 Validation must remain bounded to the changed contract: deterministic common-world/topology tests, Team Utility/Trade/waiver/What-If consumer tests, fixed 50,000-world replay baselines for supported runtimes, full CI, and exact-head P1/P2 review. Hosted acceptance, after merge, should target one baseline + one alternate-State scenario path and confirm the comparison metadata; do not rerun broad #324-#326 acceptance.
 
+### 2026-10-01 — PR #327 bounded review corrections / dual-runtime replay proof
+
+PR #327 remains the active item-4 branch. Bounded P1/P2 review found two provenance/topology issues before promotion and both are corrected on-branch:
+
+- **both-side replay provenance:** aggregate fallback comparisons may intentionally occur when baseline/scenario seed, count, model or RNG identity differ. The typed Simulation delta now carries baseline **and** scenario model version, simulation count, seed and RNG protocol rather than exposing only the baseline values as if they were shared.
+- **postseason topology precision:** common-world postseason eligibility is now evaluated per playoff week. Every possible participant within a given week must consume the same number of draws, but one round may be fully stochastic while a later round is fully deterministic. Participant-dependent mixed deterministic/stochastic rows still fail closed for paired-title claims.
+
+The typed counterfactual delta now also validates its own provenance invariants: paired regular-season worlds require matching exposed replay coordinates and `common_random_numbers`; unpaired comparisons require an explicit reason and `aggregate_difference`; paired postseason worlds require paired regular-season worlds and a paired championship delta; unavailable/unpaired title deltas must carry consistent provenance.
+
+Corrected source/test tree replay proof:
+- Python 3.11: **1,970 passed**, one existing warning;
+- Python 3.12: **1,970 passed**, one existing warning;
+- fixed 50,000-world replay digests remain the reviewed item-4 values already recorded in `tests/test_simulation_hot_loop_equivalence.py`;
+- the temporary dual-runtime CI matrix was removed after proof; normal repository CI policy is restored.
+
+Final gate is ordinary exact-head CI plus final bounded review. No #324-#326 reproof is authorized.
+
