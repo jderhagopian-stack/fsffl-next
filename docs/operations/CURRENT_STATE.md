@@ -2687,3 +2687,7 @@ This is sufficient Tier-B closeout under the risk-proportionate/no-redeploy/no-p
 
 **Simulation 2.0 roadmap advances to item 8:** governed convergence study and point-in-time calibration. Production remains at 50,000 canonical runs until convergence evidence supports a contract change and Management explicitly approves it. Calibration must use point-in-time inputs/outcomes without future leakage; do not convert the progressive preview counts into a new production-authority rule by assumption.
 
+
+## 2026-10-02 — Product direction: League Atlas franchise drill-down
+
+Management accepted a richer League Atlas team drill-down after Simulation 2.0 output contracts are complete. Tapping a team should open a franchise view combining competitive outlook with the full roster grouped by starters/active lineup, bench, IR/reserve and taxi where supported. Player rows should include age, governed projection context and Intrinsic/Broad Market values, with draft capital, depth/fragility, origin-team pick distributions, Multiverse examples and estimate/provenance detail available through progressive disclosure. Do not overload the main League Atlas table; keep the league view concise and move depth into the tapped-team surface. Recorded lineup state and projected/optimized starters must remain semantically distinct.
