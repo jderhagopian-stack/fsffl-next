@@ -221,6 +221,10 @@ def test_multiverse_records_strong_expected_team_missing_playoffs_as_empirical_e
     assert world.rarity.basis == "empirical_event_frequency"
     assert world.rarity.empirical_probability == pytest.approx(1.0)
     assert world.rarity.label == "common"
+    categories = {item.category for item in result.multiverse_worlds}
+    assert "plausible_upside" not in categories
+    assert "plausible_downside" not in categories
+    assert "extreme_tail" not in categories
 
 
 def test_multiverse_biggest_blowout_carries_matchup_explanation() -> None:
