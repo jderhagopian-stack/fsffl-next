@@ -254,12 +254,28 @@ def test_simulation_is_presented_without_recomputing_or_inventing_a_power_score(
             ),
         ),
     )
+    multiverse_world = SimpleNamespace(
+        model_dump=lambda mode="json": {
+            "category": "expected_like",
+            "simulation_id": "simulation-1",
+            "world_id": "world-1",
+            "world_index": 12,
+            "root_seed": 7,
+            "rarity": {
+                "basis": "representative_typicality",
+                "sample_count": 50_000,
+                "label": "representative",
+            },
+        }
+    )
     simulation = SimpleNamespace(
         simulation_result=SimpleNamespace(
             outcomes=outcomes,
             finish_distributions=finish,
             simulation_count=50_000,
             model_version="sim-v1",
+            multiverse_worlds=(multiverse_world,),
+            multiverse_model_version="next4-multiverse-v1",
         ),
         team_views=team_views,
     )
@@ -275,6 +291,13 @@ def test_simulation_is_presented_without_recomputing_or_inventing_a_power_score(
 
     assert payload["simulation"]["status"] == "ready"
     assert payload["simulation"]["simulation_count"] == 50_000
+    assert payload["simulation"]["multiverse"]["status"] == "ready"
+    assert payload["simulation"]["multiverse"]["model_version"] == "next4-multiverse-v1"
+    assert payload["simulation"]["multiverse"]["worlds"][0]["category"] == "expected_like"
+    assert payload["simulation"]["multiverse"]["worlds"][0]["world_index"] == 12
+    assert payload["authority"]["multiverse"].startswith(
+        "bounded representative worlds selected from the same governed Simulation"
+    )
     assert rows["a"]["playoff_probability"] == 0.82
     assert rows["a"]["playoff_seed_probabilities"] == [0.55, 0.27]
     assert rows["a"]["bye_probability"] == 0.55
