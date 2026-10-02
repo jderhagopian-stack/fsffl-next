@@ -35,6 +35,15 @@ from .future_contract import (
     FutureForecastScenario,
     FuturePlayerHorizonForecast,
 )
+from .long_horizon_contract import (
+    LONG_HORIZON_AUTHORITY_MAP_SHA256,
+    LONG_HORIZON_AUTHORITY_MAP_VERSION,
+    LONG_HORIZON_FORECAST_CONTRACT_VERSION,
+    LONG_HORIZON_POLICIES,
+    LongHorizonForecastAuthorityContract,
+    LongHorizonPolicyForecast,
+    supported_long_horizon_policies,
+)
 from .late_start_snapshot import (
     LATE_START_BASELINE_CLASS,
     LATE_START_EXCEPTION_SEASON,
@@ -212,6 +221,12 @@ __all__ = [
     "WeeklyRealizedScore",
     "RowHealthDisposition",
     "PRESEASON_COMPARISON_UNAVAILABLE",
+    "LONG_HORIZON_AUTHORITY_MAP_SHA256",
+    "LONG_HORIZON_AUTHORITY_MAP_VERSION",
+    "LONG_HORIZON_FORECAST_CONTRACT_VERSION",
+    "LONG_HORIZON_POLICIES",
+    "LongHorizonForecastAuthorityContract",
+    "LongHorizonPolicyForecast",
     "LateStartSourceHealthEvent",
     "LateStartProviderEvidence",
     "LateStartNormalizedEvidence",
@@ -273,6 +288,7 @@ __all__ = [
     "derive_kicker_fantasy_point_forecasts",
     "evaluate_rule_evidence_coverage",
     "forecast_subject_for_roster_asset",
+    "supported_long_horizon_policies",
     "intrinsic_v1_method",
     "materialize_intrinsic_v1_forecast_path",
     "score_point_forecast",
