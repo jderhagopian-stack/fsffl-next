@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from fsffl.state.models import LeagueState
 from fsffl.team_utility.simulation import RegularSeasonSimulationResult
-from fsffl.value.historical_pick import HistoricalDraftSlotObservation
+from fsffl.value.fsffl_foundation3_pick_curve import fsffl_foundation3_live_curves
+from fsffl.value.historical_pick import GovernedDraftSlotValueCurve, HistoricalDraftSlotObservation
 from fsffl.value.models import ValueScale
 from fsffl.value.origin_aware_pick import (
     GenericPickValuePrior,
@@ -77,8 +78,9 @@ def build_origin_aware_pick_values_from_simulation(
     league_state: LeagueState,
     simulation: RegularSeasonSimulationResult,
     *,
-    slot_value_observations: tuple[HistoricalDraftSlotObservation, ...],
-    slot_value_scale: ValueScale,
+    slot_value_observations: tuple[HistoricalDraftSlotObservation, ...] = (),
+    slot_value_scale: ValueScale | None = None,
+    governed_slot_value_curves: tuple[GovernedDraftSlotValueCurve, ...] = (),
     generic_priors: tuple[GenericPickValuePrior, ...] = (),
 ) -> tuple[OriginAwarePickValueResult, ...]:
     """Coordinate Simulation probability evidence with Value-owned economics."""
@@ -92,5 +94,28 @@ def build_origin_aware_pick_values_from_simulation(
         evidence,
         slot_value_observations=slot_value_observations,
         slot_value_scale=slot_value_scale,
+        governed_slot_value_curves=governed_slot_value_curves,
         generic_priors=generic_priors,
+    )
+
+
+def build_live_origin_aware_pick_values(
+    league_state: LeagueState,
+    simulation: RegularSeasonSimulationResult,
+) -> tuple[OriginAwarePickValueResult, ...]:
+    """Use the frozen Foundation-3 curve only at its governed live coordinate."""
+
+    next_season = league_state.league.season + 1
+    curves = fsffl_foundation3_live_curves(
+        league_id=league_state.league.league_id,
+        draft_season=next_season,
+        team_count=league_state.league.rules.team_count,
+        rookie_draft_rounds=league_state.league.rules.rookie_draft_rounds,
+    )
+    if not curves:
+        return ()
+    return build_origin_aware_pick_values_from_simulation(
+        league_state,
+        simulation,
+        governed_slot_value_curves=curves,
     )
