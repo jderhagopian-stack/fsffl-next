@@ -319,8 +319,11 @@ def _pick_map(
                     "draft_order_policy_version": (
                         projection.draft_order_policy_version
                     ),
-                    "max_pf_projection_model_version": (
-                        projection.max_pf_projection_model_version
+                    "draft_order_policy_authority": (
+                        projection.draft_order_policy_authority
+                    ),
+                    "draft_order_projection_model_version": (
+                        projection.draft_order_projection_model_version
                     ),
                     "authority_status": projection.authority_status,
                 }
