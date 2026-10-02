@@ -477,6 +477,44 @@ def test_dependency_plan_is_team_selective_for_rosters_and_full_for_global_rules
     assert "global_simulation_dependency_changed" in global_plan.reasons
 
 
+def test_dependency_plan_rejects_stale_baseline_result() -> None:
+    state, forecasts = _selective_state_and_forecasts()
+    baseline = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=250,
+        seed=17,
+        generated_at=AS_OF,
+    )
+    evidence = SimpleNamespace(
+        league_scored_forecasts=forecasts,
+        model_version="next2-test",
+    )
+    wrong_baseline = state.model_copy(
+        update={
+            "teams": tuple(
+                item.model_copy(update={"display_name": "Different Baseline"})
+                if item.team_id == "a"
+                else item
+                for item in state.teams
+            )
+        }
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="baseline Simulation result does not match baseline State",
+    ):
+        build_scenario_dependency_plan(
+            wrong_baseline,
+            state,
+            evidence,
+            baseline,
+            stage=ScenarioComputationStage.CONFIRMATION,
+        )
+
+
 def test_noncompetitive_state_change_reuses_canonical_competitive_result_exactly() -> None:
     state, forecasts = _selective_state_and_forecasts()
     baseline = build_live_simulation_analytics(
