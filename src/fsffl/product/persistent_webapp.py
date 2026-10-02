@@ -1161,6 +1161,15 @@ def _maybe_start_state_first_production_acceptance() -> None:
         "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_SOURCE_USER",
         _beta_restore_user,
     ).strip()
+    if (
+        stage_partial_restore
+        and acceptance_user
+        and acceptance_user == acceptance_source_user
+    ):
+        # Legacy hosted acceptance runs may have pointed the acceptance identity at
+        # the beta username. Staged partial acceptance must never mutate that source
+        # user, so derive the dedicated isolated identity automatically.
+        acceptance_user = "runtime-availability-production-acceptance"
     if stage_partial_restore and acceptance_mode != "restored_refresh":
         _runtime_availability_acceptance_state.update(
             status="fail",
