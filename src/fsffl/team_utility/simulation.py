@@ -1156,6 +1156,277 @@ def _accumulate_slot_groups(
     return slot
 
 
+def _multiverse_rarity_label(
+    probability: float | None,
+    *,
+    representative: bool = False,
+) -> Literal["representative", "common", "plausible", "unusual", "rare", "extreme"]:
+    if representative:
+        return "representative"
+    if probability is None:
+        return "plausible"
+    if probability <= 0.001:
+        return "extreme"
+    if probability <= 0.01:
+        return "rare"
+    if probability <= 0.05:
+        return "unusual"
+    if probability <= 0.25:
+        return "plausible"
+    return "common"
+
+
+def _capture_multiverse_candidate(
+    *,
+    trial_index: int,
+    wins: list[float],
+    points_for: list[float],
+    standings: list[int],
+    champion: int | None,
+    focal_team: int | None,
+    selection_metric: float,
+    rarity_metric_value: float | None = None,
+    notable_matchup: dict[str, object] | None = None,
+) -> dict[str, object]:
+    return {
+        "trial_index": trial_index,
+        "wins": tuple(wins),
+        "points_for": tuple(points_for),
+        "standings": tuple(standings),
+        "champion": champion,
+        "focal_team": focal_team,
+        "selection_metric": float(selection_metric),
+        "rarity_metric_value": (
+            None if rarity_metric_value is None else float(rarity_metric_value)
+        ),
+        "notable_matchup": notable_matchup,
+    }
+
+
+def _empirical_probability(
+    values: array,
+    threshold: float,
+    *,
+    upper_tail: bool,
+) -> float:
+    if not values:
+        return 0.0
+    if upper_tail:
+        count = sum(1 for value in values if value >= threshold)
+    else:
+        count = sum(1 for value in values if value <= threshold)
+    return count / len(values)
+
+
+def _empirical_percentile(values: array, threshold: float) -> float:
+    if not values:
+        return 0.0
+    return sum(1 for value in values if value <= threshold) / len(values)
+
+
+def _build_multiverse_examples(
+    *,
+    candidates: dict[str, dict[str, object]],
+    team_ids: tuple[str, ...],
+    playoff_team_count: int | None,
+    playoff_supported: bool,
+    championship_supported: bool,
+    league_totals: array,
+    typicality_values: array,
+    blowout_values: array,
+    upset_values: array,
+    strong_team_miss_count: int,
+    champion_seed_counts: list[int],
+    simulation_count: int,
+    simulation_id: str,
+    root_seed: int,
+    rng_protocol: str,
+    rng_batch_size: int | None,
+    simulation_input_fingerprint: str,
+) -> tuple[MultiverseWorldExample, ...]:
+    category_order = (
+        "expected_like",
+        "plausible_upside",
+        "plausible_downside",
+        "extreme_tail",
+        "biggest_blowout",
+        "biggest_upset",
+        "strong_team_misses_playoffs",
+        "low_seed_champion",
+    )
+    examples: list[MultiverseWorldExample] = []
+    for category in category_order:
+        candidate = candidates.get(category)
+        if candidate is None:
+            continue
+        metric_value = candidate.get("rarity_metric_value")
+        empirical_probability: float | None = None
+        empirical_percentile: float | None = None
+        basis: Literal[
+            "representative_typicality",
+            "empirical_upper_tail",
+            "empirical_lower_tail",
+            "empirical_event_frequency",
+        ]
+        if category == "expected_like":
+            basis = "representative_typicality"
+            if metric_value is not None:
+                empirical_percentile = _empirical_percentile(
+                    typicality_values, float(metric_value)
+                )
+            label = _multiverse_rarity_label(None, representative=True)
+        elif category == "plausible_upside":
+            basis = "empirical_upper_tail"
+            empirical_probability = _empirical_probability(
+                league_totals, float(metric_value), upper_tail=True
+            )
+            empirical_percentile = _empirical_percentile(
+                league_totals, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "plausible_downside":
+            basis = "empirical_lower_tail"
+            empirical_probability = _empirical_probability(
+                league_totals, float(metric_value), upper_tail=False
+            )
+            empirical_percentile = _empirical_percentile(
+                league_totals, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "extreme_tail":
+            basis = "empirical_upper_tail"
+            empirical_probability = _empirical_probability(
+                typicality_values, float(metric_value), upper_tail=True
+            )
+            empirical_percentile = _empirical_percentile(
+                typicality_values, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "biggest_blowout":
+            basis = "empirical_upper_tail"
+            empirical_probability = _empirical_probability(
+                blowout_values, float(metric_value), upper_tail=True
+            )
+            empirical_percentile = _empirical_percentile(
+                blowout_values, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "biggest_upset":
+            basis = "empirical_upper_tail"
+            empirical_probability = _empirical_probability(
+                upset_values, float(metric_value), upper_tail=True
+            )
+            empirical_percentile = _empirical_percentile(
+                upset_values, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "strong_team_misses_playoffs":
+            basis = "empirical_event_frequency"
+            empirical_probability = strong_team_miss_count / simulation_count
+            label = _multiverse_rarity_label(empirical_probability)
+        else:
+            basis = "empirical_event_frequency"
+            seed = int(round(float(metric_value)))
+            empirical_probability = (
+                sum(champion_seed_counts[seed:]) / simulation_count
+                if 0 <= seed < len(champion_seed_counts)
+                else 0.0
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+
+        standings_indexes = tuple(candidate["standings"])
+        standings = tuple(team_ids[index] for index in standings_indexes)
+        wins = tuple(candidate["wins"])
+        points_for = tuple(candidate["points_for"])
+        champion_index = candidate["champion"]
+        team_outcomes = tuple(
+            MultiverseWorldTeamOutcome(
+                team_id=team_id,
+                final_wins=float(wins[index]),
+                points_for=float(points_for[index]),
+                regular_season_rank=standings_indexes.index(index) + 1,
+                playoff_seed=(
+                    standings_indexes.index(index) + 1
+                    if (
+                        playoff_supported
+                        and playoff_team_count is not None
+                        and standings_indexes.index(index) < playoff_team_count
+                    )
+                    else None
+                ),
+                made_playoffs=(
+                    standings_indexes.index(index) < playoff_team_count
+                    if playoff_supported and playoff_team_count is not None
+                    else None
+                ),
+                champion=(
+                    index == champion_index if championship_supported else None
+                ),
+            )
+            for index, team_id in enumerate(team_ids)
+        )
+
+        notable = candidate.get("notable_matchup")
+        notable_model = None
+        if isinstance(notable, dict):
+            notable_model = MultiverseNotableMatchup(
+                week=int(notable["week"]),
+                home_team_id=str(notable["home_team_id"]),
+                away_team_id=str(notable["away_team_id"]),
+                home_points=float(notable["home_points"]),
+                away_points=float(notable["away_points"]),
+                margin=float(notable["margin"]),
+                expected_home_points=float(notable["expected_home_points"]),
+                expected_away_points=float(notable["expected_away_points"]),
+                expected_underdog_disadvantage=float(
+                    notable.get("expected_underdog_disadvantage", 0.0)
+                ),
+            )
+
+        world_index = int(candidate["trial_index"])
+        world_id = hashlib.sha256(
+            f"{simulation_id}:{world_index}".encode()
+        ).hexdigest()
+        focal_index = candidate.get("focal_team")
+        examples.append(
+            MultiverseWorldExample(
+                category=category,
+                simulation_id=simulation_id,
+                world_id=world_id,
+                world_index=world_index,
+                root_seed=root_seed,
+                rng_protocol=rng_protocol,
+                rng_batch_size=rng_batch_size,
+                simulation_input_fingerprint=simulation_input_fingerprint,
+                standings=standings,
+                team_outcomes=team_outcomes,
+                champion_team_id=(
+                    team_ids[int(champion_index)]
+                    if champion_index is not None
+                    else None
+                ),
+                focal_team_id=(
+                    team_ids[int(focal_index)]
+                    if focal_index is not None
+                    else None
+                ),
+                notable_matchup=notable_model,
+                selection_metric=float(candidate["selection_metric"]),
+                rarity=MultiverseRarityContext(
+                    basis=basis,
+                    empirical_probability=empirical_probability,
+                    empirical_percentile=empirical_percentile,
+                    sample_count=simulation_count,
+                    metric_value=(
+                        None if metric_value is None else float(metric_value)
+                    ),
+                    label=label,
+                ),
+            )
+        )
+    return tuple(examples)
+
+
 def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
     """Yield bounded trial-by-draw arrays under the experimental RNG protocol."""
     import numpy as np
