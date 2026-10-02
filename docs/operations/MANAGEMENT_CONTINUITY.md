@@ -458,3 +458,10 @@ Use accepted Simulation as an upstream probability source only. Value must reuse
 Authoritative scope begins with the next draft season because that is where accepted team-of-origin exact slot distributions exist. Do not extrapolate origin-team probabilities into later years. Missing class/horizon/slot economic evidence must produce transparent fallback/partial status rather than fabricated precision.
 
 Required regression themes include nonlinearity, origin differentiation, ownership invariance, mixture uncertainty, slot dominance, fallback truth, season boundary, preview-authority gating, no circularity and PIT safety.
+
+
+## 2026-10-02 — Narrow runtime corrective before Foundation 3 continues
+
+A new physical run contradicted the accepted startup/reconciliation behavior. On live #330, one refresh reached `simulation_build_complete`, then logged `job_aborted` before publication; a replacement job rebuilt Simulation and downstream intelligence before 7/7. Peak RSS was 445,063,168 bytes versus the 429,496,720-byte engineering budget.
+
+Management reopened only startup/manual-refresh lifecycle sequencing under `20261002_STARTUP_REFRESH_SEQUENCING_CORRECTIVE.md`. Do not reopen Simulation 2.0 semantics or reduce the 50k authority. PR #335 remains a valid safe checkpoint but is temporarily held. After the Tier-C corrective passes targeted hosted/physical acceptance, resume #335 immediately.
