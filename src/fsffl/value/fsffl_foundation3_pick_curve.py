@@ -74,8 +74,8 @@ def _curve_economics_payload(
                 {
                     "slot_in_round": row.slot_in_round,
                     "value": row.value.model_dump(mode="json"),
-                    "evidence_seasons": list(row.evidence_seasons),
-                    "source_model_versions": list(row.source_model_versions),
+                    "evidence_seasons": sorted(row.evidence_seasons),
+                    "source_model_versions": sorted(row.source_model_versions),
                     "dominance_adjusted": row.dominance_adjusted,
                 }
                 for row in curve.slots
