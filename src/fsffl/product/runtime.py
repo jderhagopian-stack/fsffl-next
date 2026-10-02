@@ -121,7 +121,10 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
                 "description": item.description,
                 "parameters": [
                     parameter.model_dump(mode="json")
-                    for parameter in item.parameters
+                    for parameter in sorted(
+                        item.parameters,
+                        key=lambda parameter: parameter.name,
+                    )
                 ],
             }
             for item in sorted(
