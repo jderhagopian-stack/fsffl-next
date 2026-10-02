@@ -127,6 +127,22 @@ The question is therefore not merely "did Simulation change?" but **"did Simulat
 
 The default posture is **fast by default, heavy when warranted**: small reviewable changes should remain small, useful estimates should expose uncertainty rather than disappear solely because evidence is imperfect, and incident-response safeguards must not become permanent whole-platform ceremony for unrelated work.
 
+## Estimation transparency and management sanity-check
+When exact evidence is unavailable, NEXT should prefer the most defensible bounded estimate over unnecessary unavailability, while preserving the distinction between observed fact, deterministic derivation, historical inference, standard-domain fallback, and probabilistic estimate.
+
+Before a newly introduced estimate/fallback is promoted into an authoritative path, the worker must surface it explicitly to Management and record it durably. The report must state, in plain language:
+- what exact fact/rule is unavailable;
+- what evidence/settings/history are available;
+- the proposed estimate or fallback rule;
+- why that method is defensible and what alternatives were considered;
+- the material outputs that can change because of the estimate;
+- how uncertainty/ties/ambiguity are represented;
+- what evidence would supersede the estimate later.
+
+Management gets a sanity-check opportunity before promotion when the estimate is materially new or could change user-facing decisions, rankings, probabilities, values, draft slots, or other authoritative outputs. Do not silently convert an assumption into a "verified" league rule. Once Management accepts a recurring standard fallback, later uses of the same unchanged method need provenance and traceability but do not require repeated approval unless the context or consequence is materially different.
+
+Unavailable/UNKNOWN is the last resort: use it only when the missing information makes even a bounded estimate materially misleading or unmodelable. Exact league/provider evidence always supersedes a derived or estimated fallback when it becomes available.
+
 ## Private-beta availability discipline
 FSFFL NEXT is a live private beta, not only an implementation workspace. Management must preserve the user's ability to exercise the product while deeper work continues.
 
