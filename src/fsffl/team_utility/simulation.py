@@ -1655,6 +1655,9 @@ def simulate_regular_season(
     matchup_wall_seconds = 0.0
     matchup_cpu_seconds = 0.0
     aggregation_wall_seconds = 0.0
+    cooperative_yield_wall_seconds = 0.0
+    trial_setup_wall_seconds = 0.0
+    matchup_reconstruction_wall_seconds = 0.0
     common_world_wall_seconds = 0.0
     standings_wall_seconds = 0.0
     playoff_wall_seconds = 0.0
@@ -1869,11 +1872,27 @@ def simulate_regular_season(
     champion_seed_counts = [0] * (team_count + 1)
 
     for trial_index in range(request.simulation_count):
+        sample_trial = bool(
+            profile_enabled and trial_index % profile_sample_interval == 0
+        )
+        sample_weight = min(
+            profile_sample_interval,
+            request.simulation_count - trial_index,
+        )
         # Scheduling-only checkpoint. Product orchestration may yield this worker
         # while foreground requests are active; the callback cannot alter the
         # simulation request, RNG stream, iteration count, or accumulated outputs.
+        cooperative_yield_started = (
+            _profile_wall_clock() if sample_trial and cooperative_yield is not None else None
+        )
         if cooperative_yield is not None:
             cooperative_yield()
+        if cooperative_yield_started is not None:
+            cooperative_yield_wall_seconds += (
+                _profile_wall_clock() - cooperative_yield_started
+            ) * sample_weight
+
+        trial_setup_started = _profile_wall_clock() if sample_trial else None
         wins = actual_wins.copy()
         points_for = actual_points_for.copy()
         h2h_points = [row.copy() for row in actual_h2h_points]
@@ -1881,6 +1900,10 @@ def simulate_regular_season(
         trial_score_row = None
         trial_biggest_blowout: tuple[float, int, float, float] | None = None
         trial_biggest_upset: tuple[float, float, int, float, float] | None = None
+        if trial_setup_started is not None:
+            trial_setup_wall_seconds += (
+                _profile_wall_clock() - trial_setup_started
+            ) * sample_weight
         if is_batched:
             if score_batch is None or score_batch_offset >= len(score_batch):
                 rng_started = _profile_clock() if profile_enabled else None
@@ -1900,6 +1923,9 @@ def simulate_regular_season(
                     matchup_wall_seconds += matchup_ended[0] - matchup_started[0]
                     matchup_cpu_seconds += matchup_ended[1] - matchup_started[1]
                 score_batch_offset = 0
+            batched_trial_setup_started = (
+                _profile_wall_clock() if sample_trial else None
+            )
             trial_score_row = score_batch[score_batch_offset]
             simulated_wins = numpy_batch_wins[score_batch_offset].tolist()
             simulated_points = numpy_batch_points[score_batch_offset].tolist()
@@ -1912,18 +1938,18 @@ def simulate_regular_season(
                 for index in range(team_count)
             ]
             score_batch_offset += 1
+            if batched_trial_setup_started is not None:
+                trial_setup_wall_seconds += (
+                    _profile_wall_clock() - batched_trial_setup_started
+                ) * sample_weight
         else:
             trial_wins = actual_wins.copy()
             trial_points = actual_points_for.copy()
-        sample_trial = bool(
-            profile_enabled and trial_index % profile_sample_interval == 0
-        )
-        sample_weight = min(
-            profile_sample_interval,
-            request.simulation_count - trial_index,
-        )
         matchup_started = (
             _profile_wall_clock() if sample_trial and not is_batched else None
+        )
+        matchup_reconstruction_started = (
+            _profile_wall_clock() if sample_trial and is_batched else None
         )
         if not is_batched:
             wins = trial_wins
@@ -2046,6 +2072,10 @@ def simulate_regular_season(
                                 home,
                                 away,
                             )
+        if matchup_reconstruction_started is not None:
+            matchup_reconstruction_wall_seconds += (
+                _profile_wall_clock() - matchup_reconstruction_started
+            ) * sample_weight
         if matchup_started is not None:
             matchup_ended = _profile_wall_clock()
             matchup_wall_seconds += (matchup_ended - matchup_started) * sample_weight
@@ -2608,6 +2638,8 @@ def simulate_regular_season(
         _logger.info(
             "FSFFL simulation profile phase=kernel_summary trials=%s rng_protocol=%s batch=%s "
             "rng_wall=%.6f rng_cpu=%.6f matchup_wall=%.6f matchup_cpu=%.6f "
+            "cooperative_yield_wall_estimate=%.6f trial_setup_wall_estimate=%.6f "
+            "matchup_reconstruction_wall_estimate=%.6f "
             "standings_playoff_aggregation_wall_estimate=%.6f common_world_wall=%.6f "
             "standings_wall_estimate=%.6f playoff_wall_estimate=%.6f "
             "future_pick_wall_estimate=%.6f multiverse_wall_estimate=%.6f "
@@ -2615,7 +2647,9 @@ def simulate_regular_season(
             "result_materialization_wall=%.6f result_materialization_cpu=%.6f",
             request.simulation_count, request.rng_protocol, batch_size,
             rng_wall_seconds, rng_cpu_seconds, matchup_wall_seconds,
-            matchup_cpu_seconds, aggregation_wall_seconds, common_world_wall_seconds,
+            matchup_cpu_seconds, cooperative_yield_wall_seconds,
+            trial_setup_wall_seconds, matchup_reconstruction_wall_seconds,
+            aggregation_wall_seconds, common_world_wall_seconds,
             standings_wall_seconds, playoff_wall_seconds, future_pick_wall_seconds,
             multiverse_wall_seconds, kernel_tail_wall_seconds,
             profile_sample_interval, profile_sample_count,
