@@ -2213,3 +2213,37 @@ Performance boundary:
 
 Promotion classification: Tier B Simulation output/explainability contract. Require focused deterministic replay/category/rarity tests, League Atlas payload coverage, full CI, reviewed fixed 50k replay digests if result serialization changes, exact-head P1/P2 review, then one targeted hosted acceptance of localized Simulation artifact invalidation and Multiverse-capable publication. Do not reopen #324-#328.
 
+## 2026-10-02 — #329 ACCEPTED: replayable Multiverse representative worlds
+
+PR #329 was squash-merged as `e0d4f6a1d8ca9cd6862fe1ef8203813387c971b1`. The accepted capability adds a bounded Multiverse explanation layer over the same canonical 50,000 Simulation worlds without a second probability model or raw-world archive.
+
+Accepted item-6 contract:
+- representative expected-like, plausible-upside, plausible-downside, extreme-tail and notable-outcome worlds are selected from the canonical run only;
+- every exemplar carries deterministic Simulation/world identity, root seed, RNG/replay provenance, input fingerprint, empirical rarity/percentile context and final standings/team outcomes;
+- same governed request/seed reproduces the same exemplar set and IDs;
+- no additional Monte Carlo pass or RNG draws are introduced;
+- retained all-world diagnostics remain four compact float64 scalar series (~1.6 MB at 50k) plus bounded full data for selected exemplars;
+- League Atlas transports governed Multiverse evidence only; Presentation adds no model authority;
+- player-specific superstar examples remain deferred until player-level stochastic authority exists.
+
+Exact-head promotion evidence on `932cce25c6af26ddf61b4c3a9e64f7b3dd2fa53a`:
+- full CI: **1,985 passed**, one existing warning;
+- League Atlas North Star focused validation: PASS, including real-league composition sanity and live-provider authority audit;
+- PR164 focused corrective regression: PASS;
+- Live Forecast corrective trace: PASS;
+- fixed 50,000-world serialized replay baselines were explicitly reviewed on Python 3.11 and Python 3.12;
+- Codex review was requested but unavailable because the account/repository review quota was exhausted; bounded manual exact-head P1/P2 review closed all identified issues and found no remaining P1/P2.
+
+Single targeted hosted Multiverse acceptance used Render deploy `dep-davhsbtg1s2s73aiqke0` only:
+- exact merged commit `e0d4f6a1...` became live at **03:01:50Z** on instance `...-9h6c2`; no same-commit redeploy followed;
+- startup correctly rejected the pre-#329 persisted Simulation artifact because Multiverse-capable model/output identity changed: State `68eac82b...` restored with `forecast=True simulation=False value=True complete=False`;
+- Forecast, Value and full Intrinsic remained reusable, proving Multiverse invalidation stayed localized to Simulation;
+- startup resource readiness was ~278 MB RSS / ~282 MB peak against the ~429 MB engineering budget; hosted memory settled around **243-244 MB** against the 512 MiB service limit and CPU settled near idle;
+- no ERROR, OOM/recycle, repeated reconciliation loop, replacement deploy or broad continuity regression appeared in the stable hosted window;
+- no authenticated private-beta request occurred during the stable window, so acceptance did not retrieve/use private credentials or force a recomputation/redeploy merely to materialize a new Multiverse artifact;
+- the free instance later shut down normally from inactivity at **03:16:50Z**. Exact Multiverse category/replay/League Atlas behavior is therefore supported by the final exact-head product validation, while the single hosted deployment directly proves localized persisted-Simulation invalidation, restore/resource safety and deployment continuity. This limitation must not be rewritten as a physical Multiverse-card acceptance claim.
+
+This is sufficient Tier-B closeout under the risk-proportionate/no-redeploy/no-private-credential boundary. Do not reopen #324-#329 absent contradictory evidence.
+
+**Simulation 2.0 roadmap advances immediately to item 7:** progressive scenario computation plus dependency-based selective recomputation for interactive consumers. Reconcile the existing scenario cache, common-world counterfactual path, Forecast/lineup/Simulation dependencies and product callers first; add only missing governed reuse/progression contracts. Convergence and PIT calibration remain item 8.
+
