@@ -3,10 +3,11 @@ from __future__ import annotations
 import hashlib
 import logging
 from collections import OrderedDict
+from enum import StrEnum
 from concurrent.futures import Future
 from threading import RLock
 from time import monotonic
-from typing import Callable
+from typing import Callable, Literal
 
 from fsffl.persistence.contracts import (
     ArtifactKey,
@@ -22,14 +23,62 @@ from fsffl.persistence.runtime_cache import (
     decode_simulation,
     encode_simulation,
 )
-from fsffl.state.models import LeagueState
+from fsffl.state.models import FrozenModel, LeagueState
 
 from .runtime import LiveForecastEvidence
-from .simulation_runtime import LiveSimulationAnalyticsResult
+from .simulation_runtime import (
+    LiveSimulationAnalyticsResult,
+    simulation_forecast_dependency_fingerprint,
+    simulation_structure_dependency_fingerprint,
+)
 
 
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_CACHE_MODEL_VERSION = "next8-scenario-cache-v4:durable-exact-state-forecast-loader-inflight"
+
+
+class ScenarioComputationStage(StrEnum):
+    SCREENING = "screening"
+    PROVISIONAL = "provisional"
+    CONFIRMATION = "confirmation"
+
+
+_SCENARIO_STAGE_COUNTS = {
+    ScenarioComputationStage.SCREENING: 1_000,
+    ScenarioComputationStage.PROVISIONAL: 5_000,
+    ScenarioComputationStage.CONFIRMATION: 50_000,
+}
+
+
+class ScenarioDependencyPlan(FrozenModel):
+    affected_team_ids: tuple[str, ...] = ()
+    reusable_team_ids: tuple[str, ...] = ()
+    planned_mode: Literal[
+        "full_recompute", "selective_inputs", "reuse_competitive_simulation"
+    ]
+    structure_compatible: bool
+    forecast_compatible: bool
+    baseline_preparation_available: bool
+    reasons: tuple[str, ...] = ()
+
+
+class ScenarioComputationMetadata(FrozenModel):
+    requested_stage: ScenarioComputationStage
+    requested_simulation_count: int
+    effective_simulation_count: int
+    authoritative: bool
+    execution_mode: Literal[
+        "cache_reuse",
+        "full_recompute",
+        "selective_inputs",
+        "reuse_competitive_simulation",
+    ]
+    dependency_plan: ScenarioDependencyPlan
+    cache_hit: bool
+    deeper_stage_available: ScenarioComputationStage | None = None
+    authority_label: str
+
+
+_CACHE_MODEL_VERSION = "next8-scenario-cache-v5:progressive-selective-dependency-plan"
 _MAX_ENTRIES = 64
 _lock = RLock()
 _cache: OrderedDict[str, LiveSimulationAnalyticsResult] = OrderedDict()
@@ -127,6 +176,127 @@ def _durable_forecast_fingerprint(
         _forecast_fingerprint(evidence),
         _durable_loader_identity(simulation_loader),
     )
+
+
+def scenario_stage_simulation_count(stage: ScenarioComputationStage) -> int:
+    return _SCENARIO_STAGE_COUNTS[stage]
+
+
+def _roster_fingerprint_by_team(league_state: LeagueState) -> dict[str, str]:
+    return {
+        team_state.team_id: canonical_fingerprint(
+            tuple(
+                sorted(
+                    (
+                        entry.player_id,
+                        entry.slot.value,
+                    )
+                    for entry in team_state.roster
+                )
+            )
+        )
+        for team_state in league_state.team_states
+    }
+
+
+def build_scenario_dependency_plan(
+    baseline_state: LeagueState,
+    changed_state: LeagueState,
+    evidence: LiveForecastEvidence,
+    baseline_result: LiveSimulationAnalyticsResult,
+    *,
+    stage: ScenarioComputationStage,
+) -> ScenarioDependencyPlan:
+    if baseline_state.league.league_id != changed_state.league.league_id:
+        raise ValueError("scenario dependency planning requires the same league")
+
+    preparation = baseline_result.scenario_preparation
+    changed_structure = simulation_structure_dependency_fingerprint(changed_state)
+    changed_forecast = simulation_forecast_dependency_fingerprint(
+        evidence.league_scored_forecasts,
+        forecast_model_version=evidence.model_version,
+    )
+    baseline_rosters = _roster_fingerprint_by_team(baseline_state)
+    changed_rosters = _roster_fingerprint_by_team(changed_state)
+    all_team_ids = tuple(sorted(set(baseline_rosters) | set(changed_rosters)))
+    affected = tuple(
+        team_id
+        for team_id in all_team_ids
+        if baseline_rosters.get(team_id) != changed_rosters.get(team_id)
+    )
+
+    reasons: list[str] = []
+    if preparation is None:
+        reasons.append("baseline_scenario_preparation_unavailable")
+        return ScenarioDependencyPlan(
+            affected_team_ids=affected,
+            reusable_team_ids=(),
+            planned_mode="full_recompute",
+            structure_compatible=False,
+            forecast_compatible=False,
+            baseline_preparation_available=False,
+            reasons=tuple(reasons),
+        )
+
+    structure_compatible = preparation.structure_fingerprint == changed_structure
+    forecast_compatible = preparation.forecast_fingerprint == changed_forecast
+    if not structure_compatible:
+        reasons.append("global_simulation_dependency_changed")
+    if not forecast_compatible:
+        reasons.append("forecast_dependency_changed")
+    if not structure_compatible or not forecast_compatible:
+        return ScenarioDependencyPlan(
+            affected_team_ids=affected,
+            reusable_team_ids=(),
+            planned_mode="full_recompute",
+            structure_compatible=structure_compatible,
+            forecast_compatible=forecast_compatible,
+            baseline_preparation_available=True,
+            reasons=tuple(reasons),
+        )
+
+    reusable = tuple(team_id for team_id in all_team_ids if team_id not in affected)
+    requested_count = scenario_stage_simulation_count(stage)
+    if not affected and baseline_result.simulation_result.simulation_count == requested_count:
+        mode = "reuse_competitive_simulation"
+    elif not affected and stage == ScenarioComputationStage.CONFIRMATION:
+        # Canonical baseline may be reused even if its count is read from a
+        # persisted result rather than hard-coded by the caller.
+        mode = "reuse_competitive_simulation"
+    else:
+        mode = "selective_inputs"
+    return ScenarioDependencyPlan(
+        affected_team_ids=affected,
+        reusable_team_ids=reusable,
+        planned_mode=mode,
+        structure_compatible=True,
+        forecast_compatible=True,
+        baseline_preparation_available=True,
+        reasons=(),
+    )
+
+
+def _stage_loader(
+    simulation_loader: SimulationLoader,
+    stage: ScenarioComputationStage,
+) -> SimulationLoader:
+    if stage == ScenarioComputationStage.CONFIRMATION:
+        return simulation_loader
+    factory = getattr(simulation_loader, "__fsffl_progressive_loader_factory__", None)
+    if factory is None:
+        raise ValueError(
+            "scenario Simulation loader does not support non-authoritative progressive stages"
+        )
+    loader = factory(scenario_stage_simulation_count(stage), stage.value)
+    return loader
+
+
+def _next_stage(stage: ScenarioComputationStage) -> ScenarioComputationStage | None:
+    if stage == ScenarioComputationStage.SCREENING:
+        return ScenarioComputationStage.PROVISIONAL
+    if stage == ScenarioComputationStage.PROVISIONAL:
+        return ScenarioComputationStage.CONFIRMATION
+    return None
 
 
 def scenario_cache_key(
@@ -227,6 +397,7 @@ def run_cached_scenario_simulation(
     evidence: LiveForecastEvidence,
     *,
     simulation_loader: SimulationLoader,
+    executor: Callable[[], LiveSimulationAnalyticsResult] | None = None,
 ) -> tuple[LiveSimulationAnalyticsResult, bool]:
     """Reuse or coalesce only an exact changed-State + forecast + loader result.
 
@@ -295,7 +466,11 @@ def run_cached_scenario_simulation(
             return durable, True
 
         simulation_started = monotonic()
-        result = simulation_loader(league_state, evidence)
+        result = (
+            executor()
+            if executor is not None
+            else simulation_loader(league_state, evidence)
+        )
         simulation_finished = monotonic()
         if result.league_view.context.league_state_id != league_state.state_id:
             raise ValueError("scenario Simulation result must match the exact changed LeagueState")
@@ -323,6 +498,99 @@ def run_cached_scenario_simulation(
         with _lock:
             if _inflight.get(key) is pending:
                 _inflight.pop(key, None)
+
+
+def run_progressive_scenario_simulation(
+    baseline_state: LeagueState,
+    changed_state: LeagueState,
+    evidence: LiveForecastEvidence,
+    baseline_result: LiveSimulationAnalyticsResult,
+    *,
+    simulation_loader: SimulationLoader,
+    stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION,
+) -> tuple[
+    LiveSimulationAnalyticsResult,
+    bool,
+    ScenarioComputationMetadata,
+]:
+    """Run one explicitly staged alternate-State Simulation with proven reuse."""
+
+    plan = build_scenario_dependency_plan(
+        baseline_state,
+        changed_state,
+        evidence,
+        baseline_result,
+        stage=stage,
+    )
+    requested_count = scenario_stage_simulation_count(stage)
+
+    # If competitive inputs did not change at all, an authoritative canonical
+    # baseline is stronger than rerunning a smaller provisional sample.
+    reuse_canonical = (
+        plan.planned_mode == "reuse_competitive_simulation"
+        and baseline_result.simulation_result.simulation_count == 50_000
+    )
+    selected_stage = (
+        ScenarioComputationStage.CONFIRMATION if reuse_canonical else stage
+    )
+    selected_loader = _stage_loader(simulation_loader, selected_stage)
+    selective_runner = getattr(selected_loader, "__fsffl_selective_runner__", None)
+
+    actual_mode = plan.planned_mode
+    executor: Callable[[], LiveSimulationAnalyticsResult] | None = None
+    if (
+        plan.planned_mode in {"selective_inputs", "reuse_competitive_simulation"}
+        and selective_runner is not None
+    ):
+        executor = lambda: selective_runner(
+            changed_state,
+            evidence,
+            baseline_result,
+            plan,
+            reuse_canonical,
+        )
+    elif plan.planned_mode != "full_recompute":
+        actual_mode = "full_recompute"
+
+    result, cache_hit = run_cached_scenario_simulation(
+        changed_state,
+        evidence,
+        simulation_loader=selected_loader,
+        executor=executor,
+    )
+    authoritative = (
+        reuse_canonical
+        or (
+            stage == ScenarioComputationStage.CONFIRMATION
+            and result.simulation_result.simulation_count == 50_000
+        )
+    )
+    effective_count = result.simulation_result.simulation_count
+    execution_mode: Literal[
+        "cache_reuse",
+        "full_recompute",
+        "selective_inputs",
+        "reuse_competitive_simulation",
+    ] = "cache_reuse" if cache_hit else actual_mode
+    return (
+        result,
+        cache_hit,
+        ScenarioComputationMetadata(
+            requested_stage=stage,
+            requested_simulation_count=requested_count,
+            effective_simulation_count=effective_count,
+            authoritative=authoritative,
+            execution_mode=execution_mode,
+            dependency_plan=plan,
+            cache_hit=cache_hit,
+            deeper_stage_available=(None if authoritative else _next_stage(stage)),
+            authority_label=(
+                "authoritative_confirmation"
+                if authoritative
+                else "non_authoritative_scenario_preview"
+            ),
+        ),
+    )
 
 
 def scenario_cache_status() -> dict[str, object]:
