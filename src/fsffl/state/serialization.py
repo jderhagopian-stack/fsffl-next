@@ -39,6 +39,11 @@ def _sorted_payload(state: LeagueState) -> dict[str, Any]:
                 item["available_at"],
             ),
         )
+        for policy in payload["draft_order_policies"]:
+            policy["parameters"] = sorted(
+                policy["parameters"],
+                key=lambda item: item["name"],
+            )
     payload["teams"] = sorted(payload["teams"], key=lambda item: item["team_id"])
     payload["team_states"] = sorted(payload["team_states"], key=lambda item: item["team_id"])
     for team_state in payload["team_states"]:
