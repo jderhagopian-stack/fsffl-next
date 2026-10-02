@@ -241,6 +241,13 @@ def simulation_structure_dependency_fingerprint(league_state: LeagueState) -> st
         league_state.league.model_dump(mode="json"),
         tuple(sorted(team.team_id for team in league_state.teams)),
         tuple(
+            (team_state.team_id, team_state.max_points_for)
+            for team_state in sorted(
+                league_state.team_states,
+                key=lambda item: item.team_id,
+            )
+        ),
+        tuple(
             (
                 player.player_id,
                 player.position.value,
