@@ -1735,8 +1735,7 @@ def simulate_regular_season(
         draw_layout = "batch-major;trial-major;compiled-schedule-major;home-away-v1"
         seed_derivation = (
             "pcg64-regular-root-seed-v1;"
-            "python-playoff-xor-0x5F3759DF-v1;"
-            "python-explicit-placement-game-xor-0xD12A70D5-v1"
+            "python-playoff-xor-0x5F3759DF-v1"
         )
     else:
         runtime_version = f"python-{platform.python_version()}"
@@ -1744,8 +1743,7 @@ def simulate_regular_season(
         draw_layout = "trial-major;compiled-schedule-major;home-away-v1"
         seed_derivation = (
             "python-regular-root-seed-v1;"
-            "python-playoff-xor-0x5F3759DF-v1;"
-            "python-explicit-placement-game-xor-0xD12A70D5-v1"
+            "python-playoff-xor-0x5F3759DF-v1"
         )
     future_pick_distributions: tuple[TeamOriginFuturePickDistribution, ...] = ()
     if future_pick_slot_counts is not None and future_pick_policy is not None:
