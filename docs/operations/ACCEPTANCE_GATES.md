@@ -588,3 +588,35 @@ This is sufficient Tier-B hosted acceptance because the new field semantics/pres
 
 **Simulation 2.0 roadmap advances immediately to item 4:** governed counterfactual competitive-outcome deltas using common Monte Carlo worlds where mathematically valid. Simulation returns deltas only; Decision/Trade/Market retain transaction economics, owner preference and acceptance authority.
 
+## 2026-10-01 — #327 ACCEPTED: governed common-world counterfactual competitive deltas
+
+PR #327 was squash-merged as `4ddf4c6b16272eda803ea5ad0af8c06b6407c617`. It completes Simulation 2.0 roadmap item 4 without reopening #324-#326.
+
+Accepted contract:
+- Simulation owns typed competitive-outcome deltas for authorized alternate States;
+- matching model/count/seed/RNG replay identity plus topology coordinates earns `common_random_numbers` provenance;
+- same seed alone is insufficient;
+- incompatible draw topology remains a valid aggregate before/after difference with an explicit unavailability reason rather than a false paired-world claim;
+- regular-season and postseason pairing are governed separately;
+- postseason pairing requires stable draw consumption within each playoff week, while different rounds may legitimately be uniformly stochastic versus uniformly deterministic;
+- Trade, Waiver and What-If consume Simulation competitive deltas; Team Utility adds only its non-competitive consequence channels; Value/economics/materiality/owner behavior/negotiation/disposition/acceptance remain downstream;
+- exact scenario-cache reuse remains performance-only and does not create comparison authority.
+
+Review/validation:
+- final exact head `99d7376c47b2dab644df7e505a9f545e9c78102e`: ordinary CI **1,970 passed**, one existing warning; PR164 focused corrective PASS; Live Forecast trace PASS;
+- corrected source tree explicitly passed **1,970 tests on both Python 3.11 and 3.12**;
+- reviewed fixed 50,000-world replay digests are Python 3.11 `5d76c6d46163171af810ac825f303529689d17a00884fd3f1409730180d70279` and Python 3.12 `9105dcf63c6d46827a9005e60abf919ea8b5edf8e045c2ae0365e1f87038c2bf`;
+- the temporary dual-runtime CI matrix was removed and normal repository CI policy restored;
+- Codex review was requested on the immutable head but unavailable because the code-review quota was exhausted;
+- bounded manual P1/P2 review corrected both-side replay provenance, per-week postseason draw-topology precision, and contradictory pairing-metadata validation. No remaining P1/P2 issue was found.
+
+Single targeted hosted deployment:
+- Render deploy `dep-davfcjhsrm7s73bprjag` checked out exact merge `4ddf4c6b...`, became live at **2026-10-02 00:11:46Z**, and remained the newest deployment; no same-commit redeploy occurred;
+- startup on instance `...-4k4mq` correctly rejected the pre-item-4 Simulation artifact while retaining reusable Forecast and Value with full Intrinsic: `forecast=True simulation=False value=True complete=False`;
+- startup resource readiness was ~278 MB RSS / ~279 MB peak against the ~429 MB soft engineering budget; steady hosted memory settled near **308 MB** against the 512 MiB service limit and CPU returned to idle;
+- no error logs, OOM/recycle, repeated reconciliation loop or replacement deploy occurred in the acceptance window.
+
+The private beta requires Basic Auth and no authenticated scenario POST occurred during this stable deployment window. No claim is made that a physical browser scenario was re-exercised. Under the risk-proportionate/module-contract rule, this is not a promotion blocker: the changed scenario orchestration and comparison payload were exercised by exact-head product/integration tests, while the hosted-only artifact identity/restore/resource boundary was directly proven on the merged build. A later physical scenario use may provide additional confirmation but must not reopen item 4 absent contradictory evidence.
+
+**Simulation 2.0 roadmap advances immediately to item 5: team-of-origin future-pick Simulation.** Build exact-slot/expected-slot distributions from governed origin-team football outcomes and actual league draft-order rules; preserve current owner separately from origin team; do not convert generic early/mid/late labels into authority and do not invent future-team strength beyond supported horizons.
+
