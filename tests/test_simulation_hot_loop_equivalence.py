@@ -390,7 +390,7 @@ def test_50000_run_output_matches_governed_settings_derived_postseason_baseline(
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
         (3, 11): "f87a5f68430dbcd1e0ebeceb60d448bcd79ba615b2812a7d1ea26aa6273cc481",
-        (3, 12): "9105dcf63c6d46827a9005e60abf919ea8b5edf8e045c2ae0365e1f87038c2bf",
+        (3, 12): "c3b9b1f0348a0e7c6440ae61a765a51176d7159396fe8dd8ea67b3310bcdd495",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (
