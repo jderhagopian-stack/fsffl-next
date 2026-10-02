@@ -23,7 +23,11 @@ from fsffl.team_utility.future_pick import (
     TeamOriginFuturePickDistribution,
 )
 from fsffl.team_utility.simulation import RegularSeasonSimulationResult
-from fsffl.value.historical_pick import HistoricalDraftSlotObservation
+from fsffl.value.historical_pick import (
+    GovernedDraftSlotValue,
+    GovernedDraftSlotValueCurve,
+    HistoricalDraftSlotObservation,
+)
 from fsffl.value.models import ValueDistribution, ValueScale
 from fsffl.value.origin_aware_pick import (
     GenericPickValuePrior,
@@ -520,3 +524,45 @@ def test_value_does_not_feed_back_into_simulation_or_draft_order_probability() -
     assert "fsffl.value" not in future_pick_source
     assert "origin_aware_pick" not in simulation_source
     assert "origin_aware_pick" not in future_pick_source
+
+
+def test_prebuilt_governed_curve_bypasses_raw_observation_rebuild() -> None:
+    curve = GovernedDraftSlotValueCurve(
+        round=1,
+        as_of=AS_OF,
+        scale=SCALE,
+        slots=(
+            GovernedDraftSlotValue(
+                slot_in_round=1,
+                value=ValueDistribution(mean=120.0, stddev=10.0),
+                evidence_seasons=(2024, 2025),
+                source_model_versions=("frozen-v1",),
+                provenance=("retained PIT exact-slot evidence",),
+            ),
+            GovernedDraftSlotValue(
+                slot_in_round=2,
+                value=ValueDistribution(mean=60.0, stddev=8.0),
+                evidence_seasons=(2024, 2025),
+                source_model_versions=("frozen-v1",),
+                provenance=("retained PIT exact-slot evidence",),
+            ),
+        ),
+        model_version="frozen-live-curve-v1",
+    )
+
+    results = _by_pick(
+        build_origin_aware_pick_values_from_simulation(
+            _state(),
+            _simulation(a=(0.25, 0.75, 0.0), b=(0.75, 0.25, 0.0)),
+            governed_slot_value_curves=(curve,),
+        )
+    )
+
+    a = results["pick-2027-r1-a"]
+    b = results["pick-2027-r1-b"]
+    assert a.status == b.status == OriginAwarePickValueStatus.ORIGIN_AWARE_AUTHORITATIVE
+    assert a.origin_aware_estimate is not None
+    assert b.origin_aware_estimate is not None
+    assert a.origin_aware_estimate.distribution.mean == pytest.approx(75.0)
+    assert b.origin_aware_estimate.distribution.mean == pytest.approx(105.0)
+    assert a.slot_value_curve_model_version == "frozen-live-curve-v1"
