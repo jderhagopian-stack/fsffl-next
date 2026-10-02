@@ -9,7 +9,10 @@ from fsffl.team_utility import (
 )
 
 from .runtime import LiveForecastEvidence
-from .scenario_cache import run_cached_scenario_simulation
+from .scenario_cache import (
+    ScenarioComputationStage,
+    run_progressive_scenario_simulation,
+)
 from .simulation_runtime import LiveSimulationAnalyticsResult
 
 
@@ -29,6 +32,7 @@ def build_waiver_simulation_comparison(
     move: WaiverMove,
     *,
     simulation_loader: SimulationLoader,
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION,
 ) -> dict[str, object]:
     """Run one canonical add/drop scenario through NEXT-4 Simulation authority.
 
@@ -53,10 +57,13 @@ def build_waiver_simulation_comparison(
         raise ValueError("waiver simulation requires a current NEXT-4 baseline simulation")
 
     changed_state = apply_waiver_move(league_state, move=move)
-    changed, cache_hit = run_cached_scenario_simulation(
+    changed, cache_hit, computation = run_progressive_scenario_simulation(
+        league_state,
         changed_state,
         forecast_evidence,
+        baseline,
         simulation_loader=simulation_loader,
+        stage=scenario_stage,
     )
     baseline_utility = _utility_for_team(baseline, move.focal_team_id)
     changed_utility = _utility_for_team(changed, move.focal_team_id)
@@ -81,6 +88,7 @@ def build_waiver_simulation_comparison(
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "scenario_cache_hit": cache_hit,
+        "scenario_computation": computation.model_dump(mode="json"),
         "simulation_counterfactual_delta": simulation_delta.model_dump(mode="json"),
         "team_delta": delta.model_dump(mode="json"),
         "materiality": None,
@@ -91,6 +99,10 @@ def build_waiver_simulation_comparison(
             "competitive_delta": "NEXT-4 Simulation common-world comparison when replay/topology coordinates match",
             "scenario_delta": "NEXT-4 Team Utility consumes Simulation competitive delta and adds resilience",
             "scenario_cache": "performance-only exact-result reuse",
+            "scenario_computation": (
+                "screening/provisional are explicitly non-authoritative; "
+                "confirmation or exact canonical reuse is authoritative"
+            ),
             "materiality_evaluated": False,
             "presentation_calculation": False,
         },
