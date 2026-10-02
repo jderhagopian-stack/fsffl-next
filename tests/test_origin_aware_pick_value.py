@@ -450,8 +450,18 @@ def test_generic_fallback_dependency_identity_changes_with_prior_economics() -> 
 
     assert first.status == second.status == OriginAwarePickValueStatus.GENERIC_FALLBACK
     assert first.dependency_fingerprint != second.dependency_fingerprint
+    assert first.generic_fallback_estimate is not None
+    assert second.generic_fallback_estimate is not None
     assert first.generic_fallback_estimate.distribution.mean == pytest.approx(40.0)
     assert second.generic_fallback_estimate.distribution.mean == pytest.approx(55.0)
+    assert (
+        first.generic_fallback_estimate.generic_prior_model_version
+        == "generic-prior-v1"
+    )
+    assert (
+        second.generic_fallback_estimate.generic_prior_model_version
+        == "generic-prior-v2"
+    )
 
 
 def test_next_draft_probabilities_are_never_extrapolated_into_farther_future_season() -> None:
@@ -524,6 +534,85 @@ def test_value_does_not_feed_back_into_simulation_or_draft_order_probability() -
     assert "fsffl.value" not in future_pick_source
     assert "origin_aware_pick" not in simulation_source
     assert "origin_aware_pick" not in future_pick_source
+
+
+def _prebuilt_curve(
+    round_number: int,
+    rows: tuple[tuple[int, float], ...],
+    *,
+    model_version: str | None = None,
+) -> GovernedDraftSlotValueCurve:
+    return GovernedDraftSlotValueCurve(
+        round=round_number,
+        as_of=AS_OF,
+        scale=SCALE,
+        slots=tuple(
+            GovernedDraftSlotValue(
+                slot_in_round=slot,
+                value=ValueDistribution(mean=mean, stddev=5.0),
+                evidence_seasons=(2024, 2025),
+                source_model_versions=("frozen-v1",),
+                provenance=("retained PIT exact-slot evidence",),
+            )
+            for slot, mean in rows
+        ),
+        model_version=model_version or f"prebuilt-r{round_number}-v1",
+    )
+
+
+def test_prebuilt_curve_validates_dominance_in_numeric_slot_order() -> None:
+    valid_unsorted = _prebuilt_curve(
+        1,
+        (
+            (2, 60.0),
+            (1, 120.0),
+        ),
+    )
+    assert valid_unsorted.value_for_slot(1) is not None
+    assert valid_unsorted.value_for_slot(2) is not None
+
+    with pytest.raises(
+        ValueError,
+        match="earlier governed draft slots cannot be less valuable",
+    ):
+        _prebuilt_curve(
+            1,
+            (
+                # Tuple order looks monotone to the old validator, but numeric slot
+                # order is inverted: slot 1 is worth less than later slot 2.
+                (2, 100.0),
+                (1, 50.0),
+            ),
+        )
+
+
+def test_prebuilt_curves_enforce_dominance_across_round_boundaries() -> None:
+    round_one = _prebuilt_curve(
+        1,
+        (
+            (1, 120.0),
+            (2, 80.0),
+            (3, 50.0),
+        ),
+    )
+    round_two = _prebuilt_curve(
+        2,
+        (
+            (1, 60.0),
+            (2, 40.0),
+            (3, 20.0),
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="preserve draft-position dominance across round boundaries",
+    ):
+        build_origin_aware_pick_values_from_simulation(
+            _state(),
+            _simulation(),
+            governed_slot_value_curves=(round_two, round_one),
+        )
 
 
 def test_prebuilt_governed_curve_bypasses_raw_observation_rebuild() -> None:
