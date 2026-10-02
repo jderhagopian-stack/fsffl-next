@@ -246,6 +246,7 @@ def _fallback_estimate(
         model_version=f"{model_version}:generic-fallback",
         class_strength_model_version=NO_GOVERNED_CLASS_ADJUSTMENT,
         slot_uncertainty_model_version="generic-season-round-prior:no-origin-slot",
+        generic_prior_model_version=prior.model_version,
     )
 
 
@@ -444,6 +445,22 @@ def build_origin_aware_pick_values(
         if slot_value_observations:
             raise ValueError(
                 "provide governed slot-value curves or raw slot observations, not both"
+            )
+        ordered_prebuilt_slots = tuple(
+            (curve.round, row.slot_in_round, row.value.mean)
+            for curve in sorted(
+                governed_slot_value_curves, key=lambda item: item.round
+            )
+            for row in sorted(curve.slots, key=lambda item: item.slot_in_round)
+        )
+        if any(
+            ordered_prebuilt_slots[index][2]
+            < ordered_prebuilt_slots[index + 1][2]
+            for index in range(len(ordered_prebuilt_slots) - 1)
+        ):
+            raise ValueError(
+                "prebuilt governed slot-value curves must preserve draft-position "
+                "dominance across round boundaries"
             )
         curve_by_round.update(
             {curve.round: curve for curve in governed_slot_value_curves}

@@ -165,6 +165,7 @@ class PickValueEstimate(FrozenModel):
     model_version: str
     class_strength_model_version: str
     slot_uncertainty_model_version: str
+    generic_prior_model_version: str | None = None
 
     @field_validator("as_of")
     @classmethod
@@ -181,6 +182,11 @@ class PickValueEstimate(FrozenModel):
             self.class_strength_model_version,
             self.slot_uncertainty_model_version,
         )
+        if (
+            self.generic_prior_model_version is not None
+            and not self.generic_prior_model_version.strip()
+        ):
+            raise ValueError("generic_prior_model_version cannot be blank")
         return self
 
 

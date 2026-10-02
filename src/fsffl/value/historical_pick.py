@@ -161,9 +161,12 @@ class GovernedDraftSlotValueCurve(FrozenModel):
         slots = [item.slot_in_round for item in self.slots]
         if len(slots) != len(set(slots)):
             raise ValueError("slot-value curve requires unique exact slots")
+        ordered_slots = tuple(
+            sorted(self.slots, key=lambda item: item.slot_in_round)
+        )
         if any(
-            self.slots[index].value.mean < self.slots[index + 1].value.mean
-            for index in range(len(self.slots) - 1)
+            ordered_slots[index].value.mean < ordered_slots[index + 1].value.mean
+            for index in range(len(ordered_slots) - 1)
         ):
             raise ValueError("earlier governed draft slots cannot be less valuable")
         return self
