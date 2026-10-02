@@ -337,3 +337,30 @@ The current performance investigation also established a critical distinction fo
 After the batched-RNG production decision, re-profile the **full hosted Simulation call** before choosing the next optimization. Required decomposition should separately measure at least: heavy-lane wait; lineup/static-state compilation; bye-aware weekly scoring/input construction; RNG; matchup/scoring; standings; playoffs; aggregation; Team Utility/Analytics; memory reclaim; persistence/publication. Continue the broader Simulation modernization by measured bottleneck order rather than assuming the Gaussian kernel is the whole ~173s problem.
 
 If Work nears its session/context limit while authorized work remains, it must commit an exact handoff into `docs/operations/` with branch/PR/head, completed evidence, unresolved findings, current test/CI state, any Management gate, and the next executable action, then terminate as `TURN COMPLETE — CONTINUATION REQUIRED`. Normal Implementation should resume from that repo state rather than reconstructing from chat history.
+
+## 2026-10-02 — Management continuity checkpoint: Simulation 2.0 item 8
+
+Simulation 2.0 items #324 through #330 are accepted and must not be reopened absent contradictory evidence. The active implementation is **PR #331 — Simulation 2.0: add convergence and PIT calibration evidence** on branch `work/sim20-convergence-pit-calibration`.
+
+Current management contract:
+- production Simulation authority remains 50,000 runs unless Management explicitly approves a change;
+- item 8 convergence/stability work may compare governed counts across 5k-100k plus preview context, but study evidence alone does not change runtime authority;
+- PIT calibration is not a historical-data hunt. Use only authentic timestamped Forecast+State checkpoints already present and immediately identifiable;
+- do not reconstruct old Forecasts, backfill current projections into old dates, scrape archives, or delay closeout looking for historical evidence NEXT never captured;
+- if current realized PIT calibration coverage is too small, report the exact sample/coverage and close the slice as a prospective calibration framework that will strengthen as future snapshots resolve;
+- counterfactual scenarios are tested for replay/stability/sensitivity, not unknowable alternate-world causal accuracy.
+
+Latest repo-visible PR #331 status at this checkpoint:
+- draft PR head `a2b87f03e9058a473c51a3b86b8011f785c00670`;
+- convergence harness/workflow exists and is actively running;
+- one pre-registered convergence workflow completed successfully while corrected/newer runs continued;
+- recent CI on predecessor item-8 heads was green;
+- PR currently needs reconciliation with newer main management commits before final review/merge;
+- current evidence inventory reports **0 fully realized final-season PIT calibration cases** because the 2026 season is still active; this is expected and is not a blocker.
+
+Accepted product direction to retain after Simulation 2.0 closeout:
+- League Atlas should remain concise at league level;
+- tapping a team opens a richer franchise drill-down with competitive outlook, full roster grouped by starters/bench/IR/taxi, player age/projection/Intrinsic/Broad Market values, draft capital, depth/fragility, origin-team pick distributions, Multiverse examples and provenance through progressive disclosure;
+- actual/recorded lineup state and model-optimized/projected starters must remain semantically distinct.
+
+Management continuity rule: keep this file and the canonical operations state current before chat context becomes a risk. A successor management chat should read `OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this file, and the current active PR before issuing implementation direction.
