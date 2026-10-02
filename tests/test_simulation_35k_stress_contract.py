@@ -148,4 +148,4 @@ def test_management_directive_remains_explicitly_research_only() -> None:
     assert "50,000 canonical runs" in directive
     assert "100,000 runs for same-root comparison only" in directive
     assert "Do not change production count" in directive
-    assert "Origin-aware draft-pick Value remains on hold" in directive
+    assert "Temporarily hold the next origin-aware draft-pick Value implementation" in directive
