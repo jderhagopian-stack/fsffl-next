@@ -2459,3 +2459,11 @@ This is sufficient risk-proportionate Tier-B closeout under the no-redeploy/no-c
 
 **Simulation 2.0 roadmap advances immediately to item 5:** team-of-origin future rookie-pick distributions under the actual league draft-order rules. Simulation owns the football-outcome distribution; Value/Decision consume it downstream. Generic early/mid/late labels are summaries only, never the primary authority.
 
+
+## 2026-10-01 — Management policy: estimates require explicit sanity-check visibility
+
+Management clarified that NEXT should not default to unavailable merely because an exact rule/fact is missing. Use the strongest available evidence hierarchy: exact observed/configured rule -> deterministic derivation -> league historical inference -> governed standard-domain fallback -> bounded probabilistic estimate. Return unavailable only when even a bounded estimate would be materially misleading or unmodelable.
+
+Any materially new estimate/fallback that can affect authoritative outputs must be surfaced to Management before promotion with: the missing exact fact, available evidence, proposed method, rationale/alternatives, affected outputs, uncertainty treatment, and what future evidence would supersede it. Management receives a sanity-check opportunity. Do not silently label an estimate as a verified league rule. Once a recurring fallback method is accepted, later unchanged uses need provenance/traceability but not repeated approval unless context or consequences materially differ.
+
+For active Simulation item 5, remove unsupported FSFFL-specific draft-order assumptions. Draft-order rules must use explicit league evidence when available; otherwise use the separately approved governed standard fallback with explicit derived provenance. Placement games affect rookie order only when explicitly governed.
