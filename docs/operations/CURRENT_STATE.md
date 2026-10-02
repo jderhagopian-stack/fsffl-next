@@ -2833,3 +2833,46 @@ Physical + hosted evidence on the live #330 build showed one manual refresh comp
 Controlling directive: `docs/operations/directives/20261002_STARTUP_REFRESH_SEQUENCING_CORRECTIVE.md`.
 
 Only the startup/manual-refresh reconciliation lifecycle is reopened. Forecast and Simulation 2.0 model semantics remain accepted; production stays at 50,000 runs. Origin-aware draft-pick Value PR #335 is held at its current safe checkpoint until this Tier-C lifecycle/resource corrective closes.
+
+## 2026-10-02 — PR #337 ACTIVE: startup/manual-refresh sequencing root cause closed in code
+
+The narrow corrective from `docs/operations/directives/20261002_STARTUP_REFRESH_SEQUENCING_CORRECTIVE.md` is implemented on `work/startup-refresh-sequencing-corrective`. PR #335 remains held and untouched.
+
+### Exact ownership failure
+
+The physically observed first-pass abort was **not caused by Behavioral**. The event chain is now reproduced deterministically:
+
+1. an existing partial-runtime reconciliation reached Simulation and waited behind heavy State materialization;
+2. the manual hosted Sleeper refresh completed authoritative State materialization and a newer material State won the same-user lifecycle boundary;
+3. that State activation advanced `league_generation`, cleared the older unpublished working generation, and queued the replacement reconciliation;
+4. the older reconciliation was still a heavy-work waiter and had already passed its pre-wait ownership checks;
+5. after heavy admission it did not revalidate generation/working-target ownership, so it ran the full 50,000-run Simulation for an already-superseded generation;
+6. only when attaching that result did the existing lifecycle check observe the newer generation and interrupt the job;
+7. by the time `job_aborted` was logged, Behavioral had acquired the newly released heavy-work lane, which explains `active=behavioral` without making Behavioral the superseding owner;
+8. the replacement reconciliation then rebuilt the same expensive downstream layers and eventually published.
+
+### Correction
+
+- Forecast, Simulation and Value now revalidate lifecycle generation, league/team identity, working-generation presence and exact working target **after heavy-work admission and before the expensive loader**.
+- A stale admitted waiter performs bounded memory reclaim while it still owns the heavy-work lane, then interrupts before expensive work; no model authority is weakened.
+- Reconciliation start performs a final coalescing/ownership check under the reconciliation lock around job admission + ownership-map publication, closing the near-simultaneous startup/browser trigger race.
+- Existing post-build attachment checks remain intact: a genuinely newer governed State that arrives while a heavy model is already executing may still supersede that completed result.
+- Generation-aware stale cleanup remains authoritative and cannot erase replacement working state.
+- New hosted diagnostics log the exact stale-admission/abort reason and expected/current generation/target without changing product output.
+
+### Deterministic evidence
+
+The exact code head before this docs checkpoint passed full CI (**2,020 passed**, one existing warning), plus PR164, Home North Star, League Atlas and Live Forecast focused lanes.
+
+New deterministic races prove:
+- partial restored runtime + material refresh while old Simulation waits;
+- stale old waiter exits before invoking Simulation;
+- exactly one Simulation loader call, for the winning refreshed State;
+- repeated current-job polling is observational;
+- Behavioral can wait/acquire immediately after valid Simulation without changing lifecycle ownership;
+- equivalent near-simultaneous reconciliation triggers create one job owner;
+- stale-generation cleanup cannot erase the replacement working generation;
+- the winning generation reaches one completed publication.
+
+Promotion remains Tier C. Required next gate after exact-head docs-complete CI/review is one targeted hosted cold/partial-restore -> manual refresh lifecycle/resource acceptance. The acceptance must show no duplicate Simulation on one target, no superseded completed heavy phase, one terminal publication, monotonic readiness, and peak RSS <= 429,496,720 bytes. No Simulation semantics or 50,000-run authority changed.
+
