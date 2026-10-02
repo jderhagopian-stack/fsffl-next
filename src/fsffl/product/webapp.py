@@ -45,6 +45,7 @@ from .league_atlas_preseason import (
     capture_preseason_baseline_if_eligible,
     load_preseason_baseline,
 )
+from .origin_aware_pick_value_runtime import build_live_origin_aware_pick_values
 from .intelligence_runtime import (
     build_forecast_lineup_analytics,
     build_state_only_league_view,
@@ -2518,12 +2519,22 @@ def create_app(
                     )
 
         presentation_runtime = _presentation_runtime(runtime)
+        origin_aware_pick_values = ()
+        if (
+            presentation_runtime.league_state is not None
+            and presentation_runtime.simulation_analytics is not None
+        ):
+            origin_aware_pick_values = build_live_origin_aware_pick_values(
+                presentation_runtime.league_state,
+                presentation_runtime.simulation_analytics.simulation_result,
+            )
         atlas_payload = build_league_atlas_payload(
             presentation_runtime,
             preseason_team_views=preseason_views,
             preseason_as_of=preseason_as_of,
             preseason_reason=preseason_reason,
             preseason_baseline=preseason_baseline,
+            origin_aware_pick_values=origin_aware_pick_values,
         )
         atlas_payload["intelligence_freshness"] = _intelligence_freshness(
             runtime,

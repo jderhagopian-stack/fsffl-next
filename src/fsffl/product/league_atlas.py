@@ -269,6 +269,7 @@ def _pick_map(
     state: LeagueState,
     *,
     projected_picks: tuple[object, ...] = (),
+    origin_aware_pick_values: tuple[object, ...] = (),
 ) -> dict[str, object]:
     names = _team_names(state)
     owner_by_pick = {
@@ -278,6 +279,9 @@ def _pick_map(
     picks = {pick.pick_id: pick for pick in state.draft_picks}
     projection_by_pick = {
         getattr(item, "pick_id"): item for item in projected_picks
+    }
+    value_by_pick = {
+        getattr(item, "pick_id"): item for item in origin_aware_pick_values
     }
     seasons = sorted({pick.season for pick in state.draft_picks})
     rounds = sorted({pick.round for pick in state.draft_picks})
@@ -290,6 +294,17 @@ def _pick_map(
             continue
         status = "own" if owner_team_id == pick.original_team_id else "acquired"
         projection = projection_by_pick.get(pick.pick_id)
+        pick_value = value_by_pick.get(pick.pick_id)
+        origin_estimate = (
+            getattr(pick_value, "origin_aware_estimate", None)
+            if pick_value is not None
+            else None
+        )
+        fallback_estimate = (
+            getattr(pick_value, "generic_fallback_estimate", None)
+            if pick_value is not None
+            else None
+        )
         row = {
             "pick_id": pick.pick_id,
             "season": pick.season,
@@ -326,8 +341,71 @@ def _pick_map(
                         projection.draft_order_projection_model_version
                     ),
                     "authority_status": projection.authority_status,
+                    "broad_market_variant": (
+                        {
+                            "expected_value": projection.expected_variant_market_value,
+                            "low_value": projection.low_variant_market_value,
+                            "high_value": projection.high_variant_market_value,
+                            "model_version": projection.market_variant_model_version,
+                            "authority": (
+                                "Broad Market early/mid/late variant composition; "
+                                "presentation/market lens only, not FSFFL Intrinsic"
+                            ),
+                        }
+                        if projection.expected_variant_market_value is not None
+                        else None
+                    ),
                 }
                 if projection is not None
+                else None
+            ),
+            "fsffl_intrinsic_pick_value": (
+                {
+                    "status": getattr(pick_value, "status").value,
+                    "authoritative": bool(getattr(pick_value, "authoritative")),
+                    "origin_aware_estimate": (
+                        origin_estimate.model_dump(mode="json")
+                        if origin_estimate is not None
+                        else None
+                    ),
+                    "generic_fallback_estimate": (
+                        fallback_estimate.model_dump(mode="json")
+                        if fallback_estimate is not None
+                        else None
+                    ),
+                    "fallback_reason": getattr(pick_value, "fallback_reason", None),
+                    "slot_value_curve_model_version": getattr(
+                        pick_value, "slot_value_curve_model_version", None
+                    ),
+                    "slot_value_evidence_seasons": list(
+                        getattr(pick_value, "slot_value_evidence_seasons", ())
+                    ),
+                    "slot_value_source_model_versions": list(
+                        getattr(pick_value, "slot_value_source_model_versions", ())
+                    ),
+                    "missing_slots": list(getattr(pick_value, "missing_slots", ())),
+                    "class_strength_status": getattr(
+                        pick_value, "class_strength_status", None
+                    ),
+                    "class_strength_model_version": getattr(
+                        pick_value, "class_strength_model_version", None
+                    ),
+                    "horizon_adjustment_status": getattr(
+                        pick_value, "horizon_adjustment_status", None
+                    ),
+                    "horizon_adjustment_model_version": getattr(
+                        pick_value, "horizon_adjustment_model_version", None
+                    ),
+                    "dependency_fingerprint": getattr(
+                        pick_value, "dependency_fingerprint", None
+                    ),
+                    "provenance": list(getattr(pick_value, "provenance", ())),
+                    "authority": (
+                        "Value-owned origin-aware FSFFL Intrinsic when authoritative; "
+                        "generic fallback remains explicitly non-origin-aware"
+                    ),
+                }
+                if pick_value is not None
                 else None
             ),
         }
@@ -387,7 +465,10 @@ def _pick_map(
         "seasons": seasons,
         "rounds": rounds,
         "teams": teams,
-        "ownership_semantics": "canonical State draft_picks + pick_ownership; no pick-value score",
+        "ownership_semantics": (
+            "canonical State draft_picks + pick_ownership; origin team determines "
+            "slot economics while current owner determines portfolio attachment"
+        ),
     }
 
 
@@ -398,6 +479,7 @@ def build_league_atlas_payload(
     preseason_as_of: str | None = None,
     preseason_reason: str | None = None,
     preseason_baseline: LeagueAtlasPreseasonBaseline | None = None,
+    origin_aware_pick_values: tuple[object, ...] = (),
 ) -> dict[str, object]:
     state = runtime.league_state
     if state is None:
@@ -521,7 +603,11 @@ def build_league_atlas_payload(
             ),
         },
         "preseason_expectation": preseason,
-        "pick_map": _pick_map(state, projected_picks=projected_picks),
+        "pick_map": _pick_map(
+            state,
+            projected_picks=projected_picks,
+            origin_aware_pick_values=origin_aware_pick_values,
+        ),
         "authority": {
             "state": "canonical point-in-time LeagueState",
             "max_points_for": "canonical State provider potential-points evidence when available",
@@ -536,6 +622,10 @@ def build_league_atlas_payload(
             "pick_location": (
                 "governed NEXT-4 Simulation team-of-origin exact slot distribution "
                 "for the next draft season only"
+            ),
+            "pick_intrinsic": (
+                "Value-owned exact probability mixture over governed exact-slot "
+                "economic evidence; Broad Market and generic fallback remain separate"
             ),
             "presentation_creates_model_truth": False,
             "team_intrinsic_total_created": False,

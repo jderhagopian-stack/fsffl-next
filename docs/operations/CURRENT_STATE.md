@@ -2885,3 +2885,33 @@ Physical iPhone/Safari acceptance of the deployed corrective produced one cohere
 A separate Safari presentation defect remains: Refresh gave no reliable visible acknowledgement/progress/completion and the finished state only became obvious after a page reload. Management explicitly defers that to a future bounded browser-status UX effort. It does not reopen the backend lifecycle corrective and does not block model/value work.
 
 Release the HOLD on PR #335 and resume origin-aware draft-pick Value from safe checkpoint `0564045f7b311d43443540974d54b0a00c5ec856`. Next after Foundation 3 remains Long-Term Intrinsic.
+
+## 2026-10-02 — Foundation 3 / PR #335 CLOSEOUT ACCEPTED
+
+Foundation 3 is complete on the reviewed code tree `c86df351492fa63d22c79d690935e5a1cbeb21e7` and PR #335 may promote after the docs-only closeout head clears standard exact-head CI.
+
+Accepted contract:
+- next-draft origin-aware pick Intrinsic consumes Simulation-owned team-of-origin exact slot distributions and never recreates team strength or draft order in Value;
+- economics use the full exact probability mixture `E[value(slot)]`, not `value(E[slot])`;
+- origin and current owner remain separate; ownership transfer does not change origin Intrinsic;
+- authoritative status requires the canonical 50,000-run Simulation;
+- exact-slot economics are a frozen 12-slot x 3-round FSFFL 2027 curve using the Historical Pick Coordinate pipeline and structural draft-position dominance;
+- 2028+ picks do not inherit 2027 origin distributions; farther-future coordinates remain typed generic fallback/unavailable until governed;
+- no draft-class multiplier and no horizon multiplier were invented;
+- Broad Market remains a separate market lens.
+
+Exact review/evidence:
+- full CI: **2,042 passed**, one existing warning;
+- Home North Star, League Atlas North Star, PR164 corrective, and Live Forecast corrective trace: PASS;
+- Foundation-3 evidence run `37065948587`: PASS;
+- retained builder: seasons requested 2023–2026, **144** selections, **108** usable frozen PIT values, **0 missing**, **36 stale** (2023 excluded by the 14-day freshness gate), full 36-slot curve supported;
+- real FSFFL 2027 sanity: **36 authoritative picks**, **21 transferred picks**, **36 nonlinear exact-mixture examples**, status PASS.
+
+Bounded P1/P2 review found and closed two issues before acceptance:
+1. raw DynastyProcess/FantasyPros-lineage rows are `RESEARCH_ONLY` and cannot be promoted as deployed source authority. The deployable private-beta object is now explicitly the frozen 36-parameter derived curve only; raw rows are not deployed/redistributed, raw rights are not promoted, and `commercial_recheck_required=true`.
+2. the prior evidence workflow could rebuild one curve while separately sanity-testing stale hard-coded live constants. The real FSFFL sanity now requires the freshly rebuilt curve's canonical economic digest to equal the frozen live curve before it can proceed.
+
+No remaining bounded P1/P2 issue was found after those corrections. A separate Render/physical cycle is not required for this closeout: the change is an additive Value/output contract with no persistence/publication/startup change, while the exact real-FSFFL 50k path and League Atlas product composition were exercised by the dedicated evidence/focused workflows.
+
+**Next canonical workstream: Long-Term Intrinsic.** Do not reopen Simulation 2.0, Foundation 3, or the deferred Safari-status UX item absent contradictory evidence.
+

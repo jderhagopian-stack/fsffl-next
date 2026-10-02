@@ -31,11 +31,12 @@ def observation(*, source: str, player: str, at: datetime, value: float, metric:
     )
 
 
-def policy(*, max_age: int = 14):
+def policy(*, max_age: int = 14, format_context_id: str | None = None):
     return HistoricalDraftValuePolicy(
         source_ids=("source-a", "source-b"),
         metric="market_value",
         scale=SCALE,
+        format_context_id=format_context_id,
         max_observation_age_days=max_age,
         model_version="historical-draft-freeze-v1",
         provenance="approved PIT market evidence",
@@ -138,6 +139,58 @@ def test_stale_and_missing_values_fail_closed() -> None:
     assert result.values == ()
     assert result.stale_player_ids == ("stale-rookie",)
     assert result.missing_player_ids == ("missing-rookie",)
+
+
+def test_explicit_format_context_filters_same_source_same_timestamp_rows() -> None:
+    at = datetime(2025, 4, 30, tzinfo=UTC)
+    panel = CalibrationPanel(
+        observations=(
+            CalibrationObservation(
+                source_id="source-a",
+                evidence_kind=CalibrationEvidenceKind.MARKET_VALUE,
+                observed_at=at,
+                asset_id="rookie-1",
+                format_context_id="dynasty:1qb",
+                metric="market_value",
+                value=70,
+                rights_class=DataRightsClass.RESEARCH_ONLY,
+                source_version="snapshot-v1",
+                provenance_uri="source:1qb",
+            ),
+            CalibrationObservation(
+                source_id="source-a",
+                evidence_kind=CalibrationEvidenceKind.MARKET_VALUE,
+                observed_at=at,
+                asset_id="rookie-1",
+                format_context_id="dynasty:2qb",
+                metric="market_value",
+                value=100,
+                rights_class=DataRightsClass.RESEARCH_ONLY,
+                source_version="snapshot-v1",
+                provenance_uri="source:2qb",
+            ),
+        ),
+        as_of=at,
+        panel_version="panel-v1",
+    )
+    selection = HistoricalDraftSelection(
+        draft_season=2025,
+        round=1,
+        slot_in_round=1,
+        player_id="rookie-1",
+        selected_at=datetime(2025, 5, 1, tzinfo=UTC),
+        provenance="league draft log",
+    )
+
+    result = freeze_historical_draft_values(
+        selections=(selection,),
+        panel=panel,
+        policy=policy(format_context_id="dynasty:2qb"),
+        as_of=datetime(2025, 5, 1, tzinfo=UTC),
+    )
+
+    assert result.missing_player_ids == ()
+    assert result.values[0].value.mean == 100
 
 
 def test_wrong_metric_or_unapproved_source_is_not_silently_used() -> None:

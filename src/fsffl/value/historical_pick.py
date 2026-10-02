@@ -129,6 +129,52 @@ class HistoricalPickCoordinateResult(FrozenModel):
     model_version: str = "historical-pick-coordinate-v1"
 
 
+class GovernedDraftSlotValue(FrozenModel):
+    """One exact slot's governed economic coordinate after dominance projection."""
+
+    slot_in_round: Annotated[int, Field(ge=1)]
+    value: ValueDistribution
+    evidence_seasons: tuple[int, ...]
+    source_model_versions: tuple[str, ...]
+    provenance: tuple[str, ...]
+    dominance_adjusted: bool = False
+
+
+class GovernedDraftSlotValueCurve(FrozenModel):
+    """Leakage-safe exact-slot curve reusable by current and historical Value."""
+
+    round: Annotated[int, Field(ge=1)]
+    as_of: datetime
+    scale: ValueScale
+    slots: tuple[GovernedDraftSlotValue, ...]
+    model_version: str = "governed-draft-slot-value-curve-v1"
+
+    @field_validator("as_of")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("slot-value curve as_of must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def validate_curve(self) -> "GovernedDraftSlotValueCurve":
+        slots = [item.slot_in_round for item in self.slots]
+        if len(slots) != len(set(slots)):
+            raise ValueError("slot-value curve requires unique exact slots")
+        if any(
+            self.slots[index].value.mean < self.slots[index + 1].value.mean
+            for index in range(len(self.slots) - 1)
+        ):
+            raise ValueError("earlier governed draft slots cannot be less valuable")
+        return self
+
+    def value_for_slot(self, slot_in_round: int) -> GovernedDraftSlotValue | None:
+        return next(
+            (item for item in self.slots if item.slot_in_round == slot_in_round),
+            None,
+        )
+
+
 def _observation_identity(item: HistoricalDraftSlotObservation) -> tuple[object, ...]:
     return (
         item.draft_season,
@@ -270,6 +316,62 @@ def _contributors_for_slots(
     for slot in sorted(slots):
         rows.extend(contributors_by_slot.get(slot, ()))
     return _dedupe_observations(rows)
+
+
+def build_governed_draft_slot_value_curve(
+    observations: tuple[HistoricalDraftSlotObservation, ...],
+    *,
+    round: int,
+    as_of: datetime,
+    scale: ValueScale,
+    league_rules: LeagueRules,
+    model_version: str = "governed-draft-slot-value-curve-v1",
+) -> GovernedDraftSlotValueCurve:
+    """Expose the existing PIT/dominance slot economics as a reusable exact curve.
+
+    This is intentionally a thin public wrapper around the Historical Pick
+    Coordinate's existing aggregation logic. It does not impute missing slots,
+    apply class strength, apply a horizon multiplier, or infer draft order.
+    """
+
+    if as_of.tzinfo is None:
+        raise ValueError("slot-value curve as_of must be timezone-aware")
+    if round < 1 or round > league_rules.rookie_draft_rounds:
+        raise ValueError("slot-value curve round is outside configured rookie draft")
+
+    slot_values, adjusted_slots, contributors_by_slot = _aggregate_slot_values(
+        observations,
+        round=round,
+        as_of=as_of,
+        scale=scale,
+        league_rules=league_rules,
+    )
+    rows: list[GovernedDraftSlotValue] = []
+    for slot in sorted(slot_values):
+        contributors = contributors_by_slot.get(slot, ())
+        rows.append(
+            GovernedDraftSlotValue(
+                slot_in_round=slot,
+                value=slot_values[slot],
+                evidence_seasons=tuple(
+                    sorted({item.draft_season for item in contributors})
+                ),
+                source_model_versions=tuple(
+                    sorted({item.model_version for item in contributors})
+                ),
+                provenance=tuple(
+                    sorted({item.provenance for item in contributors})
+                ),
+                dominance_adjusted=slot in adjusted_slots,
+            )
+        )
+    return GovernedDraftSlotValueCurve(
+        round=round,
+        as_of=as_of,
+        scale=scale,
+        slots=tuple(rows),
+        model_version=model_version,
+    )
 
 
 def reconstruct_historical_pick_coordinate(
