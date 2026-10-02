@@ -6,6 +6,7 @@ from pydantic import field_validator, model_validator
 
 from fsffl.state.models import FrozenModel
 
+from .simulation import CounterfactualCompetitiveOutcomeDelta
 from .utility import TeamUtilityVector
 
 
@@ -63,7 +64,8 @@ def compare_team_utility_vectors(
     baseline: TeamUtilityVector,
     scenario: TeamUtilityVector,
     *,
-    model_version: str = "next4-scenario-delta-v2",
+    competitive_override: CounterfactualCompetitiveOutcomeDelta | None = None,
+    model_version: str = "next4-scenario-delta-v3:simulation-owned-competitive-delta",
 ) -> TeamScenarioDelta:
     if baseline.team_id != scenario.team_id:
         raise ValueError("scenario comparison requires the same team")
@@ -71,7 +73,20 @@ def compare_team_utility_vectors(
         raise ValueError("model_version cannot be blank")
 
     competitive = None
-    if baseline.competitive_outcome is not None and scenario.competitive_outcome is not None:
+    if competitive_override is not None:
+        if competitive_override.team_id != baseline.team_id:
+            raise ValueError("Simulation competitive delta must match the requested team")
+        competitive = CompetitiveOutcomeDelta(
+            expected_wins=competitive_override.expected_wins,
+            expected_remaining_wins=competitive_override.expected_remaining_wins,
+            playoff_probability=competitive_override.playoff_probability,
+            bye_probability=competitive_override.bye_probability,
+            first_place_probability=competitive_override.first_place_probability,
+            championship_probability=competitive_override.championship_probability,
+        )
+    elif baseline.competitive_outcome is not None and scenario.competitive_outcome is not None:
+        # Backward-compatible fallback for non-Simulation callers. Product
+        # counterfactuals must supply the Simulation-owned override.
         competitive = CompetitiveOutcomeDelta(
             expected_wins=scenario.competitive_outcome.expected_wins - baseline.competitive_outcome.expected_wins,
             expected_remaining_wins=_optional_delta(

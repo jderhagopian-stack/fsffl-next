@@ -43,8 +43,8 @@ from fsffl.team_utility.simulation import (
 )
 from fsffl.team_utility.utility import CalculatedCompetitiveState
 
-LIVE_SIMULATION_MODEL_VERSION = "next13-live-simulation-analytics-v13:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
-EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next13-live-simulation-analytics-v13:numpy-pcg64-batched-gauss-v1:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+LIVE_SIMULATION_MODEL_VERSION = "next14-live-simulation-analytics-v14:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next14-live-simulation-analytics-v14:numpy-pcg64-batched-gauss-v1:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
 
 
 def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
@@ -311,7 +311,7 @@ def build_live_simulation_analytics(
             playoff_weekly_scoring=playoff_weekly_scoring,
             simulation_count=simulation_count,
             seed=seed,
-            model_version="next4-live-current-season-v8:finish-seed-bye-outputs:factual-completed-weeks:playoff-week-scoring:empirical-weekly-volatility:league-configured-postseason",
+            model_version="next4-live-current-season-v9:common-world-counterfactual-coordinate:finish-seed-bye-outputs:factual-completed-weeks:playoff-week-scoring:empirical-weekly-volatility:league-configured-postseason",
             rng_protocol=rng_protocol,
             rng_batch_size=rng_batch_size,
         )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import model_validator
 
 from fsffl.state.models import FrozenModel
-from fsffl.team_utility import TeamScenarioDelta, TeamUtilityVector, compare_team_utility_vectors
+from fsffl.team_utility import CounterfactualCompetitiveOutcomeDelta, TeamScenarioDelta, TeamUtilityVector, compare_team_utility_vectors
 
 from .models import BilateralTradeProposal
 
@@ -43,6 +43,8 @@ def evaluate_bilateral_trade_deltas(
     after_a: TeamUtilityVector,
     before_b: TeamUtilityVector,
     after_b: TeamUtilityVector,
+    competitive_delta_a: CounterfactualCompetitiveOutcomeDelta | None = None,
+    competitive_delta_b: CounterfactualCompetitiveOutcomeDelta | None = None,
     model_version: str = "next5-bilateral-evaluation-v1",
 ) -> BilateralTradeEvaluation:
     """Compare authoritative NEXT-4 before/after states for both sides.
@@ -62,8 +64,16 @@ def evaluate_bilateral_trade_deltas(
     if before_b.team_id != expected_b or after_b.team_id != expected_b:
         raise ValueError("side B utility vectors must describe proposal side B")
 
-    delta_a = compare_team_utility_vectors(before_a, after_a)
-    delta_b = compare_team_utility_vectors(before_b, after_b)
+    delta_a = compare_team_utility_vectors(
+        before_a,
+        after_a,
+        competitive_override=competitive_delta_a,
+    )
+    delta_b = compare_team_utility_vectors(
+        before_b,
+        after_b,
+        competitive_override=competitive_delta_b,
+    )
 
     return BilateralTradeEvaluation(
         proposal_id=proposal.proposal_id,

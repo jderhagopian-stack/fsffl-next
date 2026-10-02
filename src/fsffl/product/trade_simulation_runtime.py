@@ -5,7 +5,11 @@ from time import monotonic
 from typing import Any, Callable
 
 from fsffl.forecast.models import ForecastHorizon
-from fsffl.team_utility import compare_team_utility_vectors, optimize_team_lineup
+from fsffl.team_utility import (
+    compare_counterfactual_simulation_results,
+    compare_team_utility_vectors,
+    optimize_team_lineup,
+)
 from fsffl.trade_decision import (
     apply_bilateral_trade,
     assess_bilateral_materiality,
@@ -128,6 +132,18 @@ def build_post_trade_simulation_comparison(
     baseline_b = _utility_for_team(baseline, side_b_id)
     changed_a = _utility_for_team(changed, side_a_id)
     changed_b = _utility_for_team(changed, side_b_id)
+    simulation_delta_a = compare_counterfactual_simulation_results(
+        baseline.simulation_result,
+        changed.simulation_result,
+        team_id=side_a_id,
+        model_version=f"{_PRODUCT_MODEL_VERSION}:simulation-delta",
+    )
+    simulation_delta_b = compare_counterfactual_simulation_results(
+        baseline.simulation_result,
+        changed.simulation_result,
+        team_id=side_b_id,
+        model_version=f"{_PRODUCT_MODEL_VERSION}:simulation-delta",
+    )
 
     evaluation = evaluate_bilateral_trade_deltas(
         proposal,
@@ -135,6 +151,8 @@ def build_post_trade_simulation_comparison(
         after_a=changed_a,
         before_b=baseline_b,
         after_b=changed_b,
+        competitive_delta_a=simulation_delta_a,
+        competitive_delta_b=simulation_delta_b,
         model_version="next5-bilateral-evaluation-v1:simulated-product-view",
     )
     decision = classify_bilateral_trade_decision(
@@ -187,6 +205,10 @@ def build_post_trade_simulation_comparison(
         model_version="next5-trade-disposition-v5:intrinsic-action-facing-simulated-product-view",
     )
 
+    simulation_delta_by_team = {
+        side_a_id: simulation_delta_a,
+        side_b_id: simulation_delta_b,
+    }
     comparisons = []
     focal_scenario_delta = None
     for team_id in (focal_team_id, counterparty_team_id):
@@ -195,6 +217,7 @@ def build_post_trade_simulation_comparison(
         delta = compare_team_utility_vectors(
             baseline_utility,
             changed_utility,
+            competitive_override=simulation_delta_by_team[team_id],
             model_version=f"{_PRODUCT_MODEL_VERSION}:team-delta",
         )
         if team_id == focal_team_id:
@@ -259,6 +282,10 @@ def build_post_trade_simulation_comparison(
         },
         "decision_dimensions": decision_dimensions,
         "team_deltas": comparisons,
+        "simulation_counterfactual_deltas": [
+            simulation_delta_by_team[team_id].model_dump(mode="json")
+            for team_id in (focal_team_id, counterparty_team_id)
+        ],
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "evaluation": evaluation.model_dump(mode="json"),
         "decision": decision.model_dump(mode="json"),
@@ -282,7 +309,8 @@ def build_post_trade_simulation_comparison(
             "market_value": "NEXT-3 Value",
             "intrinsic_franchise_value": "NEXT-3 Value, consumed once by NEXT-5 materiality/disposition",
             "competitive_outcomes": "NEXT-4 Simulation",
-            "scenario_delta": "NEXT-4 Team Utility",
+            "competitive_delta": "NEXT-4 Simulation common-world comparison when replay/topology coordinates match",
+            "scenario_delta": "NEXT-4 Team Utility consumes Simulation competitive delta and adds non-competitive channels",
             "decision_dimensions": "presentation/API contract over existing source authorities; no weighting or blending",
             "materiality_and_disposition": "NEXT-5 Trade Decision",
             "package_economic_guard": "NEXT-5 Trade Decision bounded provisional prior",
