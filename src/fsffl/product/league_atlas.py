@@ -487,19 +487,19 @@ def build_league_atlas_payload(
                 {
                     "status": (
                         "ready"
-                        if simulation.simulation_result.multiverse_worlds
+                        if getattr(simulation.simulation_result, "multiverse_worlds", ())
                         else "unavailable"
                     ),
                     "model_version": (
-                        simulation.simulation_result.multiverse_model_version
+                        getattr(simulation.simulation_result, "multiverse_model_version", None)
                     ),
                     "worlds": [
                         world.model_dump(mode="json")
-                        for world in simulation.simulation_result.multiverse_worlds
+                        for world in getattr(simulation.simulation_result, "multiverse_worlds", ())
                     ],
                     "reason": (
                         None
-                        if simulation.simulation_result.multiverse_worlds
+                        if getattr(simulation.simulation_result, "multiverse_worlds", ())
                         else (
                             "Representative worlds are unavailable for this "
                             "Simulation generation."
