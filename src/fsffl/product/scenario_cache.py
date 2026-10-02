@@ -210,7 +210,15 @@ def build_scenario_dependency_plan(
     if baseline_state.league.league_id != changed_state.league.league_id:
         raise ValueError("scenario dependency planning requires the same league")
 
+    if (
+        baseline_result.league_view.context.league_state_id
+        != baseline_state.state_id
+    ):
+        raise ValueError("baseline Simulation result does not match baseline State")
     preparation = baseline_result.scenario_preparation
+    if preparation is not None and preparation.source_state_id != baseline_state.state_id:
+        raise ValueError("scenario preparation does not match baseline State")
+
     changed_structure = simulation_structure_dependency_fingerprint(changed_state)
     changed_forecast = simulation_forecast_dependency_fingerprint(
         evidence.league_scored_forecasts,
