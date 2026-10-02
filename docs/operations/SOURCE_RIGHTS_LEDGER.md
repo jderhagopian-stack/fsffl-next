@@ -91,3 +91,21 @@ No provider is promoted by this rights review. Full certification still requires
 
 Durable Research package:
 `artifacts/research/fumbles_lost_current_only_certification_20260926/`
+
+## 2026-10-02 — Foundation 3 frozen exact-slot parameter artifact
+
+Foundation 3 uses retained DynastyProcess 2QB point-in-time rows only as **research/calibration inputs** to derive a frozen 36-parameter FSFFL exact-slot curve (12 slots x 3 rookie rounds). This disposition does **not** promote the raw DynastyProcess source or its FantasyPros-consensus lineage to deployed source authority.
+
+Operational classification for this specific artifact:
+- raw source: `RESEARCH_ONLY` and remains so in `next3_market_source_registry_v1()`;
+- deployed private-beta object: **frozen derived parameter curve only**;
+- raw rows deployed/redistributed: **no**;
+- live/runtime acquisition from DynastyProcess: **no**;
+- exact source snapshots, draft-selection boundaries and model versions remain provenance;
+- private-beta use follows the existing frozen-model/calibration precedent: derived model parameters may be exercised in beta while underlying research rows remain non-deployed, absent a known prohibition;
+- `commercial_recheck_required=true`; no commercial-use clearance is asserted by this disposition.
+
+The public DynastyProcess data repository currently carries a GPL-3.0 repository license, but FSFFL keeps the raw source classification conservative because the value series has FantasyPros consensus lineage. The repository license is therefore **not** treated as a blanket promotion of upstream-data rights.
+
+Foundation-3 acceptance must additionally prove that the freshly rebuilt PIT exact-slot economics are byte-stably equivalent at the governed economic-parameter coordinate to the frozen live curve. A separately passing rebuild and live sanity are insufficient if those curves diverge.
+
