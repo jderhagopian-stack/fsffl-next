@@ -465,3 +465,12 @@ Required regression themes include nonlinearity, origin differentiation, ownersh
 A new physical run contradicted the accepted startup/reconciliation behavior. On live #330, one refresh reached `simulation_build_complete`, then logged `job_aborted` before publication; a replacement job rebuilt Simulation and downstream intelligence before 7/7. Peak RSS was 445,063,168 bytes versus the 429,496,720-byte engineering budget.
 
 Management reopened only startup/manual-refresh lifecycle sequencing under `20261002_STARTUP_REFRESH_SEQUENCING_CORRECTIVE.md`. Do not reopen Simulation 2.0 semantics or reduce the 50k authority. PR #335 remains a valid safe checkpoint but is temporarily held. After the Tier-C corrective passes targeted hosted/physical acceptance, resume #335 immediately.
+
+
+## 2026-10-02 — runtime corrective closed; Safari status defect deferred
+
+The startup/manual-refresh sequencing corrective is accepted from physical + hosted telemetry. The winning physical refresh executed one State build, one 50k Simulation, Value, Intrinsic, and one terminal publication with no abort/restart. Peak RSS was **426,971,136 bytes**, below the **429,496,720-byte** engineering budget.
+
+Management observed a separate user-facing issue: iPhone/Safari did not visibly acknowledge Refresh, show useful progress, or transition clearly to completed without a manual page reload. Park this as a future bounded browser-status/polling presentation effort. Do not let it trigger another acceptance-infrastructure chain and do not keep Foundation 3 on hold.
+
+Resume PR #335 immediately from its pinned safe checkpoint, then continue the accepted Value -> Long-Term Intrinsic -> PIT historical-market sequence.
