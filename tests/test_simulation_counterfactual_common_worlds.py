@@ -157,6 +157,63 @@ def test_uniform_postseason_draw_topology_supports_common_world_title_delta() ->
     assert "championship_probability" in delta.common_world_metrics
 
 
+def _four_team_two_round_request(*, mean_a: float) -> RegularSeasonSimulationInput:
+    rules = _settings_derived_playoff_rules(4, 15)
+    assert rules is not None
+    teams = ("a", "b", "c", "d")
+    means = {"a": mean_a, "b": 105.0, "c": 100.0, "d": 95.0}
+    playoff_rows = tuple(
+        WeeklyTeamScoringDistribution(
+            week=week,
+            team_id=team_id,
+            mean_points=means[team_id],
+            stddev_points=(10.0 if week == 15 else 0.0),
+            model_version="test-playoff-by-week",
+        )
+        for week in rules.round_weeks
+        for team_id in teams
+    )
+    return RegularSeasonSimulationInput(
+        scoring=tuple(
+            TeamScoringDistribution(
+                team_id=team_id,
+                mean_points=means[team_id],
+                stddev_points=10.0,
+                model_version="test",
+            )
+            for team_id in teams
+        ),
+        schedule=(
+            ScheduledMatchup(week=1, home_team_id="a", away_team_id="b"),
+            ScheduledMatchup(week=1, home_team_id="c", away_team_id="d"),
+        ),
+        playoff_team_count=4,
+        playoff_rules=rules,
+        playoff_weekly_scoring=playoff_rows,
+        simulation_count=2_000,
+        seed=77,
+        model_version="counterfactual-test-v1",
+    )
+
+
+def test_postseason_common_worlds_allow_randomness_to_differ_by_round_when_uniform_within_round() -> None:
+    baseline = simulate_regular_season(_four_team_two_round_request(mean_a=110.0))
+    scenario = simulate_regular_season(_four_team_two_round_request(mean_a=125.0))
+
+    delta = compare_counterfactual_simulation_results(
+        baseline,
+        scenario,
+        team_id="a",
+    )
+
+    assert baseline.common_world_postseason_coordinate is not None
+    assert baseline.common_world_postseason_coordinate == (
+        scenario.common_world_postseason_coordinate
+    )
+    assert delta.postseason_common_worlds is True
+    assert delta.championship_comparison_method == "common_random_numbers"
+
+
 def test_mixed_postseason_stochasticity_withholds_common_world_title_claim() -> None:
     baseline = simulate_regular_season(
         _request(playoff=True, playoff_std_a=0.0, playoff_std_b=9.0)
