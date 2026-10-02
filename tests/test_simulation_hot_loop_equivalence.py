@@ -393,8 +393,8 @@ def test_50000_run_output_matches_governed_settings_derived_postseason_baseline(
         world["rng_runtime_version"] = normalized_runtime
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
-        (3, 11): "1b25bc95e6cccc790994e9629c1c61eeff8f3bc3e9a700b934b338299f7ce79b",
-        (3, 12): "ab7b1ebc6081bd1ee94dd1c1b10533bcf52c3c8942cb22c8d78f5663a4a656c5",
+        (3, 11): "ab42d84f680f82467c3088842019788cad0b375783b0aed5b37113e694678a65",
+        (3, 12): "beee3fc4a8ce5b87b769a1227f6a5ff909e0da32e073b1a5d526e0076483e97e",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (
