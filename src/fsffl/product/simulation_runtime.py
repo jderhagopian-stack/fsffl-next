@@ -238,6 +238,7 @@ def simulation_structure_dependency_fingerprint(league_state: LeagueState) -> st
     """Fingerprint global Simulation dependencies while excluding bounded rosters/picks."""
 
     return _scenario_dependency_fingerprint(
+        league_state.as_of.isoformat(),
         league_state.league.model_dump(mode="json"),
         tuple(sorted(team.team_id for team in league_state.teams)),
         tuple(
