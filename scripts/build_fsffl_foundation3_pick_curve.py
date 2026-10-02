@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 from fsffl.state.models import LeagueRules
-from fsffl.value.calibration import CalibrationPanel
+from fsffl.value.calibration import CalibrationPanel, DataRightsClass
 from fsffl.value.historical_draft_value import (
     HistoricalDraftSelection,
     HistoricalDraftValuePolicy,
@@ -286,6 +286,7 @@ def main() -> None:
                 csv_text,
                 asset_id_by_fp_id=fp_to_sleeper,
                 source_version=sha,
+                rights_class=DataRightsClass.RESEARCH_ONLY,
                 provenance_uri=f"github:dynastyprocess/data@{sha}:{VALUES_PATH}",
             )
             two_qb_rows = tuple(
@@ -373,7 +374,7 @@ def main() -> None:
                 "source_id": SOURCE_ID,
                 "format_context_id": FORMAT_CONTEXT_ID,
                 "scale": SCALE.model_dump(mode="json"),
-                "rights_class": "research_only",
+                "rights_class": DataRightsClass.RESEARCH_ONLY.value,
                 "repository": DYNASTYPROCESS_REPO,
                 "values_path": VALUES_PATH,
                 "player_ids_path": PLAYER_IDS_PATH,
@@ -401,6 +402,18 @@ def main() -> None:
             "no_broad_market_pick_variants_used": True,
             "no_class_strength_adjustment_used": True,
             "no_horizon_adjustment_used": True,
+            "deployment_artifact": {
+                "kind": "frozen_derived_parameter_curve",
+                "private_beta_scope": True,
+                "raw_source_rows_deployed": False,
+                "raw_source_rights_promoted": False,
+                "commercial_recheck_required": True,
+                "governance_basis": (
+                    "Frozen derived parameters may be used in private beta while "
+                    "underlying research rows remain non-deployed; commercial use "
+                    "requires a fresh source-rights review."
+                ),
+            },
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
