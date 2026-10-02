@@ -16,12 +16,12 @@ from .position_strength import (
 from .resilience import build_roster_resilience
 from .scenario import AssetPortfolioDelta, CompetitiveOutcomeDelta, RosterResilienceDelta, TeamScenarioDelta, compare_team_utility_vectors
 from .scoring import TeamUncertaintyMethod, WeeklyScoringDecomposition, build_bye_aware_weekly_team_scoring_distribution, build_bye_aware_weekly_team_scoring_panel, build_team_scoring_distribution, build_weekly_team_scoring_distribution
-from .simulation import CompletedMatchup, CounterfactualCompetitiveOutcomeDelta, RegularSeasonSimulationInput, RegularSeasonSimulationResult, ScheduledMatchup, ScoringDistributionKind, TeamCompetitiveOutcome, TeamScoringDistribution, WeeklyTeamScoringDistribution, build_regular_season_simulation_input, compare_counterfactual_simulation_results, current_season_matchups_from_league_state, regular_season_game_counts, resolved_playoff_rules_from_league_state, scheduled_matchups_from_league_state, simulate_regular_season
+from .simulation import CompletedMatchup, CounterfactualCompetitiveOutcomeDelta, MultiverseNotableMatchup, MultiverseRarityContext, MultiverseWorldExample, MultiverseWorldTeamOutcome, RegularSeasonSimulationInput, RegularSeasonSimulationResult, ScheduledMatchup, ScoringDistributionKind, TeamCompetitiveOutcome, TeamScoringDistribution, WeeklyTeamScoringDistribution, build_regular_season_simulation_input, compare_counterfactual_simulation_results, current_season_matchups_from_league_state, regular_season_game_counts, resolved_playoff_rules_from_league_state, scheduled_matchups_from_league_state, simulate_regular_season
 from .utility import CalculatedCompetitiveState, FranchiseAssetPortfolio, OwnerStrategicPosture, RosterResilience, StrategicTeamView, TeamUtilityVector
 
 __all__ = [
     "AssetPortfolioDelta", "CalculatedCompetitiveState", "CompletedMatchup", "CompetitiveOutcomeDelta", "CounterfactualCompetitiveOutcomeDelta", "CompetitiveStatePolicy",
-    "FranchiseAssetPortfolio", "LeagueRelativePositionStrength", "PickSlotProbability", "LeagueScoringDispersionDiagnostic", "LineupAssignment", "MarginalLineupImpact", "OptimizedTeamLineup",
+    "FranchiseAssetPortfolio", "LeagueRelativePositionStrength", "PickSlotProbability", "LeagueScoringDispersionDiagnostic", "LineupAssignment", "MarginalLineupImpact", "MultiverseNotableMatchup", "MultiverseRarityContext", "MultiverseWorldExample", "MultiverseWorldTeamOutcome", "OptimizedTeamLineup",
     "OwnerStrategicPosture", "PositionLineupStrength", "PositionStrengthDelta", "RegularSeasonSimulationInput",
     "RegularSeasonSimulationResult", "RosterResilience", "RosterResilienceDelta", "ScheduledMatchup",
     "ScoringDistributionKind", "StrategicTeamView", "TeamCompetitiveOutcome", "TeamPositionStrengthComparison",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from array import array
 import hashlib
 import json
 from enum import StrEnum
@@ -286,11 +287,113 @@ class TeamFinishDistribution(FrozenModel):
         return self
 
 
+class MultiverseWorldTeamOutcome(FrozenModel):
+    """Compact final-season summary for one team in one selected world."""
+
+    team_id: str
+    final_wins: float
+    points_for: float
+    regular_season_rank: Annotated[int, Field(ge=1)]
+    playoff_seed: Annotated[int, Field(ge=1)] | None = None
+    made_playoffs: bool | None = None
+    champion: bool | None = None
+
+
+class MultiverseNotableMatchup(FrozenModel):
+    """Future matchup fact used to explain an upset or blowout exemplar."""
+
+    week: Annotated[int, Field(ge=1)]
+    home_team_id: str
+    away_team_id: str
+    home_points: Annotated[float, Field(ge=0)]
+    away_points: Annotated[float, Field(ge=0)]
+    margin: Annotated[float, Field(ge=0)]
+    expected_home_points: float
+    expected_away_points: float
+    expected_underdog_disadvantage: Annotated[float, Field(ge=0)] = 0.0
+
+
+class MultiverseRarityContext(FrozenModel):
+    """Empirical rarity from the same canonical Monte Carlo run."""
+
+    basis: Literal[
+        "representative_typicality",
+        "empirical_upper_tail",
+        "empirical_lower_tail",
+        "empirical_event_frequency",
+    ]
+    empirical_probability: Annotated[float, Field(ge=0, le=1)] | None = None
+    empirical_percentile: Annotated[float, Field(ge=0, le=1)] | None = None
+    sample_count: Annotated[int, Field(ge=1)]
+    metric_value: float | None = None
+    label: Literal[
+        "representative", "common", "plausible", "unusual", "rare", "extreme"
+    ]
+
+
+class MultiverseWorldExample(FrozenModel):
+    """Bounded replayable exemplar selected from the authoritative worlds."""
+
+    category: Literal[
+        "expected_like",
+        "plausible_upside",
+        "plausible_downside",
+        "extreme_tail",
+        "biggest_blowout",
+        "biggest_upset",
+        "strong_team_misses_playoffs",
+        "low_seed_champion",
+    ]
+    simulation_id: str
+    world_id: str
+    world_index: Annotated[int, Field(ge=0)]
+    root_seed: int
+    rng_protocol: str
+    rng_runtime_version: str
+    rng_bit_generator: str
+    rng_batch_size: Annotated[int, Field(ge=1)] | None = None
+    rng_draw_layout: str
+    rng_seed_derivation: str
+    simulation_input_fingerprint: str
+    standings: tuple[str, ...]
+    team_outcomes: tuple[MultiverseWorldTeamOutcome, ...]
+    champion_team_id: str | None = None
+    focal_team_id: str | None = None
+    notable_matchup: MultiverseNotableMatchup | None = None
+    selection_metric: float
+    rarity: MultiverseRarityContext
+    model_version: str = "next4-multiverse-world-v1"
+
+    @model_validator(mode="after")
+    def validate_world(self) -> "MultiverseWorldExample":
+        identifiers = (
+            self.simulation_id,
+            self.world_id,
+            self.rng_protocol,
+            self.rng_runtime_version,
+            self.rng_bit_generator,
+            self.rng_draw_layout,
+            self.rng_seed_derivation,
+            self.simulation_input_fingerprint,
+            self.model_version,
+        )
+        if any(not value.strip() for value in identifiers):
+            raise ValueError("Multiverse replay identifiers cannot be blank")
+        if not self.standings or len(set(self.standings)) != len(self.standings):
+            raise ValueError("Multiverse standings must be non-empty and unique")
+        outcome_ids = tuple(item.team_id for item in self.team_outcomes)
+        if set(outcome_ids) != set(self.standings):
+            raise ValueError("Multiverse team outcomes must match standings")
+        return self
+
+
 class RegularSeasonSimulationResult(FrozenModel):
     outcomes: tuple[TeamCompetitiveOutcome, ...]
     finish_distributions: tuple[TeamFinishDistribution, ...] = ()
     future_pick_distributions: tuple[TeamOriginFuturePickDistribution, ...] = ()
     future_pick_unavailability_reason: str | None = None
+    multiverse_worlds: tuple[MultiverseWorldExample, ...] = ()
+    multiverse_model_version: str = "next4-multiverse-v1"
     # Persisted with the Simulation artifact; intentionally absent from per-team product views.
     championship_probability_provenance: Literal["provider_observed_exact", "settings_derived_standard"] | None = None
     simulation_count: Annotated[int, Field(ge=1)]
@@ -1061,6 +1164,285 @@ def _accumulate_slot_groups(
     return slot
 
 
+def _multiverse_rarity_label(
+    probability: float | None,
+    *,
+    representative: bool = False,
+) -> Literal["representative", "common", "plausible", "unusual", "rare", "extreme"]:
+    if representative:
+        return "representative"
+    if probability is None:
+        return "plausible"
+    if probability <= 0.001:
+        return "extreme"
+    if probability <= 0.01:
+        return "rare"
+    if probability <= 0.05:
+        return "unusual"
+    if probability <= 0.25:
+        return "plausible"
+    return "common"
+
+
+def _capture_multiverse_candidate(
+    *,
+    trial_index: int,
+    wins: list[float],
+    points_for: list[float],
+    standings: list[int],
+    champion: int | None,
+    focal_team: int | None,
+    selection_metric: float,
+    rarity_metric_value: float | None = None,
+    notable_matchup: dict[str, object] | None = None,
+) -> dict[str, object]:
+    return {
+        "trial_index": trial_index,
+        "wins": tuple(wins),
+        "points_for": tuple(points_for),
+        "standings": tuple(standings),
+        "champion": champion,
+        "focal_team": focal_team,
+        "selection_metric": float(selection_metric),
+        "rarity_metric_value": (
+            None if rarity_metric_value is None else float(rarity_metric_value)
+        ),
+        "notable_matchup": notable_matchup,
+    }
+
+
+def _empirical_probability(
+    values: array,
+    threshold: float,
+    *,
+    upper_tail: bool,
+) -> float:
+    if not values:
+        return 0.0
+    if upper_tail:
+        count = sum(1 for value in values if value >= threshold)
+    else:
+        count = sum(1 for value in values if value <= threshold)
+    return count / len(values)
+
+
+def _empirical_percentile(values: array, threshold: float) -> float:
+    if not values:
+        return 0.0
+    return sum(1 for value in values if value <= threshold) / len(values)
+
+
+def _build_multiverse_examples(
+    *,
+    candidates: dict[str, dict[str, object]],
+    team_ids: tuple[str, ...],
+    playoff_team_count: int | None,
+    playoff_supported: bool,
+    championship_supported: bool,
+    league_totals: array,
+    typicality_values: array,
+    blowout_values: array,
+    upset_values: array,
+    strong_team_miss_count: int,
+    champion_seed_counts: list[int],
+    simulation_count: int,
+    simulation_id: str,
+    root_seed: int,
+    rng_protocol: str,
+    rng_runtime_version: str,
+    rng_bit_generator: str,
+    rng_batch_size: int | None,
+    rng_draw_layout: str,
+    rng_seed_derivation: str,
+    simulation_input_fingerprint: str,
+) -> tuple[MultiverseWorldExample, ...]:
+    category_order = (
+        "expected_like",
+        "plausible_upside",
+        "plausible_downside",
+        "extreme_tail",
+        "biggest_blowout",
+        "biggest_upset",
+        "strong_team_misses_playoffs",
+        "low_seed_champion",
+    )
+    examples: list[MultiverseWorldExample] = []
+    for category in category_order:
+        candidate = candidates.get(category)
+        if candidate is None:
+            continue
+        metric_value = candidate.get("rarity_metric_value")
+        empirical_probability: float | None = None
+        empirical_percentile: float | None = None
+        basis: Literal[
+            "representative_typicality",
+            "empirical_upper_tail",
+            "empirical_lower_tail",
+            "empirical_event_frequency",
+        ]
+        if category == "expected_like":
+            basis = "representative_typicality"
+            if metric_value is not None:
+                empirical_percentile = _empirical_percentile(
+                    typicality_values, float(metric_value)
+                )
+            label = _multiverse_rarity_label(None, representative=True)
+        elif category == "plausible_upside":
+            basis = "empirical_upper_tail"
+            empirical_probability = _empirical_probability(
+                league_totals, float(metric_value), upper_tail=True
+            )
+            empirical_percentile = _empirical_percentile(
+                league_totals, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "plausible_downside":
+            basis = "empirical_lower_tail"
+            empirical_probability = _empirical_probability(
+                league_totals, float(metric_value), upper_tail=False
+            )
+            empirical_percentile = _empirical_percentile(
+                league_totals, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "extreme_tail":
+            basis = "empirical_upper_tail"
+            empirical_probability = _empirical_probability(
+                typicality_values, float(metric_value), upper_tail=True
+            )
+            empirical_percentile = _empirical_percentile(
+                typicality_values, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "biggest_blowout":
+            basis = "empirical_upper_tail"
+            empirical_probability = _empirical_probability(
+                blowout_values, float(metric_value), upper_tail=True
+            )
+            empirical_percentile = _empirical_percentile(
+                blowout_values, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "biggest_upset":
+            basis = "empirical_upper_tail"
+            empirical_probability = _empirical_probability(
+                upset_values, float(metric_value), upper_tail=True
+            )
+            empirical_percentile = _empirical_percentile(
+                upset_values, float(metric_value)
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+        elif category == "strong_team_misses_playoffs":
+            basis = "empirical_event_frequency"
+            empirical_probability = strong_team_miss_count / simulation_count
+            label = _multiverse_rarity_label(empirical_probability)
+        else:
+            basis = "empirical_event_frequency"
+            seed = int(round(float(metric_value)))
+            empirical_probability = (
+                sum(champion_seed_counts[seed:]) / simulation_count
+                if 0 <= seed < len(champion_seed_counts)
+                else 0.0
+            )
+            label = _multiverse_rarity_label(empirical_probability)
+
+        standings_indexes = tuple(candidate["standings"])
+        standings = tuple(team_ids[index] for index in standings_indexes)
+        wins = tuple(candidate["wins"])
+        points_for = tuple(candidate["points_for"])
+        champion_index = candidate["champion"]
+        team_outcomes = tuple(
+            MultiverseWorldTeamOutcome(
+                team_id=team_id,
+                final_wins=float(wins[index]),
+                points_for=float(points_for[index]),
+                regular_season_rank=standings_indexes.index(index) + 1,
+                playoff_seed=(
+                    standings_indexes.index(index) + 1
+                    if (
+                        playoff_supported
+                        and playoff_team_count is not None
+                        and standings_indexes.index(index) < playoff_team_count
+                    )
+                    else None
+                ),
+                made_playoffs=(
+                    standings_indexes.index(index) < playoff_team_count
+                    if playoff_supported and playoff_team_count is not None
+                    else None
+                ),
+                champion=(
+                    index == champion_index if championship_supported else None
+                ),
+            )
+            for index, team_id in enumerate(team_ids)
+        )
+
+        notable = candidate.get("notable_matchup")
+        notable_model = None
+        if isinstance(notable, dict):
+            notable_model = MultiverseNotableMatchup(
+                week=int(notable["week"]),
+                home_team_id=str(notable["home_team_id"]),
+                away_team_id=str(notable["away_team_id"]),
+                home_points=float(notable["home_points"]),
+                away_points=float(notable["away_points"]),
+                margin=float(notable["margin"]),
+                expected_home_points=float(notable["expected_home_points"]),
+                expected_away_points=float(notable["expected_away_points"]),
+                expected_underdog_disadvantage=float(
+                    notable.get("expected_underdog_disadvantage", 0.0)
+                ),
+            )
+
+        world_index = int(candidate["trial_index"])
+        world_id = hashlib.sha256(
+            f"{simulation_id}:{world_index}".encode()
+        ).hexdigest()
+        focal_index = candidate.get("focal_team")
+        examples.append(
+            MultiverseWorldExample(
+                category=category,
+                simulation_id=simulation_id,
+                world_id=world_id,
+                world_index=world_index,
+                root_seed=root_seed,
+                rng_protocol=rng_protocol,
+                rng_runtime_version=rng_runtime_version,
+                rng_bit_generator=rng_bit_generator,
+                rng_batch_size=rng_batch_size,
+                rng_draw_layout=rng_draw_layout,
+                rng_seed_derivation=rng_seed_derivation,
+                simulation_input_fingerprint=simulation_input_fingerprint,
+                standings=standings,
+                team_outcomes=team_outcomes,
+                champion_team_id=(
+                    team_ids[int(champion_index)]
+                    if champion_index is not None
+                    else None
+                ),
+                focal_team_id=(
+                    team_ids[int(focal_index)]
+                    if focal_index is not None
+                    else None
+                ),
+                notable_matchup=notable_model,
+                selection_metric=float(candidate["selection_metric"]),
+                rarity=MultiverseRarityContext(
+                    basis=basis,
+                    empirical_probability=empirical_probability,
+                    empirical_percentile=empirical_percentile,
+                    sample_count=simulation_count,
+                    metric_value=(
+                        None if metric_value is None else float(metric_value)
+                    ),
+                    label=label,
+                ),
+            )
+        )
+    return tuple(examples)
+
+
 def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
     """Yield bounded trial-by-draw arrays under the experimental RNG protocol."""
     import numpy as np
@@ -1444,6 +1826,38 @@ def simulate_regular_season(
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
 
+    expected_final_points = actual_points_for.copy()
+    final_points_variance = [0.0] * team_count
+    for (
+        home_idx,
+        away_idx,
+        home_mean,
+        home_stddev,
+        away_mean,
+        away_stddev,
+    ) in compiled_schedule:
+        expected_final_points[home_idx] += home_mean
+        expected_final_points[away_idx] += away_mean
+        final_points_variance[home_idx] += home_stddev * home_stddev
+        final_points_variance[away_idx] += away_stddev * away_stddev
+    final_points_stddev = [sqrt(value) for value in final_points_variance]
+    league_expected_total = sum(expected_final_points)
+    league_total_stddev = sqrt(sum(final_points_variance))
+    plausible_upside_target = league_expected_total + league_total_stddev
+    plausible_downside_target = max(0.0, league_expected_total - league_total_stddev)
+    strongest_expected_team = max(
+        range(team_count),
+        key=lambda index: (expected_final_points[index], -index),
+    )
+
+    multiverse_candidates: dict[str, dict[str, object]] = {}
+    league_totals = array("d")
+    typicality_values = array("d")
+    blowout_values = array("d")
+    upset_values = array("d")
+    strong_team_miss_count = 0
+    champion_seed_counts = [0] * (team_count + 1)
+
     for trial_index in range(request.simulation_count):
         # Scheduling-only checkpoint. Product orchestration may yield this worker
         # while foreground requests are active; the callback cannot alter the
@@ -1455,6 +1869,8 @@ def simulate_regular_season(
         h2h_points = [row.copy() for row in actual_h2h_points]
         h2h_games = [row.copy() for row in actual_h2h_games]
         trial_score_row = None
+        trial_biggest_blowout: tuple[float, int, float, float] | None = None
+        trial_biggest_upset: tuple[float, float, int, float, float] | None = None
         if is_batched:
             if score_batch is None or score_batch_offset >= len(score_batch):
                 rng_started = _profile_clock() if profile_enabled else None
@@ -1502,7 +1918,14 @@ def simulate_regular_season(
         if not is_batched:
             wins = trial_wins
             points_for = trial_points
-            for home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev in compiled_schedule:
+            for matchup_index, (
+                home_idx,
+                away_idx,
+                home_mean,
+                home_stddev,
+                away_mean,
+                away_stddev,
+            ) in enumerate(compiled_schedule):
                 home = home_mean if home_stddev == 0 else gauss(home_mean, home_stddev)
                 away = away_mean if away_stddev == 0 else gauss(away_mean, away_stddev)
                 home = floor_at_zero(0.0, home)
@@ -1524,20 +1947,95 @@ def simulate_regular_season(
                 else:
                     wins[home_idx] += 0.5
                     wins[away_idx] += 0.5
+                margin = abs(home - away)
+                if (
+                    trial_biggest_blowout is None
+                    or margin > trial_biggest_blowout[0]
+                ):
+                    trial_biggest_blowout = (
+                        margin,
+                        matchup_index,
+                        home,
+                        away,
+                    )
+                upset_disadvantage = 0.0
+                if home > away and home_mean < away_mean:
+                    upset_disadvantage = away_mean - home_mean
+                elif away > home and away_mean < home_mean:
+                    upset_disadvantage = home_mean - away_mean
+                if upset_disadvantage > 0.0:
+                    upset_key = (upset_disadvantage, margin)
+                    if (
+                        trial_biggest_upset is None
+                        or upset_key
+                        > (
+                            trial_biggest_upset[0],
+                            trial_biggest_upset[1],
+                        )
+                    ):
+                        trial_biggest_upset = (
+                            upset_disadvantage,
+                            margin,
+                            matchup_index,
+                            home,
+                            away,
+                        )
         else:
             wins = trial_wins
             points_for = trial_points
             if trial_score_row is not None:
                 for matchup_index, row in enumerate(compiled_schedule):
-                    home_idx, away_idx = row[0], row[1]
+                    (
+                        home_idx,
+                        away_idx,
+                        home_mean,
+                        _home_stddev,
+                        away_mean,
+                        _away_stddev,
+                    ) = row
+                    home = float(trial_score_row[2 * matchup_index])
+                    away = float(trial_score_row[2 * matchup_index + 1])
                     _record_head_to_head_result(
                         home_idx,
                         away_idx,
-                        float(trial_score_row[2 * matchup_index]),
-                        float(trial_score_row[2 * matchup_index + 1]),
+                        home,
+                        away,
                         h2h_points,
                         h2h_games,
                     )
+                    margin = abs(home - away)
+                    if (
+                        trial_biggest_blowout is None
+                        or margin > trial_biggest_blowout[0]
+                    ):
+                        trial_biggest_blowout = (
+                            margin,
+                            matchup_index,
+                            home,
+                            away,
+                        )
+                    upset_disadvantage = 0.0
+                    if home > away and home_mean < away_mean:
+                        upset_disadvantage = away_mean - home_mean
+                    elif away > home and away_mean < home_mean:
+                        upset_disadvantage = home_mean - away_mean
+                    if upset_disadvantage > 0.0:
+                        upset_key = (upset_disadvantage, margin)
+                        if (
+                            trial_biggest_upset is None
+                            or upset_key
+                            > (
+                                trial_biggest_upset[0],
+                                trial_biggest_upset[1],
+                            )
+                        ):
+                            trial_biggest_upset = (
+                                upset_disadvantage,
+                                margin,
+                                matchup_index,
+                                home,
+                                away,
+                            )
         if matchup_started is not None:
             matchup_ended = _profile_wall_clock()
             matchup_wall_seconds += (matchup_ended - matchup_started) * sample_weight
@@ -1646,6 +2144,225 @@ def simulate_regular_season(
             if next_slot != team_count + 1:
                 raise ValueError(
                     "future-pick draft order did not assign every league slot"
+                )
+
+        league_total = sum(points_for)
+        typicality = 0.0
+        for index in range(team_count):
+            stddev = final_points_stddev[index]
+            if stddev > 0.0:
+                z_score = (
+                    points_for[index] - expected_final_points[index]
+                ) / stddev
+                typicality += z_score * z_score
+        league_totals.append(league_total)
+        typicality_values.append(typicality)
+        blowout_metric = (
+            trial_biggest_blowout[0]
+            if trial_biggest_blowout is not None
+            else 0.0
+        )
+        upset_metric = (
+            trial_biggest_upset[0]
+            if trial_biggest_upset is not None
+            else 0.0
+        )
+        blowout_values.append(blowout_metric)
+        upset_values.append(upset_metric)
+
+        expected_like = multiverse_candidates.get("expected_like")
+        if (
+            expected_like is None
+            or typicality < float(expected_like["selection_metric"])
+        ):
+            multiverse_candidates["expected_like"] = _capture_multiverse_candidate(
+                trial_index=trial_index,
+                wins=wins,
+                points_for=points_for,
+                standings=standings,
+                champion=champion,
+                focal_team=None,
+                selection_metric=typicality,
+                rarity_metric_value=typicality,
+            )
+
+        if league_total_stddev > 0.0:
+            upside_distance = abs(league_total - plausible_upside_target)
+            upside = multiverse_candidates.get("plausible_upside")
+            if (
+                upside is None
+                or upside_distance < float(upside["selection_metric"])
+            ):
+                multiverse_candidates["plausible_upside"] = _capture_multiverse_candidate(
+                    trial_index=trial_index,
+                    wins=wins,
+                    points_for=points_for,
+                    standings=standings,
+                    champion=champion,
+                    focal_team=None,
+                    selection_metric=upside_distance,
+                    rarity_metric_value=league_total,
+                )
+
+            downside_distance = abs(league_total - plausible_downside_target)
+            downside = multiverse_candidates.get("plausible_downside")
+            if (
+                downside is None
+                or downside_distance < float(downside["selection_metric"])
+            ):
+                multiverse_candidates["plausible_downside"] = _capture_multiverse_candidate(
+                    trial_index=trial_index,
+                    wins=wins,
+                    points_for=points_for,
+                    standings=standings,
+                    champion=champion,
+                    focal_team=None,
+                    selection_metric=downside_distance,
+                    rarity_metric_value=league_total,
+                )
+
+            extreme = multiverse_candidates.get("extreme_tail")
+            if (
+                extreme is None
+                or typicality > float(extreme["selection_metric"])
+            ):
+                multiverse_candidates["extreme_tail"] = _capture_multiverse_candidate(
+                    trial_index=trial_index,
+                    wins=wins,
+                    points_for=points_for,
+                    standings=standings,
+                    champion=champion,
+                    focal_team=None,
+                    selection_metric=typicality,
+                    rarity_metric_value=typicality,
+                )
+
+        if trial_biggest_blowout is not None:
+            margin, matchup_index, home, away = trial_biggest_blowout
+            blowout = multiverse_candidates.get("biggest_blowout")
+            if blowout is None or margin > float(blowout["selection_metric"]):
+                matchup = request.schedule[matchup_index]
+                schedule_row = compiled_schedule[matchup_index]
+                multiverse_candidates["biggest_blowout"] = (
+                    _capture_multiverse_candidate(
+                        trial_index=trial_index,
+                        wins=wins,
+                        points_for=points_for,
+                        standings=standings,
+                        champion=champion,
+                        focal_team=None,
+                        selection_metric=margin,
+                        rarity_metric_value=margin,
+                        notable_matchup={
+                            "week": matchup.week,
+                            "home_team_id": matchup.home_team_id,
+                            "away_team_id": matchup.away_team_id,
+                            "home_points": home,
+                            "away_points": away,
+                            "margin": margin,
+                            "expected_home_points": schedule_row[2],
+                            "expected_away_points": schedule_row[4],
+                            "expected_underdog_disadvantage": 0.0,
+                        },
+                    )
+                )
+
+        if trial_biggest_upset is not None:
+            (
+                disadvantage,
+                upset_margin,
+                matchup_index,
+                home,
+                away,
+            ) = trial_biggest_upset
+            upset = multiverse_candidates.get("biggest_upset")
+            existing_key = (
+                (
+                    float(upset["selection_metric"]),
+                    float(
+                        (upset.get("notable_matchup") or {}).get("margin", 0.0)
+                    ),
+                )
+                if upset is not None
+                else None
+            )
+            if (
+                existing_key is None
+                or (disadvantage, upset_margin) > existing_key
+            ):
+                matchup = request.schedule[matchup_index]
+                schedule_row = compiled_schedule[matchup_index]
+                multiverse_candidates["biggest_upset"] = (
+                    _capture_multiverse_candidate(
+                        trial_index=trial_index,
+                        wins=wins,
+                        points_for=points_for,
+                        standings=standings,
+                        champion=champion,
+                        focal_team=None,
+                        selection_metric=disadvantage,
+                        rarity_metric_value=disadvantage,
+                        notable_matchup={
+                            "week": matchup.week,
+                            "home_team_id": matchup.home_team_id,
+                            "away_team_id": matchup.away_team_id,
+                            "home_points": home,
+                            "away_points": away,
+                            "margin": upset_margin,
+                            "expected_home_points": schedule_row[2],
+                            "expected_away_points": schedule_row[4],
+                            "expected_underdog_disadvantage": disadvantage,
+                        },
+                    )
+                )
+
+        if playoff_supported and request.playoff_team_count is not None:
+            strongest_rank = standings.index(strongest_expected_team) + 1
+            if strongest_rank > request.playoff_team_count:
+                strong_team_miss_count += 1
+                miss = multiverse_candidates.get("strong_team_misses_playoffs")
+                should_replace = (
+                    miss is None
+                    or strongest_rank > float(miss["selection_metric"])
+                    or (
+                        strongest_rank == int(float(miss["selection_metric"]))
+                        and points_for[strongest_expected_team]
+                        < float(tuple(miss["points_for"])[strongest_expected_team])
+                    )
+                )
+                if should_replace:
+                    multiverse_candidates["strong_team_misses_playoffs"] = (
+                        _capture_multiverse_candidate(
+                            trial_index=trial_index,
+                            wins=wins,
+                            points_for=points_for,
+                            standings=standings,
+                            champion=champion,
+                            focal_team=strongest_expected_team,
+                            selection_metric=float(strongest_rank),
+                            rarity_metric_value=float(strongest_rank),
+                        )
+                    )
+
+        if champion is not None:
+            champion_seed = standings.index(champion) + 1
+            champion_seed_counts[champion_seed] += 1
+            low_seed = multiverse_candidates.get("low_seed_champion")
+            if (
+                low_seed is None
+                or champion_seed > float(low_seed["selection_metric"])
+            ):
+                multiverse_candidates["low_seed_champion"] = (
+                    _capture_multiverse_candidate(
+                        trial_index=trial_index,
+                        wins=wins,
+                        points_for=points_for,
+                        standings=standings,
+                        champion=champion,
+                        focal_team=champion,
+                        selection_metric=float(champion_seed),
+                        rarity_metric_value=float(champion_seed),
+                    )
                 )
 
         if trial_observer is not None:
@@ -1762,11 +2479,56 @@ def simulate_regular_season(
             for index, team_id in enumerate(team_ids)
         )
 
+    simulation_id = hashlib.sha256(
+        json.dumps(
+            {
+                "simulation_input_fingerprint": input_fingerprint,
+                "model_version": request.model_version,
+                "simulation_count": n,
+                "seed": request.seed,
+                "rng_protocol": request.rng_protocol,
+                "rng_runtime_version": runtime_version,
+                "rng_bit_generator": bit_generator_name,
+                "rng_batch_size": batch_size,
+                "rng_draw_layout": draw_layout,
+                "rng_seed_derivation": seed_derivation,
+                "multiverse_model_version": "next4-multiverse-v1",
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    multiverse_worlds = _build_multiverse_examples(
+        candidates=multiverse_candidates,
+        team_ids=team_ids,
+        playoff_team_count=request.playoff_team_count,
+        playoff_supported=playoff_supported,
+        championship_supported=championship_supported,
+        league_totals=league_totals,
+        typicality_values=typicality_values,
+        blowout_values=blowout_values,
+        upset_values=upset_values,
+        strong_team_miss_count=strong_team_miss_count,
+        champion_seed_counts=champion_seed_counts,
+        simulation_count=n,
+        simulation_id=simulation_id,
+        root_seed=request.seed,
+        rng_protocol=request.rng_protocol,
+        rng_runtime_version=runtime_version,
+        rng_bit_generator=bit_generator_name,
+        rng_batch_size=batch_size,
+        rng_draw_layout=draw_layout,
+        rng_seed_derivation=seed_derivation,
+        simulation_input_fingerprint=input_fingerprint,
+    )
+
     result = RegularSeasonSimulationResult(
         outcomes=tuple(outcomes),
         finish_distributions=tuple(finish_distributions),
         future_pick_distributions=future_pick_distributions,
         future_pick_unavailability_reason=future_pick_unavailability_reason,
+        multiverse_worlds=multiverse_worlds,
+        multiverse_model_version="next4-multiverse-v1",
         championship_probability_provenance=(
             request.playoff_rules.championship_probability_provenance()
             if championship_supported and request.playoff_rules is not None else None

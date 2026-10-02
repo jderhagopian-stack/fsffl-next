@@ -382,15 +382,19 @@ def test_50000_run_output_matches_governed_settings_derived_postseason_baseline(
     from scripts.benchmark_simulation_performance import _request
 
     result = simulate_regular_season(_request())
-    # The durable replay identity intentionally includes the Python patch
-    # version. Normalize only that identity field here; the result rows and
-    # every RNG/output field remain part of the digest.
+    # Durable replay identity intentionally includes the Python patch version.
+    # This cross-run baseline is governed per Python minor, so normalize every
+    # copy of that same runtime coordinate while leaving all football outputs,
+    # world selections, world indexes and other replay fields in the digest.
     dumped = result.model_dump(mode="json")
-    dumped["rng_runtime_version"] = f"python-{sys.version_info.major}.{sys.version_info.minor}"
+    normalized_runtime = f"python-{sys.version_info.major}.{sys.version_info.minor}"
+    dumped["rng_runtime_version"] = normalized_runtime
+    for world in dumped.get("multiverse_worlds", ()):
+        world["rng_runtime_version"] = normalized_runtime
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
-        (3, 11): "f87a5f68430dbcd1e0ebeceb60d448bcd79ba615b2812a7d1ea26aa6273cc481",
-        (3, 12): "c3b9b1f0348a0e7c6440ae61a765a51176d7159396fe8dd8ea67b3310bcdd495",
+        (3, 11): "ab42d84f680f82467c3088842019788cad0b375783b0aed5b37113e694678a65",
+        (3, 12): "beee3fc4a8ce5b87b769a1227f6a5ff909e0da32e073b1a5d526e0076483e97e",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (
