@@ -190,9 +190,9 @@ def test_resolvable_head_to_head_precedes_points_for_for_tied_nonplayoff_records
     # higher Points For than c.
     completed = (
         CompletedMatchup(week=1, home_team_id="a", away_team_id="c", home_points=100, away_points=40),
-        CompletedMatchup(week=1, home_team_id="d", away_team_id="a", home_points=120, away_points=50),
+        CompletedMatchup(week=1, home_team_id="b", away_team_id="d", home_points=100, away_points=90),
+        CompletedMatchup(week=2, home_team_id="d", away_team_id="a", home_points=120, away_points=50),
         CompletedMatchup(week=2, home_team_id="b", away_team_id="c", home_points=100, away_points=40),
-        CompletedMatchup(week=2, home_team_id="b", away_team_id="d", home_points=100, away_points=90),
         CompletedMatchup(week=3, home_team_id="c", away_team_id="d", home_points=30, away_points=20),
         CompletedMatchup(week=3, home_team_id="a", away_team_id="b", home_points=100, away_points=90),
     )
