@@ -1810,6 +1810,38 @@ def simulate_regular_season(
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
 
+    expected_final_points = actual_points_for.copy()
+    final_points_variance = [0.0] * team_count
+    for (
+        home_idx,
+        away_idx,
+        home_mean,
+        home_stddev,
+        away_mean,
+        away_stddev,
+    ) in compiled_schedule:
+        expected_final_points[home_idx] += home_mean
+        expected_final_points[away_idx] += away_mean
+        final_points_variance[home_idx] += home_stddev * home_stddev
+        final_points_variance[away_idx] += away_stddev * away_stddev
+    final_points_stddev = [sqrt(value) for value in final_points_variance]
+    league_expected_total = sum(expected_final_points)
+    league_total_stddev = sqrt(sum(final_points_variance))
+    plausible_upside_target = league_expected_total + league_total_stddev
+    plausible_downside_target = max(0.0, league_expected_total - league_total_stddev)
+    strongest_expected_team = max(
+        range(team_count),
+        key=lambda index: (expected_final_points[index], -index),
+    )
+
+    multiverse_candidates: dict[str, dict[str, object]] = {}
+    league_totals = array("d")
+    typicality_values = array("d")
+    blowout_values = array("d")
+    upset_values = array("d")
+    strong_team_miss_count = 0
+    champion_seed_counts = [0] * (team_count + 1)
+
     for trial_index in range(request.simulation_count):
         # Scheduling-only checkpoint. Product orchestration may yield this worker
         # while foreground requests are active; the callback cannot alter the
