@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import UTC, datetime
 
+from .calibration import DataRightsClass
 from .historical_pick import GovernedDraftSlotValue, GovernedDraftSlotValueCurve
 from .models import ValueDistribution, ValueScale
 
@@ -10,8 +13,15 @@ FSFFL_FOUNDATION3_TARGET_LEAGUE_ID = (
     f"sleeper:{FSFFL_FOUNDATION3_TARGET_LEAGUE_EXTERNAL_ID}"
 )
 FSFFL_FOUNDATION3_TARGET_DRAFT_SEASON = 2027
-FSFFL_FOUNDATION3_EVIDENCE_SHA256 = "afafab72557f721e482da78c8a0fc68d1a6c72f2c6163012af45ec6cb128809d"
 FSFFL_FOUNDATION3_CURVE_MODEL_VERSION = "fsffl-foundation3-exact-slot-economics-v1:2024-2026"
+FSFFL_FOUNDATION3_RAW_SOURCE_RIGHTS_CLASS = DataRightsClass.RESEARCH_ONLY
+FSFFL_FOUNDATION3_DEPLOYMENT_SCOPE = "private_beta_frozen_derived_parameters"
+FSFFL_FOUNDATION3_COMMERCIAL_RECHECK_REQUIRED = True
+FSFFL_FOUNDATION3_RIGHTS_BASIS = (
+    "Private-beta deployment is limited to the frozen 36-slot derived parameter "
+    "curve. Raw DynastyProcess/FantasyPros-lineage rows remain RESEARCH_ONLY and "
+    "are not deployed or redistributed. Commercial use requires a fresh rights review."
+)
 FSFFL_FOUNDATION3_SCALE = ValueScale(
     scale_id="dynastyprocess-2qb-pit",
     version="foundation3-v1",
@@ -31,7 +41,7 @@ FSFFL_FOUNDATION3_PROVENANCE = (
     "DynastyProcess 2QB point-in-time player value frozen before each completed FSFFL rookie draft; weekly public git history; selection=Sleeper completed rookie draft 1195205225995415553; values frozen at draft start 2025-05-31T21:16:36.387000+00:00; market=github:dynastyprocess/data@e5035554b465a6ee06d6344e12314fd7fdc805c4:files/values.csv",
     "DynastyProcess 2QB point-in-time player value frozen before each completed FSFFL rookie draft; weekly public git history; selection=Sleeper completed rookie draft 1312071960619941888; values frozen at draft start 2026-07-11T16:13:00.974000+00:00; market=github:dynastyprocess/data@41c11510c09b8dd8051844ffc9979b710e145150:files/values.csv",
     "2023 FSFFL rookie draft excluded by the explicit 14-day freshness gate: latest retained DynastyProcess snapshot was 18 days before draft start.",
-    f"derived-evidence-sha256={FSFFL_FOUNDATION3_EVIDENCE_SHA256}",
+    FSFFL_FOUNDATION3_RIGHTS_BASIS,
 )
 
 
@@ -49,6 +59,39 @@ def _slot(
         provenance=FSFFL_FOUNDATION3_PROVENANCE,
         dominance_adjusted=adjusted,
     )
+
+
+def _curve_economics_payload(
+    curves: tuple[GovernedDraftSlotValueCurve, ...],
+) -> list[dict[str, object]]:
+    """Canonicalize only the frozen economic parameters and their evidence lineage."""
+
+    return [
+        {
+            "round": curve.round,
+            "scale": curve.scale.model_dump(mode="json"),
+            "slots": [
+                {
+                    "slot_in_round": row.slot_in_round,
+                    "value": row.value.model_dump(mode="json"),
+                    "evidence_seasons": list(row.evidence_seasons),
+                    "source_model_versions": list(row.source_model_versions),
+                    "dominance_adjusted": row.dominance_adjusted,
+                }
+                for row in curve.slots
+            ],
+        }
+        for curve in curves
+    ]
+
+
+def foundation3_curve_economics_sha256(
+    curves: tuple[GovernedDraftSlotValueCurve, ...],
+) -> str:
+    payload = _curve_economics_payload(curves)
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 FSFFL_FOUNDATION3_CURVES = (
@@ -112,6 +155,10 @@ FSFFL_FOUNDATION3_CURVES = (
         ),
         model_version=FSFFL_FOUNDATION3_CURVE_MODEL_VERSION,
     ),
+)
+
+FSFFL_FOUNDATION3_EVIDENCE_SHA256 = foundation3_curve_economics_sha256(
+    FSFFL_FOUNDATION3_CURVES
 )
 
 
