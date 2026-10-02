@@ -501,6 +501,19 @@ def test_dependency_plan_is_team_selective_for_rosters_and_full_for_global_rules
     assert max_pf_plan.planned_mode == "full_recompute"
     assert max_pf_plan.structure_compatible is False
 
+    as_of_changed = state.model_copy(
+        update={"as_of": state.as_of + timedelta(minutes=1)}
+    )
+    as_of_plan = build_scenario_dependency_plan(
+        state,
+        as_of_changed,
+        evidence,
+        baseline,
+        stage=ScenarioComputationStage.CONFIRMATION,
+    )
+    assert as_of_plan.planned_mode == "full_recompute"
+    assert as_of_plan.structure_compatible is False
+
 
 def test_dependency_plan_rejects_stale_baseline_result() -> None:
     state, forecasts = _selective_state_and_forecasts()
