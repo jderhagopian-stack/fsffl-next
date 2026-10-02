@@ -1,7 +1,7 @@
 # 2026-10-02 — Origin-Aware Draft-Pick Value
 
 ## Status
-**MANAGEMENT DIRECTIVE — FOUNDATION 3 ACTIVE AFTER #333 CLOSEOUT**
+**ACCEPTED — FOUNDATION 3 COMPLETE / PR #335 CLOSEOUT 2026-10-02**
 
 This directive implements Foundation 3 from `20260928_POST_STABILIZATION_FOUNDATION_SEQUENCE.md`.
 
@@ -201,3 +201,10 @@ Foundation 3 is complete when:
 - required validation and any applicable hosted acceptance pass.
 
 Then advance directly to **Long-Term Intrinsic**. Do not begin PIT historical-market expansion, League Market, Trade Decision or Search before this foundation closes.
+
+## 2026-10-02 closeout evidence
+
+Foundation 3 is accepted under the canonical closeout recorded in `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, `IMPLEMENTATION.md`, and `ACCEPTANCE_GATES.md`. The frozen live exact-slot curve is permitted only as a private-beta derived parameter artifact; underlying DynastyProcess/FantasyPros-lineage rows remain research-only and require commercial re-review. The dedicated evidence run now proves freshly rebuilt PIT economics equal the frozen live curve before the real FSFFL 50k sanity can pass.
+
+The next workstream is Long-Term Intrinsic. This directive is closed unless contradictory evidence requires a bounded reopen.
+
