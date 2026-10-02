@@ -32,7 +32,10 @@ from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_fo
 from .behavioral_fit_runtime import build_trade_behavioral_fit
 from .behavioral_runtime import cached_behavior_profile_for_team
 from .runtime import LiveForecastEvidence
-from .scenario_cache import run_cached_scenario_simulation
+from .scenario_cache import (
+    ScenarioComputationStage,
+    run_progressive_scenario_simulation,
+)
 from .simulation_runtime import LiveSimulationAnalyticsResult
 from .trade_decision_dimensions import build_trade_decision_dimensions
 from .trade_value_adapter import cardinal_market_profiles
@@ -75,14 +78,16 @@ def build_post_trade_simulation_comparison(
     *,
     focal_team_id: str,
     simulation_loader: SimulationLoader,
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION,
 ) -> dict[str, object]:
     """Compare baseline and legal changed-roster outcomes and produce NEXT-5 disposition.
 
-    Simulation remains authoritative for competitive outcomes. Behavioral
-    Intelligence may add directional fit evidence but cannot alter Value,
-    Simulation, materiality, negotiation feasibility or disposition. Exact repeated
-    or concurrent identical changed States may reuse/share the same authoritative
-    Simulation result; no lower-fidelity result is introduced.
+    Simulation remains authoritative for competitive outcomes. Interactive
+    screening/provisional stages are explicitly non-authoritative previews; only
+    confirmation or exact reuse of an unchanged canonical competitive result may
+    cross materiality/disposition authority. Behavioral Intelligence may add
+    directional fit evidence but cannot alter Value, Simulation or Decision truth.
+    Exact repeated or concurrent changed States may reuse/share the same stage result.
     """
 
     total_started = monotonic()
@@ -121,10 +126,13 @@ def build_post_trade_simulation_comparison(
     )
     legal_after = roster_resolution.league_state
     prepared = monotonic()
-    changed, cache_hit = run_cached_scenario_simulation(
+    changed, cache_hit, computation = run_progressive_scenario_simulation(
+        league_state,
         legal_after,
         forecast_evidence,
+        baseline,
         simulation_loader=simulation_loader,
+        stage=scenario_stage,
     )
     simulated = monotonic()
 
@@ -155,13 +163,6 @@ def build_post_trade_simulation_comparison(
         competitive_delta_b=simulation_delta_b,
         model_version="next5-bilateral-evaluation-v1:simulated-product-view",
     )
-    decision = classify_bilateral_trade_decision(
-        evaluation,
-        model_version="next5-bilateral-decision-v2:simulated-product-view",
-    )
-    negotiation = assess_negotiation_feasibility(decision, focal_team_id=focal_team_id)
-    strategic_context = attach_owner_strategy(decision)
-
     economics = summarize_bilateral_trade_economics(
         proposal,
         cardinal_profiles,
@@ -188,22 +189,40 @@ def build_post_trade_simulation_comparison(
         prior=live_bounded_package_premium_prior(as_of=proposal.as_of),
     )
     materiality_policy = live_bounded_materiality_policy(as_of=proposal.as_of)
-    material_assessment = assess_bilateral_materiality(
-        evaluation,
-        economic_net,
-        competitive_policy=materiality_policy.competitive,
-        economic_policy=materiality_policy.economic,
-        roster_adjusted_market_net=roster_adjusted_market_net,
-        model_version="next5-material-assessment-v3:simulated-product-view",
-    )
-    disposition = decide_trade_disposition(
-        material_assessment,
-        negotiation,
-        strategic_context,
-        focal_team_id=focal_team_id,
-        package_economics=package_economics,
-        model_version="next5-trade-disposition-v5:intrinsic-action-facing-simulated-product-view",
-    )
+    decision = None
+    negotiation = None
+    strategic_context = None
+    material_assessment = None
+    disposition = None
+    if computation.authoritative:
+        decision = classify_bilateral_trade_decision(
+            evaluation,
+            model_version="next5-bilateral-decision-v2:simulated-product-view",
+        )
+        negotiation = assess_negotiation_feasibility(
+            decision,
+            focal_team_id=focal_team_id,
+        )
+        strategic_context = attach_owner_strategy(decision)
+        material_assessment = assess_bilateral_materiality(
+            evaluation,
+            economic_net,
+            competitive_policy=materiality_policy.competitive,
+            economic_policy=materiality_policy.economic,
+            roster_adjusted_market_net=roster_adjusted_market_net,
+            model_version="next5-material-assessment-v3:simulated-product-view",
+        )
+        disposition = decide_trade_disposition(
+            material_assessment,
+            negotiation,
+            strategic_context,
+            focal_team_id=focal_team_id,
+            package_economics=package_economics,
+            model_version=(
+                "next5-trade-disposition-v5:"
+                "intrinsic-action-facing-simulated-product-view"
+            ),
+        )
 
     simulation_delta_by_team = {
         side_a_id: simulation_delta_a,
@@ -224,27 +243,42 @@ def build_post_trade_simulation_comparison(
             focal_scenario_delta = delta
         comparisons.append(delta.model_dump(mode="json"))
 
-    decision_dimensions = build_trade_decision_dimensions(
-        focal_team_id=focal_team_id,
-        scenario_delta=focal_scenario_delta,
-        economic_net=economic_net,
-        roster_adjusted_market_net=roster_adjusted_market_net,
-        material_assessment=material_assessment,
-        position_strength=None,
-        simulation_backed=True,
-    )
-    missing_dimensions = tuple(decision_dimensions["confidence"]["missing_dimensions"])
-    decision_complete = not missing_dimensions
-    completeness_status = (
-        "complete_simulation_backed" if decision_complete else "simulation_backed_incomplete"
-    )
-    decision_scope = (
-        "complete_trade_disposition"
-        if decision_complete
-        else "simulation_backed_trade_disposition_incomplete"
-    )
+    decision_dimensions = None
+    missing_dimensions: tuple[str, ...]
+    decision_complete = False
+    if computation.authoritative and material_assessment is not None:
+        decision_dimensions = build_trade_decision_dimensions(
+            focal_team_id=focal_team_id,
+            scenario_delta=focal_scenario_delta,
+            economic_net=economic_net,
+            roster_adjusted_market_net=roster_adjusted_market_net,
+            material_assessment=material_assessment,
+            position_strength=None,
+            simulation_backed=True,
+        )
+        missing_dimensions = tuple(
+            decision_dimensions["confidence"]["missing_dimensions"]
+        )
+        decision_complete = not missing_dimensions
+        completeness_status = (
+            "complete_simulation_backed"
+            if decision_complete
+            else "simulation_backed_incomplete"
+        )
+        decision_scope = (
+            "complete_trade_disposition"
+            if decision_complete
+            else "simulation_backed_trade_disposition_incomplete"
+        )
+    else:
+        missing_dimensions = ("authoritative_50000_simulation_confirmation",)
+        completeness_status = "non_authoritative_scenario_preview"
+        decision_scope = "competitive_preview_only"
 
-    counterparty_profile = cached_behavior_profile_for_team(league_state, counterparty_team_id)
+    counterparty_profile = cached_behavior_profile_for_team(
+        league_state,
+        counterparty_team_id,
+    )
     focal_profile = cached_behavior_profile_for_team(league_state, focal_team_id)
     behavioral_fit = build_trade_behavioral_fit(
         runtime,
@@ -273,6 +307,7 @@ def build_post_trade_simulation_comparison(
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "scenario_cache_hit": cache_hit,
+        "scenario_computation": computation.model_dump(mode="json"),
         "decision_completeness": {
             "status": completeness_status,
             "simulation_backed": True,
@@ -288,20 +323,32 @@ def build_post_trade_simulation_comparison(
         ],
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "evaluation": evaluation.model_dump(mode="json"),
-        "decision": decision.model_dump(mode="json"),
-        "negotiation": negotiation.model_dump(mode="json"),
+        "decision": (
+            decision.model_dump(mode="json") if decision is not None else None
+        ),
+        "negotiation": (
+            negotiation.model_dump(mode="json")
+            if negotiation is not None
+            else None
+        ),
         "economics": economics.model_dump(mode="json"),
         "economic_net": economic_net.model_dump(mode="json"),
         "roster_adjusted_market_net": roster_adjusted_market_net.model_dump(mode="json"),
         "package_concentration": concentration.model_dump(mode="json"),
         "package_economics": package_economics.model_dump(mode="json"),
         "materiality_policy": materiality_policy.model_dump(mode="json"),
-        "material_assessment": material_assessment.model_dump(mode="json"),
-        "disposition": disposition.model_dump(mode="json"),
+        "material_assessment": (
+            material_assessment.model_dump(mode="json")
+            if material_assessment is not None
+            else None
+        ),
+        "disposition": (
+            disposition.model_dump(mode="json") if disposition is not None else None
+        ),
         "behavioral_fit": behavioral_fit.model_dump(mode="json") if behavioral_fit is not None else None,
         "availability": {
             "competitive_outcomes": True,
-            "final_trade_disposition": decision_complete,
+            "final_trade_disposition": decision_complete and computation.authoritative,
         },
         "authority": {
             "state_transition": "NEXT-5 Trade Decision",
@@ -316,6 +363,10 @@ def build_post_trade_simulation_comparison(
             "package_economic_guard": "NEXT-5 Trade Decision bounded provisional prior",
             "behavioral_fit": "Behavioral Intelligence directional inference only",
             "scenario_cache": "performance-only exact-result reuse",
+            "scenario_computation": (
+                "screening/provisional are explicitly non-authoritative; "
+                "confirmation or exact canonical reuse is authoritative"
+            ),
             "acceptance": "not calibrated or numerically estimated",
             "presentation_calculation": False,
         },

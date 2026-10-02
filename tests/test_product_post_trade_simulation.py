@@ -9,7 +9,7 @@ def test_post_trade_simulation_uses_existing_authoritative_contracts() -> None:
     source = RUNTIME.read_text(encoding="utf-8")
     assert "apply_bilateral_trade" in source
     assert "resolve_mandatory_roster_cuts" in source
-    assert "run_cached_scenario_simulation(" in source
+    assert "run_progressive_scenario_simulation(" in source
     assert "simulation_loader=simulation_loader" in source
     assert "compare_counterfactual_simulation_results" in source
     assert "competitive_delta_a=simulation_delta_a" in source
@@ -21,6 +21,10 @@ def test_post_trade_simulation_uses_existing_authoritative_contracts() -> None:
     assert '"competitive_delta": "NEXT-4 Simulation common-world comparison when replay/topology coordinates match"' in source
     assert '"scenario_delta": "NEXT-4 Team Utility consumes Simulation competitive delta and adds non-competitive channels"' in source
     assert '"scenario_cache": "performance-only exact-result reuse"' in source
+    assert '"scenario_computation"' in source
+    assert "if computation.authoritative:" in source
+    assert '"non_authoritative_scenario_preview"' in source
+    assert '"final_trade_disposition": decision_complete and computation.authoritative' in source
     assert '"presentation_calculation": False' in source
 
 

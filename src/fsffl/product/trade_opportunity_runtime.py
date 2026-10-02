@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from fsffl.opportunity import EvidenceCompleteness, candidate_from_trade_evaluation
+from fsffl.opportunity import ActionAuthority, EvidenceCompleteness, candidate_from_trade_evaluation
 from fsffl.trade_decision import TradeDecisionDisposition, TradeNegotiationFeasibility
 from fsffl.trade_decision.models import BilateralTradeProposal
 
 from .runtime import LiveForecastEvidence
+from .scenario_cache import ScenarioComputationStage
 from .simulation_runtime import LiveSimulationAnalyticsResult
 from .trade_simulation_runtime import build_post_trade_simulation_comparison
 
@@ -21,6 +22,7 @@ def build_trade_opportunity_evaluation(
     *,
     focal_team_id: str,
     simulation_loader: SimulationLoader,
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION,
 ) -> dict[str, object]:
     """Promote a discovered trade only as far as governed evidence permits.
 
@@ -36,7 +38,28 @@ def build_trade_opportunity_evaluation(
         proposal,
         focal_team_id=focal_team_id,
         simulation_loader=simulation_loader,
+        scenario_stage=scenario_stage,
     )
+    computation = comparison["scenario_computation"]
+    if not computation["authoritative"]:
+        return {
+            **comparison,
+            "candidate": None,
+            "action_authority": ActionAuthority.DIAGNOSTIC_ONLY.value,
+            "opportunity_explanation": (
+                "This is an explicitly non-authoritative scenario preview. "
+                "Run confirmation before materiality, disposition or opportunity "
+                "promotion is evaluated."
+            ),
+            "authority": {
+                **comparison["authority"],
+                "opportunity_lifecycle": (
+                    "NEXT-6 Opportunity withheld until authoritative confirmation"
+                ),
+                "presentation_calculation": False,
+            },
+            "model_version": _PRODUCT_MODEL_VERSION,
+        }
     feasibility = TradeNegotiationFeasibility.model_validate(comparison["negotiation"])
     disposition = TradeDecisionDisposition.model_validate(comparison["disposition"])
     candidate = candidate_from_trade_evaluation(

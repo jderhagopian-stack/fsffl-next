@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import hashlib
 import importlib.metadata
+import json
 import os
 import platform
 from typing import Callable, Literal
@@ -24,8 +26,10 @@ from fsffl.state.draft_order_policy import resolve_draft_order_policy
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.team_utility import (
     LeagueScoringDispersionDiagnostic,
+    OptimizedTeamLineup,
     RegularSeasonSimulationResult,
     TeamUtilityVector,
+    WeeklyTeamScoringDistribution,
     assemble_team_utility_vector,
     build_bye_aware_weekly_team_scoring_panel,
     build_league_relative_position_strengths,
@@ -44,8 +48,19 @@ from fsffl.team_utility.simulation import (
 )
 from fsffl.team_utility.utility import CalculatedCompetitiveState
 
-LIVE_SIMULATION_MODEL_VERSION = "next17-live-simulation-analytics-v17:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
-EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next17-live-simulation-analytics-v17:numpy-pcg64-batched-gauss-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+def _scenario_dependency_fingerprint(*parts: object) -> str:
+    encoded = json.dumps(
+        parts,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+LIVE_SIMULATION_MODEL_VERSION = "next18-live-simulation-analytics-v18:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next18-live-simulation-analytics-v18:numpy-pcg64-batched-gauss-v1:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
 
 
 def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
@@ -169,6 +184,21 @@ def simulation_model_version_for_rng_protocol(rng_protocol: str) -> str:
     raise ValueError(f"unsupported Simulation RNG protocol: {rng_protocol}")
 
 
+class ScenarioSimulationPreparation(FrozenModel):
+    """Compact baseline inputs safe for dependency-proven alternate-State reuse."""
+
+    source_state_id: str
+    structure_fingerprint: str
+    forecast_fingerprint: str
+    scoring_panel_weeks: tuple[int, ...]
+    lineups: tuple[OptimizedTeamLineup, ...]
+    forward_weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...]
+    model_version: str = "next4-scenario-preparation-v1"
+
+    def lineup_map(self) -> dict[str, OptimizedTeamLineup]:
+        return {item.team_id: item for item in self.lineups}
+
+
 class LiveSimulationAnalyticsResult(FrozenModel):
     """NEXT-7 views backed by authoritative NEXT-4 simulation outcomes."""
 
@@ -176,7 +206,68 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
     scoring_dispersion_diagnostic: LeagueScoringDispersionDiagnostic
+    scenario_preparation: ScenarioSimulationPreparation | None = None
     model_version: str = LIVE_SIMULATION_MODEL_VERSION
+
+
+def simulation_forecast_dependency_fingerprint(
+    forecasts: tuple[ForecastObservation, ...],
+    *,
+    forecast_model_version: str,
+) -> str:
+    return _scenario_dependency_fingerprint(
+        forecast_model_version,
+        tuple(
+            item.model_dump(mode="json")
+            for item in sorted(
+                forecasts,
+                key=lambda item: (
+                    item.player_id,
+                    item.horizon.value,
+                    item.metric.value,
+                    item.as_of.isoformat(),
+                    item.source,
+                    item.model_version,
+                ),
+            )
+        ),
+    )
+
+
+def simulation_structure_dependency_fingerprint(league_state: LeagueState) -> str:
+    """Fingerprint global Simulation dependencies while excluding bounded rosters/picks."""
+
+    return _scenario_dependency_fingerprint(
+        league_state.as_of.isoformat(),
+        league_state.league.model_dump(mode="json"),
+        tuple(sorted(team.team_id for team in league_state.teams)),
+        tuple(
+            (team_state.team_id, team_state.max_points_for)
+            for team_state in sorted(
+                league_state.team_states,
+                key=lambda item: item.team_id,
+            )
+        ),
+        tuple(
+            (
+                player.player_id,
+                player.position.value,
+                player.nfl_team,
+            )
+            for player in sorted(league_state.players, key=lambda item: item.player_id)
+        ),
+        tuple(item.model_dump(mode="json") for item in league_state.matchups),
+        league_state.completed_through_week,
+        tuple(item.model_dump(mode="json") for item in league_state.nfl_team_byes),
+        tuple(
+            item.model_dump(mode="json")
+            for item in league_state.player_week_availability
+        ),
+        tuple(
+            item.model_dump(mode="json")
+            for item in league_state.draft_order_policies
+        ),
+    )
 
 
 def build_live_simulation_analytics(
@@ -192,6 +283,9 @@ def build_live_simulation_analytics(
     rng_batch_size: int | None = None,
     generated_at: datetime | None = None,
     cooperative_yield: Callable[[], object] | None = None,
+    scenario_reuse: ScenarioSimulationPreparation | None = None,
+    affected_team_ids: frozenset[str] | None = None,
+    reuse_simulation_result: RegularSeasonSimulationResult | None = None,
 ) -> LiveSimulationAnalyticsResult:
     """Run Forecast -> week-specific NEXT-4 Simulation -> NEXT-7.
 
@@ -251,18 +345,42 @@ def build_live_simulation_analytics(
         )
 
     ordered_teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
-    lineups = {}
+    ordered_team_ids = tuple(team.team_id for team in ordered_teams)
+    structure_fingerprint = simulation_structure_dependency_fingerprint(league_state)
+    forecast_fingerprint = simulation_forecast_dependency_fingerprint(
+        forecasts,
+        forecast_model_version=forecast_model_version,
+    )
+    affected = set(affected_team_ids or ())
+    if affected - set(ordered_team_ids):
+        raise ValueError("affected_team_ids must reference canonical league teams")
+    if scenario_reuse is not None:
+        if affected_team_ids is None:
+            raise ValueError("scenario reuse requires explicit affected_team_ids")
+        if scenario_reuse.structure_fingerprint != structure_fingerprint:
+            raise ValueError("scenario reuse structure fingerprint does not match alternate State")
+        if scenario_reuse.forecast_fingerprint != forecast_fingerprint:
+            raise ValueError("scenario reuse forecast fingerprint does not match Forecast evidence")
+
+    reusable_lineups = scenario_reuse.lineup_map() if scenario_reuse is not None else {}
+    lineups: dict[str, OptimizedTeamLineup] = {}
     incomplete_team_names: list[str] = []
     with sample_rss_phase("simulation.lineup_compilation"):
         for team in ordered_teams:
-            lineup = optimize_team_lineup(
-                league_state,
-                effective_forecasts,
-                team_id=team.team_id,
-                as_of=league_state.as_of,
-                horizon=ForecastHorizon.SEASON,
-                allow_unfilled_slots=True,
+            lineup = (
+                reusable_lineups.get(team.team_id)
+                if scenario_reuse is not None and team.team_id not in affected
+                else None
             )
+            if lineup is None:
+                lineup = optimize_team_lineup(
+                    league_state,
+                    effective_forecasts,
+                    team_id=team.team_id,
+                    as_of=league_state.as_of,
+                    horizon=ForecastHorizon.SEASON,
+                    allow_unfilled_slots=True,
+                )
             lineups[team.team_id] = lineup
             if lineup.unfilled_slots:
                 slots = ", ".join(
@@ -281,14 +399,53 @@ def build_live_simulation_analytics(
     }
 
     with sample_rss_phase("simulation.weekly_scoring_panel"):
-        forward_weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
-            league_state,
-            effective_forecasts,
-            team_ids=tuple(team.team_id for team in ordered_teams),
-            weeks=scoring_panel_weeks,
-            as_of=league_state.as_of,
-            baseline_lineups=lineups,
-        )
+        if scenario_reuse is None:
+            forward_weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
+                league_state,
+                effective_forecasts,
+                team_ids=ordered_team_ids,
+                weeks=scoring_panel_weeks,
+                as_of=league_state.as_of,
+                baseline_lineups=lineups,
+            )
+        else:
+            if scenario_reuse.scoring_panel_weeks != scoring_panel_weeks:
+                raise ValueError("scenario reuse scoring weeks do not match alternate State")
+            reusable_rows = tuple(
+                row
+                for row in scenario_reuse.forward_weekly_scoring
+                if row.team_id not in affected
+            )
+            rebuilt_rows = (
+                build_bye_aware_weekly_team_scoring_panel(
+                    league_state,
+                    effective_forecasts,
+                    team_ids=tuple(
+                        team_id for team_id in ordered_team_ids if team_id in affected
+                    ),
+                    weeks=scoring_panel_weeks,
+                    as_of=league_state.as_of,
+                    baseline_lineups=lineups,
+                )
+                if affected
+                else ()
+            )
+            row_by_key = {
+                (row.team_id, row.week): row
+                for row in (*reusable_rows, *rebuilt_rows)
+            }
+            required_keys = {
+                (team_id, week)
+                for team_id in ordered_team_ids
+                for week in scoring_panel_weeks
+            }
+            if set(row_by_key) != required_keys:
+                raise ValueError("scenario reuse weekly scoring coverage is incomplete")
+            forward_weekly_scoring = tuple(
+                row_by_key[(team_id, week)]
+                for team_id in ordered_team_ids
+                for week in scoring_panel_weeks
+            )
     regular_week_set = set(fantasy_weeks)
     playoff_week_set = set(playoff_weeks)
     weekly_scoring = tuple(
@@ -322,7 +479,7 @@ def build_live_simulation_analytics(
             future_pick_draft_order_policy=explicit_draft_order_policy,
             simulation_count=simulation_count,
             seed=seed,
-            model_version="next4-live-current-season-v12:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:factual-completed-weeks:playoff-week-scoring:empirical-weekly-volatility:league-configured-postseason",
+            model_version="next4-live-current-season-v13:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:factual-completed-weeks:playoff-week-scoring:empirical-weekly-volatility:league-configured-postseason",
             rng_protocol=rng_protocol,
             rng_batch_size=rng_batch_size,
         )
@@ -344,7 +501,20 @@ def build_live_simulation_analytics(
         ),
     )
     with sample_rss_phase("simulation.kernel_and_result_aggregation"):
-        simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
+        if reuse_simulation_result is not None:
+            if affected:
+                raise ValueError("competitive Simulation reuse requires no affected team rosters")
+            if scenario_reuse is None:
+                raise ValueError("competitive Simulation reuse requires proven scenario preparation")
+            if (
+                reuse_simulation_result.simulation_count != simulation_count
+                or reuse_simulation_result.seed != seed
+                or reuse_simulation_result.rng_protocol != rng_protocol
+            ):
+                raise ValueError("competitive Simulation reuse replay identity does not match request")
+            simulation = reuse_simulation_result
+        else:
+            simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
     with sample_rss_phase("simulation.post_kernel_analytics_aggregation"):
         scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
             weekly_scoring or playoff_weekly_scoring,
@@ -541,10 +711,19 @@ def build_live_simulation_analytics(
         )
 
     views = tuple(team_views)
+    preparation = ScenarioSimulationPreparation(
+        source_state_id=league_state.state_id,
+        structure_fingerprint=structure_fingerprint,
+        forecast_fingerprint=forecast_fingerprint,
+        scoring_panel_weeks=scoring_panel_weeks,
+        lineups=tuple(lineups[team_id] for team_id in ordered_team_ids),
+        forward_weekly_scoring=forward_weekly_scoring,
+    )
     return LiveSimulationAnalyticsResult(
         league_view=build_league_analytics_view(context=context, team_views=views),
         team_views=views,
         simulation_result=simulation,
         scoring_dispersion_diagnostic=scoring_dispersion_diagnostic,
+        scenario_preparation=preparation,
         model_version=simulation_model_version_for_rng_protocol(rng_protocol),
     )

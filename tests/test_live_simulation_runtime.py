@@ -19,6 +19,10 @@ from fsffl.product.runtime import LiveForecastEvidence, UserRuntimeContext
 from fsffl.product.opportunity_search import build_scoped_trade_candidates
 from fsffl.product.trade_center_view import build_trade_center_browser_view
 from fsffl.product import scenario_cache
+from fsffl.product.scenario_cache import (
+    ScenarioComputationStage,
+    build_scenario_dependency_plan,
+)
 from fsffl.persistence.runtime_cache import decode_simulation, simulation_artifact
 from fsffl.persistence.contracts import canonical_fingerprint
 from fsffl.state.models import (
@@ -44,6 +48,7 @@ from fsffl.team_utility import (
     WeeklyTeamScoringDistribution,
     build_bye_aware_weekly_team_scoring_panel,
     compare_team_utility_vectors,
+    optimize_team_lineup,
 )
 from fsffl.trade_decision import (
     BilateralTradeProposal,
@@ -311,6 +316,280 @@ def test_live_runtime_allows_empty_remaining_regular_schedule_and_runs_postseaso
     assert rows["a"].expected_wins == pytest.approx(4.0)
     assert rows["b"].expected_wins == pytest.approx(0.0)
     assert rows["b"].championship_probability == pytest.approx(1.0)
+
+
+def _selective_state_and_forecasts() -> tuple[LeagueState, tuple[ForecastObservation, ...]]:
+    base = _state()
+    extra_player = Player(
+        player_id="pc",
+        full_name="C QB",
+        position=Position.QB,
+        nfl_team="BUF",
+    )
+    extra_state = PlayerState(
+        player_id="pc",
+        as_of=AS_OF,
+        nfl_team="BUF",
+        provenance=PROVENANCE,
+    )
+    state = base.model_copy(
+        update={
+            "players": (*base.players, extra_player),
+            "player_states": (*base.player_states, extra_state),
+        }
+    )
+    extra_forecast = ForecastObservation(
+        player_id="pc",
+        position=Position.QB,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=AS_OF,
+        period_end=AS_OF + timedelta(days=180),
+        distribution=ForecastDistribution(mean=500.0, stddev=90.0),
+        source="fsffl:live_league_scored",
+        model_version="next2-live-calibrated-test",
+        as_of=AS_OF,
+        provenance=PROVENANCE,
+    )
+    return state, (*_forecasts(), extra_forecast)
+
+
+def test_selective_scenario_rebuilds_only_affected_team_inputs() -> None:
+    state, forecasts = _selective_state_and_forecasts()
+    baseline = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=250,
+        seed=17,
+        generated_at=AS_OF,
+    )
+    assert baseline.scenario_preparation is not None
+
+    team_a = next(item for item in state.team_states if item.team_id == "a")
+    changed_team_a = team_a.model_copy(
+        update={"roster": (RosterEntry(player_id="pc", slot=RosterSlot.QB),)}
+    )
+    changed_state = state.model_copy(
+        update={
+            "team_states": tuple(
+                changed_team_a if item.team_id == "a" else item
+                for item in state.team_states
+            )
+        }
+    )
+
+    with patch(
+        "fsffl.product.simulation_runtime.optimize_team_lineup",
+        wraps=optimize_team_lineup,
+    ) as optimize:
+        changed = build_live_simulation_analytics(
+            changed_state,
+            forecasts=forecasts,
+            forecast_model_version="next2-test",
+            simulation_count=250,
+            seed=17,
+            generated_at=AS_OF,
+            scenario_reuse=baseline.scenario_preparation,
+            affected_team_ids=frozenset({"a"}),
+        )
+
+    assert {call.kwargs["team_id"] for call in optimize.call_args_list} == {"a"}
+    assert changed.scenario_preparation is not None
+    baseline_rows = {
+        (row.team_id, row.week): row
+        for row in baseline.scenario_preparation.forward_weekly_scoring
+    }
+    changed_rows = {
+        (row.team_id, row.week): row
+        for row in changed.scenario_preparation.forward_weekly_scoring
+    }
+    for week in baseline.scenario_preparation.scoring_panel_weeks:
+        assert changed_rows[("b", week)] == baseline_rows[("b", week)]
+        assert changed_rows[("a", week)] != baseline_rows[("a", week)]
+    baseline_b = baseline.scenario_preparation.lineup_map()["b"]
+    changed_b = changed.scenario_preparation.lineup_map()["b"]
+    assert changed_b == baseline_b
+
+
+def test_dependency_plan_is_team_selective_for_rosters_and_full_for_global_rules() -> None:
+    state, forecasts = _selective_state_and_forecasts()
+    baseline = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=250,
+        seed=17,
+        generated_at=AS_OF,
+    )
+    evidence = SimpleNamespace(
+        league_scored_forecasts=forecasts,
+        model_version="next2-test",
+    )
+
+    team_a = next(item for item in state.team_states if item.team_id == "a")
+    changed_team_a = team_a.model_copy(
+        update={"roster": (RosterEntry(player_id="pc", slot=RosterSlot.QB),)}
+    )
+    roster_changed = state.model_copy(
+        update={
+            "team_states": tuple(
+                changed_team_a if item.team_id == "a" else item
+                for item in state.team_states
+            )
+        }
+    )
+    roster_plan = build_scenario_dependency_plan(
+        state,
+        roster_changed,
+        evidence,
+        baseline,
+        stage=ScenarioComputationStage.CONFIRMATION,
+    )
+
+    assert roster_plan.planned_mode == "selective_inputs"
+    assert roster_plan.affected_team_ids == ("a",)
+    assert roster_plan.reusable_team_ids == ("b",)
+    assert roster_plan.structure_compatible is True
+    assert roster_plan.forecast_compatible is True
+
+    rules_changed = state.model_copy(
+        update={
+            "league": state.league.model_copy(
+                update={
+                    "rules": state.league.rules.model_copy(
+                        update={"playoff_team_count": 2}
+                    )
+                }
+            )
+        }
+    )
+    global_plan = build_scenario_dependency_plan(
+        state,
+        rules_changed,
+        evidence,
+        baseline,
+        stage=ScenarioComputationStage.CONFIRMATION,
+    )
+
+    assert global_plan.planned_mode == "full_recompute"
+    assert global_plan.structure_compatible is False
+    assert "global_simulation_dependency_changed" in global_plan.reasons
+
+    max_pf_changed = state.model_copy(
+        update={
+            "team_states": tuple(
+                item.model_copy(
+                    update={
+                        "max_points_for": 123.0,
+                        "max_points_for_provenance": PROVENANCE,
+                    }
+                )
+                if item.team_id == "a"
+                else item
+                for item in state.team_states
+            )
+        }
+    )
+    max_pf_plan = build_scenario_dependency_plan(
+        state,
+        max_pf_changed,
+        evidence,
+        baseline,
+        stage=ScenarioComputationStage.CONFIRMATION,
+    )
+    assert max_pf_plan.planned_mode == "full_recompute"
+    assert max_pf_plan.structure_compatible is False
+
+    as_of_changed = state.model_copy(
+        update={"as_of": state.as_of + timedelta(minutes=1)}
+    )
+    as_of_plan = build_scenario_dependency_plan(
+        state,
+        as_of_changed,
+        evidence,
+        baseline,
+        stage=ScenarioComputationStage.CONFIRMATION,
+    )
+    assert as_of_plan.planned_mode == "full_recompute"
+    assert as_of_plan.structure_compatible is False
+
+
+def test_dependency_plan_rejects_stale_baseline_result() -> None:
+    state, forecasts = _selective_state_and_forecasts()
+    baseline = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=250,
+        seed=17,
+        generated_at=AS_OF,
+    )
+    evidence = SimpleNamespace(
+        league_scored_forecasts=forecasts,
+        model_version="next2-test",
+    )
+    wrong_baseline = state.model_copy(
+        update={
+            "teams": tuple(
+                item.model_copy(update={"display_name": "Different Baseline"})
+                if item.team_id == "a"
+                else item
+                for item in state.teams
+            )
+        }
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="baseline Simulation result does not match baseline State",
+    ):
+        build_scenario_dependency_plan(
+            wrong_baseline,
+            state,
+            evidence,
+            baseline,
+            stage=ScenarioComputationStage.CONFIRMATION,
+        )
+
+
+def test_noncompetitive_state_change_reuses_canonical_competitive_result_exactly() -> None:
+    state, forecasts = _selective_state_and_forecasts()
+    baseline = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=250,
+        seed=17,
+        generated_at=AS_OF,
+    )
+    assert baseline.scenario_preparation is not None
+    changed_state = state.model_copy(
+        update={
+            "teams": tuple(
+                item.model_copy(update={"display_name": "A Renamed"})
+                if item.team_id == "a"
+                else item
+                for item in state.teams
+            )
+        }
+    )
+
+    changed = build_live_simulation_analytics(
+        changed_state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=250,
+        seed=17,
+        generated_at=AS_OF,
+        scenario_reuse=baseline.scenario_preparation,
+        affected_team_ids=frozenset(),
+        reuse_simulation_result=baseline.simulation_result,
+    )
+
+    assert changed.simulation_result is baseline.simulation_result
+    assert changed.league_view.context.league_state_id == changed_state.state_id
+    assert next(row for row in changed.league_view.teams if row.team_id == "a").display_name == "A Renamed"
 
 
 def test_sleeper_basic_postseason_settings_restore_odds_and_calculated_state() -> None:
