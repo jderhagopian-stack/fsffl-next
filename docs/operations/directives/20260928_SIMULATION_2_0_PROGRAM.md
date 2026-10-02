@@ -281,3 +281,15 @@ Standard fallback:
 
 An explicit but unsupported custom rule remains explicit/unavailable and must not be silently replaced by the fallback. Preserve `explicit_league_rule` versus `derived_standard_fallback` provenance. Remove FSFFL-specific Max-PF and placement-game assumptions from generic Simulation authority.
 
+
+## 2026-10-02 management clarification — item 8 PIT calibration evidence boundary
+
+Simulation 2.0 item 8 must not imply that FSFFL NEXT possesses multi-year historical Forecast snapshots that were never captured. Historical league facts such as rosters, transactions, standings, schedules and realized outcomes may be reconstructed where evidence supports them, but a historical Forecast may be used for calibration only when an authentic timestamped Forecast/projection snapshot existed at that PIT coordinate or another contemporaneous source can be independently verified. Current projections must never be backfilled into an old date and described as historical Forecast evidence.
+
+Item 8 therefore has two governed parts:
+1. **Convergence / Monte Carlo stability now** — measure expected wins, finish/seed distributions, playoff/title odds, pick-slot distributions, scenario deltas and decision-sign stability across run counts while keeping 50,000 as production authority unless Management explicitly approves a change.
+2. **PIT calibration framework + available evidence now** — build/verify the reusable calibration machinery and run it only on legitimate PIT Forecast+State checkpoints actually available (including frozen preseason and in-season captures where provenance is complete). Report sample size, seasons/weeks covered and missing evidence plainly. Treat broad multi-year weekly calibration as prospective/expanding evidence, not as a prerequisite that may be satisfied with reconstructed forecasts.
+
+Older seasons may still be used for deterministic rule execution, standings/tiebreak, draft-order or realized-outcome tests that do not require unavailable historical Forecast inputs. Counterfactual trade/waiver deltas have no directly observed alternate-world outcome; historical work there should measure replay/stability/sensitivity and not claim causal calibration.
+
+The purpose of item 8 is to prove that Simulation numerical outputs are stable at their governed run counts and to establish a leakage-free calibration system that becomes stronger as authentic PIT evidence accumulates. Limited historical Forecast coverage is an evidence limitation to disclose, not a reason to fabricate, estimate or block the Simulation 2.0 closeout when the framework and available evidence are sound.
