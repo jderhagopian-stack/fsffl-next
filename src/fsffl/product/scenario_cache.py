@@ -256,12 +256,9 @@ def build_scenario_dependency_plan(
         )
 
     reusable = tuple(team_id for team_id in all_team_ids if team_id not in affected)
-    requested_count = scenario_stage_simulation_count(stage)
-    if not affected and baseline_result.simulation_result.simulation_count == requested_count:
-        mode = "reuse_competitive_simulation"
-    elif not affected and stage == ScenarioComputationStage.CONFIRMATION:
-        # Canonical baseline may be reused even if its count is read from a
-        # persisted result rather than hard-coded by the caller.
+    if not affected:
+        # No competitive roster dependency changed. Reuse the canonical baseline
+        # result at every requested stage rather than rerunning a weaker preview.
         mode = "reuse_competitive_simulation"
     else:
         mode = "selective_inputs"
