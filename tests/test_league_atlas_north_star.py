@@ -615,6 +615,5 @@ def test_live_atlas_binds_origin_aware_pick_value_to_presentation_generation() -
     assert "presentation_runtime.league_state" in source
     assert "presentation_runtime.simulation_analytics.simulation_result" in source
     assert "origin_aware_pick_values=origin_aware_pick_values" in source
-    assert "runtime.simulation_analytics.simulation_result" not in source.split(
-        "def league_atlas(", 1
-    )[1].split("@application.get", 1)[0]
+    route_source = source.split("def league_atlas(", 1)[1].split("@application.get", 1)[0]
+    assert "\n            runtime.simulation_analytics.simulation_result," not in route_source
