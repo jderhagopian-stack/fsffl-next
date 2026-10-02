@@ -1321,3 +1321,24 @@ This is sufficient Tier-B closeout under the risk-proportionate/no-redeploy/no-p
 
 **Simulation 2.0 roadmap advances to the next directive capability: replayable Multiverse / explainability worlds.** Reconcile existing replay identity and retained diagnostics first; add only the missing bounded representative-world contract (median/expected-like, upside/downside, unusual credible/tail and notable outcome examples) with Simulation ID/seed and rarity context. This is explanation, not a second probability model. Selective recomputation/progressive scenarios, convergence and PIT calibration remain later directive work.
 
+## 2026-10-02 — Simulation 2.0 item 6 ACTIVE: replayable Multiverse / representative futures
+
+#328 team-of-origin future-pick distributions are accepted and must not be reopened absent contradictory evidence. The active roadmap position is item 6: replayable Multiverse/common-world explainability and representative tail outcomes.
+
+Bounded implementation contract:
+- Multiverse is an explanation layer over the **same canonical 50,000 Simulation worlds**, not a second probability model and not a separate stochastic run.
+- The kernel retains no 50,000-world season-path archive. It keeps four compact scalar diagnostic series plus only the currently selected bounded exemplar summaries.
+- Selected categories are: expected-like/typical world, plausible league-scoring upside, plausible downside, extreme tail, biggest future blowout, biggest future upset when observed, strongest expected-scoring team missing the playoffs when observed, and lowest-seed champion observed when championship Simulation is governed.
+- Every exemplar carries root seed, RNG protocol/batch coordinate, canonical Simulation input fingerprint, deterministic Simulation ID, world index/world ID, final standings/team outcomes, optional notable matchup, and empirical rarity/percentile context from the same canonical run.
+- Representative upside/downside targets are one governed league-total standard deviation above/below the Simulation input expectation; final rarity is empirical from the actual Monte Carlo sample.
+- Exact rerun of the same governed request/seed must reproduce the same exemplar set and IDs.
+- Model/persistence identity advances so pre-item-6 Simulation artifacts cannot masquerade as Multiverse-capable output.
+- League Atlas exposes the bounded Multiverse payload as governed Simulation explanation evidence; presentation creates no new model truth.
+- Player-specific superstar-week/season examples are explicitly deferred: current production Simulation samples governed team-week scoring distributions, not retained player-level stochastic draws. Do not fabricate player attribution.
+
+Performance boundary:
+- item 6 may add bounded diagnostic overhead but may not reintroduce a large raw-world archive or second 50,000-run pass;
+- canonical probability/standings/playoff/pick outputs, RNG draw order, common-world coordinates and 50,000-run authority remain unchanged.
+
+Promotion classification: Tier B Simulation output/explainability contract. Require focused deterministic replay/category/rarity tests, League Atlas payload coverage, full CI, reviewed fixed 50k replay digests if result serialization changes, exact-head P1/P2 review, then one targeted hosted acceptance of localized Simulation artifact invalidation and Multiverse-capable publication. Do not reopen #324-#328.
+
