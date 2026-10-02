@@ -4,6 +4,8 @@ import pytest
 
 from fsffl.state.history import InMemorySnapshotStore
 from fsffl.state.models import (
+    DraftOrderPolicyEvidence,
+    DraftOrderPolicyParameter,
     DraftPick,
     League,
     LeagueRules,
@@ -98,6 +100,50 @@ def test_state_identity_is_order_independent_for_canonical_collections() -> None
         }
     )
     assert reordered.state_id == state.state_id
+
+
+def test_empty_draft_order_policy_coordinate_preserves_legacy_state_identity() -> None:
+    state = make_state()
+    canonical = canonical_state_json(state)
+
+    assert '"draft_order_policies"' not in canonical
+    assert load_state_json(canonical).state_id == state.state_id
+
+
+def test_governed_draft_order_policy_is_canonical_state_evidence() -> None:
+    state = make_state()
+    provenance = state.provenance[0]
+    policy = DraftOrderPolicyEvidence(
+        league_id=state.league.league_id,
+        draft_season=2027,
+        effective_at=NOW - timedelta(days=1),
+        available_at=NOW,
+        policy_id="league-bylaw",
+        version="v1",
+        mechanism="standard_record_h2h_pf_then_playoff_elimination_v1",
+        description="explicit league draft-order rule",
+        parameters=(
+            DraftOrderPolicyParameter(name="placement_games_affect_order", value=False),
+        ),
+        provenance=provenance,
+    )
+    governed = state.model_copy(update={"draft_order_policies": (policy,)})
+
+    assert governed.state_id != state.state_id
+    governed_json = canonical_state_json(governed)
+    restored = load_state_json(governed_json)
+    assert '"draft_order_policies"' in governed_json
+    assert restored.state_id == governed.state_id
+    assert canonical_state_json(restored) == governed_json
+
+    wrong_league = policy.model_copy(update={"league_id": "other"})
+    with pytest.raises(ValueError, match="must belong to the league"):
+        LeagueState.model_validate(
+            {
+                **state.model_dump(),
+                "draft_order_policies": (wrong_league,),
+            }
+        )
 
 
 def test_unknown_roster_player_is_rejected() -> None:

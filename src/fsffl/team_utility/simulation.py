@@ -13,7 +13,15 @@ from typing import Annotated, Callable, Literal
 
 from pydantic import Field, model_validator
 
+from fsffl.state.draft_order_policy import DraftOrderPolicyEvidence
 from fsffl.state.models import FrozenModel, LeaguePlayoffRules, LeagueState
+
+from .future_pick import (
+    SupportedFuturePickDraftOrder,
+    TeamOriginFuturePickDistribution,
+    build_team_origin_future_pick_distribution,
+    compile_supported_future_pick_policy,
+)
 
 _logger = logging.getLogger("uvicorn.error")
 
@@ -108,6 +116,8 @@ class RegularSeasonSimulationInput(FrozenModel):
     schedule: tuple[ScheduledMatchup, ...]
     playoff_team_count: Annotated[int, Field(ge=1)] | None = None
     playoff_rules: LeaguePlayoffRules | None = None
+    future_pick_draft_season: Annotated[int, Field(ge=1900)] | None = None
+    future_pick_draft_order_policy: DraftOrderPolicyEvidence | None = None
     simulation_count: Annotated[int, Field(ge=1)] = 50_000
     seed: int = 20260905
     model_version: str
@@ -155,6 +165,22 @@ class RegularSeasonSimulationInput(FrozenModel):
             and self.playoff_rules.playoff_team_count != self.playoff_team_count
         ):
             raise ValueError("playoff_rules team count must match playoff_team_count")
+        if (
+            self.future_pick_draft_order_policy is not None
+            and self.future_pick_draft_season is None
+        ):
+            raise ValueError(
+                "explicit future-pick draft-order policy requires draft season"
+            )
+        if (
+            self.future_pick_draft_order_policy is not None
+            and self.future_pick_draft_season is not None
+            and self.future_pick_draft_order_policy.draft_season
+            != self.future_pick_draft_season
+        ):
+            raise ValueError(
+                "future-pick draft-order policy season conflicts with draft season"
+            )
         for matchup in self.completed_matchups:
             if matchup.home_team_id not in known or matchup.away_team_id not in known:
                 raise ValueError("completed matchup references unknown team")
@@ -263,6 +289,8 @@ class TeamFinishDistribution(FrozenModel):
 class RegularSeasonSimulationResult(FrozenModel):
     outcomes: tuple[TeamCompetitiveOutcome, ...]
     finish_distributions: tuple[TeamFinishDistribution, ...] = ()
+    future_pick_distributions: tuple[TeamOriginFuturePickDistribution, ...] = ()
+    future_pick_unavailability_reason: str | None = None
     # Persisted with the Simulation artifact; intentionally absent from per-team product views.
     championship_probability_provenance: Literal["provider_observed_exact", "settings_derived_standard"] | None = None
     simulation_count: Annotated[int, Field(ge=1)]
@@ -647,6 +675,8 @@ def build_regular_season_simulation_input(
     scoring: tuple[TeamScoringDistribution, ...] = (),
     weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = (),
     playoff_weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = (),
+    future_pick_draft_season: int | None = None,
+    future_pick_draft_order_policy: DraftOrderPolicyEvidence | None = None,
     simulation_count: int = 50_000,
     seed: int = 20260905,
     model_version: str = "next4-live-season-plus-playoffs-v2",
@@ -666,6 +696,8 @@ def build_regular_season_simulation_input(
         weekly_scoring=weekly_scoring,
         playoff_weekly_scoring=playoff_weekly_scoring,
         completed_matchups=completed_matchups,
+        future_pick_draft_season=future_pick_draft_season,
+        future_pick_draft_order_policy=future_pick_draft_order_policy,
         schedule=remaining_schedule,
         playoff_team_count=playoff_team_count,
         playoff_rules=playoff_rules,
@@ -792,6 +824,243 @@ def _simulate_configured_champion(standings, playoff_rules, playoff_scoring, gau
     return winners[playoff_rules.championship_matchup_id][0]
 
 
+def _playoff_game_result(left, right, playoff_scoring, week, gauss):
+    winner = _playoff_game(left, right, playoff_scoring, week, gauss)
+    loser = right if winner == left else left
+    return winner, loser
+
+
+def _simulate_configured_playoff_outcomes(
+    standings,
+    playoff_rules,
+    playoff_scoring,
+    gauss,
+) -> tuple[int, dict[int, int]]:
+    """Return champion plus each loser's canonical elimination round."""
+
+    if (
+        playoff_rules is None
+        or playoff_rules.simulation_unavailability_reason() is not None
+    ):
+        raise ValueError(
+            "future-pick playoff elimination requires governed playoff structure"
+        )
+    seeds = {
+        seed: (standings[seed - 1], seed)
+        for seed in range(1, playoff_rules.playoff_team_count + 1)
+    }
+    winners = {}
+    elimination_round: dict[int, int] = {}
+    for matchup in playoff_rules.canonical_execution_matchups():
+        left = (
+            seeds[matchup.participant_a.seed_number]
+            if matchup.participant_a.seed_number is not None
+            else winners[matchup.participant_a.winner_of_matchup_id]
+        )
+        right = (
+            seeds[matchup.participant_b.seed_number]
+            if matchup.participant_b.seed_number is not None
+            else winners[matchup.participant_b.winner_of_matchup_id]
+        )
+        winner, loser = _playoff_game_result(
+            left,
+            right,
+            playoff_scoring,
+            matchup.week,
+            gauss,
+        )
+        winners[matchup.matchup_id] = winner
+        elimination_round[loser[0]] = matchup.round_number
+    champion = winners[playoff_rules.championship_matchup_id][0]
+    return champion, elimination_round
+
+
+def _simulate_explicit_six_team_placement_order(
+    standings,
+    playoff_rules,
+    playoff_scoring,
+    bracket_gauss,
+    placement_gauss,
+) -> tuple[int, dict[int, int]]:
+    """Honor an explicitly governed six-team placement-game draft rule.
+
+    This is never used by the derived standard fallback. It exists only for an
+    explicit league policy that says 5th-/3rd-place games affect draft order.
+    """
+
+    if (
+        playoff_rules is None
+        or playoff_rules.playoff_team_count != 6
+        or playoff_rules.round_count != 3
+        or tuple(playoff_rules.bye_seeds) != (1, 2)
+        or len(playoff_rules.round_weeks) != 3
+    ):
+        raise ValueError(
+            "explicit placement-game draft order requires six-team playoff structure"
+        )
+    seeds = {seed: (standings[seed - 1], seed) for seed in range(1, 7)}
+    week_one, week_two, week_three = playoff_rules.round_weeks
+
+    qf_a_winner, qf_a_loser = _playoff_game_result(
+        seeds[3], seeds[6], playoff_scoring, week_one, bracket_gauss
+    )
+    qf_b_winner, qf_b_loser = _playoff_game_result(
+        seeds[4], seeds[5], playoff_scoring, week_one, bracket_gauss
+    )
+    fifth_winner, fifth_loser = _playoff_game_result(
+        qf_a_loser, qf_b_loser, playoff_scoring, week_two, placement_gauss
+    )
+    sf_a_winner, sf_a_loser = _playoff_game_result(
+        seeds[1], qf_b_winner, playoff_scoring, week_two, bracket_gauss
+    )
+    sf_b_winner, sf_b_loser = _playoff_game_result(
+        seeds[2], qf_a_winner, playoff_scoring, week_two, bracket_gauss
+    )
+    third_winner, third_loser = _playoff_game_result(
+        sf_a_loser, sf_b_loser, playoff_scoring, week_three, placement_gauss
+    )
+    champion, runner_up = _playoff_game_result(
+        sf_a_winner, sf_b_winner, playoff_scoring, week_three, bracket_gauss
+    )
+
+    return champion[0], {
+        champion[0]: 1,
+        runner_up[0]: 2,
+        third_winner[0]: 3,
+        third_loser[0]: 4,
+        fifth_winner[0]: 5,
+        fifth_loser[0]: 6,
+    }
+
+
+def _record_head_to_head_result(
+    home_idx: int,
+    away_idx: int,
+    home_points: float,
+    away_points: float,
+    h2h_points: list[list[float]],
+    h2h_games: list[list[int]],
+) -> None:
+    h2h_games[home_idx][away_idx] += 1
+    h2h_games[away_idx][home_idx] += 1
+    if home_points > away_points:
+        h2h_points[home_idx][away_idx] += 1.0
+    elif away_points > home_points:
+        h2h_points[away_idx][home_idx] += 1.0
+    else:
+        h2h_points[home_idx][away_idx] += 0.5
+        h2h_points[away_idx][home_idx] += 0.5
+
+
+def _group_equal_values(
+    indexes: list[int],
+    value_for,
+) -> list[list[int]]:
+    groups: list[list[int]] = []
+    for index in indexes:
+        value = value_for(index)
+        if groups and value_for(groups[-1][0]) == value:
+            groups[-1].append(index)
+        else:
+            groups.append([index])
+    return groups
+
+
+def _regular_season_draft_order_groups(
+    team_indexes,
+    *,
+    wins,
+    points_for,
+    games_by_team,
+    h2h_points,
+    h2h_games,
+) -> list[list[int]]:
+    """Order earlier picks by record, resolvable H2H, then lower Points For.
+
+    Exact ties remaining after the governed sequence are returned as one group so
+    callers can spread probability evenly across the still-unresolved slots rather
+    than inventing a hidden final tiebreak.
+    """
+
+    ordered = sorted(
+        team_indexes,
+        key=lambda index: (
+            wins[index] / games_by_team[index],
+            points_for[index],
+        ),
+    )
+    record_groups = _group_equal_values(
+        ordered,
+        lambda index: wins[index] / games_by_team[index],
+    )
+    output: list[list[int]] = []
+    for record_group in record_groups:
+        if len(record_group) == 1:
+            output.append(record_group)
+            continue
+
+        h2h_game_totals = {
+            index: sum(
+                h2h_games[index][other]
+                for other in record_group
+                if other != index
+            )
+            for index in record_group
+        }
+        h2h_resolvable = (
+            all(value > 0 for value in h2h_game_totals.values())
+            and len(set(h2h_game_totals.values())) == 1
+        )
+        h2h_groups = [record_group]
+        if h2h_resolvable:
+            h2h_pct = {
+                index: (
+                    sum(
+                        h2h_points[index][other]
+                        for other in record_group
+                        if other != index
+                    )
+                    / h2h_game_totals[index]
+                )
+                for index in record_group
+            }
+            if len(set(h2h_pct.values())) > 1:
+                h2h_ordered = sorted(record_group, key=lambda index: h2h_pct[index])
+                h2h_groups = _group_equal_values(
+                    h2h_ordered,
+                    lambda index: h2h_pct[index],
+                )
+
+        for h2h_group in h2h_groups:
+            pf_ordered = sorted(h2h_group, key=lambda index: points_for[index])
+            output.extend(
+                _group_equal_values(
+                    pf_ordered,
+                    lambda index: points_for[index],
+                )
+            )
+    return output
+
+
+def _accumulate_slot_groups(
+    slot_counts: list[list[float]],
+    groups: list[list[int]],
+    *,
+    start_slot: int,
+) -> int:
+    """Accumulate one world's governed order, splitting unresolved exact ties."""
+
+    slot = start_slot
+    for group in groups:
+        width = len(group)
+        weight = 1.0 / width
+        for team_idx in group:
+            for slot_in_round in range(slot, slot + width):
+                slot_counts[team_idx][slot_in_round - 1] += weight
+        slot += width
+    return slot
+
+
 def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
     """Yield bounded trial-by-draw arrays under the experimental RNG protocol."""
     import numpy as np
@@ -901,8 +1170,26 @@ def simulate_regular_season(
     )
     team_index = {team_id: index for index, team_id in enumerate(team_ids)}
     team_count = len(team_ids)
+
+    future_pick_policy: SupportedFuturePickDraftOrder | None = None
+    future_pick_unavailability_reason: str | None = None
+    if request.future_pick_draft_season is not None:
+        try:
+            future_pick_policy = compile_supported_future_pick_policy(
+                request.future_pick_draft_order_policy,
+                draft_season=request.future_pick_draft_season,
+                team_count=team_count,
+                playoff_team_count=request.playoff_team_count,
+            )
+        except ValueError as exc:
+            future_pick_policy = None
+            future_pick_unavailability_reason = str(exc)
+
     actual_wins = [0.0] * team_count
     actual_points_for = [0.0] * team_count
+    actual_games = [0] * team_count
+    actual_h2h_points = [[0.0] * team_count for _ in range(team_count)]
+    actual_h2h_games = [[0] * team_count for _ in range(team_count)]
     for matchup in request.completed_matchups:
         home_idx = team_index[matchup.home_team_id]
         away_idx = team_index[matchup.away_team_id]
@@ -910,6 +1197,16 @@ def simulate_regular_season(
         away_points = matchup.away_points
         actual_points_for[home_idx] += home_points
         actual_points_for[away_idx] += away_points
+        actual_games[home_idx] += 1
+        actual_games[away_idx] += 1
+        _record_head_to_head_result(
+            home_idx,
+            away_idx,
+            home_points,
+            away_points,
+            actual_h2h_points,
+            actual_h2h_games,
+        )
         if home_points > away_points:
             actual_wins[home_idx] += 1.0
         elif away_points > home_points:
@@ -917,6 +1214,16 @@ def simulate_regular_season(
         else:
             actual_wins[home_idx] += 0.5
             actual_wins[away_idx] += 0.5
+
+    games_by_team = actual_games.copy()
+    for matchup in request.schedule:
+        games_by_team[team_index[matchup.home_team_id]] += 1
+        games_by_team[team_index[matchup.away_team_id]] += 1
+    if future_pick_policy is not None and any(value < 1 for value in games_by_team):
+        future_pick_policy = None
+        future_pick_unavailability_reason = (
+            "governed draft-order fallback requires regular-season games for every team"
+        )
     compiled_schedule = []
     weekly = bool(by_week_team)
     for matchup in request.schedule:
@@ -946,6 +1253,8 @@ def simulate_regular_season(
     gauss = rng.gauss
     playoff_rng = Random(request.seed ^ 0x5F3759DF)
     playoff_gauss = playoff_rng.gauss
+    placement_game_rng = Random(request.seed ^ 0xD12A70D5)
+    placement_game_gauss = placement_game_rng.gauss
     is_batched = request.rng_protocol == NUMPY_PCG64_BATCHED_GAUSS_V1
     batch_size = (
         request.rng_batch_size or NUMPY_BATCH_SIZE_DEFAULT if is_batched else None
@@ -1017,6 +1326,25 @@ def simulate_regular_season(
         if championship_supported
         else None
     )
+
+    future_pick_slot_counts: list[list[float]] | None = None
+    if future_pick_policy is not None:
+        if playoff_scoring is None or request.playoff_rules is None:
+            future_pick_unavailability_reason = (
+                "future_pick_playoff_elimination_evidence_unavailable"
+            )
+        elif (
+            request.playoff_rules.playoff_team_count
+            != future_pick_policy.playoff_team_count
+        ):
+            future_pick_unavailability_reason = (
+                "future_pick_playoff_count_conflicts_with_policy"
+            )
+        else:
+            future_pick_slot_counts = [
+                [0.0] * team_count for _ in range(team_count)
+            ]
+            future_pick_unavailability_reason = None
 
     # Common-world coordinates intentionally fingerprint only the factual baseline,
     # ordered draw topology and governed league structure. Forecast means/standard
@@ -1124,6 +1452,9 @@ def simulate_regular_season(
             cooperative_yield()
         wins = actual_wins.copy()
         points_for = actual_points_for.copy()
+        h2h_points = [row.copy() for row in actual_h2h_points]
+        h2h_games = [row.copy() for row in actual_h2h_games]
+        trial_score_row = None
         if is_batched:
             if score_batch is None or score_batch_offset >= len(score_batch):
                 rng_started = _profile_clock() if profile_enabled else None
@@ -1143,6 +1474,7 @@ def simulate_regular_season(
                     matchup_wall_seconds += matchup_ended[0] - matchup_started[0]
                     matchup_cpu_seconds += matchup_ended[1] - matchup_started[1]
                 score_batch_offset = 0
+            trial_score_row = score_batch[score_batch_offset]
             simulated_wins = numpy_batch_wins[score_batch_offset].tolist()
             simulated_points = numpy_batch_points[score_batch_offset].tolist()
             trial_wins = [
@@ -1177,6 +1509,14 @@ def simulate_regular_season(
                 away = floor_at_zero(0.0, away)
                 points_for[home_idx] += home
                 points_for[away_idx] += away
+                _record_head_to_head_result(
+                    home_idx,
+                    away_idx,
+                    home,
+                    away,
+                    h2h_points,
+                    h2h_games,
+                )
                 if home > away:
                     wins[home_idx] += 1.0
                 elif away > home:
@@ -1187,6 +1527,17 @@ def simulate_regular_season(
         else:
             wins = trial_wins
             points_for = trial_points
+            if trial_score_row is not None:
+                for matchup_index, row in enumerate(compiled_schedule):
+                    home_idx, away_idx = row[0], row[1]
+                    _record_head_to_head_result(
+                        home_idx,
+                        away_idx,
+                        float(trial_score_row[2 * matchup_index]),
+                        float(trial_score_row[2 * matchup_index + 1]),
+                        h2h_points,
+                        h2h_games,
+                    )
         if matchup_started is not None:
             matchup_ended = _profile_wall_clock()
             matchup_wall_seconds += (matchup_ended - matchup_started) * sample_weight
@@ -1198,13 +1549,105 @@ def simulate_regular_season(
         if playoff_supported:
             for index in standings[: request.playoff_team_count]:
                 playoff_count[index] += 1
+        playoff_places_for_draft = None
+        playoff_elimination_rounds = None
         if championship_supported:
-            champion = _simulate_configured_champion(
-                standings, request.playoff_rules, playoff_scoring, playoff_gauss
-            )
+            if (
+                future_pick_slot_counts is not None
+                and future_pick_policy is not None
+                and future_pick_policy.placement_games_affect_order
+            ):
+                champion, playoff_places_for_draft = (
+                    _simulate_explicit_six_team_placement_order(
+                        standings,
+                        request.playoff_rules,
+                        playoff_scoring,
+                        playoff_gauss,
+                        placement_game_gauss,
+                    )
+                )
+            elif future_pick_slot_counts is not None and future_pick_policy is not None:
+                champion, playoff_elimination_rounds = (
+                    _simulate_configured_playoff_outcomes(
+                        standings,
+                        request.playoff_rules,
+                        playoff_scoring,
+                        playoff_gauss,
+                    )
+                )
+            else:
+                champion = _simulate_configured_champion(
+                    standings, request.playoff_rules, playoff_scoring, playoff_gauss
+                )
             champion_count[champion] += 1
         else:
             champion = None
+
+        if future_pick_slot_counts is not None and future_pick_policy is not None:
+            playoff_team_count = future_pick_policy.playoff_team_count
+            non_playoff = standings[playoff_team_count:]
+            if len(non_playoff) != future_pick_policy.non_playoff_team_count:
+                raise ValueError(
+                    "future-pick non-playoff team count conflicts with policy"
+                )
+
+            non_playoff_groups = _regular_season_draft_order_groups(
+                non_playoff,
+                wins=wins,
+                points_for=points_for,
+                games_by_team=games_by_team,
+                h2h_points=h2h_points,
+                h2h_games=h2h_games,
+            )
+            next_slot = _accumulate_slot_groups(
+                future_pick_slot_counts,
+                non_playoff_groups,
+                start_slot=1,
+            )
+
+            if future_pick_policy.placement_games_affect_order:
+                if playoff_places_for_draft is None:
+                    raise ValueError(
+                        "explicit placement-game draft order was not simulated"
+                    )
+                ordered = sorted(
+                    playoff_places_for_draft.items(),
+                    key=lambda row: row[1],
+                    reverse=True,
+                )
+                for team_idx, _final_place in ordered:
+                    future_pick_slot_counts[team_idx][next_slot - 1] += 1.0
+                    next_slot += 1
+            else:
+                if playoff_elimination_rounds is None or champion is None:
+                    raise ValueError(
+                        "future-pick playoff elimination was not simulated"
+                    )
+                eliminated_by_round: dict[int, list[int]] = {}
+                for team_idx, round_number in playoff_elimination_rounds.items():
+                    eliminated_by_round.setdefault(round_number, []).append(team_idx)
+                for round_number in sorted(eliminated_by_round):
+                    round_groups = _regular_season_draft_order_groups(
+                        eliminated_by_round[round_number],
+                        wins=wins,
+                        points_for=points_for,
+                        games_by_team=games_by_team,
+                        h2h_points=h2h_points,
+                        h2h_games=h2h_games,
+                    )
+                    next_slot = _accumulate_slot_groups(
+                        future_pick_slot_counts,
+                        round_groups,
+                        start_slot=next_slot,
+                    )
+                future_pick_slot_counts[champion][team_count - 1] += 1.0
+                next_slot += 1
+
+            if next_slot != team_count + 1:
+                raise ValueError(
+                    "future-pick draft order did not assign every league slot"
+                )
+
         if trial_observer is not None:
             trial_observer(
                 tuple(wins), tuple(points_for), tuple(standings), champion
@@ -1290,15 +1733,40 @@ def simulate_regular_season(
         runtime_version = f"numpy-{np.__version__};python-{platform.python_version()}"
         bit_generator_name = "PCG64"
         draw_layout = "batch-major;trial-major;compiled-schedule-major;home-away-v1"
-        seed_derivation = "pcg64-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
+        seed_derivation = (
+            "pcg64-regular-root-seed-v1;"
+            "python-playoff-xor-0x5F3759DF-v1"
+        )
     else:
         runtime_version = f"python-{platform.python_version()}"
         bit_generator_name = "python-random-mt19937"
         draw_layout = "trial-major;compiled-schedule-major;home-away-v1"
-        seed_derivation = "python-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
+        seed_derivation = (
+            "python-regular-root-seed-v1;"
+            "python-playoff-xor-0x5F3759DF-v1"
+        )
+    future_pick_distributions: tuple[TeamOriginFuturePickDistribution, ...] = ()
+    if future_pick_slot_counts is not None and future_pick_policy is not None:
+        future_pick_distributions = tuple(
+            build_team_origin_future_pick_distribution(
+                draft_season=future_pick_policy.draft_season,
+                original_team_id=team_id,
+                slot_counts=tuple(future_pick_slot_counts[index]),
+                simulation_count=n,
+                simulation_model_version=request.model_version,
+                policy=future_pick_policy,
+                draft_order_projection_model_version=(
+                    "record-h2h-points-for-plus-playoff-elimination-v1"
+                ),
+            )
+            for index, team_id in enumerate(team_ids)
+        )
+
     result = RegularSeasonSimulationResult(
         outcomes=tuple(outcomes),
         finish_distributions=tuple(finish_distributions),
+        future_pick_distributions=future_pick_distributions,
+        future_pick_unavailability_reason=future_pick_unavailability_reason,
         championship_probability_provenance=(
             request.playoff_rules.championship_probability_provenance()
             if championship_supported and request.playoff_rules is not None else None

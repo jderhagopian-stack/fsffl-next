@@ -50,6 +50,63 @@ class Provenance(FrozenModel):
         return value
 
 
+DraftOrderParameterValue = str | int | float | bool
+
+
+class DraftOrderPolicyParameter(FrozenModel):
+    """One explicit, serializable input to a league draft-order policy."""
+
+    name: str
+    value: DraftOrderParameterValue
+
+    @field_validator("name")
+    @classmethod
+    def require_name(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("draft-order policy parameter name cannot be blank")
+        return value.strip()
+
+
+class DraftOrderPolicyEvidence(FrozenModel):
+    """Point-in-time governed evidence for one league's draft-order rule."""
+
+    league_id: str
+    draft_season: Annotated[int, Field(ge=1900)]
+    effective_at: datetime
+    available_at: datetime
+    policy_id: str
+    version: str
+    mechanism: str
+    description: str
+    parameters: tuple[DraftOrderPolicyParameter, ...] = ()
+    provenance: Provenance
+
+    @field_validator("effective_at", "available_at")
+    @classmethod
+    def require_policy_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("draft-order policy timestamps must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def validate_policy(self) -> "DraftOrderPolicyEvidence":
+        for value in (
+            self.league_id,
+            self.policy_id,
+            self.version,
+            self.mechanism,
+            self.description,
+        ):
+            if not value.strip():
+                raise ValueError(
+                    "draft-order policy identifiers and description cannot be blank"
+                )
+        names = [item.name for item in self.parameters]
+        if len(names) != len(set(names)):
+            raise ValueError("draft-order policy parameter names must be unique")
+        return self
+
+
 class Position(StrEnum):
     QB = "QB"
     RB = "RB"
@@ -585,6 +642,7 @@ class LeagueState(FrozenModel):
     completed_through_week: Annotated[int, Field(ge=0, le=18)] | None = None
     nfl_team_byes: tuple[NflTeamBye, ...] = ()
     player_week_availability: tuple[PlayerWeekAvailability, ...] = ()
+    draft_order_policies: tuple[DraftOrderPolicyEvidence, ...] = ()
     provenance: tuple[Provenance, ...] = ()
 
     @field_validator("as_of")
@@ -656,6 +714,23 @@ class LeagueState(FrozenModel):
             item.player_id not in player_ids for item in self.player_week_availability
         ):
             raise ValueError("player availability references unknown player")
+        if any(
+            item.league_id != self.league.league_id
+            for item in self.draft_order_policies
+        ):
+            raise ValueError("draft-order policy evidence must belong to the league")
+        policy_keys = [
+            (
+                item.draft_season,
+                item.policy_id,
+                item.version,
+                item.effective_at,
+                item.available_at,
+            )
+            for item in self.draft_order_policies
+        ]
+        if len(policy_keys) != len(set(policy_keys)):
+            raise ValueError("duplicate draft-order policy evidence")
         return self
 
     def canonical_json(self) -> str:

@@ -267,3 +267,17 @@ Canonical League State / LeagueRules must retain, or explicitly mark unknown/uns
 Championship probability is the ordinary Simulation estimate when either the exact provider bracket is observed or governed league settings plus a well-supported standard bracket rule defensibly determine the graph. Preserve those two authorities as internal provenance (`provider_observed_exact` or `settings_derived_standard`); do not create a separately labeled or visually downgraded “provisional” product metric. Keep playoff qualification independently available whenever its rules are known. Withhold championship probability only when material ambiguity or unsupported/custom structure prevents a defensible bracket.
 
 Fixtures must prove materially different league structures, including different qualifier counts, start weeks, bye structures, and a non-FSFFL bracket. A configured structure is executable only when every material rule is supported; otherwise preserve it as known configuration and fail closed for affected outputs. This clarifies, and does not reorder, the accepted capability sequence in this directive.
+
+## 2026-10-02 management correction — item 5 draft-order fallback
+
+For team-of-origin future-pick distributions, use explicit governed league draft-order rules first. When no explicit league rule evidence is available for the target draft season, do **not** fail closed solely because the league-specific bylaw is unavailable; use the governed standard fallback below and retain derived provenance.
+
+Standard fallback:
+- non-playoff order: worse regular-season record, then resolvable head-to-head among tied teams, then lower regular-season Points For;
+- playoff order: round eliminated first; within the same elimination round use the same regular-season tiebreak sequence;
+- championship runner-up drafts immediately before the champion, with the champion last;
+- placement/consolation games affect draft order only when explicit league rule evidence says they do;
+- if the governed sequence still leaves an exact tie, preserve uncertainty across unresolved tied slots rather than inventing a hidden final tiebreak.
+
+An explicit but unsupported custom rule remains explicit/unavailable and must not be silently replaced by the fallback. Preserve `explicit_league_rule` versus `derived_standard_fallback` provenance. Remove FSFFL-specific Max-PF and placement-game assumptions from generic Simulation authority.
+

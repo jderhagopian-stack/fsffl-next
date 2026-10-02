@@ -109,6 +109,35 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
                 key=lambda item: (item.week, item.player_id),
             )
         ],
+        "draft_order_policies": [
+            {
+                "league_id": item.league_id,
+                "draft_season": item.draft_season,
+                "effective_at": item.effective_at.isoformat(),
+                "available_at": item.available_at.isoformat(),
+                "policy_id": item.policy_id,
+                "version": item.version,
+                "mechanism": item.mechanism,
+                "description": item.description,
+                "parameters": [
+                    parameter.model_dump(mode="json")
+                    for parameter in sorted(
+                        item.parameters,
+                        key=lambda parameter: parameter.name,
+                    )
+                ],
+            }
+            for item in sorted(
+                league_state.draft_order_policies,
+                key=lambda item: (
+                    item.draft_season,
+                    item.policy_id,
+                    item.version,
+                    item.effective_at,
+                    item.available_at,
+                ),
+            )
+        ],
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()

@@ -2096,3 +2096,67 @@ This is sufficient risk-proportionate Tier-B closeout under the no-redeploy/no-c
 
 **Simulation 2.0 roadmap advances immediately to item 5:** team-of-origin future rookie-pick distributions under the actual league draft-order rules. Simulation owns the football-outcome distribution; Value/Decision consume it downstream. Generic early/mid/late labels are summaries only, never the primary authority.
 
+## 2026-10-02 — Simulation 2.0 item 5 ACTIVE: team-of-origin future-pick slot distributions
+
+#327 common-world counterfactual Simulation is accepted and remains closed. Item 5 replaces the diagnostic early/mid/late proxy for the **next rookie draft only** with governed exact slot distributions keyed to the pick's original team.
+
+### Draft-order authority correction
+
+Draft order is resolved in this order:
+1. **Explicit league rule evidence first.** A supported `DraftOrderPolicyEvidence` for the target draft season is authoritative and retains `explicit_league_rule` provenance.
+2. **Governed standard fallback when explicit league evidence is absent.** This is a derived rule, not a claim about written league bylaws, and retains `derived_standard_fallback` provenance.
+3. An explicit but unsupported/custom policy does **not** silently fall back; it remains unavailable until that explicit rule can be modeled.
+
+Governed standard fallback:
+- non-playoff teams: worse regular-season record, then resolvable head-to-head among tied teams, then lower regular-season Points For;
+- playoff teams: earlier elimination round first; within the same elimination round use the same regular-season tiebreak sequence;
+- runner-up then champion last;
+- placement/consolation games do not affect draft order unless explicit league policy says they do;
+- if the governed sequence still leaves an exact tie, preserve uncertainty across the unresolved tied slots rather than inventing a hidden team-ID tiebreak.
+
+Unsupported FSFFL-specific assumptions are removed: Max PF is not the default draft-order metric, no FSFFL league ID is hard-coded into live Simulation authority, and 5th-/3rd-place games are not used unless explicitly governed.
+
+Implementation boundary:
+- exact next-season slot probability mass accumulates inside existing season worlds;
+- completed and simulated regular-season outcomes supply record, H2H and Points For;
+- accepted canonical playoff execution supplies elimination-round facts;
+- exact slot probabilities, expected slot, median slot and earliest-to-latest percentile are primary authority;
+- early/mid/late remain derived summaries only;
+- current owner remains separate from original team, and the origin-team slot carries across rookie-draft rounds;
+- explicit-vs-derived draft-order authority/provenance is product-visible;
+- 2028+ distributions remain unavailable in this slice rather than extrapolating unsupported future team strength.
+
+Promotion remains Tier B: focused explicit/fallback rule, tiebreak, elimination, placement-game, unresolved-tie and origin/ownership tests; full CI; reviewed fixed 50,000-world replay baselines if changed; exact-head P1/P2 review; then one targeted hosted next-season-pick acceptance. Do not reopen #324-#327.
+
+## 2026-10-02 — PR #328 dual-runtime replay validation closed
+
+PR #328 remains the active Simulation 2.0 item-5 branch. The Python 3.12 failure was isolated to the governed fixed 50,000-world complete-output replay digest after the intentional item-5 Simulation result-schema expansion. No item-5 football/draft-order logic failed.
+
+Validated source/test tree:
+- Python 3.11: **1,979 passed**, one existing warning;
+- Python 3.12: **1,979 passed**, one existing warning;
+- reviewed fixed 50k digests: Python 3.11 `f87a5f68430dbcd1e0ebeceb60d448bcd79ba615b2812a7d1ea26aa6273cc481`; Python 3.12 `c3b9b1f0348a0e7c6440ae61a765a51176d7159396fe8dd8ea67b3310bcdd495`;
+- League Atlas North Star focused validation: PASS;
+- PR164 focused corrective regression: PASS;
+- Live Forecast corrective trace: PASS.
+
+The 3.12 digest change is expected because `RegularSeasonSimulationResult` now carries item-5 future-pick distribution/unavailability fields in the canonical serialized output even for the fixed replay fixture. The temporary dual-runtime CI matrix was used only to establish the reviewed 3.12 baseline and has been removed; normal repository CI policy is restored.
+
+Remaining promotion gate: ordinary exact-head CI on the docs/workflow-restored head plus bounded exact-head P1/P2 review. If clean, merge #328 and perform one targeted hosted next-season-pick acceptance. Do not reopen accepted #324-#327.
+
+## 2026-10-02 — PR #328 final bounded review / promotion gate
+
+The Python 3.12 validation blocker is closed. The item-5 source tree passed **1,979 tests on both Python 3.11 and Python 3.12** with reviewed fixed 50,000-world replay digests; normal single-runtime repository CI was then restored.
+
+A fresh bounded exact-head P1/P2 review was required because Codex review remains unavailable under the repository/account quota. The review found one explicit-policy authority defect: a policy using the supported mechanism could include an unknown extra parameter that the compiler silently ignored. That contradicted Management's rule that explicit-but-unsupported league behavior must remain unavailable rather than be partially interpreted. The compiler now rejects unknown explicit parameters, with a deterministic regression proving no pick distribution is emitted for such a policy.
+
+The review correction does not change RNG draws, Simulation result serialization, or the fixed 50k replay payload, so the completed Python 3.11/3.12 replay proof remains standing under the risk-proportionate rule.
+
+Final corrected code head `8227f32bcb75d9406544693b1381d3dddc29d31e` validation:
+- ordinary full CI: **1,980 passed**, one existing warning;
+- League Atlas North Star focused validation: PASS, including real-league composition sanity and live-provider authority audit;
+- PR164 focused corrective regression: PASS;
+- Live Forecast corrective trace: PASS.
+
+No remaining P1/P2 issue was found in the bounded item-5 review. Remaining promotion step is one docs-complete exact-head standard validation, then exact-head merge and one targeted hosted next-season-pick acceptance. Do not reopen #324-#327.
+

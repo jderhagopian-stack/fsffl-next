@@ -24,6 +24,26 @@ def _sorted_payload(state: LeagueState) -> dict[str, Any]:
             payload["player_week_availability"],
             key=lambda item: (item["week"], item["player_id"]),
         )
+    # Draft-order policy evidence is an additive State coordinate. Omit only the
+    # empty coordinate so snapshots written before item 5 keep their State ID.
+    if not payload.get("draft_order_policies"):
+        payload.pop("draft_order_policies", None)
+    else:
+        payload["draft_order_policies"] = sorted(
+            payload["draft_order_policies"],
+            key=lambda item: (
+                item["draft_season"],
+                item["policy_id"],
+                item["version"],
+                item["effective_at"],
+                item["available_at"],
+            ),
+        )
+        for policy in payload["draft_order_policies"]:
+            policy["parameters"] = sorted(
+                policy["parameters"],
+                key=lambda item: item["name"],
+            )
     payload["teams"] = sorted(payload["teams"], key=lambda item: item["team_id"])
     payload["team_states"] = sorted(payload["team_states"], key=lambda item: item["team_id"])
     for team_state in payload["team_states"]:
