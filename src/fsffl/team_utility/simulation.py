@@ -297,9 +297,14 @@ class CounterfactualCompetitiveOutcomeDelta(FrozenModel):
     bye_probability: float | None = None
     first_place_probability: float
     championship_probability: float | None = None
-    simulation_count: Annotated[int, Field(ge=1)]
-    seed: int
-    rng_protocol: str
+    baseline_simulation_model_version: str
+    scenario_simulation_model_version: str
+    baseline_simulation_count: Annotated[int, Field(ge=1)]
+    scenario_simulation_count: Annotated[int, Field(ge=1)]
+    baseline_seed: int
+    scenario_seed: int
+    baseline_rng_protocol: str
+    scenario_rng_protocol: str
     comparison_method: Literal["common_random_numbers", "aggregate_difference"]
     championship_comparison_method: Literal[
         "common_random_numbers", "aggregate_difference", "unavailable"
@@ -463,9 +468,14 @@ def compare_counterfactual_simulation_results(
             after.first_place_probability - before.first_place_probability
         ),
         championship_probability=championship_delta,
-        simulation_count=baseline.simulation_count,
-        seed=baseline.seed,
-        rng_protocol=baseline.rng_protocol,
+        baseline_simulation_model_version=baseline.model_version,
+        scenario_simulation_model_version=scenario.model_version,
+        baseline_simulation_count=baseline.simulation_count,
+        scenario_simulation_count=scenario.simulation_count,
+        baseline_seed=baseline.seed,
+        scenario_seed=scenario.seed,
+        baseline_rng_protocol=baseline.rng_protocol,
+        scenario_rng_protocol=scenario.rng_protocol,
         comparison_method=(
             "common_random_numbers" if regular_common else "aggregate_difference"
         ),
