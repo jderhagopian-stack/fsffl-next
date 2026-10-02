@@ -2475,6 +2475,7 @@ def create_app(
                 runtime,
                 move,
                 simulation_loader=simulation_loader,
+                scenario_stage=request.scenario_stage,
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -2493,6 +2494,7 @@ def create_app(
                 proposal,
                 focal_team_id=runtime.selected_team_id,
                 simulation_loader=simulation_loader,
+                scenario_stage=request.scenario_stage,
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -2505,6 +2507,7 @@ def create_app(
                 runtime,
                 player_id=request.player_id,
                 simulation_loader=simulation_loader,
+                scenario_stage=request.scenario_stage,
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -2574,6 +2577,7 @@ def create_app(
                 proposal,
                 focal_team_id=runtime.selected_team_id,
                 simulation_loader=simulation_loader,
+                scenario_stage=request.scenario_stage,
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
