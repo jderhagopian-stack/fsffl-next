@@ -1448,3 +1448,7 @@ This is sufficient Tier-B closeout under the risk-proportionate/no-redeploy/no-p
 ## 2026-10-02 — Simulation 2.0 item 8 execution clarification
 
 Active item 8 scope is now explicit: run the convergence/stability study, then establish the reusable PIT calibration framework and use only authentic timestamped Forecast+State checkpoints that actually exist. Do not manufacture multi-year historical Forecasts from current projections or reconstructed league State. Report evidence coverage/sample size and limitations. Historical tests not requiring Forecast evidence may still use governed historical facts. Counterfactual scenario work measures stability/sensitivity, not unknowable alternate-world causal accuracy. Production remains 50,000 until Management explicitly approves any authority change.
+
+## 2026-10-02 — Item 8 no-hunt execution rule
+
+Do not spend implementation time hunting for historical PIT Forecasts. Complete convergence first. Calibration work is limited to verifying the prospective capture/scoring framework and using only authentic PIT checkpoints already present and immediately discoverable from canonical storage/repo evidence. If the sample is insufficient, state that explicitly and proceed; do not broaden into archive discovery or reconstruction.
