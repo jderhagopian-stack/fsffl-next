@@ -1406,3 +1406,41 @@ Authority boundaries:
 
 Promotion classification: Tier B Simulation execution/performance contract with versioned persisted preparation. Require focused dependency/stage/authority tests, full CI, fixed 50k replay review if serialization baselines change, exact-head P1/P2 review, then one targeted hosted acceptance of localized Simulation invalidation/resource/continuity plus the selective/progressive contract through exact-head tests. Do not broadly retest #324-#329.
 
+## 2026-10-02 — #330 ACCEPTED: progressive + dependency-selective scenario computation
+
+PR #330 was squash-merged as `b5b2fe57060f1b9b415f1634a9743c7e29bdbc77`. The accepted item-7 contract adds explicit progressive interactive stages and dependency-aware selective preparation reuse without changing canonical 50,000-run Simulation authority.
+
+Accepted capability:
+- explicit scenario stages: `screening=1,000`, `provisional=5,000`, `confirmation=50,000`;
+- screening/provisional outputs are labeled non-authoritative previews and expose the next deeper stage;
+- only 50,000-run confirmation or exact reuse of an already-authoritative canonical competitive result may cross Decision/Opportunity materiality, disposition, candidate or action-authority boundaries;
+- compact persisted `ScenarioSimulationPreparation` carries the baseline optimized lineups, forward weekly scoring panel, scoring weeks and exact structure/Forecast dependency fingerprints;
+- compatible roster-only alternate States rebuild only affected teams' deterministic lineup/weekly scoring inputs and reuse unaffected teams exactly; the league Monte Carlo outcome kernel still reruns whenever competitive roster inputs change;
+- global schedule/rules/availability/Forecast dependency changes fall back to full recomputation;
+- State changes with no competitive roster dependency change may reuse the authoritative canonical 50,000-run competitive Simulation result while rebuilding the changed-State analytics envelope;
+- trade, waiver and player-unavailable What-If endpoints default to authoritative confirmation but may explicitly request a preview stage;
+- exact scenario cache/durable identities remain stage- and model-specific, and equivalent progressive stage loaders now share a stable explicit process-cache identity so identical preview requests can reuse/coalesce exact work.
+
+Validation / exact-head review:
+- final exact head `b1c5b5ae151a33a45599c5c207313db69cb957d1`;
+- full CI: **1,998 passed**, one existing warning;
+- Home North Star focused validation: PASS;
+- League Atlas North Star focused validation: PASS;
+- PR164 focused corrective regression: PASS;
+- Live Forecast corrective trace: PASS;
+- automated Codex review was unavailable because the code-review quota was exhausted;
+- bounded manual exact-head P1/P2 review found one P2 performance/coordination issue: process-local cache identity included Python callable identity even for progressive loaders with an explicit governed cache identity, defeating in-memory reuse/in-flight coalescing across equivalent loader instances. The final head fixes that boundary and includes a regression proving the second identical screening request is an exact cache hit. No remaining P1/P2 was found in dependency planning, selective-input reuse, canonical competitive reuse, stage/durable cache separation or preview promotion gates.
+
+Single targeted hosted acceptance used only Render deploy `dep-davj3vugekts73e91gg0`:
+- exact merged commit `b5b2fe57...` became live at **04:26:16Z** on instance `...-l4hd4`; no same-commit redeploy or replacement deploy followed;
+- startup restored canonical State `68eac82b...` with `forecast=True simulation=False value=True complete=False` at **04:26:46Z**. This is the expected localized invalidation of the pre-#330 Simulation artifact under the new persisted preparation/model identity;
+- startup product readiness was partial only because Simulation was intentionally stale; Intrinsic remained `full`;
+- startup resource readiness was ~279.6 MB RSS / ~281.8 MB peak against the ~429.5 MB engineering budget;
+- hosted memory then settled near **246.1 MB** against the 512 MiB service limit while CPU fell to effectively idle;
+- no ERROR/Traceback, 5xx evidence, shutdown/restart, reconciliation loop or publication churn appeared in the stable acceptance window;
+- the only unauthenticated platform probe returned the expected private-beta 401. No private credentials were retrieved or used, so no hosted screening/provisional scenario was forced solely for acceptance. Progressive/selective semantics and authority gates are therefore supported by the final exact-head tests, while the single hosted deployment directly proves localized persisted-Simulation invalidation and resource/continuity safety.
+
+This is sufficient Tier-B closeout under the risk-proportionate/no-redeploy/no-private-credential boundary. Do not reopen #324-#330 absent contradictory evidence.
+
+**Simulation 2.0 roadmap advances to item 8:** governed convergence study and point-in-time calibration. Production remains at 50,000 canonical runs until convergence evidence supports a contract change and Management explicitly approves it. Calibration must use point-in-time inputs/outcomes without future leakage; do not convert the progressive preview counts into a new production-authority rule by assumption.
+
