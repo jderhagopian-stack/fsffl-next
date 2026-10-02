@@ -128,6 +128,11 @@ def _product_divergences(
             production_checks = production["comparison"]["product_check_results"]
             keys = sorted(set(candidate_checks) | set(production_checks))
             for check in keys:
+                # Visible probability rounding is evaluated at the individual
+                # team/metric cell below. Treating the whole 24-cell signature as
+                # one Boolean obscures whether 35k alone crosses a UI boundary.
+                if check == "rounded_probabilities_matches_100k":
+                    continue
                 c = candidate_checks.get(check)
                 p = production_checks.get(check)
                 if c is None or p is None:
@@ -144,6 +149,39 @@ def _product_divergences(
                 if not c and p:
                     candidate_only.append(event)
                 elif c and not p:
+                    production_only.append(event)
+                else:
+                    both.append(event)
+
+            def rounded_cells(row: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
+                return {
+                    (str(item["team_id"]), str(item["metric"])): item
+                    for item in row["comparison"].get(
+                        "rounded_probability_differences_vs_100k", ()
+                    )
+                }
+
+            candidate_cells = rounded_cells(candidate)
+            production_cells = rounded_cells(production)
+            for cell in sorted(set(candidate_cells) | set(production_cells)):
+                candidate_diff = candidate_cells.get(cell)
+                production_diff = production_cells.get(cell)
+                if candidate_diff is None and production_diff is None:
+                    continue
+                event = {
+                    "seed": seed,
+                    "fixture_id": fixture_id,
+                    "check": "rounded_probability_visible_cell",
+                    "team_id": cell[0],
+                    "metric": cell[1],
+                    "candidate_35k_matches_100k": candidate_diff is None,
+                    "production_50k_matches_100k": production_diff is None,
+                    "candidate_difference": candidate_diff,
+                    "production_difference": production_diff,
+                }
+                if candidate_diff is not None and production_diff is None:
+                    candidate_only.append(event)
+                elif candidate_diff is None and production_diff is not None:
                     production_only.append(event)
                 else:
                     both.append(event)
