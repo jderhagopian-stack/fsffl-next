@@ -19,6 +19,10 @@ from fsffl.product.runtime import LiveForecastEvidence, UserRuntimeContext
 from fsffl.product.opportunity_search import build_scoped_trade_candidates
 from fsffl.product.trade_center_view import build_trade_center_browser_view
 from fsffl.product import scenario_cache
+from fsffl.product.scenario_cache import (
+    ScenarioComputationStage,
+    build_scenario_dependency_plan,
+)
 from fsffl.persistence.runtime_cache import decode_simulation, simulation_artifact
 from fsffl.persistence.contracts import canonical_fingerprint
 from fsffl.state.models import (
@@ -406,6 +410,71 @@ def test_selective_scenario_rebuilds_only_affected_team_inputs() -> None:
     baseline_b = baseline.scenario_preparation.lineup_map()["b"]
     changed_b = changed.scenario_preparation.lineup_map()["b"]
     assert changed_b == baseline_b
+
+
+def test_dependency_plan_is_team_selective_for_rosters_and_full_for_global_rules() -> None:
+    state, forecasts = _selective_state_and_forecasts()
+    baseline = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=250,
+        seed=17,
+        generated_at=AS_OF,
+    )
+    evidence = SimpleNamespace(
+        league_scored_forecasts=forecasts,
+        model_version="next2-test",
+    )
+
+    team_a = next(item for item in state.team_states if item.team_id == "a")
+    changed_team_a = team_a.model_copy(
+        update={"roster": (RosterEntry(player_id="pc", slot=RosterSlot.QB),)}
+    )
+    roster_changed = state.model_copy(
+        update={
+            "team_states": tuple(
+                changed_team_a if item.team_id == "a" else item
+                for item in state.team_states
+            )
+        }
+    )
+    roster_plan = build_scenario_dependency_plan(
+        state,
+        roster_changed,
+        evidence,
+        baseline,
+        stage=ScenarioComputationStage.CONFIRMATION,
+    )
+
+    assert roster_plan.planned_mode == "selective_inputs"
+    assert roster_plan.affected_team_ids == ("a",)
+    assert roster_plan.reusable_team_ids == ("b",)
+    assert roster_plan.structure_compatible is True
+    assert roster_plan.forecast_compatible is True
+
+    rules_changed = state.model_copy(
+        update={
+            "league": state.league.model_copy(
+                update={
+                    "rules": state.league.rules.model_copy(
+                        update={"playoff_team_count": 2}
+                    )
+                }
+            )
+        }
+    )
+    global_plan = build_scenario_dependency_plan(
+        state,
+        rules_changed,
+        evidence,
+        baseline,
+        stage=ScenarioComputationStage.CONFIRMATION,
+    )
+
+    assert global_plan.planned_mode == "full_recompute"
+    assert global_plan.structure_compatible is False
+    assert "global_simulation_dependency_changed" in global_plan.reasons
 
 
 def test_noncompetitive_state_change_reuses_canonical_competitive_result_exactly() -> None:
