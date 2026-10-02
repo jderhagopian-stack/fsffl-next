@@ -2958,3 +2958,31 @@ Interpretation: the current ~126-128s path remains ~26-27% faster than the ~173s
 Next bounded performance opportunity: preserve exact 50k/RNG/replay/model semantics while eliminating or batch-vectorizing unconditional H2H reconstruction and reducing repeated Python work in team-origin slot ordering; playoff batching is secondary. No savings target is promoted until output-exact equivalence and a hosted benchmark prove it.
 
 Durable evidence: `docs/operations/evidence/simulation_production_performance_diagnostic_20261002.md`.
+
+## 2026-10-02 — #346 ACCEPTED: governed Y4-Y7 long-horizon shadow component
+
+PR #346 was squash-merged as `c4b5c4489d83801915df6eb56528b4d119e02d5b`. Exact docs-corrected head `ecfcacb58d896e5a7251f0ca3c33af2d0d314630` passed full CI (**2,058 passed**, one existing warning), PR164 focused corrective regression, corrective live-provider numerical trace, and Live Forecast corrective trace.
+
+Accepted scope is deliberately bounded:
+- Forecast-owned Y4-Y7 authority transport preserving the frozen policy board / exact-vs-set-valued authority map;
+- Value-owned Y4-Y7 lineup-capacity Shapley component using the accepted 2,048-permutation economy;
+- per-horizon model-authority envelopes and separately typed within-model outcome uncertainty;
+- a separate within-component display ruler;
+- no change to Current Intrinsic Y1-Y3, Broad Market, Team Utility, Decision or live product ranking.
+
+**Management product-definition correction is authoritative:** #346 is **not Foundation 4 completion** and the Y4-Y7 component is **not** the final product-facing Long-Term Intrinsic metric. The eventual user-facing Long-Term Intrinsic must represent holistic career-forward football-economic value from today across all future seasons. Missing Y8+ authority is an evidence boundary, not zero value and not evidence that value ends at Y7. Separate 0-10000 display indexes are not additive or averageable.
+
+Current Intrinsic remains separately visible/available as the governed Y1-Y3 lens even though its underlying economic coordinates are intended to contribute to the later holistic career-forward valuation.
+
+Accepted Research review establishes the next precise evidence boundary:
+- Y4-Y8 annual model-family work exists, but Y8 exact cardinal authority is explicitly coarse/evidence-limited;
+- terminal/career semantics were explicitly left as a separate Research/Management question;
+- existing term-structure Research explicitly rejects a hidden master Intrinsic score, perpetuity/terminal multiplier, arbitrary discount selection, and precise career cardinal value;
+- no accepted rule currently governs Y1-Y7 aggregation into one holistic raw economic coordinate.
+
+Therefore **Foundation 4 remains ACTIVE / INCOMPLETE**. Next work is the smallest Research/governance slice required to govern:
+1. a truthful Y8+ terminal/tail economic treatment; and
+2. lawful aggregation of governed Y1-Y3 + Y4-Y7 + tail using compatible underlying economic coordinates while preserving uncertainty by horizon.
+
+Do not invent discount rates, horizon weights, age/youth multipliers, survival coefficients, terminal-value assumptions, or cross-lens display-index arithmetic. Foundation 4 product promotion still requires holistic implementation, live-cohort validation, shadow persistence/API serving, resource acceptance, and explicit Management promotion.
+
