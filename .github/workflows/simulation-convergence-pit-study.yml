@@ -1,0 +1,83 @@
+name: Simulation Item 8 Convergence PIT Study
+
+on:
+  push:
+    branches: [work/sim20-convergence-pit-calibration]
+    paths:
+      - 'scripts/run_simulation_convergence_pit_study.py'
+      - 'scripts/aggregate_simulation_convergence_pit_study.py'
+      - '.github/workflows/simulation-convergence-pit-study.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: simulation-item8-convergence-pit
+  cancel-in-progress: true
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: a
+            seed_start: 0
+            seed_count: 3
+          - part: b
+            seed_start: 3
+            seed_count: 3
+          - part: c
+            seed_start: 6
+            seed_count: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: python -m pip install -e '.[web]'
+      - name: Run bounded convergence study slice
+        run: >-
+          python scripts/run_simulation_convergence_pit_study.py
+          --seed-start ${{ matrix.seed_start }}
+          --seed-count ${{ matrix.seed_count }}
+          --output-dir artifacts/research/simulation_convergence_pit_20261002/part-${{ matrix.part }}
+      - name: Upload study slice
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-item8-part-${{ matrix.part }}
+          path: artifacts/research/simulation_convergence_pit_20261002/part-${{ matrix.part }}/
+          retention-days: 14
+
+  aggregate:
+    needs: study
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download study slices
+        uses: actions/download-artifact@v4
+        with:
+          pattern: simulation-item8-part-*
+          path: artifacts/item8-parts
+      - name: Aggregate evidence
+        run: >-
+          python scripts/aggregate_simulation_convergence_pit_study.py
+          artifacts/item8-parts/simulation-item8-part-a/RESULTS.json
+          artifacts/item8-parts/simulation-item8-part-b/RESULTS.json
+          artifacts/item8-parts/simulation-item8-part-c/RESULTS.json
+          --output-dir artifacts/research/simulation_convergence_pit_20261002/final
+      - name: Upload final evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-item8-convergence-pit-final
+          path: artifacts/research/simulation_convergence_pit_20261002/final/
+          retention-days: 14
