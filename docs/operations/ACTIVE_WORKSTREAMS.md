@@ -1552,3 +1552,12 @@ Key invariants:
 - 1k/5k scenario outputs remain preview-only; authoritative downstream pick Value requires 50k confirmation or exact authoritative reuse.
 
 After closure, advance directly to Long-Term Intrinsic.
+
+
+## 2026-10-02 — ACTIVE: startup / refresh sequencing corrective
+
+Primary gate: `docs/operations/directives/20261002_STARTUP_REFRESH_SEQUENCING_CORRECTIVE.md`.
+
+Reproduce the physical cold-start -> manual-refresh flow that completed Simulation and then aborted the first reconciliation before publication. Close only lifecycle ownership/coalescing/progress/publication/resource defects. Require one coherent build, no duplicate 50k Simulation for unchanged State, monotonic progress to 7/7, preserved last-good continuity, and representative hosted peak RSS <= 429,496,720 bytes.
+
+**HOLD:** PR #335 origin-aware draft-pick Value at its current safe checkpoint. Resume it immediately after this corrective is accepted.

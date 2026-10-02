@@ -2824,3 +2824,12 @@ Authority contract:
 The implementation must use the full exact slot distribution through the existing Value probability-mixture primitive, not value the expected slot and not substitute early/mid/late summaries for exact economic authority.
 
 Initial authoritative scope is the next draft season only, matching accepted Simulation support. Farther-future picks must not inherit unsupported origin-team slot distributions.
+
+
+## 2026-10-02 — Startup/manual-refresh sequencing regression reopened narrowly
+
+Physical + hosted evidence on the live #330 build showed one manual refresh completing Simulation, then aborting before publication, followed by a replacement reconciliation that rebuilt Simulation/Value/Intrinsic and eventually published 7/7. Peak RSS reached **445,063,168 bytes**, above the **429,496,720-byte** engineering budget.
+
+Controlling directive: `docs/operations/directives/20261002_STARTUP_REFRESH_SEQUENCING_CORRECTIVE.md`.
+
+Only the startup/manual-refresh reconciliation lifecycle is reopened. Forecast and Simulation 2.0 model semantics remain accepted; production stays at 50,000 runs. Origin-aware draft-pick Value PR #335 is held at its current safe checkpoint until this Tier-C lifecycle/resource corrective closes.
