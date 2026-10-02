@@ -1,0 +1,87 @@
+name: Simulation 35k Stress Test
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/run_simulation_35k_stress_test.py'
+      - 'scripts/aggregate_simulation_35k_stress_test.py'
+      - 'tests/test_simulation_35k_stress_contract.py'
+      - '.github/workflows/simulation-35k-stress-test.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: simulation-35k-stress-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: a
+            seed_start: 0
+            seed_count: 3
+          - part: b
+            seed_start: 3
+            seed_count: 3
+          - part: c
+            seed_start: 6
+            seed_count: 3
+          - part: d
+            seed_start: 9
+            seed_count: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: python -m pip install -e '.[web]'
+      - name: Run bounded 35k stress slice
+        run: >-
+          python scripts/run_simulation_35k_stress_test.py
+          --seed-start ${{ matrix.seed_start }}
+          --seed-count ${{ matrix.seed_count }}
+          --output-dir artifacts/research/simulation_35k_stress_20261002/part-${{ matrix.part }}
+      - name: Upload stress slice
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-35k-stress-part-${{ matrix.part }}
+          path: artifacts/research/simulation_35k_stress_20261002/part-${{ matrix.part }}/
+          retention-days: 14
+
+  aggregate:
+    needs: study
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download stress slices
+        uses: actions/download-artifact@v4
+        with:
+          pattern: simulation-35k-stress-part-*
+          path: artifacts/stress-parts
+      - name: Aggregate full evidence
+        run: >-
+          python scripts/aggregate_simulation_35k_stress_test.py
+          artifacts/stress-parts/simulation-35k-stress-part-a/RESULTS.json
+          artifacts/stress-parts/simulation-35k-stress-part-b/RESULTS.json
+          artifacts/stress-parts/simulation-35k-stress-part-c/RESULTS.json
+          artifacts/stress-parts/simulation-35k-stress-part-d/RESULTS.json
+          --output-dir artifacts/research/simulation_35k_stress_20261002/final
+      - name: Upload final stress evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-35k-stress-final
+          path: artifacts/research/simulation_35k_stress_20261002/final/
+          retention-days: 14
