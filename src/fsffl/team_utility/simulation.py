@@ -1853,6 +1853,8 @@ def simulate_regular_season(
         h2h_points = [row.copy() for row in actual_h2h_points]
         h2h_games = [row.copy() for row in actual_h2h_games]
         trial_score_row = None
+        trial_biggest_blowout: tuple[float, int, float, float] | None = None
+        trial_biggest_upset: tuple[float, float, int, float, float] | None = None
         if is_batched:
             if score_batch is None or score_batch_offset >= len(score_batch):
                 rng_started = _profile_clock() if profile_enabled else None
@@ -1900,7 +1902,14 @@ def simulate_regular_season(
         if not is_batched:
             wins = trial_wins
             points_for = trial_points
-            for home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev in compiled_schedule:
+            for matchup_index, (
+                home_idx,
+                away_idx,
+                home_mean,
+                home_stddev,
+                away_mean,
+                away_stddev,
+            ) in enumerate(compiled_schedule):
                 home = home_mean if home_stddev == 0 else gauss(home_mean, home_stddev)
                 away = away_mean if away_stddev == 0 else gauss(away_mean, away_stddev)
                 home = floor_at_zero(0.0, home)
@@ -1922,20 +1931,95 @@ def simulate_regular_season(
                 else:
                     wins[home_idx] += 0.5
                     wins[away_idx] += 0.5
+                margin = abs(home - away)
+                if (
+                    trial_biggest_blowout is None
+                    or margin > trial_biggest_blowout[0]
+                ):
+                    trial_biggest_blowout = (
+                        margin,
+                        matchup_index,
+                        home,
+                        away,
+                    )
+                upset_disadvantage = 0.0
+                if home > away and home_mean < away_mean:
+                    upset_disadvantage = away_mean - home_mean
+                elif away > home and away_mean < home_mean:
+                    upset_disadvantage = home_mean - away_mean
+                if upset_disadvantage > 0.0:
+                    upset_key = (upset_disadvantage, margin)
+                    if (
+                        trial_biggest_upset is None
+                        or upset_key
+                        > (
+                            trial_biggest_upset[0],
+                            trial_biggest_upset[1],
+                        )
+                    ):
+                        trial_biggest_upset = (
+                            upset_disadvantage,
+                            margin,
+                            matchup_index,
+                            home,
+                            away,
+                        )
         else:
             wins = trial_wins
             points_for = trial_points
             if trial_score_row is not None:
                 for matchup_index, row in enumerate(compiled_schedule):
-                    home_idx, away_idx = row[0], row[1]
+                    (
+                        home_idx,
+                        away_idx,
+                        home_mean,
+                        _home_stddev,
+                        away_mean,
+                        _away_stddev,
+                    ) = row
+                    home = float(trial_score_row[2 * matchup_index])
+                    away = float(trial_score_row[2 * matchup_index + 1])
                     _record_head_to_head_result(
                         home_idx,
                         away_idx,
-                        float(trial_score_row[2 * matchup_index]),
-                        float(trial_score_row[2 * matchup_index + 1]),
+                        home,
+                        away,
                         h2h_points,
                         h2h_games,
                     )
+                    margin = abs(home - away)
+                    if (
+                        trial_biggest_blowout is None
+                        or margin > trial_biggest_blowout[0]
+                    ):
+                        trial_biggest_blowout = (
+                            margin,
+                            matchup_index,
+                            home,
+                            away,
+                        )
+                    upset_disadvantage = 0.0
+                    if home > away and home_mean < away_mean:
+                        upset_disadvantage = away_mean - home_mean
+                    elif away > home and away_mean < home_mean:
+                        upset_disadvantage = home_mean - away_mean
+                    if upset_disadvantage > 0.0:
+                        upset_key = (upset_disadvantage, margin)
+                        if (
+                            trial_biggest_upset is None
+                            or upset_key
+                            > (
+                                trial_biggest_upset[0],
+                                trial_biggest_upset[1],
+                            )
+                        ):
+                            trial_biggest_upset = (
+                                upset_disadvantage,
+                                margin,
+                                matchup_index,
+                                home,
+                                away,
+                            )
         if matchup_started is not None:
             matchup_ended = _profile_wall_clock()
             matchup_wall_seconds += (matchup_ended - matchup_started) * sample_weight
