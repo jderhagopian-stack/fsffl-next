@@ -128,6 +128,43 @@ def test_stress_aggregation_surfaces_candidate_only_boundary_failure() -> None:
     assert result["both_count"] == 0
 
 
+def test_stress_aggregation_localizes_candidate_only_visible_probability_boundary() -> None:
+    aggregate = _module(AGGREGATE, "simulation_35k_stress_rounding")
+    rows = {}
+    for seed in aggregate.EXPECTED_SEEDS:
+        for count in (35_000, 50_000, 100_000):
+            candidate_diff = (
+                [
+                    {
+                        "team_id": "t05",
+                        "metric": "playoff_probability",
+                        "observed_percent": 50,
+                        "reference_percent": 49,
+                    }
+                ]
+                if seed == aggregate.EXPECTED_SEEDS[0] and count == 35_000
+                else []
+            )
+            rows[(seed, "fixture", count)] = {
+                "comparison": {
+                    "product_check_results": {
+                        "rounded_probabilities_matches_100k": not candidate_diff
+                    },
+                    "rounded_probability_differences_vs_100k": candidate_diff,
+                }
+            }
+
+    result = aggregate._product_divergences(rows)
+
+    assert result["candidate_only_count"] == 1
+    event = result["candidate_35k_diverges_while_50k_matches"][0]
+    assert event["check"] == "rounded_probability_visible_cell"
+    assert event["team_id"] == "t05"
+    assert event["metric"] == "playoff_probability"
+    assert event["candidate_difference"]["observed_percent"] == 50
+    assert event["candidate_difference"]["reference_percent"] == 49
+
+
 def test_stress_workflow_is_bounded_parallel_and_not_a_deployment_path() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
