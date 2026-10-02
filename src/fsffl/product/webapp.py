@@ -1624,9 +1624,6 @@ def create_app(
             and same_reconciliation_league
             and same_reconciliation_generation
         )
-        replace_stale_current = bool(
-            active_job_running and not can_coalesce_current
-        )
         if can_coalesce_current:
             return {
                 **_job_payload(active_job),
