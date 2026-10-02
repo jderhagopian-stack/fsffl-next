@@ -12,6 +12,9 @@ WORKFLOW_PATH = ROOT / ".github/workflows/simulation-convergence-pit-study.yml"
 INVENTORY_PATH = (
     ROOT / "docs/operations/evidence/simulation_item8_pit_inventory_20261002.json"
 )
+SUMMARY_PATH = (
+    ROOT / "docs/operations/evidence/simulation_item8_convergence_summary_20261002.json"
+)
 
 
 def _study_module():
@@ -50,6 +53,8 @@ def test_item8_workflow_runs_all_eight_roots_in_bounded_parallel_slices() -> Non
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "cancel-in-progress: true" in workflow
+    assert "workflow_dispatch:" in workflow
+    assert "push:" not in workflow
     assert "seed_start: 0" in workflow and "seed_count: 3" in workflow
     assert "seed_start: 3" in workflow and workflow.count("seed_count: 3") == 2
     assert "seed_start: 6" in workflow and "seed_count: 2" in workflow
@@ -86,3 +91,32 @@ def test_item8_pit_inventory_distinguishes_authentic_inputs_from_realized_target
     assert eligibility["scored_continuous_observations"] == 0
     assert eligibility["prospective_input_checkpoints_exist"] is True
     assert eligibility["broad_multi_year_forecast_coverage"] is False
+
+
+def test_item8_completed_summary_locks_50k_and_no_historical_pit_hunt() -> None:
+    summary = json.loads(SUMMARY_PATH.read_text(encoding="utf-8"))
+
+    assert summary["authority_status"] == "research_only_no_production_change"
+    assert summary["production_count"] == 50_000
+    assert summary["reference_count"] == 100_000
+    assert summary["roots"] == 8
+    assert summary["workflow_run_id"] == 36_999_960_485
+    assert summary["final_artifact"]["artifact_id"] == 11_224_026_589
+    assert (
+        summary["final_artifact"]["sha256"]
+        == "8116d174d9d6aef5bd9fa3c292c513718d2a98b8037337ff4b40a4f9372dbae8"
+    )
+
+    production = summary["production_50k"]
+    assert production["expected_wins_max_abs_error_vs_100k_p90"] < 0.015
+    assert production["playoff_probability_max_abs_error_vs_100k_p90"] < 0.003
+    assert production["championship_probability_max_abs_error_vs_100k_p90"] < 0.0025
+    assert production["clear_delta_sign_agreement_min"] == 1.0
+    assert production["near_delta_sign_agreement_min"] == 1.0
+
+    pit = summary["pit_calibration"]
+    assert pit["fully_realized_final_season_cases"] == 0
+    assert pit["scored_probability_observations"] == 0
+    assert pit["scored_continuous_observations"] == 0
+    assert pit["no_historical_pit_hunt"] is True
+    assert summary["conclusion"] == "retain_50000_production_authority_no_adaptive_rule"
