@@ -2096,3 +2096,35 @@ This is sufficient risk-proportionate Tier-B closeout under the no-redeploy/no-c
 
 **Simulation 2.0 roadmap advances immediately to item 5:** team-of-origin future rookie-pick distributions under the actual league draft-order rules. Simulation owns the football-outcome distribution; Value/Decision consume it downstream. Generic early/mid/late labels are summaries only, never the primary authority.
 
+## 2026-10-02 — Simulation 2.0 item 5 ACTIVE: team-of-origin future-pick slot distributions
+
+#327 common-world counterfactual Simulation is accepted and remains closed. Item 5 replaces the diagnostic early/mid/late proxy for the **next rookie draft only** with governed exact slot distributions keyed to the pick's original team.
+
+### Draft-order authority correction
+
+Draft order is resolved in this order:
+1. **Explicit league rule evidence first.** A supported `DraftOrderPolicyEvidence` for the target draft season is authoritative and retains `explicit_league_rule` provenance.
+2. **Governed standard fallback when explicit league evidence is absent.** This is a derived rule, not a claim about written league bylaws, and retains `derived_standard_fallback` provenance.
+3. An explicit but unsupported/custom policy does **not** silently fall back; it remains unavailable until that explicit rule can be modeled.
+
+Governed standard fallback:
+- non-playoff teams: worse regular-season record, then resolvable head-to-head among tied teams, then lower regular-season Points For;
+- playoff teams: earlier elimination round first; within the same elimination round use the same regular-season tiebreak sequence;
+- runner-up then champion last;
+- placement/consolation games do not affect draft order unless explicit league policy says they do;
+- if the governed sequence still leaves an exact tie, preserve uncertainty across the unresolved tied slots rather than inventing a hidden team-ID tiebreak.
+
+Unsupported FSFFL-specific assumptions are removed: Max PF is not the default draft-order metric, no FSFFL league ID is hard-coded into live Simulation authority, and 5th-/3rd-place games are not used unless explicitly governed.
+
+Implementation boundary:
+- exact next-season slot probability mass accumulates inside existing season worlds;
+- completed and simulated regular-season outcomes supply record, H2H and Points For;
+- accepted canonical playoff execution supplies elimination-round facts;
+- exact slot probabilities, expected slot, median slot and earliest-to-latest percentile are primary authority;
+- early/mid/late remain derived summaries only;
+- current owner remains separate from original team, and the origin-team slot carries across rookie-draft rounds;
+- explicit-vs-derived draft-order authority/provenance is product-visible;
+- 2028+ distributions remain unavailable in this slice rather than extrapolating unsupported future team strength.
+
+Promotion remains Tier B: focused explicit/fallback rule, tiebreak, elimination, placement-game, unresolved-tie and origin/ownership tests; full CI; reviewed fixed 50,000-world replay baselines if changed; exact-head P1/P2 review; then one targeted hosted next-season-pick acceptance. Do not reopen #324-#327.
+
