@@ -2144,3 +2144,19 @@ The 3.12 digest change is expected because `RegularSeasonSimulationResult` now c
 
 Remaining promotion gate: ordinary exact-head CI on the docs/workflow-restored head plus bounded exact-head P1/P2 review. If clean, merge #328 and perform one targeted hosted next-season-pick acceptance. Do not reopen accepted #324-#327.
 
+## 2026-10-02 — PR #328 final bounded review / promotion gate
+
+The Python 3.12 validation blocker is closed. The item-5 source tree passed **1,979 tests on both Python 3.11 and Python 3.12** with reviewed fixed 50,000-world replay digests; normal single-runtime repository CI was then restored.
+
+A fresh bounded exact-head P1/P2 review was required because Codex review remains unavailable under the repository/account quota. The review found one explicit-policy authority defect: a policy using the supported mechanism could include an unknown extra parameter that the compiler silently ignored. That contradicted Management's rule that explicit-but-unsupported league behavior must remain unavailable rather than be partially interpreted. The compiler now rejects unknown explicit parameters, with a deterministic regression proving no pick distribution is emitted for such a policy.
+
+The review correction does not change RNG draws, Simulation result serialization, or the fixed 50k replay payload, so the completed Python 3.11/3.12 replay proof remains standing under the risk-proportionate rule.
+
+Final corrected code head `8227f32bcb75d9406544693b1381d3dddc29d31e` validation:
+- ordinary full CI: **1,980 passed**, one existing warning;
+- League Atlas North Star focused validation: PASS, including real-league composition sanity and live-provider authority audit;
+- PR164 focused corrective regression: PASS;
+- Live Forecast corrective trace: PASS.
+
+No remaining P1/P2 issue was found in the bounded item-5 review. Remaining promotion step is one docs-complete exact-head standard validation, then exact-head merge and one targeted hosted next-season-pick acceptance. Do not reopen #324-#327.
+
