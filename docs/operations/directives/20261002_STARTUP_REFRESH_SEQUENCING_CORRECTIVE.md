@@ -109,3 +109,27 @@ Acceptance infrastructure is now bounded.
 - The physical/telemetry proof must verify the same acceptance facts: one winning reconciliation, one 50k Simulation for an unchanged target, no stale duplicate build, monotonic readiness to 7/7, publication continuity, no restart, and memory within the engineering budget.
 - Once that evidence is clean, close this corrective and immediately resume PR #335.
 - Do not let acceptance-tooling work block Foundation 3 beyond this bound.
+
+
+## 2026-10-02 — startup/refresh corrective accepted; browser feedback deferred
+
+Physical iPhone/Safari acceptance on the deployed corrective completed the backend lifecycle cleanly:
+- one refresh job for the winning target;
+- one 50,000-run Simulation build;
+- zero `job_aborted` events;
+- Value and Intrinsic completed;
+- one terminal `publication_complete`;
+- process peak RSS **426,971,136 bytes**, within the **429,496,720-byte** engineering budget;
+- no restart/OOM.
+
+Measured physical-run phase timing:
+- job start -> State materialized: ~5.2s;
+- State materialized -> State sync complete: ~2.4s;
+- State sync -> Simulation complete: ~125.9s;
+- Simulation -> Value complete: ~5.0s;
+- Value -> Intrinsic complete: ~25.6s;
+- Intrinsic -> terminal publication: ~103.4s.
+
+Physical Safari exposed one separate presentation defect: the in-app Refresh action gave no reliable visible acknowledgement/progress/completion state, and the user only observed completion after reloading the web page. Management classifies this as a **future bounded browser/UI status effort**, not a blocker to the accepted backend sequencing corrective. It should trace the existing refresh POST plus `/api/intelligence/jobs/current` / `/api/intelligence/status` polling and make start/progress/completion visible on Safari without changing Simulation, Forecast, Value, publication, or lifecycle authority.
+
+Do not create another acceptance-infrastructure chain for this defect. Close the startup/refresh sequencing corrective and immediately resume PR #335 origin-aware draft-pick Value from its pinned safe checkpoint.
