@@ -1,6 +1,6 @@
 # Simulation 2.0 item 8 — convergence + PIT calibration evidence plan
 
-**Status:** pre-result evidence design. No production-authority change is authorized by this document.
+**Status:** preserved pre-result evidence design. The study is complete; final interpretation is recorded in `simulation_item8_convergence_results_20261002.md`. No production-authority change is authorized by this document.
 
 ## Production authority lock
 
@@ -57,4 +57,7 @@ That evidence proves genuine prospective calibration inputs exist. It does **not
 Run and retain the full convergence evidence, including independent-root dispersion and scenario-delta sign sensitivity. Verify the PIT framework against the authentic inventory and report finalized sample size separately from available prospective checkpoints. Keep 50,000 unchanged.
 
 If convergence evidence suggests a materially defensible lower/higher count, return the proposed count/rule and evidence to Management for sanity check. Do not implement it first.
-\n### Bounded evidence-stop rule\n\nThe authenticated Supabase/repo inventory above is the item-8 evidence set. Per Management's no-hunt rule, implementation does not scrape, reconstruct, infer, or broaden into an archive search for older Forecasts. Missing pre-2026 full-league Forecast coverage is recorded as a limitation, not a blocker.\n
+
+### Bounded evidence-stop rule
+
+The authenticated Supabase/repo inventory above is the item-8 evidence set. Per Management's no-hunt rule, implementation does not scrape, reconstruct, infer, or broaden into an archive search for older Forecasts. Missing pre-2026 full-league Forecast coverage is recorded as a limitation, not a blocker.
