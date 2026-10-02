@@ -364,3 +364,40 @@ Accepted product direction to retain after Simulation 2.0 closeout:
 - actual/recorded lineup state and model-optimized/projected starters must remain semantically distinct.
 
 Management continuity rule: keep this file and the canonical operations state current before chat context becomes a risk. A successor management chat should read `OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this file, and the current active PR before issuing implementation direction.
+
+## 2026-10-02 — Simulation 2.0 item 8 / PR #331 CLOSEOUT: convergence stable, PIT framework prospective
+
+PR #331 closes the final Simulation 2.0 evidence item. Items #324-#330 remain accepted and are not reopened.
+
+Completed convergence evidence:
+- successful pre-registered eight-root workflow run: `36999960485`, study head `9ec10864aca3a785baeab941d746fe114ca1ab36`;
+- final artifact `11224026589`, digest `8116d174d9d6aef5bd9fa3c292c513718d2a98b8037337ff4b40a4f9372dbae8`;
+- production 50k versus same-root 100k reference p90 errors: expected wins **0.014007**, playoff probability **0.002964**, championship probability **0.002427**, finish-distribution TV **0.005272**, future-pick-slot TV **0.005575**;
+- clear and near-boundary expected-wins/playoff/title scenario-delta signs matched the same-root 100k reference for **8/8 roots**;
+- 50k independent-root dispersion was small: expected-wins SD **0.004624** / range **0.01438**, playoff-probability SD **0.002317** / range **0.00732**, title-probability SD **0.000752** / range **0.00216**, future-pick expected-slot SD **0.011119** / range **0.04002**;
+- three-run study-bundle median runtime was ~**24.23s at 35k**, **34.64s at 50k**, **51.86s at 75k**, and **69.09s at 100k** on the Actions fixture.
+
+Interpretation:
+- 50k is numerically stable for the governed fixture and materially tighter than lower counts while avoiding the additional runtime of 75k/100k;
+- 35k is reasonably close, but this study does not establish a product/governance reason to reduce authority;
+- 75k/100k reduce Monte Carlo error further, but the measured improvement is incremental rather than evidence that 50k is materially unstable;
+- **production Simulation authority remains 50,000 runs**; no adaptive-count rule is promoted. Any future count change still requires separate Management approval.
+
+PIT calibration closeout follows the explicit no-hunt rule:
+- bounded existing-store evidence: **364** canonical State snapshots, **12** immutable provider ROS projection snapshots / **22,050** normalized observations, and **6** prospective football-state captures;
+- authentic pre-opener Forecast artifact 63 exists but lacks a retained matching canonical State payload and is not reconstructed;
+- earliest retained matched State+Forecast checkpoint is post-opener State `a7d56f...` + Forecast artifact 87;
+- fully realized final-season Simulation calibration cases today: **0**; scored probability observations: **0**; scored continuous observations: **0**, because the 2026 season is still active;
+- no historical Forecast reconstruction, current-projection backdating, archive scraping, or broader PIT discovery is authorized or required for closeout;
+- the leakage-safe checkpoint/scoring framework is retained for prospective scoring as authentic 2026 checkpoints resolve.
+
+Durable evidence:
+- `docs/operations/evidence/simulation_item8_convergence_results_20261002.md`;
+- `docs/operations/evidence/simulation_item8_convergence_summary_20261002.json`;
+- `docs/operations/evidence/simulation_item8_pit_inventory_20261002.json`;
+- reusable scoring/guardrail code in `fsffl.team_utility.simulation_validation`.
+
+Promotion classification: research/evidence/framework only. This PR does not change production Simulation count, RNG, model authority, runtime/persistence identity, Decision authority, or accepted #324-#330 behavior. Therefore no Render deployment or physical acceptance is required for item-8 closeout; focused evidence/calibration tests + full CI + bounded exact-head P1/P2 review are sufficient.
+
+**Simulation 2.0 program status after #331: COMPLETE.** The already-accepted post-Simulation sequence resumes with origin-aware draft-pick Value consuming the governed team-of-origin pick-slot distributions, followed by Long-Term Intrinsic and the later PIT historical-market foundation. Do not reopen Simulation 2.0 without contradictory evidence or a new Management directive.
+
