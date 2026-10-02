@@ -20,7 +20,7 @@ from fsffl.forecast import (
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.memory_attribution import log_object_graph, sample_rss_phase
-from fsffl.state.draft_order_policy import DraftOrderPolicyEvidence
+from fsffl.state.draft_order_policy import resolve_draft_order_policy
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.team_utility import (
     LeagueScoringDispersionDiagnostic,
@@ -192,7 +192,6 @@ def build_live_simulation_analytics(
     rng_batch_size: int | None = None,
     generated_at: datetime | None = None,
     cooperative_yield: Callable[[], object] | None = None,
-    draft_order_policy: DraftOrderPolicyEvidence | None = None,
 ) -> LiveSimulationAnalyticsResult:
     """Run Forecast -> week-specific NEXT-4 Simulation -> NEXT-7.
 
@@ -307,6 +306,12 @@ def build_live_simulation_analytics(
     ]
 
     next_draft_season = league_state.league.season + 1
+    explicit_draft_order_policy = resolve_draft_order_policy(
+        league_state.draft_order_policies,
+        league_id=league_state.league.league_id,
+        draft_season=next_draft_season,
+        as_of=league_state.as_of,
+    )
 
     with sample_rss_phase("simulation.input_and_schedule_materialization"):
         request = build_regular_season_simulation_input(
@@ -314,7 +319,7 @@ def build_live_simulation_analytics(
             weekly_scoring=weekly_scoring,
             playoff_weekly_scoring=playoff_weekly_scoring,
             future_pick_draft_season=next_draft_season,
-            future_pick_draft_order_policy=draft_order_policy,
+            future_pick_draft_order_policy=explicit_draft_order_policy,
             simulation_count=simulation_count,
             seed=seed,
             model_version="next4-live-current-season-v11:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:factual-completed-weeks:playoff-week-scoring:empirical-weekly-volatility:league-configured-postseason",
