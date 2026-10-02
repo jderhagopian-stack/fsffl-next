@@ -50,6 +50,7 @@ class HistoricalDraftValuePolicy(FrozenModel):
     source_ids: tuple[str, ...]
     metric: str
     scale: ValueScale
+    format_context_id: str | None = None
     max_observation_age_days: Annotated[int, Field(ge=0)]
     model_version: str
     provenance: str
@@ -62,6 +63,8 @@ class HistoricalDraftValuePolicy(FrozenModel):
             raise ValueError("historical draft value policy source ids must be unique")
         if any(not value.strip() for value in (self.metric, self.model_version, self.provenance)):
             raise ValueError("historical draft value policy identifiers/provenance cannot be blank")
+        if self.format_context_id is not None and not self.format_context_id.strip():
+            raise ValueError("historical draft value format_context_id cannot be blank")
         return self
 
 
@@ -110,6 +113,10 @@ def freeze_historical_draft_values(
             and row.asset_id == selection.player_id
             and row.source_id in approved_sources
             and row.metric == policy.metric
+            and (
+                policy.format_context_id is None
+                or row.format_context_id == policy.format_context_id
+            )
             and row.observed_at <= selection.selected_at
             and row.observed_at <= as_of
         ]
