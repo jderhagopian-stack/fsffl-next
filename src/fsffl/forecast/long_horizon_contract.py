@@ -81,13 +81,20 @@ def _authority_map_payload() -> list[dict[str, object]]:
     ]
 
 
-LONG_HORIZON_AUTHORITY_MAP_SHA256 = hashlib.sha256(
+LONG_HORIZON_AUTHORITY_MAP_SHA256 = (
+    "487555fac2e5fd0823c6a70d29b1c1e60fbf2adc0e1bb8140f9f43e6ee0e9e00"
+)
+_COMPUTED_LONG_HORIZON_AUTHORITY_MAP_SHA256 = hashlib.sha256(
     json.dumps(
         _authority_map_payload(),
         sort_keys=True,
         separators=(",", ":"),
     ).encode()
 ).hexdigest()
+if _COMPUTED_LONG_HORIZON_AUTHORITY_MAP_SHA256 != LONG_HORIZON_AUTHORITY_MAP_SHA256:
+    raise RuntimeError(
+        "frozen long-horizon Forecast authority map no longer matches its governed hash"
+    )
 
 
 class LongHorizonPolicyForecast(FrozenModel):
