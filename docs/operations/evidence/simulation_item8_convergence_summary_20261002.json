@@ -1,0 +1,45 @@
+{
+  "study_id": "simulation-item8-convergence-pit-20261002-final",
+  "authority_status": "research_only_no_production_change",
+  "production_count": 50000,
+  "reference_count": 100000,
+  "roots": 8,
+  "workflow_run_id": 36999960485,
+  "workflow_head_sha": "9ec10864aca3a785baeab941d746fe114ca1ab36",
+  "final_artifact": {
+    "artifact_id": 11224026589,
+    "name": "simulation-item8-convergence-pit-final",
+    "sha256": "8116d174d9d6aef5bd9fa3c292c513718d2a98b8037337ff4b40a4f9372dbae8"
+  },
+  "production_50k": {
+    "expected_wins_max_abs_error_vs_100k_p90": 0.01400699999999988,
+    "playoff_probability_max_abs_error_vs_100k_p90": 0.002963999999999922,
+    "championship_probability_max_abs_error_vs_100k_p90": 0.002427000000000004,
+    "finish_rank_max_tv_vs_100k_p90": 0.005271999999999994,
+    "future_pick_slot_max_tv_vs_100k_p90": 0.005574999999999993,
+    "elapsed_seconds_three_runs_median": 34.640315517999994,
+    "clear_delta_sign_agreement_min": 1,
+    "near_delta_sign_agreement_min": 1,
+    "independent_root": {
+      "baseline_expected_wins_stddev": 0.004623709955219822,
+      "baseline_expected_wins_range": 0.014379999999999171,
+      "baseline_playoff_probability_stddev": 0.0023174716826748977,
+      "baseline_playoff_probability_range": 0.007319999999999993,
+      "baseline_championship_probability_stddev": 0.000751980717837898,
+      "baseline_championship_probability_range": 0.0021599999999999987,
+      "baseline_future_pick_expected_slot_stddev": 0.011119330015787724,
+      "baseline_future_pick_expected_slot_range": 0.04001999999999928
+    }
+  },
+  "pit_calibration": {
+    "authentic_state_snapshots": 364,
+    "provider_projection_snapshots": 12,
+    "normalized_projection_observations": 22050,
+    "prospective_football_state_captures": 6,
+    "fully_realized_final_season_cases": 0,
+    "scored_probability_observations": 0,
+    "scored_continuous_observations": 0,
+    "no_historical_pit_hunt": true
+  },
+  "conclusion": "retain_50000_production_authority_no_adaptive_rule"
+}
