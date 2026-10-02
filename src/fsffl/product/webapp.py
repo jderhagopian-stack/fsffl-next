@@ -68,6 +68,7 @@ from .runtime import (
     default_live_value_loader,
     default_sleeper_state_loader,
 )
+from .scenario_cache import ScenarioComputationStage
 from .simulation_runtime import (
     LiveSimulationAnalyticsResult,
     build_live_simulation_analytics,
@@ -111,15 +112,18 @@ class AnalyzeTradeRequest(FrozenModel):
     counterparty_team_id: str
     focal_asset_refs: tuple[str, ...]
     counterparty_asset_refs: tuple[str, ...]
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION
 
 
 class EvaluateWaiverRequest(FrozenModel):
     add_player_id: str
     drop_player_id: str | None = None
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION
 
 
 class PlayerUnavailableRequest(FrozenModel):
     player_id: str
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION
 
 
 def _beta_auth_enabled() -> bool:
@@ -757,24 +761,88 @@ def _managed_team_view_payload(
     return payload
 
 
-def _default_simulation_loader(
+def _build_default_simulation(
     league_state: LeagueState,
     evidence: LiveForecastEvidence,
+    *,
+    simulation_count: int,
+    scenario_reuse=None,
+    affected_team_ids: frozenset[str] | None = None,
+    reuse_simulation_result=None,
 ) -> LiveSimulationAnalyticsResult:
     rng_protocol, rng_batch_size = configured_simulation_rng()
     return build_live_simulation_analytics(
         league_state,
         forecasts=evidence.league_scored_forecasts,
         forecast_model_version=evidence.model_version,
-        simulation_count=50_000,
+        simulation_count=simulation_count,
         rng_protocol=rng_protocol,
         rng_batch_size=rng_batch_size,
         cooperative_yield=foreground_pressure.cooperative_yield,
+        scenario_reuse=scenario_reuse,
+        affected_team_ids=affected_team_ids,
+        reuse_simulation_result=reuse_simulation_result,
     )
+
+
+def _default_simulation_loader(
+    league_state: LeagueState,
+    evidence: LiveForecastEvidence,
+) -> LiveSimulationAnalyticsResult:
+    return _build_default_simulation(
+        league_state,
+        evidence,
+        simulation_count=50_000,
+    )
+
+
+def _selective_runner_for_count(simulation_count: int):
+    def run(changed_state, evidence, baseline_result, plan, reuse_canonical):
+        return _build_default_simulation(
+            changed_state,
+            evidence,
+            simulation_count=(
+                baseline_result.simulation_result.simulation_count
+                if reuse_canonical
+                else simulation_count
+            ),
+            scenario_reuse=baseline_result.scenario_preparation,
+            affected_team_ids=frozenset(plan.affected_team_ids),
+            reuse_simulation_result=(
+                baseline_result.simulation_result if reuse_canonical else None
+            ),
+        )
+
+    return run
+
+
+def _progressive_loader_factory(simulation_count: int, stage_label: str):
+    def loader(
+        league_state: LeagueState,
+        evidence: LiveForecastEvidence,
+    ) -> LiveSimulationAnalyticsResult:
+        return _build_default_simulation(
+            league_state,
+            evidence,
+            simulation_count=simulation_count,
+        )
+
+    loader.__fsffl_cache_identity__ = (
+        f"{configured_simulation_cache_identity()}:scenario-stage={stage_label}:"
+        f"count={simulation_count}"
+    )
+    loader.__fsffl_simulation_model_version__ = (
+        f"{configured_simulation_model_version()}:scenario-stage={stage_label}:"
+        f"count={simulation_count}"
+    )
+    loader.__fsffl_selective_runner__ = _selective_runner_for_count(simulation_count)
+    return loader
 
 
 _default_simulation_loader.__fsffl_cache_identity__ = configured_simulation_cache_identity()
 _default_simulation_loader.__fsffl_simulation_model_version__ = configured_simulation_model_version()
+_default_simulation_loader.__fsffl_progressive_loader_factory__ = _progressive_loader_factory
+_default_simulation_loader.__fsffl_selective_runner__ = _selective_runner_for_count(50_000)
 
 
 def _proposal_from_request(runtime, request: AnalyzeTradeRequest, *, draft_prefix: str) -> BilateralTradeProposal:
