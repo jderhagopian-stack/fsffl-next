@@ -8,6 +8,7 @@ from fsffl.state.matchups import completed_matchups, completed_through_week
 from fsffl.state.models import LeagueState
 
 from .league_atlas_preseason import LeagueAtlasPreseasonBaseline
+from .pick_location_runtime import build_next_season_pick_projections
 from .runtime import UserRuntimeContext
 
 
@@ -264,13 +265,20 @@ def _frozen_preseason_rows(
         for row in sorted(baseline.teams, key=lambda item: (item.rank, item.team_id))
     )
 
-def _pick_map(state: LeagueState) -> dict[str, object]:
+def _pick_map(
+    state: LeagueState,
+    *,
+    projected_picks: tuple[object, ...] = (),
+) -> dict[str, object]:
     names = _team_names(state)
     owner_by_pick = {
         ownership.pick_id: ownership.owner_team_id
         for ownership in state.pick_ownership
     }
     picks = {pick.pick_id: pick for pick in state.draft_picks}
+    projection_by_pick = {
+        getattr(item, "pick_id"): item for item in projected_picks
+    }
     seasons = sorted({pick.season for pick in state.draft_picks})
     rounds = sorted({pick.round for pick in state.draft_picks})
 
@@ -281,6 +289,7 @@ def _pick_map(state: LeagueState) -> dict[str, object]:
         if owner_team_id is None:
             continue
         status = "own" if owner_team_id == pick.original_team_id else "acquired"
+        projection = projection_by_pick.get(pick.pick_id)
         row = {
             "pick_id": pick.pick_id,
             "season": pick.season,
@@ -290,6 +299,34 @@ def _pick_map(state: LeagueState) -> dict[str, object]:
             "owner_team_id": owner_team_id,
             "owner_team_name": names.get(owner_team_id, owner_team_id),
             "status": status,
+            "projected_slot": (
+                {
+                    "expected_slot": projection.expected_slot,
+                    "median_slot": projection.median_slot,
+                    "expected_slot_percentile_from_earliest": (
+                        projection.expected_slot_percentile_from_earliest
+                    ),
+                    "slot_probabilities": [
+                        item.model_dump(mode="json")
+                        for item in projection.slot_probabilities
+                    ],
+                    "early_probability": projection.early_probability,
+                    "mid_probability": projection.mid_probability,
+                    "late_probability": projection.late_probability,
+                    "simulation_count": projection.simulation_count,
+                    "simulation_model_version": projection.simulation_model_version,
+                    "draft_order_policy_id": projection.draft_order_policy_id,
+                    "draft_order_policy_version": (
+                        projection.draft_order_policy_version
+                    ),
+                    "max_pf_projection_model_version": (
+                        projection.max_pf_projection_model_version
+                    ),
+                    "authority_status": projection.authority_status,
+                }
+                if projection is not None
+                else None
+            ),
         }
         owned_by_team[owner_team_id].append(row)
         if owner_team_id != pick.original_team_id:
@@ -411,6 +448,14 @@ def build_league_atlas_payload(
         }
 
     simulation = runtime.simulation_analytics
+    projected_picks = (
+        build_next_season_pick_projections(
+            state,
+            simulation.simulation_result,
+        )
+        if simulation is not None
+        else ()
+    )
     return {
         "status": "ready",
         "contract_version": LEAGUE_ATLAS_CONTRACT_VERSION,
@@ -442,7 +487,7 @@ def build_league_atlas_payload(
             ),
         },
         "preseason_expectation": preseason,
-        "pick_map": _pick_map(state),
+        "pick_map": _pick_map(state, projected_picks=projected_picks),
         "authority": {
             "state": "canonical point-in-time LeagueState",
             "max_points_for": "canonical State provider potential-points evidence when available",
@@ -450,6 +495,10 @@ def build_league_atlas_payload(
             "simulation": "governed 50,000-run Simulation when already available",
             "competitive_state": "existing Team Utility calculated competitive state",
             "pick_ownership": "canonical State",
+            "pick_location": (
+                "governed NEXT-4 Simulation team-of-origin exact slot distribution "
+                "for the next draft season only"
+            ),
             "presentation_creates_model_truth": False,
             "team_intrinsic_total_created": False,
             "summed_market_percentiles_created": False,
