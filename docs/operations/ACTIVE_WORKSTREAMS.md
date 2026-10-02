@@ -1289,3 +1289,35 @@ Final corrected code head `8227f32bcb75d9406544693b1381d3dddc29d31e` validation:
 
 No remaining P1/P2 issue was found in the bounded item-5 review. Remaining promotion step is one docs-complete exact-head standard validation, then exact-head merge and one targeted hosted next-season-pick acceptance. Do not reopen #324-#327.
 
+## 2026-10-02 — #328 ACCEPTED: governed team-origin future-pick slot distributions
+
+PR #328 was squash-merged as `dd93e7246ed4435e7ec2760d775bd3224ad1509b`. It completes Simulation 2.0 item 5 without reopening accepted #324-#327.
+
+Accepted item-5 authority:
+- next-rookie-draft exact slot probability distributions are keyed to the pick's **origin team**, while current owner remains a separate State coordinate and the origin slot carries across rookie-draft rounds;
+- explicit governed league draft-order evidence is authoritative when supported and retains `explicit_league_rule` provenance;
+- absent explicit evidence, the approved governed standard fallback uses worse regular-season record -> resolvable head-to-head -> lower Points For for non-playoff teams; playoff teams are ordered by elimination round with the same regular-season sequence within a round; runner-up then champion are last;
+- placement/consolation games affect order only under explicit governed policy;
+- unresolved exact ties split probability across the unresolved slots rather than inventing a team-ID tiebreak;
+- explicit-but-unsupported mechanisms or unknown explicit parameters fail closed and are not silently replaced by the standard fallback;
+- early/mid/late remain summaries only; exact slots/expected slot/median slot/percentile are primary Simulation authority;
+- 2028+ slot distributions remain unavailable in this slice rather than extrapolating unsupported future team strength.
+
+Validation/review:
+- dual-runtime source tree: **1,979 passed** on Python 3.11 and **1,979 passed** on Python 3.12, one existing warning each;
+- reviewed fixed 50,000-world replay digests: Python 3.11 `f87a5f68430dbcd1e0ebeceb60d448bcd79ba615b2812a7d1ea26aa6273cc481`; Python 3.12 `c3b9b1f0348a0e7c6440ae61a765a51176d7159396fe8dd8ea67b3310bcdd495`;
+- final corrected code head `8227f32bcb75d9406544693b1381d3dddc29d31e`: ordinary CI **1,980 passed**, one existing warning; League Atlas North Star focused PASS including real-league composition/live-provider authority audit; PR164 focused PASS; Live Forecast trace PASS;
+- docs-complete exact head `a46d1a2cbf7d09755c6f0034b86f191e1ec56e61`: ordinary CI **1,980 passed**, with all three focused lanes PASS;
+- Codex review remained quota-blocked. Bounded manual exact-head P1/P2 review found one explicit-policy defect (unknown extra parameters were silently ignored); it was corrected to fail closed with regression coverage. No remaining P1/P2 issue was found.
+
+Single targeted hosted acceptance used only Render deploy `dep-davgtjk9v7es73fp0550`:
+- exact merged commit `dd93e724...` became live at **01:56:05Z** on instance `...-mxcrc`; no same-commit redeploy followed;
+- startup restored canonical State `68eac82b...` with Forecast and Value reusable and full Intrinsic while correctly rejecting the pre-#328 Simulation artifact: `forecast=True simulation=False value=True complete=False`;
+- startup resource readiness was ~277 MB RSS / ~281 MB peak against the ~429 MB engineering budget; hosted memory settled around **252 MB** against the 512 MiB service limit;
+- no 5xx, OOM/recycle, repeated reconciliation loop, replacement deploy, or error event appeared in the stable acceptance window;
+- no authenticated product request occurred during the stable hosted window. Private-beta routes require Basic Auth; acceptance did not retrieve/use private credentials or force a second deploy merely to build a new Simulation artifact. Exact pick-slot/provenance behavior is therefore supported by the final exact-head product/League Atlas real-league validation, while the single hosted deployment directly proves localized persisted-Simulation invalidation, restore/resource safety and deployment continuity. This limitation must not be rewritten as a physical pick-card acceptance claim.
+
+This is sufficient Tier-B closeout under the risk-proportionate/no-redeploy/no-private-credential boundary. Do not reopen #324-#328 absent contradictory evidence.
+
+**Simulation 2.0 roadmap advances to the next directive capability: replayable Multiverse / explainability worlds.** Reconcile existing replay identity and retained diagnostics first; add only the missing bounded representative-world contract (median/expected-like, upside/downside, unusual credible/tail and notable outcome examples) with Simulation ID/seed and rarity context. This is explanation, not a second probability model. Selective recomputation/progressive scenarios, convergence and PIT calibration remain later directive work.
+
