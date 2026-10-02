@@ -28,7 +28,12 @@ def test_exact_scenario_cache_reuses_durable_authoritative_artifacts() -> None:
         '"coalesced_hits"',
     ):
         assert phrase in source
-    assert "simulation_count" not in source
+    assert '"authority": "performance-only exact-result reuse"' in source
+    assert "ScenarioComputationStage" in source
+    assert '"non_authoritative_scenario_preview"' in source
+    assert "_SCENARIO_STAGE_COUNTS" in source
+    # Stage run counts belong to the explicit progressive wrapper, not the exact
+    # result-reuse cache authority above.
 
 
 def test_hosted_runtime_enables_scenario_persistence_without_new_authority() -> None:
