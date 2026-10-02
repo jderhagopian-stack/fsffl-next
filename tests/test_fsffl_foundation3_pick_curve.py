@@ -7,6 +7,7 @@ from fsffl.value.fsffl_foundation3_pick_curve import (
     FSFFL_FOUNDATION3_EVIDENCE_SHA256,
     FSFFL_FOUNDATION3_SCALE,
     FSFFL_FOUNDATION3_TARGET_DRAFT_SEASON,
+    FSFFL_FOUNDATION3_TARGET_LEAGUE_EXTERNAL_ID,
     FSFFL_FOUNDATION3_TARGET_LEAGUE_ID,
     fsffl_foundation3_live_curves,
 )
@@ -42,6 +43,9 @@ def test_frozen_fsffl_curve_is_complete_exact_and_structurally_monotone() -> Non
 
 
 def test_live_curve_is_scoped_to_exact_fsffl_2027_coordinate() -> None:
+    assert FSFFL_FOUNDATION3_TARGET_LEAGUE_ID == (
+        f"sleeper:{FSFFL_FOUNDATION3_TARGET_LEAGUE_EXTERNAL_ID}"
+    )
     accepted = fsffl_foundation3_live_curves(
         league_id=FSFFL_FOUNDATION3_TARGET_LEAGUE_ID,
         draft_season=FSFFL_FOUNDATION3_TARGET_DRAFT_SEASON,
