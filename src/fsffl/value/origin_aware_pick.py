@@ -560,7 +560,7 @@ def build_origin_aware_pick_values(
                 slot_value_observations,
                 round=pick.round,
                 as_of=league_state.as_of,
-                scale=curve.scale,
+                scale=slot_value_scale,
                 league_rules=league_state.league.rules,
             )
             curve_by_round[pick.round] = curve
@@ -655,7 +655,7 @@ def build_origin_aware_pick_values(
         estimate = estimate_pick_value(
             outcome_set,
             asset_id=pick.pick_id,
-            scale=slot_value_scale,
+            scale=curve.scale,
             as_of=league_state.as_of,
             draft_season=pick.season,
             round=pick.round,
