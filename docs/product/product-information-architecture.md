@@ -115,3 +115,17 @@ Maintain and refine these items during UI work:
 - scenario/result caching for exact repeated governed analyses;
 - progressive API contracts that distinguish available, loading, unavailable, and stale evidence;
 - instrumentation for endpoint/model-stage latency so commercial-quality bottlenecks can be identified rather than guessed.
+
+## League Atlas team drill-down — accepted product direction (2026-10-02)
+
+League Atlas should use the league-level view as the entry point and let the user tap a franchise for a deeper team sheet rather than forcing more columns into the main table.
+
+The team drill-down should progressively combine governed evidence from the existing authority chain:
+- **competitive outlook:** current record/rank plus governed expected wins, finish distribution, playoff/bye/title probabilities and relevant uncertainty;
+- **roster:** the full canonical roster grouped into starters/active lineup, bench, IR/reserve and taxi where the league supports those slots;
+- **player context:** position, age, governed projection context and both Intrinsic and Broad Market Value where available, with value differences kept explicit rather than collapsed into one score;
+- **draft capital:** owned/acquired/traded-away picks, including origin-team projected slot distributions and later origin-aware Value when promoted;
+- **depth/fragility:** position strength, replacement exposure and meaningful concentration/fragility evidence already owned by Team Utility/Analytics;
+- **explainability:** optional Multiverse / possible-futures examples and a compact “how calculated” provenance/estimate drill-down.
+
+Mobile presentation should favor sections/tabs or a drill-down sheet over a single giant roster table. The default view should answer “what kind of team is this and why?” before exposing every field. Roster grouping must reflect canonical State roster/slot evidence; if a projected/optimized starting lineup is shown, label it as projected/optimized rather than silently replacing the league’s recorded lineup. Forecast owns projections, Value owns Intrinsic/Market values, Simulation owns competitive outcomes, and Presentation only composes those governed outputs.
