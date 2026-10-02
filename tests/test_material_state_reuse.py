@@ -12,6 +12,8 @@ from fsffl.product.runtime import (
     league_material_fingerprint,
 )
 from fsffl.state.models import (
+    DraftOrderPolicyEvidence,
+    DraftOrderPolicyParameter,
     League,
     LeagueRules,
     LeagueState,
@@ -121,6 +123,32 @@ def test_forecast_input_fingerprint_ignores_status_and_snapshot_time() -> None:
     active = _state(as_of=BASE)
     injured = _state(as_of=BASE + timedelta(minutes=5), p1_status=PlayerStatus.INJURED)
     assert forecast_input_fingerprint(active) == forecast_input_fingerprint(injured)
+
+
+def test_draft_order_policy_changes_material_state_but_not_forecast_input() -> None:
+    state = _state(as_of=BASE)
+    provenance = state.provenance[0]
+    policy = DraftOrderPolicyEvidence(
+        league_id=state.league.league_id,
+        draft_season=2027,
+        effective_at=BASE,
+        available_at=BASE,
+        policy_id="league-bylaw",
+        version="v1",
+        mechanism="standard_record_h2h_pf_then_playoff_elimination_v1",
+        description="explicit draft-order evidence",
+        parameters=(
+            DraftOrderPolicyParameter(
+                name="placement_games_affect_order",
+                value=False,
+            ),
+        ),
+        provenance=provenance,
+    )
+    governed = state.model_copy(update={"draft_order_policies": (policy,)})
+
+    assert league_material_fingerprint(governed) != league_material_fingerprint(state)
+    assert forecast_input_fingerprint(governed) == forecast_input_fingerprint(state)
 
 
 def test_forecast_input_fingerprint_changes_when_scoring_changes() -> None:
