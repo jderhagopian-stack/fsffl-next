@@ -9,7 +9,10 @@ from fsffl.team_utility import (
 )
 
 from .runtime import LiveForecastEvidence
-from .scenario_cache import run_cached_scenario_simulation
+from .scenario_cache import (
+    ScenarioComputationStage,
+    run_progressive_scenario_simulation,
+)
 from .simulation_runtime import LiveSimulationAnalyticsResult
 
 
@@ -30,6 +33,7 @@ def build_players_unavailable_scenario(
     *,
     player_ids: tuple[str, ...],
     simulation_loader: SimulationLoader,
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION,
 ) -> dict[str, object]:
     """Stress-test the selected franchise with one or more players unavailable.
 
@@ -86,10 +90,13 @@ def build_players_unavailable_scenario(
             )
         }
     )
-    changed, cache_hit = run_cached_scenario_simulation(
+    changed, cache_hit, computation = run_progressive_scenario_simulation(
+        league_state,
         changed_state,
         forecast_evidence,
+        baseline,
         simulation_loader=simulation_loader,
+        stage=scenario_stage,
     )
     baseline_utility = _utility_for_team(baseline, team_id)
     changed_utility = _utility_for_team(changed, team_id)
@@ -126,6 +133,7 @@ def build_players_unavailable_scenario(
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "scenario_cache_hit": cache_hit,
+        "scenario_computation": computation.model_dump(mode="json"),
         "simulation_counterfactual_delta": simulation_delta.model_dump(mode="json"),
         "team_delta": delta.model_dump(mode="json"),
         "calculated_state_before": baseline_utility.calculated_competitive_state.value,
@@ -137,6 +145,10 @@ def build_players_unavailable_scenario(
             "competitive_delta": "NEXT-4 Simulation common-world comparison when replay/topology coordinates match",
             "scenario_delta": "NEXT-4 Team Utility consumes Simulation competitive delta and adds resilience",
             "scenario_cache": "performance-only exact-result reuse",
+            "scenario_computation": (
+                "screening/provisional are explicitly non-authoritative; "
+                "confirmation or exact canonical reuse is authoritative"
+            ),
             "value": "unchanged; ownership is preserved",
             "presentation_calculation": False,
         },
@@ -149,6 +161,7 @@ def build_player_unavailable_scenario(
     *,
     player_id: str,
     simulation_loader: SimulationLoader,
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION,
 ) -> dict[str, object]:
     """Single-player What-If plus a temporary multi-player Simulator envelope.
 
@@ -165,12 +178,14 @@ def build_player_unavailable_scenario(
             runtime,
             player_ids=tuple(item for item in encoded.split(",") if item),
             simulation_loader=simulation_loader,
+            scenario_stage=scenario_stage,
         )
 
     result = build_players_unavailable_scenario(
         runtime,
         player_ids=(player_id,),
         simulation_loader=simulation_loader,
+        scenario_stage=scenario_stage,
     )
     player = result["players"][0]
     return {
