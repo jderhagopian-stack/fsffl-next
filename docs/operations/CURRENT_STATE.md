@@ -2809,3 +2809,18 @@ Durable evidence:
 - workflow run `37011239970`, artifact `11227844607`, digest `sha256:377d6400b082817aa8348e56461fa0d784d1a9a960614ecc8b21a7ab96a34153`.
 
 The temporary HOLD on origin-aware draft-pick Value is released once #333 merges cleanly. Next substantive workstream: **origin-aware draft-pick Value**.
+
+
+## 2026-10-02 — Origin-aware draft-pick Value activated
+
+Foundation 3 is now the next substantive model/value workstream under `docs/operations/directives/20261002_ORIGIN_AWARE_DRAFT_PICK_VALUE.md`.
+
+Authority contract:
+- Simulation owns exact team-of-origin slot probabilities and remains at 50,000 canonical runs;
+- Value owns slot-specific economic value, class/horizon evidence, uncertainty composition and fallback;
+- Broad Market provider pick values remain a separate market lens;
+- League Market and Team Utility remain downstream.
+
+The implementation must use the full exact slot distribution through the existing Value probability-mixture primitive, not value the expected slot and not substitute early/mid/late summaries for exact economic authority.
+
+Initial authoritative scope is the next draft season only, matching accepted Simulation support. Farther-future picks must not inherit unsupported origin-team slot distributions.
