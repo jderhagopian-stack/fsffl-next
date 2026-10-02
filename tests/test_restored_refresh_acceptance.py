@@ -15,8 +15,20 @@ from fsffl.product.state_first_acceptance import (
     FSFFL_ACCEPTANCE_LEAGUE,
     StateFirstAcceptanceError,
     _probe_surface_during_simulation,
+    resolve_staged_acceptance_user,
     stage_restored_refresh_partial_acceptance,
 )
+
+
+def test_staged_acceptance_user_never_reuses_source_identity() -> None:
+    assert resolve_staged_acceptance_user(
+        source_user_id="jimmy",
+        configured_acceptance_user_id="jimmy",
+    ) == "runtime-availability-production-acceptance"
+    assert resolve_staged_acceptance_user(
+        source_user_id="jimmy",
+        configured_acceptance_user_id="isolated-acceptance",
+    ) == "isolated-acceptance"
 
 
 def test_restored_refresh_probes_foreground_surfaces_during_simulation() -> None:
