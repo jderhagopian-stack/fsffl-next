@@ -187,6 +187,50 @@ def test_progressive_stage_counts_and_non_authoritative_labels() -> None:
     assert calls == [("screening", 1_000), ("provisional", 5_000)]
 
 
+def test_progressive_equivalent_stage_loaders_reuse_process_cache() -> None:
+    clear_scenario_cache()
+    calls: list[tuple[str, int]] = []
+    loader = _progressive_loader(calls)
+    baseline = _result("baseline", simulation_count=50_000)
+    plan = ScenarioDependencyPlan(
+        affected_team_ids=("a",),
+        reusable_team_ids=("b",),
+        planned_mode="full_recompute",
+        structure_compatible=False,
+        forecast_compatible=True,
+        baseline_preparation_available=True,
+        reasons=("global_simulation_dependency_changed",),
+    )
+
+    with patch(
+        "fsffl.product.scenario_cache.build_scenario_dependency_plan",
+        return_value=plan,
+    ):
+        first, first_hit, first_meta = run_progressive_scenario_simulation(
+            _State("baseline"),
+            _State("same-screening"),
+            _Evidence(),
+            baseline,
+            simulation_loader=loader,
+            stage=ScenarioComputationStage.SCREENING,
+        )
+        second, second_hit, second_meta = run_progressive_scenario_simulation(
+            _State("baseline"),
+            _State("same-screening"),
+            _Evidence(),
+            baseline,
+            simulation_loader=loader,
+            stage=ScenarioComputationStage.SCREENING,
+        )
+
+    assert first is second
+    assert first_hit is False
+    assert second_hit is True
+    assert first_meta.authoritative is False
+    assert second_meta.execution_mode == "cache_reuse"
+    assert calls == [("screening", 1_000)]
+
+
 def test_progressive_stage_fails_closed_when_loader_cannot_build_preview() -> None:
     clear_scenario_cache()
 
