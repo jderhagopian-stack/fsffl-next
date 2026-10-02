@@ -14,6 +14,10 @@ def test_waiver_action_runtime_joins_existing_authorities() -> None:
     assert '"authority": {\n            **comparison["authority"],' in source
     assert '"market_value": "NEXT-3 Value authoritative Cardinal score"' in source
     assert '"waiver_action": "NEXT-6 Opportunity candidate authority"' in source
+    assert 'if not comparison["scenario_computation"]["authoritative"]:' in source
+    assert '"candidate": None' in source
+    assert "ActionAuthority.DIAGNOSTIC_ONLY.value" in source
+    assert "withheld until authoritative 50,000-run confirmation" in source
 
 
 def test_waiver_action_runtime_requires_complete_changed_state_evidence() -> None:
