@@ -1,4 +1,4 @@
-# 2026-10-02 — Long-Term Intrinsic Shadow Implementation
+# 2026-10-02 — Foundation 4 Y4–Y7 Long-Horizon Shadow Component
 
 ## Status
 **FOUNDATION 4 ACTIVE — BOUNDED NON-AUTHORITATIVE SHADOW**
@@ -8,18 +8,20 @@ Foundation 3 is accepted and closed. Simulation 2.0 and the deferred Safari-stat
 ## Governing Research contract
 Implementation consumes the already-accepted Long-Term Intrinsic research. Do not reopen model-family search.
 
-The Long-Term Intrinsic economic coordinate is:
+This PR implements one bounded long-horizon component only:
 
-`LT_RAW = (phi4 + phi5 + phi6 + phi7) / 4`
+`Y4_Y7_COMPONENT_RAW = (phi4 + phi5 + phi6 + phi7) / 4`
 
 where each `phi_h` is the league-aware Shapley marginal lineup contribution for literal Y4, Y5, Y6 or Y7 under the governed Forecast authority for that year.
 
-The divide-by-four operation is unit normalization across four one-season coordinates. It is not a discount or preference weight.
+The divide-by-four operation is unit normalization inside this four-year component. It is not a discount or preference weight. **It is not the final product-facing Long-Term Intrinsic metric and must never be interpreted as holistic career-forward value.**
 
 ## Authority rules
 - Current Intrinsic Y1-Y3 remains production authority and is not replaced or modified.
-- Long-Term Intrinsic Y4-Y7 is a separate non-authoritative shadow until explicit later promotion.
-- Y8 contributes no cardinal Long-Term Intrinsic value.
+- The Y4-Y7 component is a separate non-authoritative shadow input to future Foundation 4 work.
+- The eventual product-facing **Long-Term Intrinsic** must represent holistic career-forward value from today across all future seasons.
+- This PR contains **no Y8+ value component**. Missing Y8+ authority is an evidence boundary, not a zero terminal value and not evidence that economic value ends at Y7.
+- The final holistic metric must reuse compatible underlying Y1-Y3 Current Intrinsic economics plus this governed Y4-Y7 component plus a truthful governed Y8+ terminal/tail treatment.
 - Exact Forecast cells remain exact:
   - QB Y5: `blanket_75_25`
   - WR Y5: `hard_router`
@@ -29,7 +31,7 @@ The divide-by-four operation is unit normalization across four one-season coordi
 - Model-authority uncertainty and within-model outcome uncertainty remain separately typed.
 - No cumulative Long-Term standard deviation is authorized until cross-horizon covariance is governed.
 - No Market, owner, team competitive window, trade/package context or manual youth/age/workload coefficient enters universal Long-Term Intrinsic.
-- Current and Long-Term raw/index values are not additive.
+- Separate 0-10000 display indexes are never additive or averageable. Any eventual Y1→career aggregation must operate on compatible underlying economic coordinates under an explicit governed aggregation rule.
 
 ## Implementation sequence
 
@@ -41,7 +43,7 @@ Add a Forecast-owned Y4-Y7 authority transport separate from the stable producti
 - preserve the frozen position×horizon supported-policy map by version/hash;
 - reject Y8 cardinal rows.
 
-Add a pure Value-owned Long-Term consumer:
+Add a pure Value-owned Y4-Y7 long-horizon component consumer:
 - use the existing governed lineup-capacity Shapley game;
 - 2,048 permutations;
 - deterministic horizon seeds;
@@ -66,24 +68,40 @@ Required:
 - authority-map identity;
 - fail closed on missing player/horizon/policy coverage.
 
-### Slice C — persisted shadow + API
+### Slice C — persisted Y4-Y7 component shadow + API
 After the Forecast materializer is governed:
-- persist `long_term_intrinsic_contract` separately from Current Intrinsic;
+- persist the Y4-Y7 component separately from Current Intrinsic and from the future holistic Long-Term Intrinsic contract;
 - stable semantic fingerprint excludes volatile timestamps;
-- shadow endpoint `/api/value/long-term-intrinsic-v1`;
+- any shadow endpoint must be labeled as the **Y4-Y7 component**, not as final product Long-Term Intrinsic;
 - ordinary Current Intrinsic endpoint/artifact remains byte/semantic unchanged;
-- full current-cohort authority envelope and separate display scale.
+- full current-cohort authority envelope and separate within-component display scale.
 
-### Slice D — shadow acceptance / later promotion gate
-Before any product-authority promotion:
+### Slice D — Y4-Y7 component acceptance
+Before this component is accepted as an input to holistic Foundation 4:
 - deterministic replay against accepted Research evidence;
 - current full-cohort materialization;
 - resource/performance acceptance;
 - API/presentation validation;
-- physical mobile validation;
-- explicit Management promotion.
+- explicit Management acceptance of the component.
+
+### Slice E — holistic career-forward Foundation 4
+Foundation 4 is **not complete** at Slice D. Final product promotion additionally requires:
+- reuse of governed Y1-Y3 Current Intrinsic economics as the near/mid-term component;
+- reuse of the accepted Y4-Y7 shadow economics as the long-horizon component;
+- a truthful governed Y8+ terminal/tail treatment;
+- an explicit governed aggregation rule across compatible raw economic coordinates;
+- horizon-preserving model-authority and outcome uncertainty;
+- full live-cohort implementation, persistence/API shadow serving, resource acceptance, validation, and explicit Management promotion.
+
+If Research does not govern Y8+ or the Y1-Y7 aggregation rule, implementation stops at that evidence boundary and opens the smallest required Research/governance slice. No arbitrary discount rate, horizon weight, age/youth multiplier, survival coefficient, or terminal-value assumption may be invented.
 
 Market, Team Utility, Decision and live player ranking remain unchanged during the shadow phase.
+
+## Product-definition correction
+
+The internal code names introduced by this bounded PR may retain `LongTerm...` for continuity, but their governed semantics are **Y4-Y7 component shadow only**. They do not authorize a user-facing claim that Long-Term Intrinsic equals Y4-Y7, and they do not authorize setting Y8+ to zero.
+
+Accepted Research establishes annual Y4-Y8 model-family evidence but explicitly leaves terminal/career semantics as a separate Management/governance question. Research also did not authorize a hidden master Intrinsic score. Therefore the next Foundation 4 slice must resolve the Y8+ tail and Y1-Y7 aggregation evidence boundary before holistic implementation can proceed.
 
 ## Validation rule
 Apply risk-proportionate validation per slice. Slice A is a bounded new contract/pure Value capability with no live runtime behavior; focused Forecast/Value tests plus full CI and exact-head P1/P2 review are sufficient. Later runtime/persistence/product slices receive targeted hosted/physical acceptance according to their blast radius.
