@@ -308,8 +308,8 @@ class MultiverseNotableMatchup(FrozenModel):
     home_points: Annotated[float, Field(ge=0)]
     away_points: Annotated[float, Field(ge=0)]
     margin: Annotated[float, Field(ge=0)]
-    expected_home_points: Annotated[float, Field(ge=0)]
-    expected_away_points: Annotated[float, Field(ge=0)]
+    expected_home_points: float
+    expected_away_points: float
     expected_underdog_disadvantage: Annotated[float, Field(ge=0)] = 0.0
 
 
