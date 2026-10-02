@@ -39,9 +39,10 @@ def build_players_unavailable_scenario(
 
     Ownership is preserved. Selected active-roster players move to hypothetical IR
     in a changed NEXT-1 State, then the same NEXT-2 Forecast evidence is run through
-    authoritative NEXT-4 Simulation. Product never applies injury multipliers or
-    invents substitute projections. Exact repeated scenarios may reuse the cached
-    authoritative Simulation result.
+    NEXT-4 Simulation. Screening/provisional stages are explicitly non-authoritative;
+    confirmation remains 50,000-run authority. Product never applies injury
+    multipliers or invents substitute projections. Exact repeated scenarios may
+    reuse the exact stage result.
     """
 
     league_state = runtime.league_state
