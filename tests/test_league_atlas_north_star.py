@@ -10,6 +10,7 @@ import pytest
 from fsffl.product.league_atlas import (
     LEAGUE_ATLAS_CONTRACT_VERSION,
     _frozen_preseason_rows,
+    _pick_map,
     build_league_atlas_payload,
 )
 from fsffl.product.league_atlas_preseason import (
@@ -19,6 +20,8 @@ from fsffl.product.league_atlas_preseason import (
     load_preseason_baseline,
 )
 from fsffl.product.runtime import UserRuntimeContext
+from fsffl.value.models import PickValueEstimate, ValueDistribution, ValueScale
+
 from fsffl.state.models import (
     DraftPick,
     League,
@@ -197,6 +200,93 @@ def test_pick_map_preserves_true_owner_original_team_and_round_identity() -> Non
     alpha_2028 = next(row for row in teams["a"]["by_year"] if row["season"] == 2028)
     assert alpha_2028["round_counts"] == {"1": 0, "2": 1, "3": 1}
     assert alpha_2028["total_picks"] == 2
+
+
+def test_pick_map_keeps_broad_market_variant_and_origin_aware_intrinsic_separate() -> None:
+    state = _state()
+    scale = ValueScale(
+        scale_id="fsffl-pick-economic",
+        version="1",
+        unit_label="pick economic units",
+    )
+    projection = SimpleNamespace(
+        pick_id="2027-a-1",
+        expected_slot=2.0,
+        median_slot=2,
+        expected_slot_percentile_from_earliest=1.0,
+        slot_probabilities=(),
+        early_probability=0.2,
+        mid_probability=0.6,
+        late_probability=0.2,
+        simulation_count=50_000,
+        simulation_model_version="simulation-v1",
+        draft_order_policy_id="policy",
+        draft_order_policy_version="v1",
+        draft_order_policy_authority="derived_standard_fallback",
+        draft_order_projection_model_version="projection-v1",
+        authority_status="governed_team_origin_pick_slot_distribution",
+        expected_variant_market_value=6400.0,
+        low_variant_market_value=5000.0,
+        high_variant_market_value=8000.0,
+        market_variant_model_version="broad-market-variants-v1",
+    )
+    intrinsic = PickValueEstimate(
+        asset_id="2027-a-1",
+        distribution=ValueDistribution(mean=61.0, stddev=15.0),
+        scale=scale,
+        as_of=NOW,
+        draft_season=2027,
+        round=1,
+        model_version="origin-aware-pick-value-v1",
+        class_strength_model_version="no-governed-class-adjustment",
+        slot_uncertainty_model_version="simulation-v1+policy:v1",
+    )
+    value_result = SimpleNamespace(
+        pick_id="2027-a-1",
+        status=SimpleNamespace(value="origin_aware_authoritative"),
+        authoritative=True,
+        origin_aware_estimate=intrinsic,
+        generic_fallback_estimate=None,
+        fallback_reason=None,
+        slot_value_curve_model_version="governed-draft-slot-value-curve-v1",
+        slot_value_evidence_seasons=(2024, 2025),
+        slot_value_source_model_versions=("pit-slot-v1",),
+        missing_slots=(),
+        class_strength_status="not_applied_no_governed_evidence",
+        class_strength_model_version="no-governed-class-adjustment",
+        horizon_adjustment_status="not_applied_no_governed_evidence",
+        horizon_adjustment_model_version="no-governed-horizon-adjustment",
+        dependency_fingerprint="fingerprint",
+        provenance=("PIT slot evidence",),
+    )
+
+    pick_map = _pick_map(
+        state,
+        projected_picks=(projection,),
+        origin_aware_pick_values=(value_result,),
+    )
+    teams = {row["team_id"]: row for row in pick_map["teams"]}
+    acquired = next(
+        row for row in teams["b"]["owned"] if row["pick_id"] == "2027-a-1"
+    )
+
+    assert acquired["original_team_id"] == "a"
+    assert acquired["owner_team_id"] == "b"
+    assert acquired["projected_slot"]["broad_market_variant"]["expected_value"] == 6400.0
+    assert (
+        acquired["projected_slot"]["broad_market_variant"]["authority"]
+        .startswith("Broad Market")
+    )
+    intrinsic_payload = acquired["fsffl_intrinsic_pick_value"]
+    assert intrinsic_payload["status"] == "origin_aware_authoritative"
+    assert intrinsic_payload["authoritative"] is True
+    assert intrinsic_payload["origin_aware_estimate"]["distribution"]["mean"] == 61.0
+    assert intrinsic_payload["generic_fallback_estimate"] is None
+    assert "Value-owned origin-aware FSFFL Intrinsic" in intrinsic_payload["authority"]
+    assert (
+        acquired["projected_slot"]["broad_market_variant"]["expected_value"]
+        != intrinsic_payload["origin_aware_estimate"]["distribution"]["mean"]
+    )
 
 
 def test_simulation_is_presented_without_recomputing_or_inventing_a_power_score() -> None:
