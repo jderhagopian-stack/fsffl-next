@@ -2764,3 +2764,20 @@ PIT outcome:
 
 Next approved program sequence: **origin-aware draft-pick Value** consuming the accepted team-of-origin pick-slot distributions -> **Long-Term Intrinsic** -> later **PIT historical market evidence**. Do not reopen #324-#331 absent contradictory evidence or a new Management directive.
 
+
+
+## 2026-10-02 — Management authorizes bounded 35k vs 50k Simulation stress test
+
+Simulation 2.0 #324-#331 remains accepted and complete. The item-8 study identified **35,000** as the only lower run count with a potentially attractive speed/fidelity tradeoff: ~24.23s versus ~34.64s for 50k on the governed three-run bundle, with all tested clear/near scenario-delta signs matching the 100k reference in the original eight-root fixture.
+
+Management has authorized one bounded follow-on evidence study under `docs/operations/directives/20261002_SIMULATION_35K_STRESS_TEST.md`.
+
+Key constraints:
+- production authority remains **50,000**;
+- compare 35k vs 50k primarily, using same-root 100k as research reference;
+- attack razor-thin playoff, parity, tail-title, pick-boundary, near-zero scenario-delta, material-delta and supported postseason-structure cases;
+- report product-relevant sign/rank/classification/disposition changes, not just average numerical error;
+- no authority/config/model-identity change without a later explicit Management decision;
+- no historical Forecast hunt or reopening of accepted #324-#331 behavior.
+
+The next origin-aware draft-pick Value implementation is temporarily held until this bounded study reports, solely to avoid churn if Management later approves a production-count change.
