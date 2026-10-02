@@ -427,3 +427,14 @@ PIT outcome:
 
 Next approved program sequence: **origin-aware draft-pick Value** consuming the accepted team-of-origin pick-slot distributions -> **Long-Term Intrinsic** -> later **PIT historical market evidence**. Do not reopen #324-#331 absent contradictory evidence or a new Management directive.
 
+
+
+## 2026-10-02 — Management follow-on: stress-test 35k before origin-aware Value
+
+After accepting #331 and closing Simulation 2.0, Management elected to test the one genuinely plausible lower authority candidate rather than immediately moving on. The controlling directive is `docs/operations/directives/20261002_SIMULATION_35K_STRESS_TEST.md`.
+
+This does **not** reopen #324-#331. Current production authority remains 50,000 runs. The bounded study compares 35k vs 50k under deliberately difficult governed cases, with same-root 100k as research reference. It must test not only numerical error but whether 35k changes product-relevant signs, rankings, classifications, pick summaries or downstream decisions where existing consumers apply.
+
+Original item-8 context motivating the test: 35k three-run median ~24.23s versus 50k ~34.64s, while the original eight-root fixture preserved all tested clear/near delta signs. That evidence is promising but not broad enough by itself to change authority.
+
+Temporarily hold origin-aware draft-pick Value until this gate resolves. If 35k is merely numerically noisier but product-equivalent across the stress set, return a Management proposal rather than changing production automatically. If any meaningful boundary case fails, retain 50k and resume the approved Value -> Long-Term Intrinsic -> PIT historical-market sequence.
