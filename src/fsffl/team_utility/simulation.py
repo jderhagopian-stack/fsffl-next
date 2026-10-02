@@ -292,7 +292,7 @@ class MultiverseWorldTeamOutcome(FrozenModel):
 
     team_id: str
     final_wins: float
-    points_for: Annotated[float, Field(ge=0)]
+    points_for: float
     regular_season_rank: Annotated[int, Field(ge=1)]
     playoff_seed: Annotated[int, Field(ge=1)] | None = None
     made_playoffs: bool | None = None
