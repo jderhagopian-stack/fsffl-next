@@ -14,7 +14,9 @@ FSFFL_FOUNDATION3_SCALE = ValueScale(
     version="foundation3-v1",
     unit_label="DynastyProcess 2QB value units",
 )
-FSFFL_FOUNDATION3_EVIDENCE_AS_OF = datetime(2026, 10, 2, 20, 28, 9, tzinfo=UTC)
+FSFFL_FOUNDATION3_EVIDENCE_AS_OF = datetime(
+    2026, 7, 11, 16, 13, 0, 974000, tzinfo=UTC
+)
 FSFFL_FOUNDATION3_EVIDENCE_SEASONS = (2024, 2025, 2026)
 FSFFL_FOUNDATION3_SOURCE_MODEL_VERSIONS = (
     "foundation3-fsffl-historical-draft-freeze-v1+a106fdf7188cf0e9e48531fd396d5fd64c96204b",
