@@ -11,6 +11,14 @@ TRADE_SIMULATION = ROOT / "src/fsffl/product/trade_simulation_runtime.py"
 WAIVER_ACTION = ROOT / "src/fsffl/product/waiver_action_runtime.py"
 
 
+def test_simulation_dependency_fingerprints_do_not_import_persistence_layer() -> None:
+    source = (ROOT / "src/fsffl/product/simulation_runtime.py").read_text(
+        encoding="utf-8"
+    )
+    assert "fsffl.persistence" not in source
+    assert "_scenario_dependency_fingerprint" in source
+
+
 def test_interactive_scenario_requests_default_to_authoritative_confirmation() -> None:
     trade = AnalyzeTradeRequest(
         counterparty_team_id="b",
