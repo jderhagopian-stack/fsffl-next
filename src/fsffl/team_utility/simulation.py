@@ -349,7 +349,11 @@ class MultiverseWorldExample(FrozenModel):
     world_index: Annotated[int, Field(ge=0)]
     root_seed: int
     rng_protocol: str
+    rng_runtime_version: str
+    rng_bit_generator: str
     rng_batch_size: Annotated[int, Field(ge=1)] | None = None
+    rng_draw_layout: str
+    rng_seed_derivation: str
     simulation_input_fingerprint: str
     standings: tuple[str, ...]
     team_outcomes: tuple[MultiverseWorldTeamOutcome, ...]
@@ -366,6 +370,10 @@ class MultiverseWorldExample(FrozenModel):
             self.simulation_id,
             self.world_id,
             self.rng_protocol,
+            self.rng_runtime_version,
+            self.rng_bit_generator,
+            self.rng_draw_layout,
+            self.rng_seed_derivation,
             self.simulation_input_fingerprint,
             self.model_version,
         )
@@ -1241,7 +1249,11 @@ def _build_multiverse_examples(
     simulation_id: str,
     root_seed: int,
     rng_protocol: str,
+    rng_runtime_version: str,
+    rng_bit_generator: str,
     rng_batch_size: int | None,
+    rng_draw_layout: str,
+    rng_seed_derivation: str,
     simulation_input_fingerprint: str,
 ) -> tuple[MultiverseWorldExample, ...]:
     category_order = (
@@ -1396,7 +1408,11 @@ def _build_multiverse_examples(
                 world_index=world_index,
                 root_seed=root_seed,
                 rng_protocol=rng_protocol,
+                rng_runtime_version=rng_runtime_version,
+                rng_bit_generator=rng_bit_generator,
                 rng_batch_size=rng_batch_size,
+                rng_draw_layout=rng_draw_layout,
+                rng_seed_derivation=rng_seed_derivation,
                 simulation_input_fingerprint=simulation_input_fingerprint,
                 standings=standings,
                 team_outcomes=team_outcomes,
@@ -2470,7 +2486,11 @@ def simulate_regular_season(
                 "simulation_count": n,
                 "seed": request.seed,
                 "rng_protocol": request.rng_protocol,
+                "rng_runtime_version": runtime_version,
+                "rng_bit_generator": bit_generator_name,
                 "rng_batch_size": batch_size,
+                "rng_draw_layout": draw_layout,
+                "rng_seed_derivation": seed_derivation,
                 "multiverse_model_version": "next4-multiverse-v1",
             },
             sort_keys=True,
@@ -2493,7 +2513,11 @@ def simulate_regular_season(
         simulation_id=simulation_id,
         root_seed=request.seed,
         rng_protocol=request.rng_protocol,
+        rng_runtime_version=runtime_version,
+        rng_bit_generator=bit_generator_name,
         rng_batch_size=batch_size,
+        rng_draw_layout=draw_layout,
+        rng_seed_derivation=seed_derivation,
         simulation_input_fingerprint=input_fingerprint,
     )
 
