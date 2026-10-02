@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from fsffl.opportunity import (
+    ActionAuthority,
     EvidenceCompleteness,
     WaiverMove,
     assess_waiver_materiality,
@@ -12,6 +13,7 @@ from fsffl.team_utility import AssetPortfolioDelta, TeamScenarioDelta
 from fsffl.trade_decision import live_bounded_materiality_policy
 
 from .runtime import LiveForecastEvidence
+from .scenario_cache import ScenarioComputationStage
 from .simulation_runtime import LiveSimulationAnalyticsResult
 from .waiver_simulation_runtime import build_waiver_simulation_comparison
 
@@ -60,6 +62,7 @@ def build_actionable_waiver_comparison(
     move: WaiverMove,
     *,
     simulation_loader: SimulationLoader,
+    scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION,
 ) -> dict[str, object]:
     """Join governed waiver evidence without creating a new desirability score.
 
@@ -82,10 +85,33 @@ def build_actionable_waiver_comparison(
         runtime,
         move,
         simulation_loader=simulation_loader,
+        scenario_stage=scenario_stage,
     )
     policy = live_bounded_materiality_policy(as_of=league_state.as_of)
     delta = TeamScenarioDelta.model_validate(comparison["team_delta"])
     delta = delta.model_copy(update={"asset_portfolio": _economic_delta(runtime, move, policy)})
+    if not comparison["scenario_computation"]["authoritative"]:
+        return {
+            **comparison,
+            "team_delta": delta.model_dump(mode="json"),
+            "materiality_policy": policy.model_dump(mode="json"),
+            "material_assessment": None,
+            "candidate": None,
+            "action_authority": ActionAuthority.DIAGNOSTIC_ONLY.value,
+            "authority": {
+                **comparison["authority"],
+                "market_value": "NEXT-3 Value authoritative Cardinal score",
+                "materiality": (
+                    "withheld until authoritative 50,000-run confirmation"
+                ),
+                "waiver_action": (
+                    "NEXT-6 Opportunity authority withheld on scenario preview"
+                ),
+                "presentation_calculation": False,
+            },
+            "model_version": _PRODUCT_MODEL_VERSION,
+        }
+
     completeness = EvidenceCompleteness.COMPLETE if _complete(delta) else EvidenceCompleteness.PARTIAL
     assessment = assess_waiver_materiality(
         delta,
