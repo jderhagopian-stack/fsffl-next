@@ -447,3 +447,14 @@ Management reviewed the completed 12-root / four-fixture stress study and retain
 Directive outcome: do not promote 35k, do not add an adaptive authority rule, and stop count hunting. 35k remains permissible only for explicitly non-authoritative research/internal use. Production remains 50k.
 
 PR #333 is closeout-only and requires no Render/physical proof. Once merged, release the temporary hold and proceed immediately to **origin-aware draft-pick Value**, preserving the authority boundary: Simulation owns slot probability distributions; Value owns economic valuation; Decision remains downstream.
+
+
+## 2026-10-02 — Foundation 3 activated: origin-aware draft-pick Value
+
+The next management-controlled implementation is `docs/operations/directives/20261002_ORIGIN_AWARE_DRAFT_PICK_VALUE.md`.
+
+Use accepted Simulation as an upstream probability source only. Value must reuse `estimate_pick_value` / exact mixture moments and reconcile the Historical Pick Coordinate rather than create a second pick scale or slot model. Provider generic/early-mid-late pick values remain Broad Market evidence, not FSFFL Intrinsic.
+
+Authoritative scope begins with the next draft season because that is where accepted team-of-origin exact slot distributions exist. Do not extrapolate origin-team probabilities into later years. Missing class/horizon/slot economic evidence must produce transparent fallback/partial status rather than fabricated precision.
+
+Required regression themes include nonlinearity, origin differentiation, ownership invariance, mixture uncertainty, slot dominance, fallback truth, season boundary, preview-authority gating, no circularity and PIT safety.
