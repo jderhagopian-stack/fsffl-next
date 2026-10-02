@@ -2186,55 +2186,56 @@ def simulate_regular_season(
                 rarity_metric_value=typicality,
             )
 
-        upside_distance = abs(league_total - plausible_upside_target)
-        upside = multiverse_candidates.get("plausible_upside")
-        if (
-            upside is None
-            or upside_distance < float(upside["selection_metric"])
-        ):
-            multiverse_candidates["plausible_upside"] = _capture_multiverse_candidate(
-                trial_index=trial_index,
-                wins=wins,
-                points_for=points_for,
-                standings=standings,
-                champion=champion,
-                focal_team=None,
-                selection_metric=upside_distance,
-                rarity_metric_value=league_total,
-            )
+        if league_total_stddev > 0.0:
+            upside_distance = abs(league_total - plausible_upside_target)
+            upside = multiverse_candidates.get("plausible_upside")
+            if (
+                upside is None
+                or upside_distance < float(upside["selection_metric"])
+            ):
+                multiverse_candidates["plausible_upside"] = _capture_multiverse_candidate(
+                    trial_index=trial_index,
+                    wins=wins,
+                    points_for=points_for,
+                    standings=standings,
+                    champion=champion,
+                    focal_team=None,
+                    selection_metric=upside_distance,
+                    rarity_metric_value=league_total,
+                )
 
-        downside_distance = abs(league_total - plausible_downside_target)
-        downside = multiverse_candidates.get("plausible_downside")
-        if (
-            downside is None
-            or downside_distance < float(downside["selection_metric"])
-        ):
-            multiverse_candidates["plausible_downside"] = _capture_multiverse_candidate(
-                trial_index=trial_index,
-                wins=wins,
-                points_for=points_for,
-                standings=standings,
-                champion=champion,
-                focal_team=None,
-                selection_metric=downside_distance,
-                rarity_metric_value=league_total,
-            )
+            downside_distance = abs(league_total - plausible_downside_target)
+            downside = multiverse_candidates.get("plausible_downside")
+            if (
+                downside is None
+                or downside_distance < float(downside["selection_metric"])
+            ):
+                multiverse_candidates["plausible_downside"] = _capture_multiverse_candidate(
+                    trial_index=trial_index,
+                    wins=wins,
+                    points_for=points_for,
+                    standings=standings,
+                    champion=champion,
+                    focal_team=None,
+                    selection_metric=downside_distance,
+                    rarity_metric_value=league_total,
+                )
 
-        extreme = multiverse_candidates.get("extreme_tail")
-        if (
-            extreme is None
-            or typicality > float(extreme["selection_metric"])
-        ):
-            multiverse_candidates["extreme_tail"] = _capture_multiverse_candidate(
-                trial_index=trial_index,
-                wins=wins,
-                points_for=points_for,
-                standings=standings,
-                champion=champion,
-                focal_team=None,
-                selection_metric=typicality,
-                rarity_metric_value=typicality,
-            )
+            extreme = multiverse_candidates.get("extreme_tail")
+            if (
+                extreme is None
+                or typicality > float(extreme["selection_metric"])
+            ):
+                multiverse_candidates["extreme_tail"] = _capture_multiverse_candidate(
+                    trial_index=trial_index,
+                    wins=wins,
+                    points_for=points_for,
+                    standings=standings,
+                    champion=champion,
+                    focal_team=None,
+                    selection_metric=typicality,
+                    rarity_metric_value=typicality,
+                )
 
         if trial_biggest_blowout is not None:
             margin, matchup_index, home, away = trial_biggest_blowout
