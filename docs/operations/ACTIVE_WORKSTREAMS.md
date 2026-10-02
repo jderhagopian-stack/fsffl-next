@@ -1535,3 +1535,20 @@ The 35k-vs-50k Management gate is resolved: **retain 50,000 production authority
 Immediately after #333 merges, the active implementation becomes **origin-aware draft-pick Value**. It must consume Simulation-owned team-of-origin exact future-pick slot distributions; Value owns the economic conversion of those distributions. Do not let Value recreate team-strength/draft-order forecasting, and do not let Simulation emit economic trade value.
 
 Long-Term Intrinsic remains next after origin-aware draft-pick Value, followed by the later PIT historical-market foundation.
+
+
+## 2026-10-02 — ACTIVE: origin-aware draft-pick Value
+
+Controlling directive: `docs/operations/directives/20261002_ORIGIN_AWARE_DRAFT_PICK_VALUE.md`.
+
+Goal: convert accepted 50k Simulation team-of-origin exact slot distributions into governed FSFFL Intrinsic pick value using existing Value mixture primitives and Historical Pick Coordinate evidence.
+
+Key invariants:
+- compute `E[value(slot)]` over the full distribution, never `value(E[slot])`;
+- preserve origin team separately from current owner;
+- keep Broad Market pick values distinct from FSFFL Intrinsic;
+- do not invent class-strength or horizon multipliers;
+- next-draft origin-aware authority only until Simulation supports farther seasons;
+- 1k/5k scenario outputs remain preview-only; authoritative downstream pick Value requires 50k confirmation or exact authoritative reuse.
+
+After closure, advance directly to Long-Term Intrinsic.
