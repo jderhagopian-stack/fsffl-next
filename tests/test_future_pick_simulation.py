@@ -310,6 +310,30 @@ def test_unsupported_explicit_policy_does_not_get_silently_replaced_by_fallback(
     )
 
 
+def test_unknown_parameter_on_supported_explicit_mechanism_fails_closed() -> None:
+    explicit = _explicit_policy()
+    bad = explicit.model_copy(
+        update={
+            "parameters": explicit.parameters
+            + (
+                DraftOrderPolicyParameter(
+                    name="consolation_lottery_affects_order",
+                    value=True,
+                ),
+            )
+        }
+    )
+    result = simulate_regular_season(
+        _six_team_playoff_request(explicit_policy=bad)
+    )
+
+    assert result.future_pick_distributions == ()
+    assert result.future_pick_unavailability_reason == (
+        "unsupported explicit future-pick parameter: "
+        "consolation_lottery_affects_order"
+    )
+
+
 def _projection_state() -> LeagueState:
     league_id = "league:test"
     team_ids = tuple("abcdefghijkl")
