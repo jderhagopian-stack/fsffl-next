@@ -96,3 +96,16 @@ Do not broaden into general startup redesign or unrelated performance tuning.
 
 ## Sequencing
 Hold PR #335 at its current safe checkpoint. Once this corrective is accepted, rebase/reconcile #335 if needed and resume origin-aware draft-pick Value immediately. Then continue to Long-Term Intrinsic.
+
+
+## Management acceptance stop rule — 2026-10-02
+
+Acceptance infrastructure is now bounded.
+
+- PR #337 product/runtime corrective is already merged and deployed.
+- Permit **one** bounded correction of the staged acceptance harness/configuration (current #340 path) and **one** hosted acceptance attempt.
+- Do **not** create further acceptance-only PR chains, fixtures, identity layers, redeploy loops, or harness architecture if that attempt still fails for harness/setup reasons.
+- If the hosted harness still cannot prove the required lifecycle, switch immediately to one controlled physical iPhone/Safari refresh while Management/Implementation watches Render logs and memory telemetry.
+- The physical/telemetry proof must verify the same acceptance facts: one winning reconciliation, one 50k Simulation for an unchanged target, no stale duplicate build, monotonic readiness to 7/7, publication continuity, no restart, and memory within the engineering budget.
+- Once that evidence is clean, close this corrective and immediately resume PR #335.
+- Do not let acceptance-tooling work block Foundation 3 beyond this bound.
