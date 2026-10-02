@@ -474,3 +474,15 @@ The startup/manual-refresh sequencing corrective is accepted from physical + hos
 Management observed a separate user-facing issue: iPhone/Safari did not visibly acknowledge Refresh, show useful progress, or transition clearly to completed without a manual page reload. Park this as a future bounded browser-status/polling presentation effort. Do not let it trigger another acceptance-infrastructure chain and do not keep Foundation 3 on hold.
 
 Resume PR #335 immediately from its pinned safe checkpoint, then continue the accepted Value -> Long-Term Intrinsic -> PIT historical-market sequence.
+
+## 2026-10-02 — Simulation production performance diagnostic COMPLETE
+
+The narrow production profile reproduced the current physical Simulation duration at ~127.8s while preserving 50,000 canonical trials, `numpy-pcg64-batched-gauss-v1`, and batch 500.
+
+Measured hotspots are team-of-origin future-pick ordering (~27.558s), playoffs/championship (~15.824s), per-trial H2H reconstruction (~11.267s), and standings (~9.064s). RNG is only 1.481s; Multiverse is ~0.519s; cooperative foreground yield is ~0.192s. Team Utility / Analytics assembly adds 8.695s outside the 105.595s kernel.
+
+Peak RSS was 388,489,216 bytes, below the 429,496,720-byte engineering budget and 536,870,900-byte Render limit. The service repeatedly reached its 0.15 CPU limit, so this is CPU-bound rather than memory-bound.
+
+Management disposition: keep 50k authority and current RNG. The next bounded performance effort should first remove/batch-vectorize unconditional H2H reconstruction and reduce repeated Python work in exact team-origin slot ordering, preserving exact output/replay semantics; playoff batching is secondary. The earlier ~59s hosted NumPy interval is not an apples-to-apples current-workload baseline, while the current path remains ~26-27% faster than the ~173s legacy Python physical path despite richer Simulation 2.0 work.
+
+Evidence: `docs/operations/evidence/simulation_production_performance_diagnostic_20261002.md`.

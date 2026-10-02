@@ -2928,3 +2928,33 @@ Validation: exact head `66694ec2e76faee73047e302a1e92ed765dc98b1`; full CI **2,0
 
 Foundation 3 remains closed. Proceed directly to **Long-Term Intrinsic (Foundation 4)** under the accepted Y4-Y7 Research contract; do not reopen Simulation 2.0 or Foundation 3 absent contradictory evidence.
 
+## 2026-10-02 — Simulation production performance diagnostic COMPLETE
+
+The deferred narrow full-call production profile is complete on the accepted Simulation 2.0 runtime. Production authority remains **50,000 trials** with `numpy-pcg64-batched-gauss-v1`, batch 500; no Simulation semantics or accepted #324-#333 behavior were reopened.
+
+Representative governed FSFFL hosted run:
+- full measured Simulation composition: **~127.8s**;
+- 50k kernel + result aggregation: **105.595s**;
+- bye-aware weekly scoring/input: **11.401s**;
+- lineup/static compilation: **1.905s**;
+- Team Utility / Analytics view assembly: **8.695s**.
+
+Kernel hotspots:
+- team-of-origin future-pick ordering: **~27.558s**;
+- playoffs/championship: **~15.824s**;
+- per-trial matchup/H2H reconstruction: **~11.267s**;
+- standings: **~9.064s**.
+
+Non-bottlenecks:
+- RNG generation: **1.481s**;
+- Multiverse work: **~0.519s**;
+- common-world setup: negligible;
+- cooperative foreground yield: **~0.192s**.
+
+Peak RSS was **388,489,216 bytes**, below the **429,496,720-byte** engineering budget and **536,870,900-byte** Render hard limit. Render CPU repeatedly reached the 0.15 CPU limit, so the current runtime is CPU-bound, not memory-bound. Terminal publication persistence after downstream completion was ~**3.75s** and is not the Simulation bottleneck.
+
+Interpretation: the current ~126-128s path remains ~26-27% faster than the ~173s legacy Python physical baseline while doing materially more work. The earlier ~59s hosted NumPy interval is not an apples-to-apples current workload; the profile rules out RNG as the regression source.
+
+Next bounded performance opportunity: preserve exact 50k/RNG/replay/model semantics while eliminating or batch-vectorizing unconditional H2H reconstruction and reducing repeated Python work in team-origin slot ordering; playoff batching is secondary. No savings target is promoted until output-exact equivalence and a hosted benchmark prove it.
+
+Durable evidence: `docs/operations/evidence/simulation_production_performance_diagnostic_20261002.md`.
