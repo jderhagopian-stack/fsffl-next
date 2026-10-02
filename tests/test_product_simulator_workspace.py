@@ -18,7 +18,8 @@ def test_simulator_runtime_builds_one_simultaneous_changed_state() -> None:
     assert '"scenario_kind": "players_unavailable"' in source
     assert "item.player_id in selected" in source
     assert '"slot": RosterSlot.IR' in source
-    assert "run_cached_scenario_simulation" in source
+    assert "run_progressive_scenario_simulation" in source
+    assert '"scenario_computation"' in source
     assert '"scenario_cache_hit": cache_hit' in source
     assert '"competitive_outcomes": "NEXT-4 Simulation"' in source
     assert '"value": "unchanged; ownership is preserved"' in source
