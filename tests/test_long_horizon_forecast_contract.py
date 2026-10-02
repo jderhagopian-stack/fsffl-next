@@ -57,7 +57,9 @@ def _complete_player(
 
 
 def test_frozen_y4_y7_authority_map_preserves_exact_and_set_valued_cells() -> None:
-    assert len(LONG_HORIZON_AUTHORITY_MAP_SHA256) == 64
+    assert LONG_HORIZON_AUTHORITY_MAP_SHA256 == (
+        "487555fac2e5fd0823c6a70d29b1c1e60fbf2adc0e1bb8140f9f43e6ee0e9e00"
+    )
     assert LONG_HORIZON_AUTHORITY_MAP_VERSION == "y4-y7-symmetric-authority-20260927-v1"
 
     assert supported_long_horizon_policies(Position.QB, 5) == ("blanket_75_25",)
