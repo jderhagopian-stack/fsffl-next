@@ -1376,3 +1376,33 @@ This is sufficient Tier-B closeout under the risk-proportionate/no-redeploy/no-p
 
 **Simulation 2.0 roadmap advances immediately to item 7:** progressive scenario computation plus dependency-based selective recomputation for interactive consumers. Reconcile the existing scenario cache, common-world counterfactual path, Forecast/lineup/Simulation dependencies and product callers first; add only missing governed reuse/progression contracts. Convergence and PIT calibration remain item 8.
 
+## 2026-10-02 — Simulation 2.0 item 7 ACTIVE: progressive + dependency-selective scenarios
+
+#329 Multiverse is accepted and must not be reopened absent contradictory evidence. The active roadmap position is item 7: progressive interactive scenario computation plus dependency-based selective recomputation.
+
+Reconciliation before implementation:
+- exact changed-State scenario results already had bounded in-memory/durable caching and in-flight coalescing;
+- #327 already governs common-world competitive deltas;
+- canonical current-State Simulation remains 50,000 trials and is never downgraded;
+- trade, waiver and player-unavailable scenarios already share the same authoritative Simulation loader.
+
+Bounded item-7 implementation on `work/sim20-progressive-selective-scenarios`:
+- persisted canonical Simulation results now carry a compact `ScenarioSimulationPreparation` bundle: baseline optimized lineups, forward weekly team-scoring panel, scoring weeks, global-structure fingerprint and exact Forecast dependency fingerprint;
+- alternate-State dependency planning distinguishes bounded roster changes from global Simulation changes. Compatible roster-only scenarios recompute only affected teams' deterministic lineups/weekly scoring inputs while reusing unaffected teams exactly; global rule/schedule/availability/Forecast dependency changes fall back to full input recomputation;
+- alternate States with **no competitive roster dependency change** reuse the existing canonical competitive Simulation result exactly, even if the caller requested a lower stage, because an authoritative 50k result is stronger than a new preview;
+- interactive stages are explicit: `screening=1,000`, `provisional=5,000`, `confirmation=50,000`;
+- screening/provisional results are labeled `non_authoritative_scenario_preview`, expose a deeper-stage coordinate, and use distinct cache/model identities;
+- only 50,000-run confirmation or exact reuse of an already-authoritative canonical competitive result may cross Trade Decision / Opportunity materiality, disposition or action-authority boundaries;
+- Trade, waiver and What-If endpoints accept an explicit `scenario_stage`, defaulting to confirmation so existing product behavior remains authoritative;
+- scenario preparation is validated against the exact baseline State/result before reuse; mismatched/stale preparation fails closed;
+- the full league Monte Carlo outcome kernel still recomputes whenever competitive roster inputs actually change. Item 7 selectively reuses **unaffected deterministic preparation** rather than pretending unrelated league outcomes are independent.
+
+Authority boundaries:
+- Simulation owns stage fidelity, dependency planning, competitive results and common-world deltas;
+- Team Utility consumes Simulation competitive deltas and adds resilience/non-competitive channels;
+- Decision/Opportunity may inspect preview deltas but cannot promote materiality/disposition/action authority until confirmation;
+- Presentation/API transports stage/progression metadata only;
+- no calibrated adaptive run-count rule is introduced. The separate convergence/PIT study remains item 8 and 50,000 remains canonical authority.
+
+Promotion classification: Tier B Simulation execution/performance contract with versioned persisted preparation. Require focused dependency/stage/authority tests, full CI, fixed 50k replay review if serialization baselines change, exact-head P1/P2 review, then one targeted hosted acceptance of localized Simulation invalidation/resource/continuity plus the selective/progressive contract through exact-head tests. Do not broadly retest #324-#329.
+
