@@ -606,3 +606,15 @@ def test_preseason_baseline_loader_requests_new_governed_postseason_version() ->
     assert store.request is not None
     assert store.request["model_version"] == LEAGUE_ATLAS_PRESEASON_MODEL_VERSION
     assert LEAGUE_ATLAS_PRESEASON_MODEL_VERSION != "phase3-league-atlas-preseason-v1"
+
+
+def test_live_atlas_binds_origin_aware_pick_value_to_presentation_generation() -> None:
+    source = Path("src/fsffl/product/webapp.py").read_text(encoding="utf-8")
+
+    assert "build_live_origin_aware_pick_values" in source
+    assert "presentation_runtime.league_state" in source
+    assert "presentation_runtime.simulation_analytics.simulation_result" in source
+    assert "origin_aware_pick_values=origin_aware_pick_values" in source
+    assert "runtime.simulation_analytics.simulation_result" not in source.split(
+        "def league_atlas(", 1
+    )[1].split("@application.get", 1)[0]
