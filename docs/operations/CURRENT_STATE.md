@@ -2876,3 +2876,12 @@ New deterministic races prove:
 
 Promotion remains Tier C. Required next gate after exact-head docs-complete CI/review is one targeted hosted cold/partial-restore -> manual refresh lifecycle/resource acceptance. The acceptance must show no duplicate Simulation on one target, no superseded completed heavy phase, one terminal publication, monotonic readiness, and peak RSS <= 429,496,720 bytes. No Simulation semantics or 50,000-run authority changed.
 
+
+
+## 2026-10-02 — startup/refresh corrective ACCEPTED; Foundation 3 resumes
+
+Physical iPhone/Safari acceptance of the deployed corrective produced one coherent backend refresh: one 50k Simulation, no abort, Value + Intrinsic completion, one terminal publication, no restart, and peak RSS **426,971,136 bytes** under the **429,496,720-byte** engineering budget.
+
+A separate Safari presentation defect remains: Refresh gave no reliable visible acknowledgement/progress/completion and the finished state only became obvious after a page reload. Management explicitly defers that to a future bounded browser-status UX effort. It does not reopen the backend lifecycle corrective and does not block model/value work.
+
+Release the HOLD on PR #335 and resume origin-aware draft-pick Value from safe checkpoint `0564045f7b311d43443540974d54b0a00c5ec856`. Next after Foundation 3 remains Long-Term Intrinsic.
