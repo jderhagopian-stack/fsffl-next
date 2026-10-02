@@ -20,6 +20,7 @@ from fsffl.forecast import (
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.memory_attribution import log_object_graph, sample_rss_phase
+from fsffl.state.draft_order_policy import DraftOrderPolicyEvidence
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.team_utility import (
     LeagueScoringDispersionDiagnostic,
@@ -43,8 +44,8 @@ from fsffl.team_utility.simulation import (
 )
 from fsffl.team_utility.utility import CalculatedCompetitiveState
 
-LIVE_SIMULATION_MODEL_VERSION = "next14-live-simulation-analytics-v14:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
-EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next14-live-simulation-analytics-v14:numpy-pcg64-batched-gauss-v1:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+LIVE_SIMULATION_MODEL_VERSION = "next16-live-simulation-analytics-v16:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next16-live-simulation-analytics-v16:numpy-pcg64-batched-gauss-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
 
 
 def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
@@ -191,6 +192,7 @@ def build_live_simulation_analytics(
     rng_batch_size: int | None = None,
     generated_at: datetime | None = None,
     cooperative_yield: Callable[[], object] | None = None,
+    draft_order_policy: DraftOrderPolicyEvidence | None = None,
 ) -> LiveSimulationAnalyticsResult:
     """Run Forecast -> week-specific NEXT-4 Simulation -> NEXT-7.
 
@@ -304,14 +306,18 @@ def build_live_simulation_analytics(
         and not lineups[row.team_id].unfilled_slots
     ]
 
+    next_draft_season = league_state.league.season + 1
+
     with sample_rss_phase("simulation.input_and_schedule_materialization"):
         request = build_regular_season_simulation_input(
             league_state,
             weekly_scoring=weekly_scoring,
             playoff_weekly_scoring=playoff_weekly_scoring,
+            future_pick_draft_season=next_draft_season,
+            future_pick_draft_order_policy=draft_order_policy,
             simulation_count=simulation_count,
             seed=seed,
-            model_version="next4-live-current-season-v9:common-world-counterfactual-coordinate:finish-seed-bye-outputs:factual-completed-weeks:playoff-week-scoring:empirical-weekly-volatility:league-configured-postseason",
+            model_version="next4-live-current-season-v11:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:factual-completed-weeks:playoff-week-scoring:empirical-weekly-volatility:league-configured-postseason",
             rng_protocol=rng_protocol,
             rng_batch_size=rng_batch_size,
         )
