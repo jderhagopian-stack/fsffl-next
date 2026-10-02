@@ -393,8 +393,9 @@ def build_origin_aware_pick_values(
     league_state: LeagueState,
     origin_slot_evidence: tuple[OriginPickProbabilityEvidence, ...],
     *,
-    slot_value_observations: tuple[HistoricalDraftSlotObservation, ...],
-    slot_value_scale: ValueScale,
+    slot_value_observations: tuple[HistoricalDraftSlotObservation, ...] = (),
+    slot_value_scale: ValueScale | None = None,
+    governed_slot_value_curves: tuple[GovernedDraftSlotValueCurve, ...] = (),
     generic_priors: tuple[GenericPickValuePrior, ...] = (),
     authoritative_simulation_count: int = AUTHORITATIVE_SIMULATION_COUNT,
     model_version: str = ORIGIN_AWARE_PICK_VALUE_MODEL_VERSION,
@@ -433,6 +434,24 @@ def build_origin_aware_pick_values(
         raise ValueError("canonical pick ownership requires unique pick ids")
     priors = _prior_by_coordinate(generic_priors)
     curve_by_round: dict[int, GovernedDraftSlotValueCurve] = {}
+    if governed_slot_value_curves:
+        rounds = [curve.round for curve in governed_slot_value_curves]
+        if len(rounds) != len(set(rounds)):
+            raise ValueError("governed slot-value curves require unique rounds")
+        scales = {curve.scale for curve in governed_slot_value_curves}
+        if len(scales) != 1:
+            raise ValueError("governed slot-value curves must share one ValueScale")
+        if slot_value_observations:
+            raise ValueError(
+                "provide governed slot-value curves or raw slot observations, not both"
+            )
+        curve_by_round.update(
+            {curve.round: curve for curve in governed_slot_value_curves}
+        )
+    elif slot_value_scale is None:
+        raise ValueError(
+            "slot_value_scale is required when governed slot-value curves are absent"
+        )
 
     results: list[OriginAwarePickValueResult] = []
     for pick in sorted(
@@ -533,14 +552,24 @@ def build_origin_aware_pick_values(
 
         curve = curve_by_round.get(pick.round)
         if curve is None:
+            if slot_value_scale is None:
+                raise ValueError(
+                    f"governed slot-value curve missing for rookie round {pick.round}"
+                )
             curve = build_governed_draft_slot_value_curve(
                 slot_value_observations,
                 round=pick.round,
                 as_of=league_state.as_of,
-                scale=slot_value_scale,
+                scale=curve.scale,
                 league_rules=league_state.league.rules,
             )
             curve_by_round[pick.round] = curve
+        if curve.as_of > league_state.as_of:
+            raise ValueError("governed slot-value curve cannot postdate LeagueState")
+        if curve.scale not in (
+            {slot_value_scale} if slot_value_scale is not None else {curve.scale}
+        ):
+            raise ValueError("slot-value curve scale does not match requested ValueScale")
         curve_by_slot = {row.slot_in_round: row for row in curve.slots}
         probability_slots = {
             row.slot_in_round
