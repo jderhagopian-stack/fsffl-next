@@ -55,13 +55,17 @@ def test_fast_trade_analysis_explicitly_declares_partial_pre_simulation_scope() 
 def test_simulation_backed_trade_response_only_claims_complete_scope_when_dimensions_are_complete() -> None:
     source = SIM_RUNTIME.read_text(encoding="utf-8")
     for phrase in (
-        '"complete_simulation_backed" if decision_complete else "simulation_backed_incomplete"',
+        '"complete_simulation_backed"',
+        '"simulation_backed_incomplete"',
         '"complete_trade_disposition"',
         '"simulation_backed_trade_disposition_incomplete"',
+        '"non_authoritative_scenario_preview"',
+        '"competitive_preview_only"',
         '"simulation_backed": True',
         '"final_disposition_available": decision_complete',
-        '"final_trade_disposition": decision_complete',
-        'missing_dimensions = tuple(decision_dimensions["confidence"]["missing_dimensions"])',
+        '"final_trade_disposition": decision_complete and computation.authoritative',
+        'decision_dimensions["confidence"]["missing_dimensions"]',
+        "authoritative_50000_simulation_confirmation",
         "intrinsic-action-facing",
     ):
         assert phrase in source
