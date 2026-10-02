@@ -6,6 +6,10 @@ on:
     paths:
       - 'scripts/build_fsffl_foundation3_pick_curve.py'
       - 'src/fsffl/value/historical_draft_value.py'
+      - 'src/fsffl/value/fsffl_foundation3_pick_curve.py'
+      - 'src/fsffl/value/origin_aware_pick.py'
+      - 'src/fsffl/product/origin_aware_pick_value_runtime.py'
+      - 'scripts/run_foundation3_fsffl_2027_sanity.py'
       - '.github/workflows/foundation3-fsffl-pick-curve.yml'
 
 jobs:
@@ -30,11 +34,15 @@ jobs:
             --rookie-rounds 3 \
             --max-observation-age-days 14 \
             --output artifacts/foundation3/fsffl_pick_slot_evidence.json
+      - name: Run real FSFFL 2027 origin-aware pick-value sanity
+        run: python scripts/run_foundation3_fsffl_2027_sanity.py
       - name: Upload derived evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: foundation3-fsffl-pick-slot-evidence
-          path: artifacts/foundation3/fsffl_pick_slot_evidence.json
+          path: |
+            artifacts/foundation3/fsffl_pick_slot_evidence.json
+            artifacts/foundation3/fsffl_2027_origin_aware_sanity.json
           if-no-files-found: warn
           retention-days: 7
