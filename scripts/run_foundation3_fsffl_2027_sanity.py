@@ -13,19 +13,24 @@ from fsffl.team_utility.simulation import NUMPY_PCG64_BATCHED_GAUSS_V1
 from fsffl.value.fsffl_foundation3_pick_curve import (
     FSFFL_FOUNDATION3_CURVES,
     FSFFL_FOUNDATION3_CURVE_MODEL_VERSION,
-    FSFFL_FOUNDATION3_TARGET_LEAGUE_ID,
     FSFFL_FOUNDATION3_TARGET_DRAFT_SEASON,
+    FSFFL_FOUNDATION3_TARGET_LEAGUE_EXTERNAL_ID,
+    FSFFL_FOUNDATION3_TARGET_LEAGUE_ID,
 )
 from fsffl.value.origin_aware_pick import OriginAwarePickValueStatus
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts/foundation3/fsffl_2027_origin_aware_sanity.json"
-LEAGUE_ID = FSFFL_FOUNDATION3_TARGET_LEAGUE_ID
+LEAGUE_EXTERNAL_ID = FSFFL_FOUNDATION3_TARGET_LEAGUE_EXTERNAL_ID
 
 
 def main() -> None:
-    state = default_sleeper_state_loader(LEAGUE_ID)
+    state = default_sleeper_state_loader(LEAGUE_EXTERNAL_ID)
+    if state.league.league_id != FSFFL_FOUNDATION3_TARGET_LEAGUE_ID:
+        raise RuntimeError(
+            "canonical Sleeper league identity diverges from frozen Foundation 3 scope"
+        )
     if state.league.season + 1 != FSFFL_FOUNDATION3_TARGET_DRAFT_SEASON:
         raise RuntimeError(
             "Foundation 3 live curve target season no longer matches current FSFFL State"
