@@ -566,9 +566,7 @@ def build_origin_aware_pick_values(
             curve_by_round[pick.round] = curve
         if curve.as_of > league_state.as_of:
             raise ValueError("governed slot-value curve cannot postdate LeagueState")
-        if curve.scale not in (
-            {slot_value_scale} if slot_value_scale is not None else {curve.scale}
-        ):
+        if slot_value_scale is not None and curve.scale != slot_value_scale:
             raise ValueError("slot-value curve scale does not match requested ValueScale")
         curve_by_slot = {row.slot_in_round: row for row in curve.slots}
         probability_slots = {
