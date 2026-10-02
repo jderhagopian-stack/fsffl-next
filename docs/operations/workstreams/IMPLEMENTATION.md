@@ -2064,3 +2064,35 @@ The private beta requires Basic Auth and no authenticated scenario POST occurred
 
 **Simulation 2.0 roadmap advances immediately to item 5: team-of-origin future-pick Simulation.** Build exact-slot/expected-slot distributions from governed origin-team football outcomes and actual league draft-order rules; preserve current owner separately from origin team; do not convert generic early/mid/late labels into authority and do not invent future-team strength beyond supported horizons.
 
+## 2026-10-01 — #327 ACCEPTED: governed common-world counterfactual deltas
+
+PR #327 was squash-merged as `4ddf4c6b16272eda803ea5ad0af8c06b6407c617`. It completes Simulation 2.0 item 4 without reopening accepted #324–#326 work.
+
+Accepted capability:
+- Simulation persists explicit topology-only common-world coordinates for regular-season and postseason random-draw structure;
+- common-random-number provenance is emitted only when baseline/scenario model, count, seed, RNG replay identity and relevant draw topology all match;
+- otherwise Simulation still returns the mathematically valid aggregate competitive-outcome delta with explicit fallback provenance/reason;
+- typed Simulation-owned competitive deltas cover expected/future wins, playoff, bye, first-place and championship probability;
+- Trade, Waiver and What-If consume Simulation competitive deltas; Team Utility only adds non-competitive consequence channels; Decision/Value/owner/acceptance authority remains downstream;
+- scenario-cache reuse remains performance-only and does not create comparison authority;
+- postseason common-world eligibility is evaluated per playoff week, so round-to-round stochasticity may differ when every possible participant within each round consumes the same draw count;
+- both baseline and scenario replay provenance is retained on aggregate-fallback comparisons.
+
+Validation before merge:
+- corrected Python 3.11 full suite: **1,970 passed**, one existing warning;
+- corrected Python 3.12 full suite: **1,970 passed**, one existing warning;
+- fixed 50,000-world replay digests were reviewed for both supported runtimes and normal CI policy restored;
+- bounded P1/P2 review corrected both-side replay provenance and postseason topology precision before promotion;
+- deterministic tests prove same seed alone is insufficient, draw-topology mismatch fails common-world claims closed, uniform topology enables common-world deltas, and mixed participant-dependent postseason topology falls back explicitly.
+
+Single targeted hosted acceptance used only Render deploy `dep-davfcjhsrm7s73bprjag`:
+- exact merged commit `4ddf4c6b...` became live at **00:11:46Z** on one replacement instance; no same-commit redeploy followed;
+- startup restored canonical State `68eac82b...` with Forecast and Value reusable while correctly rejecting the pre-#327 Simulation artifact (`simulation=False`) because Simulation result identity changed;
+- startup resource evidence was ~278 MB RSS / ~279 MB peak against the ~429 MB engineering budget and 512 MiB service limit; memory then settled near **308 MB** with idle CPU;
+- no 5xx, OOM/recycle, repeated reconciliation loop or replacement deployment appeared in the stable window;
+- no authenticated trade/waiver/What-If request occurred during that window. Private-beta scenario routes require Basic Auth, and acceptance did not retrieve/use private credentials or trigger a second same-commit deployment. The counterfactual execution/provenance contract itself is therefore supported by exact-head deterministic/runtime tests, while the single hosted deployment proves the hosted-only restore/resource/identity boundary. This limitation is explicit and must not be rewritten as a physical scenario request.
+
+This is sufficient risk-proportionate Tier-B closeout under the no-redeploy/no-credential boundary. Do not reopen or redeploy #324–#327 absent contradictory evidence.
+
+**Simulation 2.0 roadmap advances immediately to item 5:** team-of-origin future rookie-pick distributions under the actual league draft-order rules. Simulation owns the football-outcome distribution; Value/Decision consume it downstream. Generic early/mid/late labels are summaries only, never the primary authority.
+
