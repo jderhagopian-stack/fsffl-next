@@ -483,6 +483,37 @@ def build_league_atlas_payload(
                 if simulation is not None
                 else None
             ),
+            "multiverse": (
+                {
+                    "status": (
+                        "ready"
+                        if simulation.simulation_result.multiverse_worlds
+                        else "unavailable"
+                    ),
+                    "model_version": (
+                        simulation.simulation_result.multiverse_model_version
+                    ),
+                    "worlds": [
+                        world.model_dump(mode="json")
+                        for world in simulation.simulation_result.multiverse_worlds
+                    ],
+                    "reason": (
+                        None
+                        if simulation.simulation_result.multiverse_worlds
+                        else (
+                            "Representative worlds are unavailable for this "
+                            "Simulation generation."
+                        )
+                    ),
+                }
+                if simulation is not None
+                else {
+                    "status": "unavailable",
+                    "model_version": None,
+                    "worlds": [],
+                    "reason": "Matching governed Simulation evidence is not yet available.",
+                }
+            ),
             "reason": (
                 None
                 if simulation_rows
@@ -496,6 +527,10 @@ def build_league_atlas_payload(
             "max_points_for": "canonical State provider potential-points evidence when available",
             "preseason": "frozen pre-opener State + governed Forecast + matching 50,000-run Simulation when available",
             "simulation": "governed 50,000-run Simulation when already available",
+            "multiverse": (
+                "bounded representative worlds selected from the same governed "
+                "Simulation; explanation only, with replay identity and empirical rarity"
+            ),
             "competitive_state": "existing Team Utility calculated competitive state",
             "pick_ownership": "canonical State",
             "pick_location": (
