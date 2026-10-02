@@ -1655,6 +1655,12 @@ def simulate_regular_season(
     matchup_wall_seconds = 0.0
     matchup_cpu_seconds = 0.0
     aggregation_wall_seconds = 0.0
+    common_world_wall_seconds = 0.0
+    standings_wall_seconds = 0.0
+    playoff_wall_seconds = 0.0
+    future_pick_wall_seconds = 0.0
+    multiverse_wall_seconds = 0.0
+    kernel_tail_wall_seconds = 0.0
     profile_sample_interval = 100
     profile_sample_count = 0
     wins_sum = [0.0] * team_count
@@ -1728,6 +1734,7 @@ def simulate_regular_season(
             ]
             future_pick_unavailability_reason = None
 
+    common_world_started = _profile_wall_clock() if profile_enabled else None
     # Common-world coordinates intentionally fingerprint only the factual baseline,
     # ordered draw topology and governed league structure. Forecast means/standard
     # deviations are excluded except for the deterministic-vs-stochastic mask,
@@ -1822,6 +1829,9 @@ def simulate_regular_season(
                     separators=(",", ":"),
                 ).encode()
             ).hexdigest()
+
+    if common_world_started is not None:
+        common_world_wall_seconds += _profile_wall_clock() - common_world_started
 
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
@@ -2040,15 +2050,24 @@ def simulate_regular_season(
             matchup_ended = _profile_wall_clock()
             matchup_wall_seconds += (matchup_ended - matchup_started) * sample_weight
         aggregation_started = _profile_wall_clock() if sample_trial else None
-        standings = sorted(ranking_indexes, key=lambda index: (-wins[index], -points_for[index], team_ids[index]))
+        standings_started = _profile_wall_clock() if sample_trial else None
+        standings = sorted(
+            ranking_indexes,
+            key=lambda index: (-wins[index], -points_for[index], team_ids[index]),
+        )
         first_count[standings[0]] += 1
         for rank_index, team_idx in enumerate(standings):
             finish_count[team_idx][rank_index] += 1
         if playoff_supported:
             for index in standings[: request.playoff_team_count]:
                 playoff_count[index] += 1
+        if standings_started is not None:
+            standings_wall_seconds += (
+                _profile_wall_clock() - standings_started
+            ) * sample_weight
         playoff_places_for_draft = None
         playoff_elimination_rounds = None
+        playoff_started = _profile_wall_clock() if sample_trial else None
         if championship_supported:
             if (
                 future_pick_slot_counts is not None
@@ -2080,7 +2099,12 @@ def simulate_regular_season(
             champion_count[champion] += 1
         else:
             champion = None
+        if playoff_started is not None:
+            playoff_wall_seconds += (
+                _profile_wall_clock() - playoff_started
+            ) * sample_weight
 
+        future_pick_started = _profile_wall_clock() if sample_trial else None
         if future_pick_slot_counts is not None and future_pick_policy is not None:
             playoff_team_count = future_pick_policy.playoff_team_count
             non_playoff = standings[playoff_team_count:]
@@ -2145,7 +2169,12 @@ def simulate_regular_season(
                 raise ValueError(
                     "future-pick draft order did not assign every league slot"
                 )
+        if future_pick_started is not None:
+            future_pick_wall_seconds += (
+                _profile_wall_clock() - future_pick_started
+            ) * sample_weight
 
+        multiverse_started = _profile_wall_clock() if sample_trial else None
         league_total = sum(points_for)
         typicality = 0.0
         for index in range(team_count):
@@ -2365,6 +2394,12 @@ def simulate_regular_season(
                     )
                 )
 
+        if multiverse_started is not None:
+            multiverse_wall_seconds += (
+                _profile_wall_clock() - multiverse_started
+            ) * sample_weight
+
+        kernel_tail_started = _profile_wall_clock() if sample_trial else None
         if trial_observer is not None:
             trial_observer(
                 tuple(wins), tuple(points_for), tuple(standings), champion
@@ -2373,6 +2408,10 @@ def simulate_regular_season(
             wins_sum[index] += value
             remaining_wins_sum[index] += value - actual_wins[index]
             wins_sq_sum[index] += value * value
+        if kernel_tail_started is not None:
+            kernel_tail_wall_seconds += (
+                _profile_wall_clock() - kernel_tail_started
+            ) * sample_weight
         if aggregation_started is not None:
             aggregation_ended = _profile_wall_clock()
             aggregation_wall_seconds += (aggregation_ended - aggregation_started) * sample_weight
@@ -2462,6 +2501,9 @@ def simulate_regular_season(
             "python-regular-root-seed-v1;"
             "python-playoff-xor-0x5F3759DF-v1"
         )
+    future_pick_result_started = (
+        _profile_wall_clock() if profile_enabled else None
+    )
     future_pick_distributions: tuple[TeamOriginFuturePickDistribution, ...] = ()
     if future_pick_slot_counts is not None and future_pick_policy is not None:
         future_pick_distributions = tuple(
@@ -2477,6 +2519,10 @@ def simulate_regular_season(
                 ),
             )
             for index, team_id in enumerate(team_ids)
+        )
+    if future_pick_result_started is not None:
+        future_pick_wall_seconds += (
+            _profile_wall_clock() - future_pick_result_started
         )
 
     simulation_id = hashlib.sha256(
@@ -2498,6 +2544,7 @@ def simulate_regular_season(
             separators=(",", ":"),
         ).encode()
     ).hexdigest()
+    multiverse_result_started = _profile_wall_clock() if profile_enabled else None
     multiverse_worlds = _build_multiverse_examples(
         candidates=multiverse_candidates,
         team_ids=team_ids,
@@ -2521,6 +2568,10 @@ def simulate_regular_season(
         rng_seed_derivation=seed_derivation,
         simulation_input_fingerprint=input_fingerprint,
     )
+    if multiverse_result_started is not None:
+        multiverse_wall_seconds += (
+            _profile_wall_clock() - multiverse_result_started
+        )
 
     result = RegularSeasonSimulationResult(
         outcomes=tuple(outcomes),
@@ -2557,13 +2608,19 @@ def simulate_regular_season(
         _logger.info(
             "FSFFL simulation profile phase=kernel_summary trials=%s rng_protocol=%s batch=%s "
             "rng_wall=%.6f rng_cpu=%.6f matchup_wall=%.6f matchup_cpu=%.6f "
-            "standings_playoff_aggregation_wall_estimate=%.6f sample_interval=%s samples=%s "
+            "standings_playoff_aggregation_wall_estimate=%.6f common_world_wall=%.6f "
+            "standings_wall_estimate=%.6f playoff_wall_estimate=%.6f "
+            "future_pick_wall_estimate=%.6f multiverse_wall_estimate=%.6f "
+            "kernel_tail_wall_estimate=%.6f sample_interval=%s samples=%s "
             "result_materialization_wall=%.6f result_materialization_cpu=%.6f",
             request.simulation_count, request.rng_protocol, batch_size,
             rng_wall_seconds, rng_cpu_seconds, matchup_wall_seconds,
-            matchup_cpu_seconds, aggregation_wall_seconds, profile_sample_interval,
-            profile_sample_count,
-            result_ended[0] - result_started[0], result_ended[1] - result_started[1],
+            matchup_cpu_seconds, aggregation_wall_seconds, common_world_wall_seconds,
+            standings_wall_seconds, playoff_wall_seconds, future_pick_wall_seconds,
+            multiverse_wall_seconds, kernel_tail_wall_seconds,
+            profile_sample_interval, profile_sample_count,
+            result_ended[0] - result_started[0],
+            result_ended[1] - result_started[1],
         )
     return result
 
