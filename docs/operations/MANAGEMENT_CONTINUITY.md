@@ -438,3 +438,12 @@ This does **not** reopen #324-#331. Current production authority remains 50,000 
 Original item-8 context motivating the test: 35k three-run median ~24.23s versus 50k ~34.64s, while the original eight-root fixture preserved all tested clear/near delta signs. That evidence is promising but not broad enough by itself to change authority.
 
 Temporarily hold origin-aware draft-pick Value until this gate resolves. If 35k is merely numerically noisier but product-equivalent across the stress set, return a Management proposal rather than changing production automatically. If any meaningful boundary case fails, retain 50k and resume the approved Value -> Long-Term Intrinsic -> PIT historical-market sequence.
+
+
+## 2026-10-02 — 35k authority gate resolved
+
+Management reviewed the completed 12-root / four-fixture stress study and retained **50,000** as canonical production Simulation authority. The candidate 35k count delivered ~29.9% median harness runtime savings but crossed materially more product-visible boundaries than 50k relative to the same-root 100k research reference: 71 candidate-only divergences versus 24 production-only divergences. Ranking agreement was 45/48 at 35k versus 47/48 at 50k; future-pick boundary summaries were 10/12 versus 11/12. Counterfactual signs/materiality remained stable at both counts.
+
+Directive outcome: do not promote 35k, do not add an adaptive authority rule, and stop count hunting. 35k remains permissible only for explicitly non-authoritative research/internal use. Production remains 50k.
+
+PR #333 is closeout-only and requires no Render/physical proof. Once merged, release the temporary hold and proceed immediately to **origin-aware draft-pick Value**, preserving the authority boundary: Simulation owns slot probability distributions; Value owns economic valuation; Decision remains downstream.
