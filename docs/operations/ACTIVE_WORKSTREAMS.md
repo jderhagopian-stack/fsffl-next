@@ -1515,3 +1515,14 @@ PIT outcome:
 
 Next approved program sequence: **origin-aware draft-pick Value** consuming the accepted team-of-origin pick-slot distributions -> **Long-Term Intrinsic** -> later **PIT historical market evidence**. Do not reopen #324-#331 absent contradictory evidence or a new Management directive.
 
+
+
+## 2026-10-02 — ACTIVE: bounded 35k vs 50k Simulation stress test
+
+**Primary management gate:** execute `docs/operations/directives/20261002_SIMULATION_35K_STRESS_TEST.md`.
+
+Simulation 2.0 #324-#331 remains accepted. Production remains at 50,000 canonical runs. This is a bounded post-closeout authority re-evaluation focused only on whether 35,000 preserves decision-relevant stability under hard cases while materially reducing runtime.
+
+Required evidence emphasizes product consequences: near-boundary sign stability, team ordering, rounded probabilities, classification inputs, pick-slot summaries and downstream Decision/Opportunity disposition where existing governed consumers apply. Same-root 100k remains research reference only.
+
+**HOLD:** origin-aware draft-pick Value implementation until this stress-test Management gate resolves. Then resume immediately with 50k retained, or after a separately approved/promoted count change if Management chooses 35k. Long-Term Intrinsic and later PIT historical-market work remain downstream.
