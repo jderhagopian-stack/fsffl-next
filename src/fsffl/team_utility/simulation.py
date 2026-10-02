@@ -1007,19 +1007,29 @@ def simulate_regular_season(
             "postseason_scoring_or_rules_unavailable"
         )
     else:
-        postseason_stochastic_flags = tuple(
-            stddev != 0.0
-            for week in request.playoff_rules.round_weeks
-            for _mean, stddev in playoff_scoring[week]
-        )
-        # If some possible playoff participants consume RNG and others do not,
-        # advancement can change the number of draws between alternate States.
-        # Same seed is then not sufficient to prove paired postseason worlds.
-        if len(set(postseason_stochastic_flags)) > 1:
-            common_world_postseason_unavailability_reason = (
-                "mixed_deterministic_stochastic_playoff_draws"
+        postseason_randomness_by_week: list[tuple[int, str]] = []
+        for week in request.playoff_rules.round_weeks:
+            week_stochastic_flags = tuple(
+                stddev != 0.0 for _mean, stddev in playoff_scoring[week]
             )
-        else:
+            # Pairing is stable when every possible participant in a given game
+            # week consumes the same number of RNG draws. Different playoff weeks
+            # may legitimately be all-stochastic vs all-deterministic because the
+            # number of draws remains fixed within each week for either State.
+            if len(set(week_stochastic_flags)) > 1:
+                common_world_postseason_unavailability_reason = (
+                    "mixed_deterministic_stochastic_playoff_draws"
+                )
+                break
+            postseason_randomness_by_week.append(
+                (
+                    week,
+                    "all_stochastic"
+                    if week_stochastic_flags and week_stochastic_flags[0]
+                    else "all_deterministic",
+                )
+            )
+        if common_world_postseason_unavailability_reason is None:
             postseason_common_world_payload = {
                 "regular_coordinate": common_world_regular_season_coordinate,
                 "playoff_rules": request.playoff_rules.model_dump(mode="json"),
@@ -1027,12 +1037,7 @@ def simulate_regular_season(
                     item.model_dump(mode="json")
                     for item in request.playoff_rules.canonical_execution_matchups()
                 ],
-                "postseason_randomness": (
-                    "all_stochastic"
-                    if postseason_stochastic_flags
-                    and postseason_stochastic_flags[0]
-                    else "all_deterministic"
-                ),
+                "postseason_randomness_by_week": postseason_randomness_by_week,
             }
             common_world_postseason_coordinate = hashlib.sha256(
                 json.dumps(
