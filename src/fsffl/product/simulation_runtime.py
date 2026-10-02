@@ -667,50 +667,55 @@ def build_live_simulation_analytics(
         warnings=tuple(warnings),
     )
 
-    team_views: list[TeamAnalyticsView] = []
-    for team in ordered_teams:
-        try:
-            utility = assemble_team_utility_vector(
-                league_state,
-                effective_forecasts,
-                team_id=team.team_id,
-                as_of=league_state.as_of,
-                horizon=ForecastHorizon.SEASON,
-                competitive_outcome=outcomes[team.team_id],
-                competitive_state_policy=competitive_state_policy,
-                model_version="next4-live-team-utility-v5:resilience-driver-identity",
+    with sample_rss_phase("simulation.team_utility_and_analytics_views"):
+        team_views: list[TeamAnalyticsView] = []
+        for team in ordered_teams:
+            try:
+                utility = assemble_team_utility_vector(
+                    league_state,
+                    effective_forecasts,
+                    team_id=team.team_id,
+                    as_of=league_state.as_of,
+                    horizon=ForecastHorizon.SEASON,
+                    competitive_outcome=outcomes[team.team_id],
+                    competitive_state_policy=competitive_state_policy,
+                    model_version="next4-live-team-utility-v5:resilience-driver-identity",
+                )
+            except ValueError:
+                if not lineups[team.team_id].unfilled_slots:
+                    raise
+                utility = TeamUtilityVector(
+                    team_id=team.team_id,
+                    as_of=league_state.as_of,
+                    competitive_outcome=outcomes[team.team_id],
+                    calculated_competitive_state=(
+                        classify_calculated_competitive_state(
+                            outcomes[team.team_id],
+                            competitive_state_policy,
+                            as_of=league_state.as_of,
+                        )
+                        if competitive_state_policy is not None
+                        else CalculatedCompetitiveState.UNKNOWN
+                    ),
+                    model_version="next4-live-team-utility-v5:resilience-driver-identity:resilience_unavailable_incomplete_roster",
+                )
+            team_views.append(
+                build_team_analytics_view(
+                    league_state,
+                    context=context,
+                    team_id=team.team_id,
+                    forecasts=forecasts,
+                    optimized_lineup=lineups[team.team_id],
+                    position_strengths=position_strengths_by_team[team.team_id],
+                    utility=utility,
+                )
             )
-        except ValueError:
-            if not lineups[team.team_id].unfilled_slots:
-                raise
-            utility = TeamUtilityVector(
-                team_id=team.team_id,
-                as_of=league_state.as_of,
-                competitive_outcome=outcomes[team.team_id],
-                calculated_competitive_state=(
-                    classify_calculated_competitive_state(
-                        outcomes[team.team_id],
-                        competitive_state_policy,
-                        as_of=league_state.as_of,
-                    )
-                    if competitive_state_policy is not None
-                    else CalculatedCompetitiveState.UNKNOWN
-                ),
-                model_version="next4-live-team-utility-v5:resilience-driver-identity:resilience_unavailable_incomplete_roster",
-            )
-        team_views.append(
-            build_team_analytics_view(
-                league_state,
-                context=context,
-                team_id=team.team_id,
-                forecasts=forecasts,
-                optimized_lineup=lineups[team.team_id],
-                position_strengths=position_strengths_by_team[team.team_id],
-                utility=utility,
-            )
-        )
 
-    views = tuple(team_views)
+        views = tuple(team_views)
+        league_view = build_league_analytics_view(
+            context=context,
+            team_views=views,
+        )
     preparation = ScenarioSimulationPreparation(
         source_state_id=league_state.state_id,
         structure_fingerprint=structure_fingerprint,
@@ -720,7 +725,7 @@ def build_live_simulation_analytics(
         forward_weekly_scoring=forward_weekly_scoring,
     )
     return LiveSimulationAnalyticsResult(
-        league_view=build_league_analytics_view(context=context, team_views=views),
+        league_view=league_view,
         team_views=views,
         simulation_result=simulation,
         scoring_dispersion_diagnostic=scoring_dispersion_diagnostic,
