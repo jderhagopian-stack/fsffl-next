@@ -34,14 +34,13 @@ def build_waiver_simulation_comparison(
     simulation_loader: SimulationLoader,
     scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION,
 ) -> dict[str, object]:
-    """Run one canonical add/drop scenario through NEXT-4 Simulation authority.
+    """Run one governed add/drop scenario stage through NEXT-4 Simulation.
 
     Product does not score waiver desirability here. NEXT-6 owns candidate search,
     NEXT-4 owns competitive outcomes, and materiality remains a separate governed
-    interpretation step with explicit policies. This adapter only creates the
-    changed State, simulates it, and returns the typed before/after Team Utility
-    delta for the focal franchise. Exact repeated changed States may reuse the
-    prior authoritative Simulation result.
+    interpretation step with explicit policies. Screening/provisional stages are
+    diagnostic previews; confirmation or exact canonical competitive reuse is
+    authoritative. Exact repeated changed States may reuse the exact stage result.
     """
 
     league_state = runtime.league_state
