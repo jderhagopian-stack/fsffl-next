@@ -88,6 +88,7 @@ from .scenario_cache import configure_scenario_cache_persistence
 from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
 from .state_first_acceptance import (
     run_state_first_production_acceptance,
+    resolve_staged_acceptance_user,
     run_state_first_restored_refresh_acceptance,
     stage_restored_refresh_partial_acceptance,
 )
@@ -1161,15 +1162,11 @@ def _maybe_start_state_first_production_acceptance() -> None:
         "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_SOURCE_USER",
         _beta_restore_user,
     ).strip()
-    if (
-        stage_partial_restore
-        and acceptance_user
-        and acceptance_user == acceptance_source_user
-    ):
-        # Legacy hosted acceptance runs may have pointed the acceptance identity at
-        # the beta username. Staged partial acceptance must never mutate that source
-        # user, so derive the dedicated isolated identity automatically.
-        acceptance_user = "runtime-availability-production-acceptance"
+    if stage_partial_restore:
+        acceptance_user = resolve_staged_acceptance_user(
+            source_user_id=acceptance_source_user,
+            configured_acceptance_user_id=acceptance_user,
+        )
     if stage_partial_restore and acceptance_mode != "restored_refresh":
         _runtime_availability_acceptance_state.update(
             status="fail",
