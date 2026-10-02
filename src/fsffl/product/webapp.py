@@ -1700,6 +1700,25 @@ def create_app(
                 elif working_target != expected_state_id:
                     reason = "working_target_changed"
                 if reason is not None:
+                    # We are still inside the admitted heavy-work lane. Reclaim the
+                    # just-finished prior phase before releasing admission to the
+                    # replacement owner, so a stale waiter cannot hand transient RSS
+                    # directly into the next expensive build.
+                    reclaim_phase_memory(
+                        f"{user_id}:{expected_state_id}:stale_{phase}_admission"
+                    )
+                    logging.getLogger("uvicorn.error").info(
+                        "FSFFL intelligence stale heavy phase skipped user=%s "
+                        "phase=%s reason=%s expected_generation=%s "
+                        "current_generation=%s expected_state=%s working_target=%s",
+                        user_id,
+                        phase,
+                        reason,
+                        expected_generation,
+                        current_generation,
+                        expected_state_id,
+                        working_target,
+                    )
                     raise IntelligenceJobInterrupted(
                         f"{reason}_before_{phase}"
                     )
