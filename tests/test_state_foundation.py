@@ -130,8 +130,11 @@ def test_governed_draft_order_policy_is_canonical_state_evidence() -> None:
     governed = state.model_copy(update={"draft_order_policies": (policy,)})
 
     assert governed.state_id != state.state_id
-    assert '"draft_order_policies"' in canonical_state_json(governed)
-    assert load_state_json(canonical_state_json(governed)) == governed
+    governed_json = canonical_state_json(governed)
+    restored = load_state_json(governed_json)
+    assert '"draft_order_policies"' in governed_json
+    assert restored.state_id == governed.state_id
+    assert canonical_state_json(restored) == governed_json
 
     wrong_league = policy.model_copy(update={"league_id": "other"})
     with pytest.raises(ValueError, match="must belong to the league"):
