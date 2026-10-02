@@ -131,6 +131,10 @@ def test_replay_identity_mismatch_fails_common_world_claim_closed() -> None:
 
     assert delta.regular_season_common_worlds is False
     assert delta.regular_season_unavailability_reason == "seed_mismatch"
+    assert delta.baseline_seed == 77
+    assert delta.scenario_seed == 78
+    assert delta.baseline_simulation_count == 2_000
+    assert delta.scenario_simulation_count == 2_000
 
 
 def test_uniform_postseason_draw_topology_supports_common_world_title_delta() -> None:
