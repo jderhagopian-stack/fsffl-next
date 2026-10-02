@@ -1526,3 +1526,12 @@ Simulation 2.0 #324-#331 remains accepted. Production remains at 50,000 canonica
 Required evidence emphasizes product consequences: near-boundary sign stability, team ordering, rounded probabilities, classification inputs, pick-slot summaries and downstream Decision/Opportunity disposition where existing governed consumers apply. Same-root 100k remains research reference only.
 
 **HOLD:** origin-aware draft-pick Value implementation until this stress-test Management gate resolves. Then resume immediately with 50k retained, or after a separately approved/promoted count change if Management chooses 35k. Long-Term Intrinsic and later PIT historical-market work remain downstream.
+
+
+## 2026-10-02 — 35k stress study closing; next: origin-aware draft-pick Value
+
+The 35k-vs-50k Management gate is resolved: **retain 50,000 production authority** and stop further count hunting. PR #333 is in closeout only: persist evidence, exact-head validation/review, merge. No deployment or physical acceptance is required.
+
+Immediately after #333 merges, the active implementation becomes **origin-aware draft-pick Value**. It must consume Simulation-owned team-of-origin exact future-pick slot distributions; Value owns the economic conversion of those distributions. Do not let Value recreate team-strength/draft-order forecasting, and do not let Simulation emit economic trade value.
+
+Long-Term Intrinsic remains next after origin-aware draft-pick Value, followed by the later PIT historical-market foundation.
