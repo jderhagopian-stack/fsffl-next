@@ -1,12 +1,8 @@
 name: Simulation Item 8 Convergence PIT Study
 
 on:
-  push:
-    branches: [work/sim20-convergence-pit-calibration]
-    paths:
-      - 'scripts/run_simulation_convergence_pit_study.py'
-      - 'scripts/aggregate_simulation_convergence_pit_study.py'
-      - '.github/workflows/simulation-convergence-pit-study.yml'
+  # Item 8's pre-registered eight-root study completed successfully.
+  # Keep the harness replayable without re-running it on closeout/docs pushes.
   workflow_dispatch:
 
 concurrency:
