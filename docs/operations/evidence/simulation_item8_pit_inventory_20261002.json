@@ -1,0 +1,126 @@
+{
+  "study_inventory_id": "simulation-item8-pit-inventory-20261002-v1",
+  "source": {
+    "provider": "Supabase Postgres",
+    "project_ref": "gldxkbqcprzuffgmamxl",
+    "access_mode": "read-only metadata/count queries",
+    "queried_on": "2026-10-02"
+  },
+  "authentic_evidence": {
+    "canonical_state_snapshots": {
+      "total": 364,
+      "leagues": [
+        {
+          "league_id": "sleeper:1312071960615731200",
+          "season": 2026,
+          "snapshots": 310,
+          "first_as_of": "2026-09-10T12:44:36.198236Z",
+          "last_as_of": "2026-10-01T22:23:17.987578Z"
+        },
+        {
+          "league_id": "sleeper:1397623301961981952",
+          "season": 2026,
+          "snapshots": 54,
+          "first_as_of": "2026-09-25T01:17:08.064818Z",
+          "last_as_of": "2026-10-01T14:29:32.626758Z"
+        }
+      ]
+    },
+    "provider_projection_snapshots": {
+      "total": 12,
+      "season": 2026,
+      "horizon": "rest_of_season",
+      "first_effective_at": "2026-09-27T09:07:49Z",
+      "last_effective_at": "2026-10-02T02:18:55.452Z",
+      "providers": [
+        "cbs",
+        "razzball"
+      ],
+      "normalized_observations": 22050
+    },
+    "prospective_football_state_captures": {
+      "total": 6,
+      "season": 2026,
+      "first_captured_at": "2026-09-27T14:00:44.427Z",
+      "last_captured_at": "2026-10-02T02:18:54.270Z",
+      "authority_status": "research_only",
+      "completed_through_week_coordinates": [
+        2,
+        3
+      ]
+    },
+    "durable_state_forecast_pairs": [
+      {
+        "league_id": "sleeper:1312071960615731200",
+        "unique_states_with_forecast": 270,
+        "forecast_artifacts": 272,
+        "unique_states_with_simulation": 224,
+        "simulation_artifacts": 226,
+        "state_forecast_calendar_days": 16,
+        "completed_week_coordinates": [
+          2,
+          3
+        ]
+      },
+      {
+        "league_id": "sleeper:1397623301961981952",
+        "unique_states_with_forecast": 31,
+        "forecast_artifacts": 31,
+        "unique_states_with_simulation": 0,
+        "simulation_artifacts": 0,
+        "state_forecast_calendar_days": 7,
+        "completed_week_coordinates": [
+          2,
+          3
+        ]
+      }
+    ],
+    "pre_opener_forecast_only_evidence": {
+      "league_id": "sleeper:1312071960615731200",
+      "season": 2026,
+      "forecast_artifact_kind": "current_forecast_evidence",
+      "forecast_artifact_id": 63,
+      "forecast_computed_at": "2026-09-09T23:26:16.657633Z",
+      "raw_ensemble_as_of": "2026-09-09T23:23:53.152680Z",
+      "coverage": "QB/RB/WR/TE only; no K/DST and no fumbles_lost",
+      "before_official_opener": true,
+      "matching_retained_canonical_state_payload": false,
+      "eligible_full_state_forecast_checkpoint": false,
+      "reason": "Authentic Forecast exists before kickoff, but no matching retained canonical State snapshot exists for that state hash; do not reconstruct one."
+    },
+    "earliest_matched_state_forecast_checkpoint": {
+      "league_id": "sleeper:1312071960615731200",
+      "season": 2026,
+      "state_hash": "a7d56fab86a63e908daced4ed9dd335509ec4c968a7f74024019c8f3b988b30d",
+      "state_as_of": "2026-09-10T12:44:36.198236Z",
+      "forecast_artifact_id": 87,
+      "forecast_model_version": "next8-live-forecast-evidence-v3",
+      "forecast_computed_at": "2026-09-10T12:45:33.703488Z",
+      "after_official_opener": true,
+      "authentic_input_checkpoint": true
+    },
+    "post_opener_frozen_baseline": {
+      "artifact_id": 145,
+      "computed_at": "2026-09-10T21:36:41.346326Z",
+      "classification": "authentic_post_opener_frozen_baseline_not_preseason_PIT",
+      "note": "Official 2026 NFL opener was 2026-09-10T00:20:00Z; artifact 145 must not be labeled preseason."
+    }
+  },
+  "calibration_eligibility": {
+    "fully_realized_final_season_cases": 0,
+    "scored_probability_observations": 0,
+    "scored_continuous_observations": 0,
+    "reason": "All authentic full-league State/Forecast checkpoints are from the still-active 2026 season. Final standings, playoff/title results, and 2027 rookie-pick slots are not yet realized, so season-end probability calibration cannot be scored without future leakage.",
+    "prospective_input_checkpoints_exist": true,
+    "broad_multi_year_forecast_coverage": false
+  },
+  "limitations": [
+    "Artifact 145 is post-opener and is not preseason PIT evidence.",
+    "Artifact 63 is authentic pre-opener Forecast evidence but lacks a retained matching canonical State payload, so it is not a full State+Forecast calibration checkpoint.",
+    "No historical pre-2026 full-league Forecast archive is present in the durable store.",
+    "Many State/Forecast artifacts are repeated refreshes within the same completed-week coordinate and are not independent calibration samples.",
+    "Current 2026 checkpoints can be retained for prospective scoring as realized outcomes become final.",
+    "Older realized league facts may be used for rule/tiebreak/draft-order tests but not paired with reconstructed current Forecasts.",
+    "Counterfactual alternate-world outcomes are unobservable; validate them by replay, convergence, and sensitivity rather than causal historical accuracy."
+  ]
+}
