@@ -174,6 +174,18 @@ def compile_supported_future_pick_policy(
         "playoff_order_policy": STANDARD_PLAYOFF_ORDER,
         "origin_slot_carries_across_rounds": True,
     }
+    supported_parameter_names = set(required) | {
+        "placement_games_affect_order",
+        "placement_games_policy",
+    }
+    unsupported_parameter_names = sorted(
+        set(parameters) - supported_parameter_names
+    )
+    if unsupported_parameter_names:
+        raise ValueError(
+            "unsupported explicit future-pick parameter: "
+            f"{unsupported_parameter_names[0]}"
+        )
     for name, expected in required.items():
         if parameters.get(name) != expected:
             raise ValueError(f"unsupported explicit future-pick parameter: {name}")
