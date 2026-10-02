@@ -2448,3 +2448,16 @@ No remaining bounded P1/P2 issue was found after those corrections. A separate R
 
 **Next canonical workstream: Long-Term Intrinsic.** Do not reopen Simulation 2.0, Foundation 3, or the deferred Safari-status UX item absent contradictory evidence.
 
+## 2026-10-02 — Foundation 3 post-merge corrective #343 ACCEPTED
+
+PR #343 was squash-merged as `a5f221f3a43d9d8668e59d7317c44c2a48ceba4d` to address the three bounded P2 findings that landed after #335 merge.
+
+Corrections accepted without reopening Foundation 3 design:
+- prebuilt exact-slot curves validate draft-position dominance in numeric `slot_in_round` order rather than tuple order;
+- prebuilt multi-round curves additionally enforce global dominance across numeric `(round, slot)` boundaries;
+- generic fallback `PickValueEstimate` explicitly exposes the source `generic_prior_model_version`.
+
+Validation: exact head `66694ec2e76faee73047e302a1e92ed765dc98b1`; full CI **2,044 passed**, one existing warning; PR164 focused corrective lane PASS; Codex exact-head review reported no major issues. No frozen FSFFL curve parameters, 50,000-run Simulation authority, origin-aware runtime, persistence/publication, or hosted behavior changed. No Render/physical acceptance required.
+
+Foundation 3 remains closed. Proceed directly to **Long-Term Intrinsic (Foundation 4)** under the accepted Y4-Y7 Research contract; do not reopen Simulation 2.0 or Foundation 3 absent contradictory evidence.
+
