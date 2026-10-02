@@ -59,16 +59,23 @@ Important safeguards:
 
 This work should reuse/reconcile the governed Historical Pick Coordinate research rather than inventing a new arbitrary pick scale.
 
-## Foundation 4 — Long-Term Intrinsic
-Resume the already-accepted Research contract without another family search:
-- Current Intrinsic = governed Y1-Y3;
-- Long-Term Intrinsic = governed Y4-Y7;
-- Y8 remains coarse only;
-- separate rulers and uncertainty;
-- no arbitrary horizon weights;
+## Foundation 4 — Holistic career-forward Long-Term Intrinsic
+Resume the accepted long-horizon Research without reopening already-settled model-family work, but preserve the evidence boundary.
+
+Foundation 4 product definition:
+- **Current Intrinsic** remains the separate governed Y1-Y3 lens and remains visible/available.
+- The accepted Y4-Y7 Research contract is a governed **long-horizon component**, not the final Long-Term Intrinsic metric.
+- The eventual product-facing **Long-Term Intrinsic** must represent holistic career-forward football-economic value from today across all future seasons.
+- Y1-Y3 economics must be reused from governed Current Intrinsic; Y4-Y7 economics must be reused from the accepted long-horizon component.
+- Y8+ requires a truthful governed terminal/tail treatment. Lack of current exact Y8+ cardinal authority must never be encoded as zero or as value ending at Y7.
+- The holistic metric must be constructed from compatible underlying economic coordinates, not by adding or averaging the separate 0-10000 display indexes.
+- preserve model-authority uncertainty separately from outcome uncertainty and preserve uncertainty by horizon;
+- no arbitrary discount rates, horizon weights, age/youth multipliers, survival coefficients, terminal-value assumptions, or hidden master-score heuristics;
 - preserve exact-vs-set-valued Forecast authority.
 
-This adds the missing long-horizon football-economic lens without replacing Current Intrinsic.
+The bounded Y4-Y7 shadow component may be accepted independently, but **Foundation 4 is not complete** until the holistic all-future-years metric is implemented, validated on the live cohort, persisted/API-served in shadow, resource-tested, and explicitly promoted.
+
+If accepted Research does not govern the Y8+ tail or Y1-Y7 aggregation rule, stop only those unresolved portions and execute the smallest necessary Research/governance slice. Do not guess.
 
 ## Foundation 5 — Historical / PIT market evidence
 Strengthen the empirical base that Market, Trade and Owner Intelligence consume:

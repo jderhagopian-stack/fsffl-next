@@ -216,7 +216,25 @@ Physical Safari acceptance now passes the #323 restart/served-generation continu
 7. progressive scenario computation plus dependency-based selective recomputation for interactive consumers;
 8. convergence study and PIT calibration before broader Simulation 2.0 authority closeout.
 
-After the Simulation 2.0 program reaches its promotion gates, continue the accepted higher-level sequence: origin-aware draft-pick Value -> Long-Term Intrinsic -> PIT historical market evidence -> League Market / Owner Intelligence -> Trade Decision -> Market/Search optimization -> intelligence-surface exploitation.
+After the Simulation 2.0 program reaches its promotion gates, continue the accepted higher-level sequence: origin-aware draft-pick Value -> Foundation 4 holistic career-forward Long-Term Intrinsic -> PIT historical market evidence -> League Market / Owner Intelligence -> Trade Decision -> Market/Search optimization -> intelligence-surface exploitation.
+
+### Foundation 4 product-definition gate
+
+The Y4-Y7 Long-Horizon Intrinsic shadow is a governed component, not the final product metric. Product-facing Long-Term Intrinsic must span the player's career-forward economic value from today through all future seasons.
+
+Required composition:
+- governed Y1-Y3 Current Intrinsic economics as the near/mid-term component;
+- governed Y4-Y7 shadow economics as the long-horizon component;
+- a governed Y8+ terminal/tail treatment;
+- one explicit aggregation rule over compatible raw economic coordinates.
+
+Prohibited shortcuts:
+- zeroing Y8+ because exact annual authority is weak;
+- treating value as ending at Y7;
+- adding/averaging Current and Y4-Y7 0-10000 display indexes;
+- inventing discount rates, horizon weights, age/youth multipliers, survival coefficients, or terminal assumptions.
+
+Current Intrinsic remains separately visible even after its underlying Y1-Y3 economics contribute to holistic career-forward value. Foundation 4 is not complete until the holistic metric is live-cohort validated, persisted/API-served in shadow, resource-tested, and explicitly promoted. If accepted Research does not govern the tail or aggregation rule, the next work is the smallest evidence/governance slice needed to resolve those exact gaps.
 
 Do not let the non-blocking first-navigation loading polish displace the Simulation roadmap. Address it opportunistically through prefetch/cached-layout/skeleton work when measured evidence justifies the interruption.
 
