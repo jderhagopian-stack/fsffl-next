@@ -2462,11 +2462,48 @@ def simulate_regular_season(
             for index, team_id in enumerate(team_ids)
         )
 
+    simulation_id = hashlib.sha256(
+        json.dumps(
+            {
+                "simulation_input_fingerprint": input_fingerprint,
+                "model_version": request.model_version,
+                "simulation_count": n,
+                "seed": request.seed,
+                "rng_protocol": request.rng_protocol,
+                "rng_batch_size": batch_size,
+                "multiverse_model_version": "next4-multiverse-v1",
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    multiverse_worlds = _build_multiverse_examples(
+        candidates=multiverse_candidates,
+        team_ids=team_ids,
+        playoff_team_count=request.playoff_team_count,
+        playoff_supported=playoff_supported,
+        championship_supported=championship_supported,
+        league_totals=league_totals,
+        typicality_values=typicality_values,
+        blowout_values=blowout_values,
+        upset_values=upset_values,
+        strong_team_miss_count=strong_team_miss_count,
+        champion_seed_counts=champion_seed_counts,
+        simulation_count=n,
+        simulation_id=simulation_id,
+        root_seed=request.seed,
+        rng_protocol=request.rng_protocol,
+        rng_batch_size=batch_size,
+        simulation_input_fingerprint=input_fingerprint,
+    )
+
     result = RegularSeasonSimulationResult(
         outcomes=tuple(outcomes),
         finish_distributions=tuple(finish_distributions),
         future_pick_distributions=future_pick_distributions,
         future_pick_unavailability_reason=future_pick_unavailability_reason,
+        multiverse_worlds=multiverse_worlds,
+        multiverse_model_version="next4-multiverse-v1",
         championship_probability_provenance=(
             request.playoff_rules.championship_probability_provenance()
             if championship_supported and request.playoff_rules is not None else None
