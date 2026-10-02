@@ -67,7 +67,15 @@ def main() -> None:
         )
     by_pick = {row.pick_id: row for row in values}
     if set(by_pick) != {pick.pick_id for pick in state.draft_picks}:
-        raise RuntimeError("live origin-aware Value result does not cover canonical pick inventory")
+        raise RuntimeError(
+            "live origin-aware Value result does not cover canonical pick inventory; "
+            f"league_id={state.league.league_id} "
+            f"season={state.league.season} "
+            f"team_count={state.league.rules.team_count} "
+            f"rookie_draft_rounds={state.league.rules.rookie_draft_rounds} "
+            f"state_pick_count={len(state.draft_picks)} "
+            f"value_result_count={len(values)}"
+        )
 
     curve_by_round = {
         curve.round: {row.slot_in_round: row for row in curve.slots}
