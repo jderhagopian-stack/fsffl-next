@@ -107,7 +107,11 @@ def test_multiverse_examples_are_bounded_replayable_and_from_same_simulation(
         assert 0 <= world.world_index < request.simulation_count
         assert world.root_seed == request.seed
         assert world.rng_protocol == rng_protocol
+        assert world.rng_runtime_version == first.rng_runtime_version
+        assert world.rng_bit_generator == first.rng_bit_generator
         assert world.rng_batch_size == batch_size
+        assert world.rng_draw_layout == first.rng_draw_layout
+        assert world.rng_seed_derivation == first.rng_seed_derivation
         assert world.simulation_input_fingerprint == first.simulation_input_fingerprint
         assert world.rarity.sample_count == request.simulation_count
         assert len(world.standings) == 4
