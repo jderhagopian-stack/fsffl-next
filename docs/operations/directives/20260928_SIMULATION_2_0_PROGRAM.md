@@ -293,3 +293,15 @@ Item 8 therefore has two governed parts:
 Older seasons may still be used for deterministic rule execution, standings/tiebreak, draft-order or realized-outcome tests that do not require unavailable historical Forecast inputs. Counterfactual trade/waiver deltas have no directly observed alternate-world outcome; historical work there should measure replay/stability/sensitivity and not claim causal calibration.
 
 The purpose of item 8 is to prove that Simulation numerical outputs are stable at their governed run counts and to establish a leakage-free calibration system that becomes stronger as authentic PIT evidence accumulates. Limited historical Forecast coverage is an evidence limitation to disclose, not a reason to fabricate, estimate or block the Simulation 2.0 closeout when the framework and available evidence are sound.
+
+### Item 8 execution correction — do not spend time hunting for historical PIT Forecasts
+
+The PIT portion of item 8 is **not** a historical-data discovery project. Do not search broadly for old third-party Forecast files, scrape archives, infer old forecasts, or delay Simulation 2.0 closeout while looking for evidence that NEXT did not capture.
+
+Execution priority is:
+1. complete the Monte Carlo convergence/stability study;
+2. verify that NEXT can persist and later score timestamped PIT calibration observations prospectively;
+3. use only PIT Forecast+State checkpoints already present in the governed repository/persistence path and immediately identifiable from current canonical evidence;
+4. if that immediately available sample is too small for meaningful outcome calibration, record that fact and the exact coverage, then close the calibration portion as **framework/prospective evidence established** rather than continuing to hunt.
+
+No broad historical Forecast search is required for item 8 promotion. Future weekly captures will expand calibration automatically.
