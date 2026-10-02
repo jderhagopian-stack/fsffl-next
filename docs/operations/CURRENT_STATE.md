@@ -2500,3 +2500,19 @@ Implementation boundary:
 
 Promotion remains Tier B: focused explicit/fallback rule, tiebreak, elimination, placement-game, unresolved-tie and origin/ownership tests; full CI; reviewed fixed 50,000-world replay baselines if changed; exact-head P1/P2 review; then one targeted hosted next-season-pick acceptance. Do not reopen #324-#327.
 
+## 2026-10-02 — PR #328 dual-runtime replay validation closed
+
+PR #328 remains the active Simulation 2.0 item-5 branch. The Python 3.12 failure was isolated to the governed fixed 50,000-world complete-output replay digest after the intentional item-5 Simulation result-schema expansion. No item-5 football/draft-order logic failed.
+
+Validated source/test tree:
+- Python 3.11: **1,979 passed**, one existing warning;
+- Python 3.12: **1,979 passed**, one existing warning;
+- reviewed fixed 50k digests: Python 3.11 `f87a5f68430dbcd1e0ebeceb60d448bcd79ba615b2812a7d1ea26aa6273cc481`; Python 3.12 `c3b9b1f0348a0e7c6440ae61a765a51176d7159396fe8dd8ea67b3310bcdd495`;
+- League Atlas North Star focused validation: PASS;
+- PR164 focused corrective regression: PASS;
+- Live Forecast corrective trace: PASS.
+
+The 3.12 digest change is expected because `RegularSeasonSimulationResult` now carries item-5 future-pick distribution/unavailability fields in the canonical serialized output even for the fixed replay fixture. The temporary dual-runtime CI matrix was used only to establish the reviewed 3.12 baseline and has been removed; normal repository CI policy is restored.
+
+Remaining promotion gate: ordinary exact-head CI on the docs/workflow-restored head plus bounded exact-head P1/P2 review. If clean, merge #328 and perform one targeted hosted next-season-pick acceptance. Do not reopen accepted #324-#327.
+
