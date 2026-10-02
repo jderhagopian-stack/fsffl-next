@@ -2781,3 +2781,31 @@ Key constraints:
 - no historical Forecast hunt or reopening of accepted #324-#331 behavior.
 
 The next origin-aware draft-pick Value implementation is temporarily held until this bounded study reports, solely to avoid churn if Management later approves a production-count change.
+
+
+## 2026-10-02 — 35k stress gate resolved: retain 50,000
+
+The bounded post-#331 authority re-evaluation completed under PR #333. The 35,000 candidate is **not promoted**.
+
+Accepted study result:
+- 12 independent roots across four governed hard-case fixtures;
+- same-root 100,000 used only as research reference;
+- 35k median stress-bundle runtime **35.153s** versus **50.172s** at 50k (~29.9% faster);
+- 35k diverged where 50k matched 100k on **71** product checks, versus **24** in the opposite direction; both diverged on 55;
+- close-team ranking agreement: **45/48 at 35k** versus **47/48 at 50k**;
+- future-pick boundary-summary agreement: **10/12 at 35k** versus **11/12 at 50k**;
+- near-zero and material scenario-delta signs and governed materiality classifications matched the 100k reference at both counts.
+
+Management disposition:
+- retain **50,000 canonical production runs**;
+- no adaptive-count rule;
+- stop count hunting under this directive;
+- 35k may be used only in explicitly non-authoritative research/internal contexts unless a future Management directive changes that;
+- no Render/physical acceptance required because the study is research/evidence only.
+
+Durable evidence:
+- `docs/operations/evidence/simulation_35k_stress_closeout_20261002.md`;
+- `docs/operations/evidence/simulation_35k_stress_results_20261002.json`;
+- workflow run `37011239970`, artifact `11227844607`, digest `sha256:377d6400b082817aa8348e56461fa0d784d1a9a960614ecc8b21a7ab96a34153`.
+
+The temporary HOLD on origin-aware draft-pick Value is released once #333 merges cleanly. Next substantive workstream: **origin-aware draft-pick Value**.
