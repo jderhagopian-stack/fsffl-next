@@ -39,6 +39,22 @@ StateActivator = Callable[..., object | None]
 PresentationSnapshotCloner = Callable[[str, str, object], str]
 
 
+def resolve_staged_acceptance_user(
+    *,
+    source_user_id: str,
+    configured_acceptance_user_id: str,
+) -> str:
+    """Keep acceptance staging isolated even under a legacy same-user env value."""
+
+    source = source_user_id.strip()
+    configured = configured_acceptance_user_id.strip()
+    if not source:
+        raise StateFirstAcceptanceError("acceptance staging source user id is blank")
+    if configured and configured != source:
+        return configured
+    return "runtime-availability-production-acceptance"
+
+
 def stage_restored_refresh_partial_acceptance(
     *,
     store: PersistentPrivateBetaRuntimeStore,
