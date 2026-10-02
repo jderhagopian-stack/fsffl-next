@@ -695,6 +695,21 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
 
         return super().get(user_id)
 
+    def reset_in_memory_for_acceptance_restore(self, user_id: str) -> None:
+        """Acceptance-only: forget process-local runtime so durable restore runs again.
+
+        This never deletes or mutates persistence. Callers must first await any
+        outstanding checkpoint for the isolated acceptance identity.
+        """
+
+        if not user_id.strip():
+            raise ValueError("user_id cannot be blank")
+        with self.lifecycle_operation(user_id):
+            super().clear(user_id)
+            self._restore_attempted.discard(user_id)
+            self._last_good_guard_users.discard(user_id)
+            self._forecast_replay_decisions.pop(user_id, None)
+
     def prepare_fresh_connect(self, user_id: str) -> None:
         """Declare that fresh provider State supersedes any in-flight cold restore."""
 

@@ -10,9 +10,11 @@ from time import monotonic, sleep
 from fastapi import Depends
 
 from fsffl.persistence import (
+    ReusableArtifactRecord,
     persistence_store_from_env,
     projection_history_store_from_env,
     state_snapshot_store_from_env,
+    utc_now,
 )
 from fsffl.providers.sleeper_live import SleeperLiveSource
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
@@ -52,7 +54,10 @@ from .presentation_continuity import (
     MARKET_VALUE_LENSES_ALL_SURFACE,
     MARKET_VALUE_LENSES_ROSTERED_SURFACE,
     MARKET_WORKSPACE_SURFACE,
+    REQUIRED_PRESENTATION_SURFACES,
     PresentationContinuityStore,
+    _manifest_key,
+    _surface_key,
 )
 from .player_intelligence import (
     PlayerFutureForecastCache,
@@ -84,6 +89,7 @@ from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
 from .state_first_acceptance import (
     run_state_first_production_acceptance,
     run_state_first_restored_refresh_acceptance,
+    stage_restored_refresh_partial_acceptance,
 )
 
 
@@ -1025,6 +1031,82 @@ def _runtime_acceptance_process_identity() -> str:
     return f"pid:{os.getpid()}"
 
 
+def _clone_acceptance_presentation_snapshot(
+    source_user_id: str,
+    acceptance_user_id: str,
+    source_context: object,
+) -> str:
+    """Copy one validated governed presentation into the isolated acceptance scope."""
+
+    if _persistence_store is None:
+        raise RuntimeError("Acceptance presentation cloning requires persistence")
+    state = getattr(source_context, "league_state", None)
+    selected_team_id = getattr(source_context, "selected_team_id", None)
+    if state is None:
+        raise RuntimeError("Acceptance presentation source State is unavailable")
+
+    source_manifest = _persistence_store.get_reusable_artifact(
+        _manifest_key(
+            user_id=source_user_id,
+            league_id=state.league.league_id,
+            league_state_id=state.state_id,
+        )
+    )
+    if source_manifest is None:
+        raise RuntimeError("Acceptance presentation source manifest is unavailable")
+    manifest_payload = dict(source_manifest.payload)
+    promotion_id = str(manifest_payload.get("promotion_id") or "").strip()
+    if (
+        not promotion_id
+        or manifest_payload.get("selected_team_id") != selected_team_id
+    ):
+        raise RuntimeError("Acceptance presentation source identity is inconsistent")
+
+    available = set(manifest_payload.get("surfaces") or ())
+    if not set(REQUIRED_PRESENTATION_SURFACES).issubset(available):
+        raise RuntimeError("Acceptance presentation source is incomplete")
+
+    now = utc_now()
+    for surface in REQUIRED_PRESENTATION_SURFACES:
+        source_surface = _persistence_store.get_reusable_artifact(
+            _surface_key(
+                user_id=source_user_id,
+                league_id=state.league.league_id,
+                promotion_id=promotion_id,
+                surface=surface,
+            )
+        )
+        if source_surface is None:
+            raise RuntimeError(
+                f"Acceptance presentation source surface is unavailable: {surface}"
+            )
+        _persistence_store.put_artifact(
+            ReusableArtifactRecord(
+                key=_surface_key(
+                    user_id=acceptance_user_id,
+                    league_id=state.league.league_id,
+                    promotion_id=promotion_id,
+                    surface=surface,
+                ),
+                payload=dict(source_surface.payload),
+                computed_at=now,
+            )
+        )
+
+    _persistence_store.put_artifact(
+        ReusableArtifactRecord(
+            key=_manifest_key(
+                user_id=acceptance_user_id,
+                league_id=state.league.league_id,
+                league_state_id=state.state_id,
+            ),
+            payload=manifest_payload,
+            computed_at=now,
+        )
+    )
+    return promotion_id
+
+
 def _maybe_start_state_first_production_acceptance() -> None:
     enabled = any(
         os.getenv(name, "0").strip().lower() in {"1", "true", "yes", "on"}
@@ -1068,6 +1150,23 @@ def _maybe_start_state_first_production_acceptance() -> None:
             reason=f"Unsupported runtime acceptance mode: {acceptance_mode}",
         )
         return
+    stage_partial_restore = (
+        os.getenv(
+            "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_STAGE_PARTIAL",
+            "0",
+        ).strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
+    acceptance_source_user = os.getenv(
+        "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_SOURCE_USER",
+        _beta_restore_user,
+    ).strip()
+    if stage_partial_restore and acceptance_mode != "restored_refresh":
+        _runtime_availability_acceptance_state.update(
+            status="fail",
+            reason="Partial acceptance staging is valid only for restored_refresh mode.",
+        )
+        return
     _runtime_availability_acceptance_state.clear()
     _runtime_availability_acceptance_state.update(
         status="scheduled",
@@ -1075,6 +1174,8 @@ def _maybe_start_state_first_production_acceptance() -> None:
         user_id=acceptance_user,
         mode=acceptance_mode,
         delay_seconds=delay_seconds,
+        stage_partial_restore=stage_partial_restore,
+        source_user_id=(acceptance_source_user if stage_partial_restore else None),
     )
 
     def run() -> None:
@@ -1084,6 +1185,22 @@ def _maybe_start_state_first_production_acceptance() -> None:
                 raise RuntimeError("Hosted lightweight startup restore did not complete")
             _runtime_availability_acceptance_state["status"] = "running"
             if acceptance_mode == "restored_refresh":
+                if stage_partial_restore:
+                    staged = stage_restored_refresh_partial_acceptance(
+                        store=_runtime_store,
+                        source_user_id=acceptance_source_user,
+                        acceptance_user_id=acceptance_user,
+                        clone_presentation_snapshot=(
+                            _clone_acceptance_presentation_snapshot
+                        ),
+                    )
+                    _logger.info(
+                        "FSFFL RUNTIME AVAILABILITY ACCEPTANCE staged partial data=%s",
+                        staged,
+                    )
+                    release_unused_process_memory(
+                        label="after-runtime-acceptance-partial-staging"
+                    )
                 report = run_state_first_restored_refresh_acceptance(
                     store=_runtime_store,
                     user_id=acceptance_user,
