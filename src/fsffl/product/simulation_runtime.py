@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import hashlib
 import importlib.metadata
+import json
 import os
 import platform
 from typing import Callable, Literal
@@ -20,7 +22,6 @@ from fsffl.forecast import (
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.memory_attribution import log_object_graph, sample_rss_phase
-from fsffl.persistence.contracts import canonical_fingerprint
 from fsffl.state.draft_order_policy import resolve_draft_order_policy
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.team_utility import (
@@ -46,6 +47,17 @@ from fsffl.team_utility.simulation import (
     PYTHON_RANDOM_GAUSS_V1,
 )
 from fsffl.team_utility.utility import CalculatedCompetitiveState
+
+def _scenario_dependency_fingerprint(*parts: object) -> str:
+    encoded = json.dumps(
+        parts,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
 
 LIVE_SIMULATION_MODEL_VERSION = "next18-live-simulation-analytics-v18:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
 EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next18-live-simulation-analytics-v18:numpy-pcg64-batched-gauss-v1:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
@@ -203,7 +215,7 @@ def simulation_forecast_dependency_fingerprint(
     *,
     forecast_model_version: str,
 ) -> str:
-    return canonical_fingerprint(
+    return _scenario_dependency_fingerprint(
         forecast_model_version,
         tuple(
             item.model_dump(mode="json")
@@ -225,7 +237,7 @@ def simulation_forecast_dependency_fingerprint(
 def simulation_structure_dependency_fingerprint(league_state: LeagueState) -> str:
     """Fingerprint global Simulation dependencies while excluding bounded rosters/picks."""
 
-    return canonical_fingerprint(
+    return _scenario_dependency_fingerprint(
         league_state.league.model_dump(mode="json"),
         tuple(sorted(team.team_id for team in league_state.teams)),
         tuple(
