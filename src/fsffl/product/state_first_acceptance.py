@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from threading import Thread
 from time import monotonic, process_time, sleep
 from typing import Callable
@@ -15,6 +17,7 @@ from .background_jobs import (
     IntelligenceJobStatus,
 )
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
+from .runtime import league_material_fingerprint, replay_live_forecast_evidence_for_state
 from .scenario_cache import _forecast_fingerprint
 from .simulation_runtime import simulation_artifact_model_version
 
@@ -33,6 +36,155 @@ HistoryProbe = Callable[[str, object], dict[str, object]]
 ResourceReader = Callable[[], dict[str, object]]
 ProcessIdentityReader = Callable[[], str]
 StateActivator = Callable[..., object | None]
+PresentationSnapshotCloner = Callable[[str, str, object], str]
+
+
+def stage_restored_refresh_partial_acceptance(
+    *,
+    store: PersistentPrivateBetaRuntimeStore,
+    source_user_id: str,
+    acceptance_user_id: str,
+    clone_presentation_snapshot: PresentationSnapshotCloner,
+) -> dict[str, object]:
+    """Stage an isolated durable partial restore from a governed full FSFFL runtime.
+
+    The source runtime and persistence are read-only. The isolated acceptance user
+    first receives the exact full S0 bundle and presentation, then advances to an S1
+    snapshot that differs only by as_of. Forecast is replayed through the governed
+    compatible-State path, Value is rebound to S1, and Simulation is deliberately
+    omitted. S1 is persisted, process-local acceptance state is cleared, and S1 is
+    restored cold before the normal manual-refresh acceptance begins.
+    """
+
+    if not source_user_id.strip() or not acceptance_user_id.strip():
+        raise StateFirstAcceptanceError("acceptance staging user ids cannot be blank")
+    if source_user_id == acceptance_user_id:
+        raise StateFirstAcceptanceError(
+            "acceptance staging must use an isolated user distinct from production"
+        )
+
+    source = store.restore_user(source_user_id)
+    if (
+        source.league_state is None
+        or source.league_state.league.league_id
+        != f"sleeper:{FSFFL_ACCEPTANCE_LEAGUE}"
+        or source.selected_team_id is None
+        or source.forecast_evidence is None
+        or source.simulation_analytics is None
+        or source.value_evidence is None
+    ):
+        raise StateFirstAcceptanceError(
+            "acceptance staging source is not a complete canonical FSFFL runtime"
+        )
+
+    if not store.wait_for_checkpoint(acceptance_user_id, timeout=180.0):
+        raise StateFirstAcceptanceError(
+            "acceptance staging could not drain the isolated checkpoint queue"
+        )
+    store.reset_in_memory_for_acceptance_restore(acceptance_user_id)
+
+    s0 = source.league_state
+    store.set_league_state(acceptance_user_id, s0)
+    store.select_team(acceptance_user_id, source.selected_team_id)
+    store.set_intelligence_bundle(
+        acceptance_user_id,
+        league_state=s0,
+        forecast_evidence=source.forecast_evidence,
+        simulation_analytics=source.simulation_analytics,
+        value_evidence=source.value_evidence,
+    )
+    if not store.wait_for_checkpoint(acceptance_user_id, timeout=180.0):
+        raise StateFirstAcceptanceError(
+            "acceptance staging could not persist the full last-good baseline"
+        )
+
+    presentation_generation_id = clone_presentation_snapshot(
+        source_user_id,
+        acceptance_user_id,
+        source,
+    )
+    if not presentation_generation_id:
+        raise StateFirstAcceptanceError(
+            "acceptance staging could not clone the full presentation generation"
+        )
+    store.bind_publication_generation_id(
+        acceptance_user_id,
+        presentation_generation_id,
+    )
+
+    now = datetime.now(timezone.utc)
+    target_as_of = max(now, s0.as_of + timedelta(microseconds=1))
+    s1 = s0.model_copy(update={"as_of": target_as_of})
+    if s1.state_id == s0.state_id:
+        raise StateFirstAcceptanceError(
+            "acceptance staging failed to create a distinct target State identity"
+        )
+    if league_material_fingerprint(s1) != league_material_fingerprint(s0):
+        raise StateFirstAcceptanceError(
+            "acceptance staging changed substantive football State"
+        )
+
+    s1_forecast = replay_live_forecast_evidence_for_state(
+        s1,
+        source.forecast_evidence,
+    )
+    s1_value = replace(
+        source.value_evidence,
+        league_state_id=s1.state_id,
+    )
+    store.set_league_state(acceptance_user_id, s1)
+    store.set_intelligence_bundle(
+        acceptance_user_id,
+        league_state=s1,
+        forecast_evidence=s1_forecast,
+        simulation_analytics=None,
+        value_evidence=s1_value,
+    )
+    if not store.wait_for_checkpoint(acceptance_user_id, timeout=180.0):
+        raise StateFirstAcceptanceError(
+            "acceptance staging could not persist the partial target snapshot"
+        )
+
+    partial = store.get(acceptance_user_id)
+    if (
+        partial.league_state is None
+        or partial.league_state.state_id != s1.state_id
+        or partial.forecast_evidence is None
+        or partial.simulation_analytics is not None
+        or partial.value_evidence is None
+        or partial.served_intelligence is None
+        or partial.served_intelligence.league_state_id != s0.state_id
+    ):
+        raise StateFirstAcceptanceError(
+            "acceptance staging did not produce the expected S0-served/S1-partial state"
+        )
+
+    store.reset_in_memory_for_acceptance_restore(acceptance_user_id)
+    restored = store.restore_user(acceptance_user_id)
+    if (
+        restored.league_state is None
+        or restored.league_state.state_id != s1.state_id
+        or restored.forecast_evidence is None
+        or restored.simulation_analytics is not None
+        or restored.value_evidence is None
+        or restored.served_intelligence is None
+        or restored.served_intelligence.league_state_id != s0.state_id
+    ):
+        raise StateFirstAcceptanceError(
+            "acceptance staging cold restore did not reproduce the required partial shape"
+        )
+
+    return {
+        "status": "staged",
+        "source_user_id": source_user_id,
+        "acceptance_user_id": acceptance_user_id,
+        "served_state_id": s0.state_id,
+        "target_state_id": s1.state_id,
+        "selected_team_id": restored.selected_team_id,
+        "publication_generation_id": restored.publication_generation_id,
+        "presentation_generation_id": presentation_generation_id,
+        "material_fingerprint": league_material_fingerprint(s1),
+    }
 
 
 def _wait_for_job(
