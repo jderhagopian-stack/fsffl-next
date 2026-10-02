@@ -355,6 +355,41 @@ def _rounded_probability_signature(result) -> tuple[tuple[str, int | None, int |
     )
 
 
+def _rounded_probability_differences(
+    observed: list[list[Any]] | tuple[tuple[Any, ...], ...],
+    reference: list[list[Any]] | tuple[tuple[Any, ...], ...],
+) -> list[dict[str, Any]]:
+    observed_by_team = {
+        str(team_id): {
+            "playoff_probability": playoff,
+            "championship_probability": championship,
+        }
+        for team_id, playoff, championship in observed
+    }
+    reference_by_team = {
+        str(team_id): {
+            "playoff_probability": playoff,
+            "championship_probability": championship,
+        }
+        for team_id, playoff, championship in reference
+    }
+    differences: list[dict[str, Any]] = []
+    for team_id in sorted(reference_by_team):
+        for metric in ("playoff_probability", "championship_probability"):
+            actual = observed_by_team[team_id][metric]
+            expected = reference_by_team[team_id][metric]
+            if actual != expected:
+                differences.append(
+                    {
+                        "team_id": team_id,
+                        "metric": metric,
+                        "observed_percent": actual,
+                        "reference_percent": expected,
+                    }
+                )
+    return differences
+
+
 def _competitive_state_signature(result) -> tuple[tuple[str, str], ...]:
     policy = derive_league_relative_competitive_state_policy(
         result.outcomes,
@@ -578,9 +613,13 @@ def _compare_to_reference(
             row["baseline"]["ranking_signature"]
             == reference["baseline"]["ranking_signature"]
         ),
-        "rounded_probabilities_match_100k": (
+        "rounded_probabilities_matches_100k": (
             row["baseline"]["rounded_probability_signature"]
             == reference["baseline"]["rounded_probability_signature"]
+        ),
+        "rounded_probability_differences_vs_100k": _rounded_probability_differences(
+            row["baseline"]["rounded_probability_signature"],
+            reference["baseline"]["rounded_probability_signature"],
         ),
         "competitive_states_match_100k": (
             row["baseline"]["competitive_state_signature"]
