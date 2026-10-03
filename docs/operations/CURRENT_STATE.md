@@ -3203,3 +3203,25 @@ Promotion classification is Tier C because persistence/restore/resource behavior
 
 After Foundation 4 shadow acceptance, immediately execute the approved Product Integration / Capability Rollout tranche for the sole private-beta user: expose accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience, then obtain physical iPhone/Safari feedback before Foundation 5.
 
+## 2026-10-03 — Foundation 4 #361 scoring-coordinate blocker exposed by Codex P1 closeout
+
+PR #361 advanced to head `8e79d9f86fc0522fc6973c5bbdfa78e38f5c7210`. The two specific Codex P1 findings were addressed in code:
+- lineup-capacity identity is now canonical/order-independent rather than provider-row-order-sensitive;
+- the frozen Y4-Y7 board is explicitly labeled as standard/non-PPR and no longer silently relabeled as connected-league scoring when the coordinates differ.
+
+This second correction exposes a genuine Foundation 4 product blocker for the actual FSFFL target league: the live league is 0.5 PPR, while the current frozen Y4-Y7 board is standard/non-PPR. The new code therefore correctly fails closed for FSFFL rather than aggregating incompatible Y1-Y3 and Y4-Y7 units.
+
+Foundation 4 must **not** be promoted with half-PPR merely unavailable. Before merge/hosted acceptance, complete one governed scoring-coordinate path for FSFFL: either materialize the Y4-Y7/terminal authority directly in the connected 0.5-PPR coordinate or validate a lawful exact transform that preserves compatible Shapley economics. No heuristic multiplier or silent relabeling is authorized. Add direct FSFFL 0.5-PPR acceptance coverage. This is a bounded scoring-coordinate completion issue, not a reopening of the career-tail model family/governance.
+
+
+## 2026-10-03 — Foundation 4 scoring-policy refinement
+
+Foundation 4 league-scoring adaptation must distinguish **material predictability**, not require literal reproduction of every configured scoring rule.
+
+Governed rule classes:
+- **modeled linear/material** player-offense rules (receptions, yards, TDs, interceptions, fumbles lost, etc.) must be incorporated when governed forecast inputs exist;
+- **governed residual/event** rules may be included only through an accepted bounded empirical/probabilistic treatment;
+- **rare/exotic materially unpredictable bonuses** with no defensible forecast signal may be explicitly ignored rather than blocking Foundation 4, provided the omission is typed/provenanced and applied consistently across Current Intrinsic, Y4-Y7 and Y8+ so all summed economics remain on one effective scoring coordinate;
+- **material unsupported** rules that could meaningfully alter player value and cannot be modeled must fail closed or downgrade authority rather than be silently ignored.
+
+Do not implement a strict all-rules-exact gate, and do not special-case only FSFFL half-PPR. Build a general connected-league scoring-coverage policy. FSFFL 0.5 PPR is the first acceptance case. No heuristic multipliers or silent cross-coordinate relabeling.
