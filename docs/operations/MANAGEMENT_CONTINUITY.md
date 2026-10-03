@@ -565,29 +565,6 @@ Current management handoff:
 - Shift management emphasis back toward Foundation 4 #356. It is open/green but has not advanced since the shadow-contract/current-authority checkpoint.
 - Next Foundation 4 gates: live cohort -> persistence/API -> restart/reload/resources -> bounded shadow acceptance -> Product Integration / Capability Rollout -> Foundation 5.
 
-## 2026-10-03 — Foundation 4 runtime/persistence acceptance tranche ACTIVE
-
-Foundation 4 is the primary forward-capability workstream. The substantive continuation lives on `work/foundation4-holistic-career-forward-shadow`, reconciled onto current main without regenerating the frozen binary authority artifacts.
-
-Governed economic definition remains unchanged:
-- holistic raw career-forward value = compatible annual raw Shapley economics `Y1 + ... + Y7 + TAIL_Y8_PLUS`;
-- Current Intrinsic remains the separate governed Y1-Y3 product lens;
-- Y4-Y7 consume the frozen accepted all-policy current-cohort authority coordinates, never their 0-10000 display index;
-- Y8+ is the governed cumulative career tail from literal Y8 through career end;
-- no new discount/horizon preference weight, age/youth multiplier, survival multiplier, terminal multiplier, Market input, display-index arithmetic or cumulative career SD is authorized.
-
-Current implementation state:
-- frozen 2026 current cohort: **335 players**, 5,360 governed Y4-Y7 policy rows plus 335 terminal feature rows;
-- production runtime materializer composes ready Current Intrinsic Y1-Y3 + frozen Y4-Y7 + governed Y8+ tail and fails closed on cohort or lineup-signature mismatch;
-- holistic and Y4-Y7 component artifacts are persisted separately with dependency/model identity;
-- shadow API endpoints are installed separately from Current Intrinsic;
-- startup restore attempts compatible Foundation 4 reuse without replacing Current Intrinsic;
-- dedicated tests now cover full-cohort materialization, durable persistence, API serving and fresh-loader restart semantic identity;
-- a bounded hosted acceptance probe supports explicit `build` and `restore` modes, exposes only non-sensitive metadata/fingerprints, validates raw-economic reconciliation, and fails if process peak RSS exceeds the engineering memory budget.
-
-Promotion classification is Tier C because persistence/restore/resource behavior is now part of the claim. Required remaining gates: exact-head CI/focused review -> one hosted build acceptance -> one same-code restore/reload proof with identical semantic fingerprint -> record acceptance.
-
-After Foundation 4 shadow acceptance, immediately execute the approved Product Integration / Capability Rollout tranche for the sole private-beta user: expose accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience, then obtain physical iPhone/Safari feedback before Foundation 5.
 
 ## 2026-10-03 — Intrinsic performance continuity note
 
@@ -596,6 +573,7 @@ Do not lose the previously identified Intrinsic optimization work. There are two
 - **speed the rebuild that is genuinely necessary** only after profiling the accepted Foundation 4 holistic path.
 
 Recent hosted lifecycle evidence still puts the current Intrinsic phase at roughly **25–27s** when it runs. After #361 Foundation 4 correctness/persistence/hosted acceptance, run a bounded Intrinsic performance profile and optimize only measured material costs while preserving exact Current Intrinsic / Long-Term Intrinsic economics, fingerprints and restart identity. This should happen before or alongside Product Integration, not be forgotten behind the Simulation work.
+
 
 ## 2026-10-03 — Foundation 4 scoring-coordinate management gate
 
@@ -615,3 +593,42 @@ Policy:
 - fail closed or downgrade only when an unsupported rule is material enough to change valuation meaningfully.
 
 This creates one coherent effective scoring coordinate per league while avoiding fake precision. FSFFL 0.5 PPR must pass as the first live acceptance case. Do not use heuristic scoring multipliers.
+
+
+## 2026-10-03 — DURABLE IMPLEMENTATION RE-ANCHOR (chat history is non-authoritative)
+
+Implementation continuity must not depend on ChatGPT conversation history. If the Implementation chat loses visible context, **resume from this repo record plus PR #361 and the other canonical operations docs**.
+
+Current active work:
+- Foundation 4 / PR #361: `Foundation 4: materialize and persist career-forward shadow`.
+- Current observed head at this checkpoint: `fbb417901db9297717a9244803f25696295bf713` (PR may advance after this note; always re-read the live PR head first).
+- The branch now carries directly FSFFL-scored Y4-Y7 and Y8+ authority, with regenerated/frozen package identities and tests being reconciled to that authority.
+- At this checkpoint, all focused lanes except full CI are green; full CI is still running on the exact head.
+- Preserve Management scoring policy: model material/predictable league scoring rules; use only governed residual/event treatments; explicitly omit genuinely rare/unpredictable bonuses with provenance and consistent omission across Y1-Y3/Y4-Y7/Y8+; fail closed or downgrade on materially important unsupported rules. No heuristic multipliers and no incompatible-coordinate arithmetic.
+- If exact-head validation is green, request fresh Codex review and proceed directly through hosted 335-player build, persistence/API, restart/restore semantic identity, and resource acceptance.
+- After Foundation 4 acceptance, run the queued Intrinsic runtime-performance tranche (reuse/persist-first, then optimize unavoidable Shapley/materialization cost) and then the approved Product Integration / Capability Rollout tranche before Foundation 5.
+- Simulation 2.0 major semantics/performance work is complete; do not reopen it except for the narrow acceptance-tooling P2 or new contradictory evidence.
+
+Startup rule for any replacement/new Implementation chat: read `docs/operations/OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this `MANAGEMENT_CONTINUITY.md`, the applicable directive(s), and the live PR #361 exact head before acting. The repo is the durable authority; chat text is only a transport layer.
+
+## 2026-10-03 — Foundation 4 runtime/persistence acceptance tranche ACTIVE
+
+Foundation 4 / PR #361 remains the active capability workstream. Its directly FSFFL-scored 335-player Y4-Y7 + Y8+ authority is frozen; Current Intrinsic stays separate; holistic raw economics remain compatible Y1-Y7 Shapley coordinates plus cumulative Y8+ tail. Shadow holistic/Y4-Y7 artifacts are persisted separately, APIs remain separate from Current Intrinsic, and hosted acceptance must prove build -> persistence/API -> same-code restore/reuse -> resource safety.
+
+After #361 acceptance, run the queued Intrinsic performance tranche (reuse/persistence first, then measured unavoidable computation) and continue into Product Integration / Capability Rollout before Foundation 5.
+
+## 2026-10-03 — Foundation 4 #361 FSFFL artifact-freeze correction
+
+The directly recalibrated FSFFL-scored Foundation 4 artifacts are now the intended packaged authority; model-family and routing research remain frozen and were not reopened.
+
+Verified generation evidence:
+- generation workflow run `37096263982`, retained artifact `11263913850`;
+- packaged repo blobs exactly match the retained workflow artifact bytes;
+- Y4-Y7 board: 5,360 rows / 335 players, direct `connected_league_fantasy_points`, semantic SHA-256 `3caddc5c33be83088eaca30d8c1ac7031022f08668a031a0a3b08616aed773c2`;
+- terminal feature board: 335 players, direct connected-league scoring coordinates, semantic SHA-256 `ef52ccaaef0749d6d1e5786c351714570c0d0a0ea811cc1cf940fe2adac8c867`;
+- retained workflow ZIP SHA-256 `6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22`;
+- packaged Y8+ runtime JSON semantic SHA-256 `33158a26d50e71809cf0f38a7d479fda05ccbaa9fbd5703ba894c1cba4560537`.
+
+The runtime now consumes the exact packaged FSFFL Y8+ coefficients/residual bands and pins the regenerated Y4-Y7/terminal semantic identities. The superseded standard/non-PPR freeze is retained only as historical provenance/negative compatibility evidence. No heuristic scoring multiplier, retraining or model redesign was introduced.
+
+Promotion remains Tier C. Required closeout: final exact-head CI and focused validations -> fresh Codex review -> one hosted 335-player build -> same-code restart/restore semantic identity -> resource acceptance -> canonical closeout.
