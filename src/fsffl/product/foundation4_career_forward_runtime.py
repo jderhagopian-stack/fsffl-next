@@ -283,7 +283,8 @@ class Foundation4CareerForwardShadowLoader:
         )
         terminal_features = provide_foundation4_terminal_features()
         player_ids = {item.player_id for item in current.estimates}
-        if set(component.player_ids) != player_ids or set(terminal_features) != player_ids:
+        component_player_ids = {item.player_id for item in component.estimates}
+        if component_player_ids != player_ids or set(terminal_features) != player_ids:
             raise ValueError(
                 "Foundation 4 requires Current, Y4-Y7 and terminal coverage for the identical full cohort"
             )
