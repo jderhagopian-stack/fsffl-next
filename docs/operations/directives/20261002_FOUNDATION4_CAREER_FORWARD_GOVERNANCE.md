@@ -77,6 +77,35 @@ The first workflow pass stopped before model/outcome scoring because the origina
 
 No terminal outcome was opened in either pass. Management therefore freezes Y7 as the anchor and 2015 as the single chronological holdout rather than weakening the three-post-Y8-season observation rule.
 
+## Terminal source-boundary result
+
+The first scored terminal workflow produced **INSUFFICIENT_EVIDENCE** before fitting a point model: nflverse `status` is a current roster-state taxonomy (`ACT/RES/CUT/DEV/...`) and contains no explicit retirement endpoint for the frozen cohorts. Treating `CUT` or recent absence as retirement is prohibited.
+
+A direct gap audit of the same retained player-season source also found repeated returns after multi-season absences, so an inactivity-gap rule cannot be silently promoted as a career-end definition.
+
+Therefore the explicit-completed-career regression route is closed.
+
+## Frozen transition-tail follow-up
+
+The smallest source-compatible terminal candidate is a **position-specific economic state-transition tail**:
+
+- compute realized annual lineup-capacity Shapley values in the same football-economic units;
+- on development cohorts 2013-2014, estimate the non-negative through-origin transition coefficient `rho_position` from realized annual Shapley `phi_h -> phi_(h+1)` across the observed Y7+ tail, deduplicated by player/calendar transition;
+- estimate model-authority uncertainty for `rho_position` by deterministic player-cluster bootstrap;
+- use the already-frozen predicted Y7 Shapley as each player's terminal anchor;
+- validate on untouched base-season 2015 by predicting only the fully observed restricted Y8-Y11 discounted tail;
+- report transition coefficients separately by relative horizon to test the stationarity assumption before any infinite extrapolation;
+- an infinite Y8+ tail is mathematically admissible only when `0.85 * rho_position < 1`; otherwise that position is unavailable;
+- if transition stability or holdout calibration is not credible, the null term-structure-only candidate wins.
+
+The candidate terminal series, if governed, is:
+
+`TAIL_Y8_PLUS = 0.85^7 * phi_Y7 * rho / (1 - 0.85 * rho)`
+
+with low/reference/high values generated from the bootstrapped `rho` authority envelope, not a hand-set survival multiplier.
+
+This follow-up is frozen before its transition coefficients or holdout errors are inspected. It introduces no current-player input and no alternate discount search.
+
 ## Tail uncertainty
 
 Model-authority uncertainty and outcome uncertainty stay separate.
