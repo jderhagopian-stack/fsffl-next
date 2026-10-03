@@ -1,0 +1,169 @@
+{
+  "aggregation_semantics": {
+    "career_forward_raw": "sum annual raw Shapley Y1-Y7 + direct cumulative tail Y8+",
+    "cumulative_outcome_sd_authorized": false,
+    "current_intrinsic_replaced": false,
+    "discounting": "none",
+    "display_indexes_combined": false
+  },
+  "artifact_digest": "sha256:505ba72e71ddcb868c1673386f2a516d64e1a087fe2d8d9807572cb24cd99aa6",
+  "artifact_id": 11260487964,
+  "authority": "coarse_set_valued_terminal",
+  "features": [
+    "age_years",
+    "experience_years",
+    "log_current_points",
+    "log_prior_points",
+    "prior_missing"
+  ],
+  "final_holdout": {
+    "base_season": 2011,
+    "combined_outer_80_coverage": 0.6118067978533095,
+    "combined_outer_90_coverage": 0.9302325581395349,
+    "model_authority_envelope_coverage": 0.026833631484794274,
+    "scored_rows": 559
+  },
+  "fitted_models": {
+    "direct_ridge": {
+      "QB": {
+        "feature_names": ["age_years","experience_years","log_current_points","log_prior_points","prior_missing"],
+        "kind": "direct_ridge",
+        "position": "QB",
+        "retransformation": "duan_smearing_training_only_v1",
+        "ridge_coefficients": [-0.631120117879448,-0.0349363638331627,0.6189339479451728,0.45573020081039944,0.2834387805166698],
+        "ridge_intercept": 1.2283121227444938,
+        "scaler_mean": [28.803876324880406,5.356495468277946,3.511842268797386,2.717757830611865,0.3041289023162135],
+        "scaler_scale": [4.431663955616934,4.335827069762098,1.823394446901083,2.29236652094665,0.46003751270102805],
+        "smearing_factor": 17.785726797864225
+      },
+      "RB": {
+        "feature_names": ["age_years","experience_years","log_current_points","log_prior_points","prior_missing"],
+        "kind": "direct_ridge",
+        "position": "RB",
+        "retransformation": "duan_smearing_training_only_v1",
+        "ridge_coefficients": [-0.47679187718439486,0.2073978927358479,0.28358249582935796,0.0333389320603864,0.09983730080563974],
+        "ridge_intercept": 0.35157613656646186,
+        "scaler_mean": [26.446119243073518,3.3187006145741877,3.258621524096676,2.4792941232192245,0.3033362598770852],
+        "scaler_scale": [2.9956102140741643,2.9688626539834,1.4515225139049912,1.9877815685307816,0.45969922049190665],
+        "smearing_factor": 4.219669476417952
+      },
+      "TE": {
+        "feature_names": ["age_years","experience_years","log_current_points","log_prior_points","prior_missing"],
+        "kind": "direct_ridge",
+        "position": "TE",
+        "retransformation": "duan_smearing_training_only_v1",
+        "ridge_coefficients": [-0.8810841951050555,0.5345999563133221,0.32233412789615234,0.1812757454569877,0.18501773413551179],
+        "ridge_intercept": 0.49799809830993824,
+        "scaler_mean": [26.833764997511917,3.590778097982709,2.735706087234454,2.091439522476457,0.30331412103746397],
+        "scaler_scale": [3.176887641570353,3.1670086477568997,1.3258534483109514,1.7247006489117755,0.45968974865308304],
+        "smearing_factor": 3.952764083190802
+      },
+      "WR": {
+        "feature_names": ["age_years","experience_years","log_current_points","log_prior_points","prior_missing"],
+        "kind": "direct_ridge",
+        "position": "WR",
+        "retransformation": "duan_smearing_training_only_v1",
+        "ridge_coefficients": [-0.4338939777803942,0.022867042210151338,0.4587911770313252,0.17592847224056934,0.22558938376396662],
+        "ridge_intercept": 0.5839569381740273,
+        "scaler_mean": [26.563471165689833,3.480561122244489,3.3603344560811936,2.5911821808837825,0.30741482965931866],
+        "scaler_scale": [3.3835115146817025,3.292720288693026,1.4310345997196248,2.0148172452027997,0.4614227477756712],
+        "smearing_factor": 5.98962368603483
+      }
+    },
+    "two_part_state": {
+      "QB": {
+        "feature_names": ["age_years","experience_years","log_current_points","log_prior_points","prior_missing"],
+        "kind": "two_part_state",
+        "logit_coefficients": [-0.9031414222261018,-0.22228528207029108,0.8158210628123791,0.7300437304431165,0.5435084302879836],
+        "logit_intercept": -1.3370797927178728,
+        "position": "QB",
+        "positive_ridge_coefficients": [-0.4866895224383592,0.044130021866585684,0.5781321392300057,0.3496546695474597,0.186927595499223],
+        "positive_ridge_intercept": 3.792212904779314,
+        "positive_smearing_factor": 5.384051324661913,
+        "retransformation": "duan_smearing_training_only_v1",
+        "scaler_mean": [28.803876324880406,5.356495468277946,3.511842268797386,2.717757830611865,0.3041289023162135],
+        "scaler_scale": [4.431663955616934,4.335827069762098,1.823394446901083,2.29236652094665,0.46003751270102805]
+      },
+      "RB": {
+        "feature_names": ["age_years","experience_years","log_current_points","log_prior_points","prior_missing"],
+        "kind": "two_part_state",
+        "logit_coefficients": [-1.1256159411873277,-0.27636517419647216,0.7566448985844114,0.2957989796055362,0.31043440242362935],
+        "logit_intercept": -2.7837281719188276,
+        "position": "RB",
+        "positive_ridge_coefficients": [-0.8100174943229401,0.17084783201092973,0.8780232808523023,0.3435193083941179,0.45086936506113967],
+        "positive_ridge_intercept": 1.9831540848102254,
+        "positive_smearing_factor": 2.478633059336131,
+        "retransformation": "duan_smearing_training_only_v1",
+        "scaler_mean": [26.446119243073518,3.3187006145741877,3.258621524096676,2.4792941232192245,0.3033362598770852],
+        "scaler_scale": [2.9956102140741643,2.9688626539834,1.4515225139049912,1.9877815685307816,0.45969922049190665]
+      },
+      "TE": {
+        "feature_names": ["age_years","experience_years","log_current_points","log_prior_points","prior_missing"],
+        "kind": "two_part_state",
+        "logit_coefficients": [-1.9426786477737537,0.4647224118120708,0.6962119097035886,0.581791544443871,0.4839577611546206],
+        "logit_intercept": -2.280761936565817,
+        "position": "TE",
+        "positive_ridge_coefficients": [-0.8353646377345334,0.19990138007722777,0.7321443809387594,0.6233801584272495,0.5726883577200316],
+        "positive_ridge_intercept": 1.9432626034802627,
+        "positive_smearing_factor": 2.6562617306187666,
+        "retransformation": "duan_smearing_training_only_v1",
+        "scaler_mean": [26.833764997511917,3.590778097982709,2.735706087234454,2.091439522476457,0.30331412103746397],
+        "scaler_scale": [3.176887641570353,3.1670086477568997,1.3258534483109514,1.7247006489117755,0.45968974865308304]
+      },
+      "WR": {
+        "feature_names": ["age_years","experience_years","log_current_points","log_prior_points","prior_missing"],
+        "kind": "two_part_state",
+        "logit_coefficients": [-1.055629198033804,-0.24368524967577615,1.192580425047812,0.576283811092281,0.6405058363445538],
+        "logit_intercept": -2.35517010847703,
+        "position": "WR",
+        "positive_ridge_coefficients": [-0.316020846799795,-0.04522266361834543,0.5935020684190871,0.29254885113199774,0.27018414522008083],
+        "positive_ridge_intercept": 3.090267205473738,
+        "positive_smearing_factor": 2.668002204652552,
+        "retransformation": "duan_smearing_training_only_v1",
+        "scaler_mean": [26.563471165689833,3.480561122244489,3.3603344560811936,2.5911821808837825,0.30741482965931866],
+        "scaler_scale": [3.3835115146817025,3.292720288693026,1.4310345997196248,2.0148172452027997,0.4614227477756712]
+      }
+    }
+  },
+  "limitations": [
+    "terminal labels are retrospective completed-career outcomes, not historically real-time available labels",
+    "right-censored rows are excluded rather than treated as zero",
+    "terminal artifact is valid only for the matching lineup-capacity signature",
+    "model-family spread is model-authority uncertainty, not an outcome confidence interval",
+    "rolling and final-holdout validation are grouped by player to prevent overlapping-career target leakage",
+    "log-scale terminal magnitude models use training-only Duan smearing to target expected original-scale cumulative tail"
+  ],
+  "lineup_capacity_signature": "fe6d07a77a7f11cd61e1af476e9d6b3fe89b7e59c6aecdeab5eb61c991b21349",
+  "model_version": "career-tail-two-family-v1",
+  "raw_quantity": "cumulative_governed_shapley_marginal_fantasy_points_y8_plus",
+  "residual_bands": {
+    "direct_ridge": {
+      "QB": {"n": 375,"q80": 15.481068218339349,"q90": 345.5562915380326},
+      "RB": {"n": 871,"q80": 1.88484674375667,"q90": 2.522184862983338},
+      "TE": {"n": 533,"q80": 0.5495474486221303,"q90": 17.469520907368903},
+      "WR": {"n": 973,"q80": 2.7556657684374324,"q90": 14.64075741251873}
+    },
+    "two_part_state": {
+      "QB": {"n": 375,"q80": 32.64468555050439,"q90": 347.3900064829445},
+      "RB": {"n": 871,"q80": 1.8044198948495225,"q90": 8.726198481184156},
+      "TE": {"n": 533,"q80": 0.8652072144681578,"q90": 16.777141550961982},
+      "WR": {"n": 973,"q80": 3.700848985805659,"q90": 18.45716314184871}
+    }
+  },
+  "retransformation": {
+    "direct_ridge_target": "expected_original_scale_tail",
+    "method": "duan_smearing_training_only_v1",
+    "two_part_positive_magnitude_target": "expected_original_scale_positive_tail"
+  },
+  "schema_version": "fsffl-foundation4-career-tail-terminal-v1",
+  "supported_models": ["direct_ridge","two_part_state"],
+  "target_version": "career-tail-y8plus-shapley-v1",
+  "validation_governance": {
+    "final_holdout_player_overlap": 0,
+    "final_holdout_training_excludes_holdout_player_ids": true,
+    "rolling_training_excludes_validation_player_ids": true,
+    "rolling_validation_player_overlap": 0,
+    "split_unit": "player_id"
+  },
+  "workflow_run_id": 37086000162
+}
