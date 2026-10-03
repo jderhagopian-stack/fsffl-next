@@ -16,6 +16,8 @@ def test_league_comparison_consumes_authoritative_atlas_analytics_and_value_cont
         assert evidence in source
     assert "api('/api/league/atlas')" in source
     assert "api('/api/league/team-views')" in source
+    assert "results[0].league_state_id===results[1]?.league_state_id" in source
+    assert "League State changed while the Atlas and roster views were loading" in source
     assert "api('/api/league/value-lenses')" in source
     assert "api('/api/values')" not in source
     assert "team_cardinal_portfolios" not in source

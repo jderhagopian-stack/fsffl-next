@@ -362,8 +362,14 @@ async function loadFsfflLeagueComparison(){
   }
   panel.innerHTML='<div class="atlas-loading"><i></i><strong>League Atlas</strong><span>Loading State, Simulation and league structure independently of Intrinsic.</span></div>';
   try{
-    const results=await Promise.all([api('/api/league/atlas'),api('/api/league/team-views')]);
-    fsfflLeagueStructureState.atlas=results[0];fsfflLeagueStructureState.views=results[1]?.team_views||[];
+    let atlasPayload=null,teamViewsPayload=null;
+    for(let attempt=0;attempt<3;attempt+=1){
+      const results=await Promise.all([api('/api/league/atlas'),api('/api/league/team-views')]);
+      if(results[0]?.league_state_id&&results[0].league_state_id===results[1]?.league_state_id){atlasPayload=results[0];teamViewsPayload=results[1];break}
+      if(attempt<2)await new Promise(resolve=>setTimeout(resolve,150));
+    }
+    if(!atlasPayload||!teamViewsPayload)throw new Error('League State changed while the Atlas and roster views were loading. Reload to align the evidence.');
+    fsfflLeagueStructureState.atlas=atlasPayload;fsfflLeagueStructureState.views=teamViewsPayload.team_views||[];
     fsfflLeagueStructureState.valueLenses=null;fsfflLeagueStructureState.valueStatus='idle';fsfflLeagueStructureState.valueError=null;fsfflLeagueStructureState.longTermEvidence=null;fsfflLeagueStructureState.longTermStatus='idle';fsfflLeagueStructureState.dynastyRooms=null;fsfflLeagueStructureState.dynastyRoomStatus='idle';fsfflLeagueStructureState.positionLens='current';fsfflLeagueStructureState.positionLensMode='rank';
     fsfflLeagueStructureState.managedTeamId=state?.context?.team_id||fsfflLeagueStructureState.atlas?.managed_team_id||null;
     fsfflLeagueStructureState.pickYear=fsfflLeagueStructureState.atlas?.pick_map?.seasons?.[0]||null;
