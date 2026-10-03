@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from importlib.resources import files
 from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
@@ -11,8 +12,6 @@ from fsffl.state.models import FrozenModel, LeagueRules, Position
 from fsffl.value.shapley_intrinsic import subset_caps_from_rules
 
 
-CAREER_TAIL_TARGET_VERSION = "career-tail-y8plus-shapley-v1"
-CAREER_TAIL_MODEL_VERSION = "career-tail-two-family-v1"
 CAREER_TAIL_VALUE_CONSUMER_VERSION = "career-tail-value-consumer-v1"
 CAREER_TAIL_RAW_QUANTITY = (
     "cumulative_governed_shapley_marginal_fantasy_points_y8_plus"
@@ -29,108 +28,139 @@ CAREER_TAIL_FEATURES = (
 CAREER_TAIL_LEGACY_RESEARCH_LINEUP_CAPACITY_SIGNATURE = (
     "fe6d07a77a7f11cd61e1af476e9d6b3fe89b7e59c6aecdeab5eb61c991b21349"
 )
-# Canonical semantic signature of the governed lineup-capacity game.  The frozen
-# research artifact recorded the legacy order-sensitive representation above; the
-# economics are unchanged, but runtime compatibility must not depend on provider
-# lineup ordering.
 CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE = (
     "a4d9a532c477b9fb2114a33009b94adbe15823748efec46d9701bdcddc8f5363"
 )
-CAREER_TAIL_RESEARCH_RUN_ID = 37086000162
-CAREER_TAIL_RESEARCH_ARTIFACT_ID = 11260487964
-CAREER_TAIL_RESEARCH_ARTIFACT_SHA256 = (
-    "505ba72e71ddcb868c1673386f2a516d64e1a087fe2d8d9807572cb24cd99aa6"
+CAREER_TAIL_RUNTIME_PACKAGE_SEMANTIC_SHA256 = (
+    "33158a26d50e71809cf0f38a7d479fda05ccbaa9fbd5703ba894c1cba4560537"
 )
-CAREER_TAIL_SHAPLEY_PERMUTATIONS = 2048
-CAREER_TAIL_SHAPLEY_SEED = 20260915
+CAREER_TAIL_RESEARCH_ARTIFACT_ID = 11263913850
 
 
-_FROZEN_MODELS: dict[str, dict[Position, dict[str, object]]] = {
-    "direct_ridge": {
-        Position.QB: {
-            "scaler_mean": (28.803876324880406, 5.356495468277946, 3.511842268797386, 2.717757830611865, 0.3041289023162135),
-            "scaler_scale": (4.431663955616934, 4.335827069762098, 1.823394446901083, 2.29236652094665, 0.46003751270102805),
-            "intercept": 1.2283121227444938,
-            "coefficients": (-0.631120117879448, -0.0349363638331627, 0.6189339479451728, 0.45573020081039944, 0.2834387805166698),
-            "smearing": 17.785726797864225,
-        },
-        Position.RB: {
-            "scaler_mean": (26.446119243073518, 3.3187006145741877, 3.258621524096676, 2.4792941232192245, 0.3033362598770852),
-            "scaler_scale": (2.9956102140741643, 2.9688626539834, 1.4515225139049912, 1.9877815685307816, 0.45969922049190665),
-            "intercept": 0.35157613656646186,
-            "coefficients": (-0.47679187718439486, 0.2073978927358479, 0.28358249582935796, 0.0333389320603864, 0.09983730080563974),
-            "smearing": 4.219669476417952,
-        },
-        Position.TE: {
-            "scaler_mean": (26.833764997511917, 3.590778097982709, 2.735706087234454, 2.091439522476457, 0.30331412103746397),
-            "scaler_scale": (3.176887641570353, 3.1670086477568997, 1.3258534483109514, 1.7247006489117755, 0.45968974865308304),
-            "intercept": 0.49799809830993824,
-            "coefficients": (-0.8810841951050555, 0.5345999563133221, 0.32233412789615234, 0.1812757454569877, 0.18501773413551179),
-            "smearing": 3.952764083190802,
-        },
-        Position.WR: {
-            "scaler_mean": (26.563471165689833, 3.480561122244489, 3.3603344560811936, 2.5911821808837825, 0.30741482965931866),
-            "scaler_scale": (3.3835115146817025, 3.292720288693026, 1.4310345997196248, 2.0148172452027997, 0.4614227477756712),
-            "intercept": 0.5839569381740273,
-            "coefficients": (-0.4338939777803942, 0.022867042210151338, 0.4587911770313252, 0.17592847224056934, 0.22558938376396662),
-            "smearing": 5.98962368603483,
-        },
-    },
-    "two_part_state": {
-        Position.QB: {
-            "scaler_mean": (28.803876324880406, 5.356495468277946, 3.511842268797386, 2.717757830611865, 0.3041289023162135),
-            "scaler_scale": (4.431663955616934, 4.335827069762098, 1.823394446901083, 2.29236652094665, 0.46003751270102805),
-            "logit_intercept": -1.3370797927178728,
-            "logit_coefficients": (-0.9031414222261018, -0.22228528207029108, 0.8158210628123791, 0.7300437304431165, 0.5435084302879836),
-            "positive_intercept": 3.792212904779314,
-            "positive_coefficients": (-0.4866895224383592, 0.044130021866585684, 0.5781321392300057, 0.3496546695474597, 0.186927595499223),
-            "positive_smearing": 5.384051324661913,
-        },
-        Position.RB: {
-            "scaler_mean": (26.446119243073518, 3.3187006145741877, 3.258621524096676, 2.4792941232192245, 0.3033362598770852),
-            "scaler_scale": (2.9956102140741643, 2.9688626539834, 1.4515225139049912, 1.9877815685307816, 0.45969922049190665),
-            "logit_intercept": -2.7837281719188276,
-            "logit_coefficients": (-1.1256159411873277, -0.27636517419647216, 0.7566448985844114, 0.2957989796055362, 0.31043440242362935),
-            "positive_intercept": 1.9831540848102254,
-            "positive_coefficients": (-0.8100174943229401, 0.17084783201092973, 0.8780232808523023, 0.3435193083941179, 0.45086936506113967),
-            "positive_smearing": 2.478633059336131,
-        },
-        Position.TE: {
-            "scaler_mean": (26.833764997511917, 3.590778097982709, 2.735706087234454, 2.091439522476457, 0.30331412103746397),
-            "scaler_scale": (3.176887641570353, 3.1670086477568997, 1.3258534483109514, 1.7247006489117755, 0.45968974865308304),
-            "logit_intercept": -2.280761936565817,
-            "logit_coefficients": (-1.9426786477737537, 0.4647224118120708, 0.6962119097035886, 0.581791544443871, 0.4839577611546206),
-            "positive_intercept": 1.9432626034802627,
-            "positive_coefficients": (-0.8353646377345334, 0.19990138007722777, 0.7321443809387594, 0.6233801584272495, 0.5726883577200316),
-            "positive_smearing": 2.6562617306187666,
-        },
-        Position.WR: {
-            "scaler_mean": (26.563471165689833, 3.480561122244489, 3.3603344560811936, 2.5911821808837825, 0.30741482965931866),
-            "scaler_scale": (3.3835115146817025, 3.292720288693026, 1.4310345997196248, 2.0148172452027997, 0.4614227477756712),
-            "logit_intercept": -2.35517010847703,
-            "logit_coefficients": (-1.055629198033804, -0.24368524967577615, 1.192580425047812, 0.576283811092281, 0.6405058363445538),
-            "positive_intercept": 3.090267205473738,
-            "positive_coefficients": (-0.316020846799795, -0.04522266361834543, 0.5935020684190871, 0.29254885113199774, 0.27018414522008083),
-            "positive_smearing": 2.668002204652552,
-        },
-    },
-}
+def _canonical_package_digest(payload: dict[str, object]) -> str:
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
-_RESIDUAL_BANDS: dict[str, dict[Position, tuple[int, float, float]]] = {
-    "direct_ridge": {
-        Position.QB: (375, 15.481068218339349, 345.5562915380326),
-        Position.RB: (871, 1.88484674375667, 2.522184862983338),
-        Position.TE: (533, 0.5495474486221303, 17.469520907368903),
-        Position.WR: (973, 2.7556657684374324, 14.64075741251873),
-    },
-    "two_part_state": {
-        Position.QB: (375, 32.64468555050439, 347.3900064829445),
-        Position.RB: (871, 1.8044198948495225, 8.726198481184156),
-        Position.TE: (533, 0.8652072144681578, 16.777141550961982),
-        Position.WR: (973, 3.700848985805659, 18.45716314184871),
-    },
-}
 
+def _load_fsffl_runtime_package() -> dict[str, object]:
+    resource = files("fsffl.value").joinpath(
+        "data/foundation4_career_tail_fsffl_2026.json"
+    )
+    payload = json.loads(resource.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Foundation 4 career-tail runtime package is not an object")
+    declared = str(payload.get("semantic_sha256") or "")
+    semantic_payload = {
+        key: value for key, value in payload.items() if key != "semantic_sha256"
+    }
+    actual = _canonical_package_digest(semantic_payload)
+    if declared != CAREER_TAIL_RUNTIME_PACKAGE_SEMANTIC_SHA256 or actual != declared:
+        raise ValueError("Foundation 4 career-tail runtime package semantic digest mismatch")
+    if tuple(payload.get("supported_models") or ()) != CAREER_TAIL_SUPPORTED_MODELS:
+        raise ValueError("Foundation 4 career-tail supported model set is not governed")
+    if payload.get("lineup_capacity_signature") != CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE:
+        raise ValueError("Foundation 4 career-tail lineup-capacity signature drifted")
+    if payload.get("scoring_coordinate") != "connected_league_fantasy_points":
+        raise ValueError("Foundation 4 career-tail scoring coordinate drifted")
+    aggregation = payload.get("aggregation_semantics")
+    if (
+        not isinstance(aggregation, dict)
+        or aggregation.get("cumulative_outcome_sd_authorized") is not False
+        or aggregation.get("current_intrinsic_replaced") is not False
+        or aggregation.get("discounting") != "none"
+        or aggregation.get("display_indexes_combined") is not False
+    ):
+        raise ValueError("Foundation 4 career-tail aggregation semantics drifted")
+    return payload
+
+
+_CAREER_TAIL_RUNTIME_PACKAGE = _load_fsffl_runtime_package()
+CAREER_TAIL_TARGET_VERSION = str(_CAREER_TAIL_RUNTIME_PACKAGE["target_version"])
+CAREER_TAIL_MODEL_VERSION = str(_CAREER_TAIL_RUNTIME_PACKAGE["model_version"])
+CAREER_TAIL_SCORING_COORDINATE = str(
+    _CAREER_TAIL_RUNTIME_PACKAGE["scoring_coordinate"]
+)
+CAREER_TAIL_RESEARCH_RUN_ID = int(_CAREER_TAIL_RUNTIME_PACKAGE["research_run_id"])
+# The retained workflow artifact packages the exact runtime JSON plus its generating
+# evidence. The runtime provenance pins the semantic JSON identity directly.
+CAREER_TAIL_RESEARCH_ARTIFACT_SHA256 = CAREER_TAIL_RUNTIME_PACKAGE_SEMANTIC_SHA256
+CAREER_TAIL_SHAPLEY_PERMUTATIONS = int(
+    _CAREER_TAIL_RUNTIME_PACKAGE["shapley_permutations"]
+)
+CAREER_TAIL_SHAPLEY_SEED = int(_CAREER_TAIL_RUNTIME_PACKAGE["shapley_seed"])
+
+
+def _normalized_frozen_models() -> dict[str, dict[Position, dict[str, object]]]:
+    raw_models = _CAREER_TAIL_RUNTIME_PACKAGE["fitted_models"]
+    if not isinstance(raw_models, dict):
+        raise ValueError("Foundation 4 career-tail fitted models are missing")
+    output: dict[str, dict[Position, dict[str, object]]] = {}
+    for model_id in CAREER_TAIL_SUPPORTED_MODELS:
+        raw_by_position = raw_models.get(model_id)
+        if not isinstance(raw_by_position, dict):
+            raise ValueError(f"Foundation 4 career-tail model missing: {model_id}")
+        typed: dict[Position, dict[str, object]] = {}
+        for position in (Position.QB, Position.RB, Position.WR, Position.TE):
+            row = raw_by_position.get(position.value)
+            if not isinstance(row, dict):
+                raise ValueError(
+                    f"Foundation 4 career-tail model missing {model_id}/{position.value}"
+                )
+            if model_id == "direct_ridge":
+                typed[position] = {
+                    "scaler_mean": tuple(row["scaler_mean"]),
+                    "scaler_scale": tuple(row["scaler_scale"]),
+                    "intercept": row["ridge_intercept"],
+                    "coefficients": tuple(row["ridge_coefficients"]),
+                    "smearing": row["smearing_factor"],
+                }
+            else:
+                typed[position] = {
+                    "scaler_mean": tuple(row["scaler_mean"]),
+                    "scaler_scale": tuple(row["scaler_scale"]),
+                    "logit_intercept": row["logit_intercept"],
+                    "logit_coefficients": tuple(row["logit_coefficients"]),
+                    "positive_intercept": row["positive_ridge_intercept"],
+                    "positive_coefficients": tuple(
+                        row["positive_ridge_coefficients"]
+                    ),
+                    "positive_smearing": row["positive_smearing_factor"],
+                }
+        output[model_id] = typed
+    return output
+
+
+def _normalized_residual_bands() -> dict[
+    str, dict[Position, tuple[int, float, float]]
+]:
+    raw_bands = _CAREER_TAIL_RUNTIME_PACKAGE["residual_bands"]
+    if not isinstance(raw_bands, dict):
+        raise ValueError("Foundation 4 career-tail residual bands are missing")
+    output: dict[str, dict[Position, tuple[int, float, float]]] = {}
+    for model_id in CAREER_TAIL_SUPPORTED_MODELS:
+        raw_by_position = raw_bands.get(model_id)
+        if not isinstance(raw_by_position, dict):
+            raise ValueError(
+                f"Foundation 4 career-tail residual model missing: {model_id}"
+            )
+        output[model_id] = {}
+        for position in (Position.QB, Position.RB, Position.WR, Position.TE):
+            row = raw_by_position.get(position.value)
+            if not isinstance(row, dict):
+                raise ValueError(
+                    f"Foundation 4 career-tail residual missing {model_id}/{position.value}"
+                )
+            output[model_id][position] = (
+                int(row["n"]),
+                float(row["q80"]),
+                float(row["q90"]),
+            )
+    return output
+
+
+_FROZEN_MODELS = _normalized_frozen_models()
+_RESIDUAL_BANDS = _normalized_residual_bands()
 
 class CareerTailFeatures(FrozenModel):
     player_id: str
@@ -284,6 +314,13 @@ def build_career_tail_authority(
     *,
     rules: LeagueRules,
 ) -> CareerTailAuthority:
+    if (
+        features.current_points_coordinate != CAREER_TAIL_SCORING_COORDINATE
+        or features.prior_points_coordinate != CAREER_TAIL_SCORING_COORDINATE
+    ):
+        raise ValueError(
+            "career-tail terminal features are outside the governed FSFFL scoring coordinate"
+        )
     signature = lineup_capacity_signature(rules)
     if signature != CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE:
         raise ValueError(
