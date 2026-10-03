@@ -58,10 +58,6 @@ def _rules() -> LeagueRules:
 def _lineup_capacity_signature(rules: LeagueRules) -> str:
     payload = {
         "team_count": rules.team_count,
-        "lineup": [
-            {"slot": row.slot.value, "count": row.count}
-            for row in rules.lineup
-        ],
         "caps": subset_caps_from_rules(rules),
     }
     return hashlib.sha256(
