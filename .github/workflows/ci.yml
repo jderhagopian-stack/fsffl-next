@@ -18,3 +18,46 @@ jobs:
         run: python -m pip install -e '.[dev,web]'
       - name: Test
         run: pytest -q
+
+  foundation4-current-long-horizon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install frozen research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn
+      - name: Restore accepted historical and routing evidence
+        run: |
+          mkdir -p /tmp/panel /tmp/term /tmp/route
+          gh api repos/${{ github.repository }}/actions/artifacts/10912862252/zip > /tmp/panel.zip
+          unzip -oq /tmp/panel.zip -d /tmp/panel
+          gh api repos/${{ github.repository }}/actions/artifacts/10899387479/zip > /tmp/term.zip
+          unzip -oq /tmp/term.zip -d /tmp/term
+          gh api repos/${{ github.repository }}/actions/artifacts/10916355135/zip > /tmp/route.zip
+          unzip -oq /tmp/route.zip -d /tmp/route
+      - name: Materialize governed 335-player Y4-Y7 authority
+        run: |
+          python scripts/build_foundation4_current_long_horizon_authority.py \
+            --model-a-rows /tmp/term/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results /tmp/term/frozen/qb/qb_career_state_deployment_results.json \
+            --raw-seasons /tmp/panel/RAW_PLAYER_SEASONS_RICH.csv \
+            --players /tmp/panel/PLAYERS.csv \
+            --residual-states /tmp/term/frozen/modela/multiyear-intrinsic-model-a/player_specific_trajectory_residual_states.csv \
+            --innovation-states /tmp/term/frozen/modela/multiyear-intrinsic-model-a/within_player_trajectory_innovation_states.csv \
+            --current-route /tmp/route/CURRENT_RESEARCH_ROUTE.csv \
+            --rolling-policy-predictions /tmp/route/ROLLING_POLICY_PREDICTIONS.csv
+      - name: Upload Foundation 4 current authority
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation4-current-long-horizon-authority
+          path: /tmp/foundation4_current_long_horizon
+          retention-days: 30
+
