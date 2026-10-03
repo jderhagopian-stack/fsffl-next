@@ -38,6 +38,7 @@ def test_position_map_keeps_current_rank_and_labels_dynasty_breadth_separately()
     assert "row.year_index+' '+laNum(row.reference_center,1)" in source
     assert "longTermState==='ready'?'not reported':longTermState==='idle'?'not loaded':longTermState==='stale'" in source
     assert "longTermState==='stale'?'not loaded for this last-good state'" in source
+    assert "longTermStatus==='stale'?'Long-Term Intrinsic is not loaded for this last-good State.'" in source
     assert source.count("fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale") == 2
     assert "Current Intrinsic · " in source
     assert "Market · " in source
