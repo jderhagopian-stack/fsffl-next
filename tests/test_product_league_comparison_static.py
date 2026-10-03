@@ -44,6 +44,8 @@ def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authorit
     assert "longTermState==='ready'?'not reported':longTermState==='idle'?'not loaded':longTermState==='stale'" in source
     assert "longTermState==='stale'?'not loaded for this last-good state'" in source
     assert "longTermStatus==='stale'?'Long-Term Intrinsic is not loaded for this last-good State.'" in source
+    assert "longTermStatus==='unavailable'?'Long-Term Intrinsic request is temporarily unavailable; reopen this detail to retry." in source
+    assert "!['idle','building','unavailable'].includes(fsfflLeagueStructureState.longTermStatus)" in source
     assert source.count("fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale") == 4
     assert "Current Intrinsic · " in source
     assert "Market · " in source
