@@ -486,3 +486,33 @@ Peak RSS was 388,489,216 bytes, below the 429,496,720-byte engineering budget an
 Management disposition: keep 50k authority and current RNG. The next bounded performance effort should first remove/batch-vectorize unconditional H2H reconstruction and reduce repeated Python work in exact team-origin slot ordering, preserving exact output/replay semantics; playoff batching is secondary. The earlier ~59s hosted NumPy interval is not an apples-to-apples current-workload baseline, while the current path remains ~26-27% faster than the ~173s legacy Python physical path despite richer Simulation 2.0 work.
 
 Evidence: `docs/operations/evidence/simulation_production_performance_diagnostic_20261002.md`.
+
+## 2026-10-03 — Simulation H2H performance tranche: code accepted, hosted benchmark pending Render rollout
+
+Postseason PR #351 remains accepted and closed. Its controlling governed 50k benchmark is postseason **55.888s -> 8.836s** and kernel **104.901s -> 61.007s** with 50k/RNG/replay/model authority unchanged.
+
+The next measured target was the NumPy-path per-world matchup/H2H reconstruction (~20.4s controlling baseline). PR #353 — `Simulation: batch H2H and Multiverse schedule products` — was squash-merged as `ea33d479a414bfa6a62ff06f7c4d84bdc8779e3b`.
+
+Implementation:
+- eliminates the second 50,000 × schedule Python scan in the NumPy production path;
+- derives simulated H2H points plus Multiverse biggest-blowout/upset candidates inside the existing bounded 500-world schedule batch pass;
+- precompiles H2H game-count topology once because scheduled games are world-invariant;
+- leaves the legacy Python RNG path unchanged;
+- preserves exact score generation and RNG consumption/order.
+
+Correctness evidence at final PR head `c61aab7d6fb52e570e168d5ac6019d10257a2756`:
+- full CI: **2,086 passed**, one existing warning;
+- PR164 focused corrective regression: PASS;
+- complete serialized/result equality against a literal scalar schedule-product reference across seeds 17, 2718 and 20261003;
+- standing fixed 50k replay digest remained green;
+- existing deterministic H2H/future-pick, 2/4/6/8 postseason, exact-provider, Multiverse/common-world coverage remained green.
+
+Stale PR #349 was closed as superseded by accepted #351.
+
+Hosted benchmark status:
+- exact merged #353 deploy `dep-db05iiad0e5s73a6ijd0` built successfully and launched replacement instance `...-595zs`;
+- the prior #351 instance shut down cleanly, but Render has not advanced the replacement deploy beyond `update_in_progress` and has emitted no Uvicorn startup/readiness/error after the launch command;
+- a same-commit recovery deploy request was accepted as `dep-db05ksadails73995r9g` and is queued behind the stuck rollout;
+- therefore **no #353 hosted 50k benchmark is yet valid**. Do not infer savings from CI or local structure and do not advance team-origin ordering until the governed hosted exact profile lands.
+
+Next executable action: let Render resolve/cancel the stuck deployment lane, verify exact #353 is live, run one governed 50k exact profile, compare combined batch schedule-product + residual H2H cost and kernel/full-Simulation wall time against the accepted #351 baseline, then advance to team-origin ordering only if H2H has reached diminishing returns.
