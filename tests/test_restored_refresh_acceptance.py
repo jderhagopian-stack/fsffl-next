@@ -15,6 +15,7 @@ from fsffl.product.state_first_acceptance import (
     FSFFL_ACCEPTANCE_LEAGUE,
     StateFirstAcceptanceError,
     _probe_surface_during_simulation,
+    _require_last_good_presentation_during_rebuild,
     resolve_staged_acceptance_user,
     stage_restored_refresh_partial_acceptance,
 )
@@ -56,6 +57,60 @@ def test_restored_refresh_probes_foreground_surfaces_during_simulation() -> None
 
     assert result == {"readiness_status": "rebuilding"}
     assert calls == [("restored_refresh_during_simulation", "published-runtime")]
+
+
+
+
+def test_restored_refresh_accepts_truthful_rebuilding_with_atomic_last_good() -> None:
+    observed = {
+        "reconciliation_status": "running",
+        "working_generation_active": True,
+        "readiness_status": "rebuilding",
+        "publication_status": "serving_last_good_during_update",
+        "presentation_snapshot_available": True,
+        "publication_generation_id": "generation-last-good",
+        "publication_generations": {
+            "context": "generation-last-good",
+            "home": "generation-last-good",
+            "franchise": "generation-last-good",
+            "league": "generation-last-good",
+            "market": "generation-last-good",
+        },
+        "presentation_modes": {
+            "context": None,
+            "home": "stale_last_good",
+            "franchise": "stale_last_good",
+            "league": "stale_last_good",
+            "market": "stale_last_good",
+        },
+    }
+
+    _require_last_good_presentation_during_rebuild(observed)
+
+
+def test_restored_refresh_rejects_mixed_last_good_generations() -> None:
+    observed = {
+        "reconciliation_status": "running",
+        "working_generation_active": True,
+        "readiness_status": "rebuilding",
+        "publication_status": "serving_last_good_during_update",
+        "presentation_snapshot_available": True,
+        "publication_generation_id": "generation-last-good",
+        "publication_generations": {
+            "home": "generation-last-good",
+            "league": "generation-other",
+        },
+        "presentation_modes": {
+            "home": "stale_last_good",
+            "league": "stale_last_good",
+        },
+    }
+
+    with pytest.raises(
+        StateFirstAcceptanceError,
+        match="truthfully serve one atomic last-good publication",
+    ):
+        _require_last_good_presentation_during_rebuild(observed)
 
 
 def test_restored_refresh_requires_foreground_probe_before_job_finishes() -> None:
