@@ -35,7 +35,7 @@ from fsffl.value.shapley_intrinsic_contract import (
 from .foundation4_shadow_inputs import (
     FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256,
     FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256,
-    provide_foundation4_long_horizon_forecast_contract,
+    provide_foundation4_long_horizon_forecast_contract_for_rules,
     provide_foundation4_terminal_features,
 )
 from .runtime import UserRuntimeContext
@@ -187,7 +187,9 @@ class Foundation4CareerForwardShadowLoader:
     ) -> LongTermIntrinsicShadowContract | None:
         if self._persistence_store is None or context.league_state is None:
             return None
-        forecast = provide_foundation4_long_horizon_forecast_contract()
+        forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
+            context.league_state.league.rules
+        )
         expected_input = long_term_intrinsic_input_fingerprint(
             forecast,
             rules=context.league_state.league.rules,
@@ -276,7 +278,9 @@ class Foundation4CareerForwardShadowLoader:
                 "Foundation 4 requires ready governed Current Intrinsic Y1-Y3"
             )
 
-        long_forecast = provide_foundation4_long_horizon_forecast_contract()
+        long_forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
+            context.league_state.league.rules
+        )
         component = build_long_term_intrinsic_shadow(
             long_forecast,
             rules=context.league_state.league.rules,
