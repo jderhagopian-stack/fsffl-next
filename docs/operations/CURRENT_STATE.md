@@ -3091,3 +3091,37 @@ A placeholder draft PR #356 was opened with no file delta and closed unmerged; i
 Current Intrinsic remains the separate Y1-Y3 lens. The eventual user-facing Long-Term Intrinsic is the holistic all-future-years career-forward value.
 
 Management rollout sequence after Foundation 4 acceptance: **run a bounded Product Integration / Capability Rollout tranche before Foundation 5**. Because the private beta presently has one user, use a simple shadow -> prove -> expose -> refine cycle rather than multi-cohort rollout. Productize accepted Simulation 2.0 competitive intelligence, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience, then proceed to Foundation 5 while incorporating physical iPhone/Safari feedback.
+
+
+## 2026-10-03 — Simulation #357/#358 and Foundation 4 #356 current checkpoint
+
+Simulation performance advanced again.
+
+PR #357 (`Simulation: optimize team-origin future-pick ordering`) merged as `926c738b60792fb1e959e7e1cb30fca61d9447c0`. Its governed hosted 50,000-run profile measured:
+- kernel wall **42.895s**;
+- team-origin future-pick ordering **11.593s**, down from the #355 controlling baseline **17.440s** (~33.5% reduction in the targeted phase);
+- H2H **6.274s**;
+- postseason **5.786s**;
+- standings **2.904s**;
+- RNG **4.799s**;
+- Multiverse **3.808s**.
+Peak RSS at Simulation build was **389,877,760 bytes**, below the **429,496,720-byte** engineering budget.
+
+The targeted origin-ordering optimization is therefore materially effective, though one hosted run should not be over-interpreted as a clean total-kernel delta because CPU-throttled subphase wall times moved in both directions. Preserve the exact 50k/RNG/replay/model contract.
+
+PR #358 (`Simulation: close H2H chunk lifetime memory bound`) then merged as `f527aedd398df638f2d361cfd9296752c5f533f5` and is live. It closes the post-merge #355 Codex P2 by reusing one independently bounded dense H2H buffer across chunk transitions and populating the historical baseline directly instead of overlapping old/new chunks plus a second dense baseline. CI and PR164 focused regression passed. A fresh governed #358 50k profile has **not yet landed**; obtain one before final Simulation performance closeout/re-targeting.
+
+The runtime-availability acceptance failure also **recurred** on the #357 hosted run after successful publication. The failure again reported `readiness_status=rebuilding` / `serving_last_good_during_update` with stale-last-good presentation surfaces while a newer working generation was active. Root-cause this narrowly as acceptance/lifecycle behavior; do not reopen Simulation semantics or discard the valid performance profile.
+
+Foundation 4 implementation is now substantive. Draft PR #356 (`Foundation 4: implement governed career-forward intrinsic shadow`) is open/mergeable at head `f6cbba6fe6ca95ef3039b1eab6fddaba49d637fa`. It now contains:
+- frozen production-readable career-tail artifact identity from workflow run **37086000162** / artifact **11260487964**;
+- pure Y8+ terminal Value consumer with lineup-capacity signature fail-closed behavior;
+- holistic raw career-forward aggregator using compatible `Y1-Y7 + Y8+` Shapley economics;
+- explicit separation of Current Intrinsic, Y4-Y7 model authority, terminal model-authority spread and historical residual evidence;
+- deterministic semantic fingerprinting;
+- no display-index arithmetic, Market input, holistic discounting or cumulative career SD;
+- focused contract tests plus a CI materialization lane for current Y4-Y7 authority.
+
+Current #356 validation is green: full CI and PR164 focused regression pass, including the `foundation4-current-long-horizon` CI job. That job produced artifact **11261836244** at the current head. #356 is still a **shadow-contract implementation**, not Foundation 4 acceptance: live-cohort wiring, persistence/API serving, restart/reload/resource validation and bounded review/promotion remain ahead.
+
+Management sequence remains: finish Foundation 4 shadow acceptance -> Product Integration / Capability Rollout to the sole private-beta user -> Foundation 5 PIT historical-market evidence.
