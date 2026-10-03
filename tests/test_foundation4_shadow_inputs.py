@@ -10,6 +10,8 @@ from fsffl.product.foundation4_shadow_inputs import (
     FOUNDATION4_FSFFL_SCORING_COORDINATE,
     FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256,
     FOUNDATION4_LONG_HORIZON_ROW_COUNT,
+    FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS,
+    FOUNDATION4_LONG_TERM_RESIDUAL_OMISSION_POLICY,
     FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256,
     foundation4_fsffl_scoring_is_compatible,
     foundation4_long_horizon_rows,
@@ -89,6 +91,9 @@ def test_frozen_board_known_coordinate_and_terminal_transport_are_exact() -> Non
     assert "exact FSFFL scoring transform" in (
         feature.live_feature_transport_limitation or ""
     )
+    assert "intentionally omits rare/unpredictable residual scoring bonuses" in (
+        feature.live_feature_transport_limitation or ""
+    )
 
 
     terminal = provide_foundation4_terminal_features()
@@ -138,6 +143,15 @@ def test_frozen_board_uses_direct_fsffl_scoring_authority() -> None:
     )
     assert connected.provenance["scoring_materialization"] == (
         "direct_historical_fsffl_target_recalibration"
+    )
+    assert tuple(
+        connected.provenance["intentionally_omitted_immaterial_residual_rule_stats"]
+    ) == FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS
+    assert connected.provenance["residual_omission_policy"] == (
+        FOUNDATION4_LONG_TERM_RESIDUAL_OMISSION_POLICY
+    )
+    assert "standalone Current Intrinsic remains unchanged" in (
+        connected.provenance["current_intrinsic_boundary"]
     )
 
 
