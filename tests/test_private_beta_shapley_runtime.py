@@ -53,6 +53,7 @@ from fsffl.product.vnext_future_forecast_provider import (
     VNEXT_FORECAST_VERSION,
     build_vnext_future_forecast_contract,
     provide_vnext_future_forecast_contract,
+    vnext_future_forecast_input_fingerprint,
 )
 from fsffl.state.models import (
     League,
@@ -1055,6 +1056,66 @@ def test_promoted_vnext_intrinsic_survives_authentic_preseason_raw_without_fumbl
         "preserved_preseason_year1_forecast"
     )
 
+
+
+def test_vnext_semantic_future_contract_is_materialized_once_across_unrelated_state_advance() -> None:
+    state, observation = _fixture()
+    calls: list[str] = []
+
+    def counted_builder(**kwargs):
+        calls.append("future")
+        return provide_vnext_future_forecast_contract(**kwargs)
+
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        future_forecast_builder=counted_builder,
+        future_forecast_model_version=VNEXT_FORECAST_VERSION,
+        future_missing_fact_family="vnext_future_forecast_coordinate",
+        future_forecast_input_fingerprint_resolver=(
+            vnext_future_forecast_input_fingerprint
+        ),
+    )
+    context = _context(state, observation)
+
+    baseline_fingerprint = loader.intrinsic_input_fingerprint(context)
+    built = loader(context)
+    assert built.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert calls == ["future"]
+
+    advanced = state.model_copy(
+        update={
+            "as_of": state.as_of + timedelta(hours=3),
+            "teams": (
+                state.teams[0].model_copy(update={"display_name": "A Updated"}),
+                state.teams[1],
+            ),
+            "team_states": tuple(
+                item.model_copy(update={"faab_balance": 17})
+                for item in state.team_states
+            ),
+        }
+    )
+    advanced_context = _context(advanced, observation)
+    assert advanced.state_id != state.state_id
+    assert loader.intrinsic_input_fingerprint(advanced_context) == baseline_fingerprint
+    reused = loader(advanced_context)
+    assert reused is built
+    assert calls == ["future"]
+
+    changed_rules = state.league.rules.model_copy(
+        update={
+            "lineup": (
+                LineupRequirement(slot=RosterSlot.QB, count=2),
+            )
+        }
+    )
+    changed_state = state.model_copy(
+        update={
+            "league": state.league.model_copy(update={"rules": changed_rules}),
+        }
+    )
+    loader.intrinsic_input_fingerprint(_context(changed_state, observation))
+    assert calls == ["future", "future"]
 
 
 def test_intrinsic_input_fingerprint_ignores_unrelated_league_state_changes() -> None:
