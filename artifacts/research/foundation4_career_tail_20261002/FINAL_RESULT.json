@@ -1,0 +1,66 @@
+{
+  "authority": "governed_for_bounded_shadow_implementation",
+  "research_head": "ae03df724bb2b8ff16a48b9798dcf21b8bc9c3b9",
+  "workflow_run_id": 37086000162,
+  "artifact_id": 11260487964,
+  "artifact_digest": "sha256:505ba72e71ddcb868c1673386f2a516d64e1a087fe2d8d9807572cb24cd99aa6",
+  "source_artifact_id": 10899387479,
+  "source_artifact_digest": "sha256:ea72f312148f01b8066419e8f12cb3a04a4dbbd99fd6e0b7dc975c65cc2446b5",
+  "target": "cumulative_governed_shapley_marginal_fantasy_points_y8_plus",
+  "lineup_capacity_signature": "fe6d07a77a7f11cd61e1af476e9d6b3fe89b7e59c6aecdeab5eb61c991b21349",
+  "supported_models": [
+    "direct_ridge",
+    "two_part_state"
+  ],
+  "terminal_authority": "coarse_set_valued",
+  "validation_governance": {
+    "split_unit": "player_id",
+    "rolling_training_excludes_validation_player_ids": true,
+    "final_holdout_training_excludes_holdout_player_ids": true,
+    "rolling_validation_player_overlap": 0,
+    "final_holdout_player_overlap": 0
+  },
+  "retransformation": {
+    "method": "duan_smearing_training_only_v1",
+    "target": "expected_original_scale_cumulative_tail"
+  },
+  "rolling_validation": {
+    "n": 2752,
+    "direct_ridge": {
+      "rmse": 147.4540407013652,
+      "mae": 27.625295674665573,
+      "spearman": 0.1170620424661413
+    },
+    "two_part_state": {
+      "rmse": 146.0366770743778,
+      "mae": 27.36569951531345,
+      "spearman": 0.30174692910876044
+    },
+    "zero_tail_rmse": 148.40066492100578
+  },
+  "final_holdout_2011": {
+    "total_rows": 567,
+    "censored_rows_excluded": 8,
+    "scored_rows": 559,
+    "direct_ridge": {
+      "rmse": 85.71920757822615,
+      "mae": 18.359922851170456,
+      "spearman": 0.19218845188519965
+    },
+    "two_part_state": {
+      "rmse": 80.04149414215246,
+      "mae": 18.497081265503105,
+      "spearman": 0.3161139393572186
+    },
+    "model_authority_envelope_coverage": 0.026833631484794274,
+    "combined_outer_80_coverage": 0.6118067978533095,
+    "combined_outer_90_coverage": 0.9302325581395349
+  },
+  "aggregation": {
+    "raw_quantity": "sum annual raw Shapley Y1-Y7 plus direct cumulative tail Y8+",
+    "discounting": "none",
+    "combine_display_indexes": false,
+    "replace_current_intrinsic": false,
+    "cumulative_outcome_sd_authorized": false
+  }
+}
