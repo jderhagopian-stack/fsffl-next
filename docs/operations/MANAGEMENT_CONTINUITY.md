@@ -589,3 +589,10 @@ Promotion classification is Tier C because persistence/restore/resource behavior
 
 After Foundation 4 shadow acceptance, immediately execute the approved Product Integration / Capability Rollout tranche for the sole private-beta user: expose accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience, then obtain physical iPhone/Safari feedback before Foundation 5.
 
+## 2026-10-03 — Intrinsic performance continuity note
+
+Do not lose the previously identified Intrinsic optimization work. There are two distinct goals:
+- **avoid unnecessary rebuilds** via dependency-scoped compatibility, durable persistence and exact restore/reuse; historical cold Shapley rebuilds were multi-minute;
+- **speed the rebuild that is genuinely necessary** only after profiling the accepted Foundation 4 holistic path.
+
+Recent hosted lifecycle evidence still puts the current Intrinsic phase at roughly **25–27s** when it runs. After #361 Foundation 4 correctness/persistence/hosted acceptance, run a bounded Intrinsic performance profile and optimize only measured material costs while preserving exact Current Intrinsic / Long-Term Intrinsic economics, fingerprints and restart identity. This should happen before or alongside Product Integration, not be forgotten behind the Simulation work.
