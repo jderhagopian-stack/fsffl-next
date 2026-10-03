@@ -1928,3 +1928,32 @@ This bounded Intrinsic performance tranche may run immediately after Foundation 
 ## 2026-10-03 — #361 exact-head validation retrigger
 
 The Foundation 4 branch has now directly materialized/recalibrated the governed long-horizon and terminal artifacts in the FSFFL scoring coordinate. The generated frozen-board commit `7a845b63969acb831225cc4ab5abb44e5f24c444` was authored by `github-actions[bot]`; its pull-request workflow records ended as `action_required` with no jobs, so they are not valid exact-head validation. This management checkpoint intentionally creates a normal branch commit to retrigger the required PR validation on the post-generation artifact head. Do not merge until those exact-head checks run and pass, the scoring-policy coverage remains consistent with Management's modeled/residual/ignorable/material-unsupported rule classes, and the targeted hosted build/restore acceptance is complete.
+
+## 2026-10-03 — Foundation 4 closed; Intrinsic runtime-performance tranche ACTIVE
+
+**Foundation 4 / PR #361: ACCEPTED / CLOSED.** Merge commit `ef29a0e7f6243a9d429d18c6f76b3a66d4cd0410`; final reviewed head `4886b91f270bc0c07fcea9b89130132cb503126d`.
+
+Hosted closeout:
+- first live run built/persisted the Foundation 4 artifacts;
+- clean same-code redeploy `dep-db0h5rugekts739mf5g0` restored the full 335-player holistic artifact with semantic identity intact;
+- Foundation 4 restore acceptance peak RSS: **364,875,776 bytes**;
+- full runtime-availability acceptance: **PASS**, peak RSS **402,485,248 bytes**;
+- engineering budget: **429,496,720 bytes**.
+
+Do not reopen model/scoring work or repeat an expensive Foundation 4 build merely to improve acceptance-harness cosmetics.
+
+Superseded draft PR #356 is closed unmerged.
+
+### ACTIVE — Intrinsic runtime performance
+Required sequence:
+1. measure cold Long-Term Intrinsic materialization wall time / CPU / RSS;
+2. measure exact compatible restore/reuse wall time / CPU / RSS;
+3. measure changed-State rebuild wall time / CPU / RSS;
+4. identify avoidable recomputation, dependency-fingerprint churn, duplicate persistence/materialization or other reuse misses;
+5. eliminate unnecessary work first while preserving semantic identity and exact dependency compatibility;
+6. optimize unavoidable Shapley/materialization compute only if the measured gain is material;
+7. record before/after evidence and keep Current Intrinsic / Foundation 4 semantics unchanged.
+
+### QUEUED IMMEDIATELY AFTER — Product Integration / Capability Rollout
+Expose the already-accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience. Use one-user private-beta shadow -> prove -> expose -> refine; obtain physical iPhone/Safari feedback and then proceed to Foundation 5.
+
