@@ -314,6 +314,54 @@ def _semantic_fingerprint(payload: Mapping[str, object]) -> str:
     ).hexdigest()
 
 
+def _holistic_semantic_payload(
+    *,
+    model_version: str,
+    evaluation_season: int,
+    lineup_capacity_signature_value: str,
+    current_intrinsic_contract_version: str,
+    y4_y7_contract_version: str,
+    terminal_artifact_digest: str,
+    estimates: tuple[HolisticCareerForwardPlayerEstimate, ...] | list[HolisticCareerForwardPlayerEstimate],
+) -> dict[str, object]:
+    return {
+        "model_version": model_version,
+        "evaluation_season": evaluation_season,
+        "lineup_capacity_signature": lineup_capacity_signature_value,
+        "current_intrinsic_contract_version": current_intrinsic_contract_version,
+        "y4_y7_contract_version": y4_y7_contract_version,
+        "terminal_artifact_digest": terminal_artifact_digest,
+        "estimates": [
+            {
+                "player_id": row.player_id,
+                "raw_reference": row.career_forward_raw_reference,
+                "authority": row.model_authority.model_dump(mode="json"),
+            }
+            for row in estimates
+        ],
+    }
+
+
+def holistic_shadow_semantic_fingerprint(
+    shadow: HolisticCareerForwardShadow,
+) -> str:
+    """Recompute the persisted Foundation 4 semantic identity from served output."""
+
+    return _semantic_fingerprint(
+        _holistic_semantic_payload(
+            model_version=shadow.model_version,
+            evaluation_season=shadow.evaluation_season,
+            lineup_capacity_signature_value=shadow.lineup_capacity_signature,
+            current_intrinsic_contract_version=(
+                shadow.current_intrinsic_contract_version
+            ),
+            y4_y7_contract_version=shadow.y4_y7_contract_version,
+            terminal_artifact_digest=shadow.terminal_artifact_digest,
+            estimates=shadow.estimates,
+        )
+    )
+
+
 def build_holistic_career_forward_shadow(
     current_intrinsic: ShapleyIntrinsicContract,
     y4_y7: LongTermIntrinsicShadowContract,
@@ -403,22 +451,15 @@ def build_holistic_career_forward_shadow(
             )
         )
 
-    fingerprint_payload = {
-        "model_version": FOUNDATION4_HOLISTIC_MODEL_VERSION,
-        "evaluation_season": current_intrinsic.evaluation_season,
-        "lineup_capacity_signature": signature,
-        "current_intrinsic_contract_version": current_intrinsic.contract_version,
-        "y4_y7_contract_version": y4_y7.contract_version,
-        "terminal_artifact_digest": _TERMINAL_ARTIFACT["artifact_digest"],
-        "estimates": [
-            {
-                "player_id": row.player_id,
-                "raw_reference": row.career_forward_raw_reference,
-                "authority": row.model_authority.model_dump(mode="json"),
-            }
-            for row in estimates
-        ],
-    }
+    fingerprint_payload = _holistic_semantic_payload(
+        model_version=FOUNDATION4_HOLISTIC_MODEL_VERSION,
+        evaluation_season=current_intrinsic.evaluation_season,
+        lineup_capacity_signature_value=signature,
+        current_intrinsic_contract_version=current_intrinsic.contract_version,
+        y4_y7_contract_version=y4_y7.contract_version,
+        terminal_artifact_digest=str(_TERMINAL_ARTIFACT["artifact_digest"]),
+        estimates=estimates,
+    )
     return HolisticCareerForwardShadow(
         evaluation_season=current_intrinsic.evaluation_season,
         lineup_capacity_signature=signature,
