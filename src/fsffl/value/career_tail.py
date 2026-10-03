@@ -26,8 +26,15 @@ CAREER_TAIL_FEATURES = (
     "log_prior_points",
     "prior_missing",
 )
-CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE = (
+CAREER_TAIL_LEGACY_RESEARCH_LINEUP_CAPACITY_SIGNATURE = (
     "fe6d07a77a7f11cd61e1af476e9d6b3fe89b7e59c6aecdeab5eb61c991b21349"
+)
+# Canonical semantic signature of the governed lineup-capacity game.  The frozen
+# research artifact recorded the legacy order-sensitive representation above; the
+# economics are unchanged, but runtime compatibility must not depend on provider
+# lineup ordering.
+CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE = (
+    "a4d9a532c477b9fb2114a33009b94adbe15823748efec46d9701bdcddc8f5363"
 )
 CAREER_TAIL_RESEARCH_RUN_ID = 37086000162
 CAREER_TAIL_RESEARCH_ARTIFACT_ID = 11260487964
@@ -222,12 +229,11 @@ class CareerTailAuthority(FrozenModel):
 
 
 def lineup_capacity_signature(rules: LeagueRules) -> str:
+    # The Shapley economy consumes capacities, not the provider's source ordering
+    # of lineup rows.  Hash only the semantic capacity coordinate so equivalent
+    # Sleeper/canonical lineups receive the same identity.
     payload = {
         "team_count": rules.team_count,
-        "lineup": [
-            {"slot": row.slot.value, "count": row.count}
-            for row in rules.lineup
-        ],
         "caps": subset_caps_from_rules(rules),
     }
     return hashlib.sha256(
