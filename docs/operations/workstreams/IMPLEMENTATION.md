@@ -2607,3 +2607,31 @@ Implementation disposition:
 
 Validation is intentionally risk-proportionate: run existing Foundation 4 focused lanes and ordinary CI only, then proceed directly to hosted 335-player build/persistence/API/restart/resource acceptance if green.
 
+## 2026-10-03 — Foundation 4 #361 CLOSEOUT / next active tranche
+
+**DIRECTIVE COMPLETE — FOUNDATION 4.**
+
+PR #361 merged as `ef29a0e7f6243a9d429d18c6f76b3a66d4cd0410`; final exact head `4886b91f270bc0c07fcea9b89130132cb503126d` passed full CI (**2,120 passed**, one existing warning) and all required focused lanes.
+
+Hosted acceptance is substantively complete:
+- the first live run built and persisted the Foundation 4 Y4-Y7 component and holistic career-forward artifacts;
+- clean same-code redeploy `dep-db0h5rugekts739mf5g0` restored the full **335-player** artifact with semantic identity intact;
+- Foundation 4 restore acceptance passed with peak RSS **364,875,776 bytes**;
+- full runtime-availability acceptance passed with peak RSS **402,485,248 bytes**, below the **429,496,720-byte** engineering budget;
+- standalone Current Intrinsic remained separate and unchanged.
+
+The earlier build-side/harness failure is superseded by the persisted-artifact + exact same-code restore evidence and subsequent full runtime-availability PASS. Do not rerun the expensive Foundation 4 build solely to make the harness history cosmetically clean.
+
+PR #356 is superseded and closed unmerged.
+
+### ACTIVE — Intrinsic runtime-performance tranche
+Measure and compare:
+1. cold Long-Term Intrinsic materialization;
+2. exact compatible restore/reuse;
+3. changed-State rebuild.
+
+First remove unnecessary recomputation, duplicate materialization/persistence, or overly broad dependency invalidation. Preserve exact semantic/dependency identity. Only optimize unavoidable Shapley/materialization computation if the measured cost is materially useful to reduce. Record wall time, CPU, RSS, restore latency, rebuild latency and semantic equality.
+
+### NEXT — Product Integration / Capability Rollout
+After the performance tranche, continue directly into the approved one-user private-beta rollout of accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic across Home / Franchise / League / Market / More. Do not begin Foundation 5 first.
+
