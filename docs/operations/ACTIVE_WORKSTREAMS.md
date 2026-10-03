@@ -1888,6 +1888,29 @@ One narrow #359 acceptance-tooling P2 remains: missing surface publication-gener
 ### Foundation 4
 #356 remains open/green but unchanged since the current shadow-contract/current-authority artifact checkpoint. Resume it now through live-cohort runtime materialization, persistence/API, restart/reload/resource validation, bounded review and explicit shadow acceptance. This is the primary forward product-capability workstream.
 
+## 2026-10-03 — Foundation 4 runtime/persistence acceptance tranche ACTIVE
+
+Foundation 4 is the primary forward-capability workstream. The substantive continuation lives on `work/foundation4-holistic-career-forward-shadow`, reconciled onto current main without regenerating the frozen binary authority artifacts.
+
+Governed economic definition remains unchanged:
+- holistic raw career-forward value = compatible annual raw Shapley economics `Y1 + ... + Y7 + TAIL_Y8_PLUS`;
+- Current Intrinsic remains the separate governed Y1-Y3 product lens;
+- Y4-Y7 consume the frozen accepted all-policy current-cohort authority coordinates, never their 0-10000 display index;
+- Y8+ is the governed cumulative career tail from literal Y8 through career end;
+- no new discount/horizon preference weight, age/youth multiplier, survival multiplier, terminal multiplier, Market input, display-index arithmetic or cumulative career SD is authorized.
+
+Current implementation state:
+- frozen 2026 current cohort: **335 players**, 5,360 governed Y4-Y7 policy rows plus 335 terminal feature rows;
+- production runtime materializer composes ready Current Intrinsic Y1-Y3 + frozen Y4-Y7 + governed Y8+ tail and fails closed on cohort or lineup-signature mismatch;
+- holistic and Y4-Y7 component artifacts are persisted separately with dependency/model identity;
+- shadow API endpoints are installed separately from Current Intrinsic;
+- startup restore attempts compatible Foundation 4 reuse without replacing Current Intrinsic;
+- dedicated tests now cover full-cohort materialization, durable persistence, API serving and fresh-loader restart semantic identity;
+- a bounded hosted acceptance probe supports explicit `build` and `restore` modes, exposes only non-sensitive metadata/fingerprints, validates raw-economic reconciliation, and fails if process peak RSS exceeds the engineering memory budget.
+
+Promotion classification is Tier C because persistence/restore/resource behavior is now part of the claim. Required remaining gates: exact-head CI/focused review -> one hosted build acceptance -> one same-code restore/reload proof with identical semantic fingerprint -> record acceptance.
+
+After Foundation 4 shadow acceptance, immediately execute the approved Product Integration / Capability Rollout tranche for the sole private-beta user: expose accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience, then obtain physical iPhone/Safari feedback before Foundation 5.
 
 ## 2026-10-03 — Preserve queued Intrinsic runtime optimization
 
@@ -1900,3 +1923,8 @@ Historical beta evidence identified the main failure mode as unnecessary cold Sh
 4. report before/after wall time, CPU/RSS, cache/restore latency and semantic equality.
 
 This bounded Intrinsic performance tranche may run immediately after Foundation 4 acceptance and before or alongside the Product Integration rollout; do not let it delay exposure of already-proven capabilities unless latency is materially user-blocking.
+
+
+## 2026-10-03 — #361 exact-head validation retrigger
+
+The Foundation 4 branch has now directly materialized/recalibrated the governed long-horizon and terminal artifacts in the FSFFL scoring coordinate. The generated frozen-board commit `7a845b63969acb831225cc4ab5abb44e5f24c444` was authored by `github-actions[bot]`; its pull-request workflow records ended as `action_required` with no jobs, so they are not valid exact-head validation. This management checkpoint intentionally creates a normal branch commit to retrigger the required PR validation on the post-generation artifact head. Do not merge until those exact-head checks run and pass, the scoring-policy coverage remains consistent with Management's modeled/residual/ignorable/material-unsupported rule classes, and the targeted hosted build/restore acceptance is complete.

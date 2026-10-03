@@ -58,10 +58,6 @@ def _rules() -> LeagueRules:
 def _lineup_capacity_signature(rules: LeagueRules) -> str:
     payload = {
         "team_count": rules.team_count,
-        "lineup": [
-            {"slot": row.slot.value, "count": row.count}
-            for row in rules.lineup
-        ],
         "caps": subset_caps_from_rules(rules),
     }
     return hashlib.sha256(
@@ -508,10 +504,17 @@ def _holdout_summary(
 
 
 def main() -> None:
+    global OUT
     parser = argparse.ArgumentParser()
     parser.add_argument("--player-seasons", required=True)
+    parser.add_argument("--out-dir", default=str(OUT))
+    parser.add_argument(
+        "--scoring-coordinate",
+        default="frozen_standard_non_ppr_fantasy_points",
+    )
     args = parser.parse_args()
 
+    OUT = Path(args.out_dir)
     OUT.mkdir(parents=True, exist_ok=True)
     player_seasons = pd.read_csv(args.player_seasons)
     rules = _rules()
@@ -613,6 +616,7 @@ def main() -> None:
     evidence = {
         "target_version": TARGET_VERSION,
         "model_version": MODEL_VERSION,
+        "scoring_coordinate": args.scoring_coordinate,
         "authority": "coarse_set_valued_terminal",
         "raw_quantity": (
             "cumulative_governed_shapley_"
@@ -682,6 +686,10 @@ def main() -> None:
                 "the matching lineup-capacity signature"
             ),
             (
+                "terminal artifact is valid only for its declared scoring "
+                "coordinate; cross-coordinate aggregation is forbidden"
+            ),
+            (
                 "model-family spread is model-authority "
                 "uncertainty, not an outcome confidence interval"
             ),
@@ -712,6 +720,11 @@ def main() -> None:
             "Lineup-capacity signature: "
             + signature
             + "."
+        ),
+        (
+            "Scoring coordinate: **"
+            + str(args.scoring_coordinate)
+            + "**."
         ),
         (
             "Rolling validation rows: **"

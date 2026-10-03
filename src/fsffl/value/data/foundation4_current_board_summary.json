@@ -1,0 +1,27 @@
+{
+  "authority": "frozen_policy_fsffl_scoring_direct_recalibration",
+  "current_source": "FINAL_CONNECTED_LEAGUE_BOARD_335.csv",
+  "evaluation_season": 2026,
+  "historical_scoring_transform": "nflverse_standard + 0.5*receptions + passing_interceptions + fumbles_lost",
+  "horizons": [
+    4,
+    5,
+    6,
+    7
+  ],
+  "model_family_search_reopened": false,
+  "player_count": 335,
+  "policies": [
+    "baseline",
+    "hard_router",
+    "soft_stack",
+    "blanket_75_25"
+  ],
+  "route_policy_search_reopened": false,
+  "row_count": 5360,
+  "scoring_coordinate": "connected_league_fantasy_points",
+  "terminal_current_points_coordinate": "connected_league_fantasy_points",
+  "terminal_feature_player_count": 335,
+  "terminal_prior_points_coordinate": "connected_league_fantasy_points",
+  "uncertainty_recalibrated_on_fsffl_target": true
+}

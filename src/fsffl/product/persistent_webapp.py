@@ -30,6 +30,10 @@ from .forecast_resilience import (
     make_preseason_baseline_authority_loader,
     make_resilient_forecast_loader,
 )
+from .foundation4_career_forward_runtime import (
+    Foundation4CareerForwardShadowLoader,
+)
+from .foundation4_shadow_routes import install_foundation4_shadow_routes
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
 from .intrinsic_background import (
@@ -223,6 +227,25 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     max_workers=1,
     intrinsic_input_fingerprint_resolver=(
         _shapley_intrinsic_loader.intrinsic_input_fingerprint
+    ),
+    heavy_work_coordinator=_heavy_work_coordinator,
+    ownership_validator=_execution_state_scope_owned,
+)
+_foundation4_shadow_loader = Foundation4CareerForwardShadowLoader(
+    current_intrinsic_loader=_shapley_intrinsic_loader,
+    current_intrinsic_fingerprint_resolver=(
+        _shapley_intrinsic_loader.intrinsic_input_fingerprint
+    ),
+    persistence_store=_persistence_store,
+)
+_foundation4_shadow_coordinator = ShapleyIntrinsicBackgroundCoordinator(
+    _foundation4_shadow_loader,
+    max_workers=1,
+    forecast_coordinate_resolver=(
+        lambda _context: _foundation4_shadow_loader.forecast_model_version
+    ),
+    intrinsic_input_fingerprint_resolver=(
+        _foundation4_shadow_loader.intrinsic_input_fingerprint
     ),
     heavy_work_coordinator=_heavy_work_coordinator,
     ownership_validator=_execution_state_scope_owned,
@@ -495,6 +518,12 @@ def _clear_intrinsic_execution(transition: ResourceTransition) -> dict[str, int]
         "loader_cache": _shapley_intrinsic_loader.clear_user_cache(
             transition.user_id
         ),
+        "foundation4_coordinator": _foundation4_shadow_coordinator.clear_user(
+            transition.user_id
+        ),
+        "foundation4_loader_cache": _foundation4_shadow_loader.clear_user_cache(
+            transition.user_id
+        ),
     }
 
 
@@ -765,6 +794,180 @@ _runtime_availability_acceptance_state: dict[str, object] = {
     "contract": "runtime-availability-acceptance-v1",
     "reason": "Acceptance mode is disabled; normal startup remains restore-only.",
 }
+
+
+_foundation4_acceptance_state: dict[str, object] = {
+    "status": "idle",
+    "contract": "foundation4-shadow-acceptance-v1",
+    "reason": "Foundation 4 acceptance is disabled; normal startup remains restore-only.",
+}
+_foundation4_acceptance_lock = RLock()
+
+
+def _run_foundation4_shadow_acceptance() -> None:
+    mode = os.getenv("FSFFL_FOUNDATION4_ACCEPTANCE_MODE", "build").strip().lower()
+    if mode not in {"build", "restore"}:
+        _foundation4_acceptance_state.update(
+            status="fail",
+            mode=mode,
+            reason="FSFFL_FOUNDATION4_ACCEPTANCE_MODE must be build or restore.",
+        )
+        return
+    if not _startup_restore_complete.wait(timeout=180.0):
+        _foundation4_acceptance_state.update(
+            status="fail",
+            mode=mode,
+            reason="Startup restore did not complete before Foundation 4 acceptance.",
+        )
+        return
+    if not _beta_restore_user:
+        _foundation4_acceptance_state.update(
+            status="fail",
+            mode=mode,
+            reason="No hosted beta user is configured.",
+        )
+        return
+
+    try:
+        context = _runtime_store.get(_beta_restore_user)
+        if context.league_state is None:
+            raise RuntimeError("Foundation 4 acceptance requires restored canonical State")
+        if context.league_state.league.season != 2026:
+            raise RuntimeError("Foundation 4 frozen authority is 2026-only")
+
+        before = _heavy_work_coordinator.snapshot()
+        current_record = _shapley_intrinsic_coordinator.wait_for_terminal(
+            context,
+            timeout_seconds=240.0,
+        )
+        if (
+            current_record.status != IntrinsicBuildStatus.COMPLETED
+            or current_record.contract is None
+        ):
+            raise RuntimeError(
+                "Governed Current Intrinsic was not ready for Foundation 4 acceptance"
+            )
+
+        if mode == "restore":
+            foundation4_record = (
+                _foundation4_shadow_coordinator.restore_compatible_staged(context)
+            )
+            if foundation4_record is None:
+                raise RuntimeError(
+                    "No compatible persisted Foundation 4 shadow was restored"
+                )
+        else:
+            foundation4_record = _foundation4_shadow_coordinator.wait_for_terminal(
+                context,
+                timeout_seconds=240.0,
+            )
+
+        if (
+            foundation4_record.status != IntrinsicBuildStatus.COMPLETED
+            or foundation4_record.contract is None
+        ):
+            raise RuntimeError("Foundation 4 shadow did not reach completed state")
+        contract = foundation4_record.contract
+        component = _foundation4_shadow_loader.current_component(context)
+        if contract.player_count != 335 or len(contract.estimates) != 335:
+            raise RuntimeError("Foundation 4 holistic cohort is not the governed 335 players")
+        if component is None or len(component.estimates) != 335:
+            raise RuntimeError("Foundation 4 Y4-Y7 component is not the governed 335 players")
+        if (
+            contract.current_intrinsic_replaced
+            or contract.authoritative_for_current_intrinsic
+            or contract.display_scaling_applied
+            or contract.market_inputs_used
+        ):
+            raise RuntimeError("Foundation 4 violated the governed shadow/economic boundary")
+        if contract.aggregation != (
+            "phi_Y1 + phi_Y2 + phi_Y3 + phi_Y4 + phi_Y5 + phi_Y6 + phi_Y7 + "
+            "TAIL_Y8_PLUS"
+        ):
+            raise RuntimeError("Foundation 4 aggregation semantics drifted")
+
+        current_by_id = {
+            row.player_id: row for row in current_record.contract.estimates
+        }
+        for estimate in contract.estimates:
+            current = current_by_id.get(estimate.player_id)
+            if current is None:
+                raise RuntimeError("Foundation 4 current-cohort identity mismatch")
+            raw_y1_y3 = sum(
+                float(row.raw_shapley_contribution) for row in current.contributions
+            )
+            if abs(raw_y1_y3 - estimate.current_intrinsic_raw_y1_y3) > 1e-9:
+                raise RuntimeError("Foundation 4 Y1-Y3 raw Shapley semantics drifted")
+            reconstructed = (
+                estimate.current_intrinsic_raw_y1_y3
+                + estimate.long_horizon_raw_y4_y7_reference
+                + estimate.terminal_raw_y8_plus_reference
+            )
+            if abs(reconstructed - estimate.raw_career_forward_reference) > 1e-9:
+                raise RuntimeError("Foundation 4 career-forward economics do not reconcile")
+
+        after = _heavy_work_coordinator.snapshot()
+        if after.peak_rss_bytes > after.memory_budget_bytes:
+            raise RuntimeError(
+                "Foundation 4 acceptance exceeded the engineering memory budget: "
+                f"{after.peak_rss_bytes} > {after.memory_budget_bytes}"
+            )
+        _foundation4_acceptance_state.clear()
+        _foundation4_acceptance_state.update(
+            status="pass",
+            contract="foundation4-shadow-acceptance-v1",
+            mode=mode,
+            league_state_id=context.league_state.state_id,
+            dependency_fingerprint=foundation4_record.intrinsic_input_fingerprint,
+            semantic_input_fingerprint=contract.input_fingerprint,
+            player_count=contract.player_count,
+            current_intrinsic_player_count=len(current_record.contract.estimates),
+            long_horizon_player_count=len(component.estimates),
+            aggregation=contract.aggregation,
+            current_intrinsic_replaced=False,
+            display_scaling_applied=False,
+            market_inputs_used=False,
+            rss_before_bytes=before.current_rss_bytes,
+            rss_after_bytes=after.current_rss_bytes,
+            peak_rss_bytes=after.peak_rss_bytes,
+            memory_budget_bytes=after.memory_budget_bytes,
+        )
+        logging.getLogger("uvicorn.error").info(
+            "FSFFL FOUNDATION4 SHADOW ACCEPTANCE PASS data=%s",
+            _foundation4_acceptance_state,
+        )
+    except Exception as exc:
+        _foundation4_acceptance_state.clear()
+        _foundation4_acceptance_state.update(
+            status="fail",
+            contract="foundation4-shadow-acceptance-v1",
+            mode=mode,
+            error_type=type(exc).__name__,
+            reason=str(exc),
+        )
+        logging.getLogger("uvicorn.error").exception(
+            "FSFFL FOUNDATION4 SHADOW ACCEPTANCE FAILED"
+        )
+
+
+def _maybe_start_foundation4_shadow_acceptance() -> None:
+    enabled = os.getenv("FSFFL_RUN_FOUNDATION4_ACCEPTANCE", "0").strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        return
+    with _foundation4_acceptance_lock:
+        if _foundation4_acceptance_state.get("status") == "running":
+            return
+        _foundation4_acceptance_state.clear()
+        _foundation4_acceptance_state.update(
+            status="running",
+            contract="foundation4-shadow-acceptance-v1",
+            mode=os.getenv("FSFFL_FOUNDATION4_ACCEPTANCE_MODE", "build").strip().lower(),
+        )
+    Thread(
+        target=_run_foundation4_shadow_acceptance,
+        name="fsffl-foundation4-shadow-acceptance",
+        daemon=True,
+    ).start()
 
 
 def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
@@ -1279,6 +1482,13 @@ def hosted_runtime_availability_acceptance_health() -> dict[str, object]:
     return dict(_runtime_availability_acceptance_state)
 
 
+@app.get("/health/foundation4-shadow-acceptance")
+def hosted_foundation4_shadow_acceptance_health() -> dict[str, object]:
+    """Non-sensitive Foundation 4 materialization/restore/resource acceptance proof."""
+
+    return dict(_foundation4_acceptance_state)
+
+
 @app.get("/health/runtime-resources")
 def hosted_runtime_resources() -> dict[str, object]:
     """Non-sensitive process resource/admission telemetry for beta acceptance."""
@@ -1330,6 +1540,12 @@ install_shapley_intrinsic_routes(
     runtime_store=_runtime_store,
     contract_loader=_shapley_intrinsic_loader,
     background_coordinator=_shapley_intrinsic_coordinator,
+)
+install_foundation4_shadow_routes(
+    app,
+    runtime_store=_runtime_store,
+    loader=_foundation4_shadow_loader,
+    coordinator=_foundation4_shadow_coordinator,
 )
 install_intrinsic_market_discovery_routes(
     app,
@@ -1488,6 +1704,25 @@ def _run_lightweight_startup_restore() -> None:
                         _beta_restore_user,
                         exc,
                     )
+                try:
+                    restored_f4 = _foundation4_shadow_coordinator.restore_compatible_staged(
+                        context
+                    )
+                    if restored_f4 is not None:
+                        _logger.info(
+                            "FSFFL Foundation4 restored compatible shadow user=%s state=%s estimates=%s",
+                            _beta_restore_user,
+                            context.league_state.state_id,
+                            len(restored_f4.contract.estimates)
+                            if restored_f4.contract is not None
+                            else 0,
+                        )
+                except Exception as exc:
+                    _logger.warning(
+                        "FSFFL Foundation4 compatible-restore unavailable user=%s error=%s",
+                        _beta_restore_user,
+                        exc,
+                    )
                 context = _runtime_store.get(_beta_restore_user)
                 terminal = bool(
                     context.forecast_evidence is not None
@@ -1539,3 +1774,4 @@ def _start_lightweight_startup_restore() -> None:
 
 app.router.add_event_handler("startup", _start_lightweight_startup_restore)
 app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)
+app.router.add_event_handler("startup", _maybe_start_foundation4_shadow_acceptance)

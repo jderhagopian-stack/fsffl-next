@@ -610,3 +610,25 @@ Current active work:
 - Simulation 2.0 major semantics/performance work is complete; do not reopen it except for the narrow acceptance-tooling P2 or new contradictory evidence.
 
 Startup rule for any replacement/new Implementation chat: read `docs/operations/OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this `MANAGEMENT_CONTINUITY.md`, the applicable directive(s), and the live PR #361 exact head before acting. The repo is the durable authority; chat text is only a transport layer.
+
+## 2026-10-03 — Foundation 4 runtime/persistence acceptance tranche ACTIVE
+
+Foundation 4 / PR #361 remains the active capability workstream. Its directly FSFFL-scored 335-player Y4-Y7 + Y8+ authority is frozen; Current Intrinsic stays separate; holistic raw economics remain compatible Y1-Y7 Shapley coordinates plus cumulative Y8+ tail. Shadow holistic/Y4-Y7 artifacts are persisted separately, APIs remain separate from Current Intrinsic, and hosted acceptance must prove build -> persistence/API -> same-code restore/reuse -> resource safety.
+
+After #361 acceptance, run the queued Intrinsic performance tranche (reuse/persistence first, then measured unavoidable computation) and continue into Product Integration / Capability Rollout before Foundation 5.
+
+## 2026-10-03 — Foundation 4 #361 FSFFL artifact-freeze correction
+
+The directly recalibrated FSFFL-scored Foundation 4 artifacts are now the intended packaged authority; model-family and routing research remain frozen and were not reopened.
+
+Verified generation evidence:
+- generation workflow run `37096263982`, retained artifact `11263913850`;
+- packaged repo blobs exactly match the retained workflow artifact bytes;
+- Y4-Y7 board: 5,360 rows / 335 players, direct `connected_league_fantasy_points`, semantic SHA-256 `3caddc5c33be83088eaca30d8c1ac7031022f08668a031a0a3b08616aed773c2`;
+- terminal feature board: 335 players, direct connected-league scoring coordinates, semantic SHA-256 `ef52ccaaef0749d6d1e5786c351714570c0d0a0ea811cc1cf940fe2adac8c867`;
+- retained workflow ZIP SHA-256 `6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22`;
+- packaged Y8+ runtime JSON semantic SHA-256 `33158a26d50e71809cf0f38a7d479fda05ccbaa9fbd5703ba894c1cba4560537`.
+
+The runtime now consumes the exact packaged FSFFL Y8+ coefficients/residual bands and pins the regenerated Y4-Y7/terminal semantic identities. The superseded standard/non-PPR freeze is retained only as historical provenance/negative compatibility evidence. No heuristic scoring multiplier, retraining or model redesign was introduced.
+
+Promotion remains Tier C. Required closeout: final exact-head CI and focused validations -> fresh Codex review -> one hosted 335-player build -> same-code restart/restore semantic identity -> resource acceptance -> canonical closeout.

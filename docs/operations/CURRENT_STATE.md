@@ -3179,6 +3179,29 @@ The prior recurring runtime-availability false-negative is no longer reproduced 
 
 Foundation 4 draft #356 remains open at head `f6cbba6fe6ca95ef3039b1eab6fddaba49d637fa` and has not advanced since its green shadow-contract/current-authority checkpoint. It is now the more important forward-progress lane: continue live-cohort materialization, persistence/API, restart/reload/resource validation and bounded shadow acceptance.
 
+## 2026-10-03 — Foundation 4 runtime/persistence acceptance tranche ACTIVE
+
+Foundation 4 is the primary forward-capability workstream. The substantive continuation lives on `work/foundation4-holistic-career-forward-shadow`, reconciled onto current main without regenerating the frozen binary authority artifacts.
+
+Governed economic definition remains unchanged:
+- holistic raw career-forward value = compatible annual raw Shapley economics `Y1 + ... + Y7 + TAIL_Y8_PLUS`;
+- Current Intrinsic remains the separate governed Y1-Y3 product lens;
+- Y4-Y7 consume the frozen accepted all-policy current-cohort authority coordinates, never their 0-10000 display index;
+- Y8+ is the governed cumulative career tail from literal Y8 through career end;
+- no new discount/horizon preference weight, age/youth multiplier, survival multiplier, terminal multiplier, Market input, display-index arithmetic or cumulative career SD is authorized.
+
+Current implementation state:
+- frozen 2026 current cohort: **335 players**, 5,360 governed Y4-Y7 policy rows plus 335 terminal feature rows;
+- production runtime materializer composes ready Current Intrinsic Y1-Y3 + frozen Y4-Y7 + governed Y8+ tail and fails closed on cohort or lineup-signature mismatch;
+- holistic and Y4-Y7 component artifacts are persisted separately with dependency/model identity;
+- shadow API endpoints are installed separately from Current Intrinsic;
+- startup restore attempts compatible Foundation 4 reuse without replacing Current Intrinsic;
+- dedicated tests now cover full-cohort materialization, durable persistence, API serving and fresh-loader restart semantic identity;
+- a bounded hosted acceptance probe supports explicit `build` and `restore` modes, exposes only non-sensitive metadata/fingerprints, validates raw-economic reconciliation, and fails if process peak RSS exceeds the engineering memory budget.
+
+Promotion classification is Tier C because persistence/restore/resource behavior is now part of the claim. Required remaining gates: exact-head CI/focused review -> one hosted build acceptance -> one same-code restore/reload proof with identical semantic fingerprint -> record acceptance.
+
+After Foundation 4 shadow acceptance, immediately execute the approved Product Integration / Capability Rollout tranche for the sole private-beta user: expose accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience, then obtain physical iPhone/Safari feedback before Foundation 5.
 
 ## 2026-10-03 — Foundation 4 #361 scoring-coordinate blocker exposed by Codex P1 closeout
 
