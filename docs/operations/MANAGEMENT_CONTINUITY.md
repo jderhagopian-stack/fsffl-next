@@ -554,3 +554,13 @@ Current management handoff:
 - Keep Simulation at 50k with exact RNG/replay/model semantics.
 - #356 Foundation 4 is still the substantive implementation workstream and should continue in parallel; do not park it while optimizing Simulation.
 - Foundation 4 completion path remains live cohort -> persistence/API -> restart/reload/resources -> bounded acceptance -> Product Integration / Capability Rollout -> Foundation 5.
+
+
+## 2026-10-03 — Management continuity after successful #360 hosted run
+
+- Exact live #360 completed governed 50k hosted acceptance: kernel **43.800s**, future-pick ordering **12.704s**, H2H **2.056s**, postseason **8.376s**, overall acceptance peak RSS **393,076,736 bytes**, runtime availability **PASS**, restored-refresh total **211.082s**.
+- The Simulation kernel is now ~58.2% faster than the corrected **104.901s** baseline with 50k/RNG/replay/model authority unchanged.
+- Do not claim #360 itself improved over #357 from one throttled-host run; #357 measured 42.895s kernel / 11.593s ordering. Treat the current performance band as ~43-44s kernel and re-profile only if pursuing another material optimization.
+- The recurring last-good-during-rebuild acceptance failure was not reproduced: #359 path passed. Still close its post-merge P2 so any missing per-surface publication generation fails closed.
+- Shift management emphasis back toward Foundation 4 #356. It is open/green but has not advanced since the shadow-contract/current-authority checkpoint.
+- Next Foundation 4 gates: live cohort -> persistence/API -> restart/reload/resources -> bounded shadow acceptance -> Product Integration / Capability Rollout -> Foundation 5.
