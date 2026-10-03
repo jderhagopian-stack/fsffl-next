@@ -92,6 +92,7 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     assert "/static/league_atlas.css?v=20261003-scenarios-pick-order1" in league
     assert "const leagueAtlasStaticVersion='20261003-scenarios-pick-order1';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
+    assert "product_shell.js?v=20260929-physical-connect1&c=20261003-scenarios-pick-order1" in _source(INDEX)
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
 
