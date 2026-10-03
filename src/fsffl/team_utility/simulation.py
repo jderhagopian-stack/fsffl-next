@@ -1653,8 +1653,15 @@ def _numpy_h2h_points_batch(
     compiled_schedule,
     team_count,
     base_h2h_points,
+    *,
+    out=None,
 ):
-    """Build exact H2H points for one independently bounded world chunk."""
+    """Fill exact H2H points for one independently bounded world chunk.
+
+    When out is supplied, the same dense buffer is reused across chunk
+    transitions so the configured byte ceiling bounds live H2H NumPy storage,
+    not merely each individual allocation.
+    """
 
     import numpy as np
 
@@ -1662,13 +1669,21 @@ def _numpy_h2h_points_batch(
         len(row) != team_count for row in base_h2h_points
     ):
         raise ValueError("base H2H points shape conflicts with team_count")
-    # Allocate exactly one capped dense chunk. Populate the canonical historical
-    # baseline directly from its Python rows so chunk creation never overlaps a
-    # second dense team_count x team_count NumPy baseline.
-    h2h_points = np.empty(
-        (scores.shape[0], team_count, team_count),
-        dtype=np.float64,
-    )
+    if out is None:
+        storage = np.empty(
+            (scores.shape[0], team_count, team_count),
+            dtype=np.float64,
+        )
+    else:
+        if (
+            out.ndim != 3
+            or out.shape[1:] != (team_count, team_count)
+            or out.shape[0] < scores.shape[0]
+            or out.dtype != np.float64
+        ):
+            raise ValueError("H2H output buffer is incompatible with requested chunk")
+        storage = out
+    h2h_points = storage[: scores.shape[0]]
     for home_idx, row in enumerate(base_h2h_points):
         for away_idx, value in enumerate(row):
             h2h_points[:, home_idx, away_idx] = value
@@ -1910,6 +1925,7 @@ def simulate_regular_season(
     numpy_batch_wins = None
     numpy_batch_points = None
     numpy_batch_h2h_points = None
+    numpy_h2h_buffer = None
     numpy_h2h_chunk_start = 0
     numpy_h2h_chunk_end = 0
     numpy_h2h_chunk_rows = 0
@@ -2379,16 +2395,25 @@ def simulate_regular_season(
                         len(score_batch),
                         numpy_h2h_chunk_start + numpy_h2h_chunk_rows,
                     )
-                    # Drop the previous capped parent before evaluating the next
-                    # allocation. h2h_points is reset to None at trial start, so
-                    # no row view keeps the old parent alive across this boundary.
-                    numpy_batch_h2h_points = None
-                    numpy_batch_h2h_points = _numpy_h2h_points_batch(
-                        score_batch[numpy_h2h_chunk_start:numpy_h2h_chunk_end],
-                        compiled_schedule,
-                        team_count,
-                        actual_h2h_points,
-                    )
+                    chunk_scores = score_batch[
+                        numpy_h2h_chunk_start:numpy_h2h_chunk_end
+                    ]
+                    if numpy_h2h_buffer is None:
+                        numpy_h2h_buffer = _numpy_h2h_points_batch(
+                            chunk_scores,
+                            compiled_schedule,
+                            team_count,
+                            actual_h2h_points,
+                        )
+                        numpy_batch_h2h_points = numpy_h2h_buffer
+                    else:
+                        numpy_batch_h2h_points = _numpy_h2h_points_batch(
+                            chunk_scores,
+                            compiled_schedule,
+                            team_count,
+                            actual_h2h_points,
+                            out=numpy_h2h_buffer,
+                        )
                 h2h_points = numpy_batch_h2h_points[
                     batch_row_index - numpy_h2h_chunk_start
                 ]
