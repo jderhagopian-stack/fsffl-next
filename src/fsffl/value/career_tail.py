@@ -132,6 +132,19 @@ class CareerTailFeatures(FrozenModel):
     experience_years: Annotated[float, Field(ge=0.0)]
     current_points: Annotated[float, Field(ge=0.0)]
     prior_points: Annotated[float | None, Field(ge=0.0)] = None
+    current_points_coordinate: str = (
+        "retrospective_completed_base_season_fantasy_production"
+    )
+    prior_points_coordinate: str = "retrospective_completed_prior_season_fantasy_production"
+    live_feature_transport_limitation: str | None = None
+
+    @model_validator(mode="after")
+    def validate_feature_transport(self) -> "CareerTailFeatures":
+        if not self.player_id.strip():
+            raise ValueError("career-tail player_id cannot be blank")
+        if not self.current_points_coordinate.strip() or not self.prior_points_coordinate.strip():
+            raise ValueError("career-tail production coordinate identifiers cannot be blank")
+        return self
 
     @property
     def feature_vector(self) -> tuple[float, float, float, float, float]:
