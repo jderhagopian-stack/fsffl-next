@@ -30,6 +30,10 @@ from .forecast_resilience import (
     make_preseason_baseline_authority_loader,
     make_resilient_forecast_loader,
 )
+from .foundation4_career_forward_runtime import (
+    Foundation4CareerForwardShadowLoader,
+)
+from .foundation4_shadow_routes import install_foundation4_shadow_routes
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
 from .intrinsic_background import (
@@ -223,6 +227,25 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     max_workers=1,
     intrinsic_input_fingerprint_resolver=(
         _shapley_intrinsic_loader.intrinsic_input_fingerprint
+    ),
+    heavy_work_coordinator=_heavy_work_coordinator,
+    ownership_validator=_execution_state_scope_owned,
+)
+_foundation4_shadow_loader = Foundation4CareerForwardShadowLoader(
+    current_intrinsic_loader=_shapley_intrinsic_loader,
+    current_intrinsic_fingerprint_resolver=(
+        _shapley_intrinsic_loader.intrinsic_input_fingerprint
+    ),
+    persistence_store=_persistence_store,
+)
+_foundation4_shadow_coordinator = ShapleyIntrinsicBackgroundCoordinator(
+    _foundation4_shadow_loader,
+    max_workers=1,
+    forecast_coordinate_resolver=(
+        lambda _context: _foundation4_shadow_loader.forecast_model_version
+    ),
+    intrinsic_input_fingerprint_resolver=(
+        _foundation4_shadow_loader.intrinsic_input_fingerprint
     ),
     heavy_work_coordinator=_heavy_work_coordinator,
     ownership_validator=_execution_state_scope_owned,
@@ -493,6 +516,12 @@ def _clear_intrinsic_execution(transition: ResourceTransition) -> dict[str, int]
             transition.user_id
         ),
         "loader_cache": _shapley_intrinsic_loader.clear_user_cache(
+            transition.user_id
+        ),
+        "foundation4_coordinator": _foundation4_shadow_coordinator.clear_user(
+            transition.user_id
+        ),
+        "foundation4_loader_cache": _foundation4_shadow_loader.clear_user_cache(
             transition.user_id
         ),
     }
@@ -1331,6 +1360,12 @@ install_shapley_intrinsic_routes(
     contract_loader=_shapley_intrinsic_loader,
     background_coordinator=_shapley_intrinsic_coordinator,
 )
+install_foundation4_shadow_routes(
+    app,
+    runtime_store=_runtime_store,
+    loader=_foundation4_shadow_loader,
+    coordinator=_foundation4_shadow_coordinator,
+)
 install_intrinsic_market_discovery_routes(
     app,
     runtime_store=_runtime_store,
@@ -1485,6 +1520,25 @@ def _run_lightweight_startup_restore() -> None:
                 except Exception as exc:
                     _logger.warning(
                         "FSFFL startup Intrinsic compatible-restore unavailable user=%s error=%s",
+                        _beta_restore_user,
+                        exc,
+                    )
+                try:
+                    restored_f4 = _foundation4_shadow_coordinator.restore_compatible_staged(
+                        context
+                    )
+                    if restored_f4 is not None:
+                        _logger.info(
+                            "FSFFL Foundation4 restored compatible shadow user=%s state=%s estimates=%s",
+                            _beta_restore_user,
+                            context.league_state.state_id,
+                            len(restored_f4.contract.estimates)
+                            if restored_f4.contract is not None
+                            else 0,
+                        )
+                except Exception as exc:
+                    _logger.warning(
+                        "FSFFL Foundation4 compatible-restore unavailable user=%s error=%s",
                         _beta_restore_user,
                         exc,
                     )
