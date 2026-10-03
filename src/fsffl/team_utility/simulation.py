@@ -1532,6 +1532,7 @@ def simulate_regular_season(
     """
 
     profile_enabled = os.getenv("FSFFL_SIMULATION_PROFILE", "").strip().lower() in {"1", "true", "yes", "on"}
+    profile_function_started = _profile_wall_clock() if profile_enabled else None
     compile_started = _profile_clock() if profile_enabled else None
     by_team = {item.team_id: item for item in request.scoring}
     by_week_team = {(item.week, item.team_id): item for item in request.weekly_scoring}
@@ -1661,11 +1662,13 @@ def simulate_regular_season(
     common_world_wall_seconds = 0.0
     standings_wall_seconds = 0.0
     playoff_wall_seconds = 0.0
-    future_pick_wall_seconds = 0.0
-    multiverse_wall_seconds = 0.0
-    kernel_tail_wall_seconds = 0.0
-    profile_sample_interval = 100
-    profile_sample_count = 0
+    future_pick_ordering_wall_seconds = 0.0
+    multiverse_loop_wall_seconds = 0.0
+    future_pick_result_wall_seconds = 0.0
+    multiverse_result_wall_seconds = 0.0
+    pre_loop_wall_seconds = 0.0
+    loop_wall_seconds = 0.0
+    loop_residual_wall_seconds = 0.0
     wins_sum = [0.0] * team_count
     remaining_wins_sum = [0.0] * team_count
     wins_sq_sum = [0.0] * team_count
@@ -1871,28 +1874,27 @@ def simulate_regular_season(
     strong_team_miss_count = 0
     champion_seed_counts = [0] * (team_count + 1)
 
+    loop_started = _profile_wall_clock() if profile_enabled else None
+    if profile_function_started is not None and loop_started is not None:
+        pre_loop_wall_seconds = loop_started - profile_function_started
+
     for trial_index in range(request.simulation_count):
-        sample_trial = bool(
-            profile_enabled and trial_index % profile_sample_interval == 0
-        )
-        sample_weight = min(
-            profile_sample_interval,
-            request.simulation_count - trial_index,
-        )
         # Scheduling-only checkpoint. Product orchestration may yield this worker
         # while foreground requests are active; the callback cannot alter the
         # simulation request, RNG stream, iteration count, or accumulated outputs.
         cooperative_yield_started = (
-            _profile_wall_clock() if sample_trial and cooperative_yield is not None else None
+            _profile_wall_clock()
+            if profile_enabled and cooperative_yield is not None
+            else None
         )
         if cooperative_yield is not None:
             cooperative_yield()
         if cooperative_yield_started is not None:
             cooperative_yield_wall_seconds += (
                 _profile_wall_clock() - cooperative_yield_started
-            ) * sample_weight
+            )
 
-        trial_setup_started = _profile_wall_clock() if sample_trial else None
+        trial_setup_started = _profile_wall_clock() if profile_enabled else None
         wins = actual_wins.copy()
         points_for = actual_points_for.copy()
         h2h_points = [row.copy() for row in actual_h2h_points]
@@ -1903,7 +1905,7 @@ def simulate_regular_season(
         if trial_setup_started is not None:
             trial_setup_wall_seconds += (
                 _profile_wall_clock() - trial_setup_started
-            ) * sample_weight
+            )
         if is_batched:
             if score_batch is None or score_batch_offset >= len(score_batch):
                 rng_started = _profile_clock() if profile_enabled else None
@@ -1924,7 +1926,7 @@ def simulate_regular_season(
                     matchup_cpu_seconds += matchup_ended[1] - matchup_started[1]
                 score_batch_offset = 0
             batched_trial_setup_started = (
-                _profile_wall_clock() if sample_trial else None
+                _profile_wall_clock() if profile_enabled else None
             )
             trial_score_row = score_batch[score_batch_offset]
             simulated_wins = numpy_batch_wins[score_batch_offset].tolist()
@@ -1941,15 +1943,15 @@ def simulate_regular_season(
             if batched_trial_setup_started is not None:
                 trial_setup_wall_seconds += (
                     _profile_wall_clock() - batched_trial_setup_started
-                ) * sample_weight
+                )
         else:
             trial_wins = actual_wins.copy()
             trial_points = actual_points_for.copy()
         matchup_started = (
-            _profile_wall_clock() if sample_trial and not is_batched else None
+            _profile_wall_clock() if profile_enabled and not is_batched else None
         )
         matchup_reconstruction_started = (
-            _profile_wall_clock() if sample_trial and is_batched else None
+            _profile_wall_clock() if profile_enabled and is_batched else None
         )
         if not is_batched:
             wins = trial_wins
@@ -2075,12 +2077,11 @@ def simulate_regular_season(
         if matchup_reconstruction_started is not None:
             matchup_reconstruction_wall_seconds += (
                 _profile_wall_clock() - matchup_reconstruction_started
-            ) * sample_weight
+            )
         if matchup_started is not None:
             matchup_ended = _profile_wall_clock()
-            matchup_wall_seconds += (matchup_ended - matchup_started) * sample_weight
-        aggregation_started = _profile_wall_clock() if sample_trial else None
-        standings_started = _profile_wall_clock() if sample_trial else None
+            matchup_wall_seconds += matchup_ended - matchup_started
+        standings_started = _profile_wall_clock() if profile_enabled else None
         standings = sorted(
             ranking_indexes,
             key=lambda index: (-wins[index], -points_for[index], team_ids[index]),
@@ -2094,10 +2095,10 @@ def simulate_regular_season(
         if standings_started is not None:
             standings_wall_seconds += (
                 _profile_wall_clock() - standings_started
-            ) * sample_weight
+            )
         playoff_places_for_draft = None
         playoff_elimination_rounds = None
-        playoff_started = _profile_wall_clock() if sample_trial else None
+        playoff_started = _profile_wall_clock() if profile_enabled else None
         if championship_supported:
             if (
                 future_pick_slot_counts is not None
@@ -2132,9 +2133,9 @@ def simulate_regular_season(
         if playoff_started is not None:
             playoff_wall_seconds += (
                 _profile_wall_clock() - playoff_started
-            ) * sample_weight
+            )
 
-        future_pick_started = _profile_wall_clock() if sample_trial else None
+        future_pick_started = _profile_wall_clock() if profile_enabled else None
         if future_pick_slot_counts is not None and future_pick_policy is not None:
             playoff_team_count = future_pick_policy.playoff_team_count
             non_playoff = standings[playoff_team_count:]
@@ -2200,11 +2201,11 @@ def simulate_regular_season(
                     "future-pick draft order did not assign every league slot"
                 )
         if future_pick_started is not None:
-            future_pick_wall_seconds += (
+            future_pick_ordering_wall_seconds += (
                 _profile_wall_clock() - future_pick_started
-            ) * sample_weight
+            )
 
-        multiverse_started = _profile_wall_clock() if sample_trial else None
+        multiverse_started = _profile_wall_clock() if profile_enabled else None
         league_total = sum(points_for)
         typicality = 0.0
         for index in range(team_count):
@@ -2425,11 +2426,11 @@ def simulate_regular_season(
                 )
 
         if multiverse_started is not None:
-            multiverse_wall_seconds += (
+            multiverse_loop_wall_seconds += (
                 _profile_wall_clock() - multiverse_started
-            ) * sample_weight
+            )
 
-        kernel_tail_started = _profile_wall_clock() if sample_trial else None
+        aggregation_started = _profile_wall_clock() if profile_enabled else None
         if trial_observer is not None:
             trial_observer(
                 tuple(wins), tuple(points_for), tuple(standings), champion
@@ -2438,14 +2439,29 @@ def simulate_regular_season(
             wins_sum[index] += value
             remaining_wins_sum[index] += value - actual_wins[index]
             wins_sq_sum[index] += value * value
-        if kernel_tail_started is not None:
-            kernel_tail_wall_seconds += (
-                _profile_wall_clock() - kernel_tail_started
-            ) * sample_weight
         if aggregation_started is not None:
-            aggregation_ended = _profile_wall_clock()
-            aggregation_wall_seconds += (aggregation_ended - aggregation_started) * sample_weight
-            profile_sample_count += 1
+            aggregation_wall_seconds += (
+                _profile_wall_clock() - aggregation_started
+            )
+
+    if loop_started is not None:
+        loop_wall_seconds = _profile_wall_clock() - loop_started
+        loop_accounted_wall_seconds = (
+            cooperative_yield_wall_seconds
+            + trial_setup_wall_seconds
+            + rng_wall_seconds
+            + matchup_wall_seconds
+            + matchup_reconstruction_wall_seconds
+            + standings_wall_seconds
+            + playoff_wall_seconds
+            + future_pick_ordering_wall_seconds
+            + multiverse_loop_wall_seconds
+            + aggregation_wall_seconds
+        )
+        loop_residual_wall_seconds = max(
+            0.0,
+            loop_wall_seconds - loop_accounted_wall_seconds,
+        )
 
     result_started = _profile_clock() if profile_enabled else None
     n = request.simulation_count
@@ -2551,7 +2567,7 @@ def simulate_regular_season(
             for index, team_id in enumerate(team_ids)
         )
     if future_pick_result_started is not None:
-        future_pick_wall_seconds += (
+        future_pick_result_wall_seconds += (
             _profile_wall_clock() - future_pick_result_started
         )
 
@@ -2599,7 +2615,7 @@ def simulate_regular_season(
         simulation_input_fingerprint=input_fingerprint,
     )
     if multiverse_result_started is not None:
-        multiverse_wall_seconds += (
+        multiverse_result_wall_seconds += (
             _profile_wall_clock() - multiverse_result_started
         )
 
@@ -2635,26 +2651,44 @@ def simulate_regular_season(
     )
     if result_started is not None:
         result_ended = _profile_clock()
+        result_materialization_wall_seconds = result_ended[0] - result_started[0]
+        call_wall_seconds = (
+            _profile_wall_clock() - profile_function_started
+            if profile_function_started is not None
+            else 0.0
+        )
+        call_accounted_wall_seconds = (
+            pre_loop_wall_seconds
+            + loop_wall_seconds
+            + result_materialization_wall_seconds
+        )
+        call_residual_wall_seconds = max(
+            0.0,
+            call_wall_seconds - call_accounted_wall_seconds,
+        )
         _logger.info(
-            "FSFFL simulation profile phase=kernel_summary trials=%s rng_protocol=%s batch=%s "
-            "rng_wall=%.6f rng_cpu=%.6f matchup_wall=%.6f matchup_cpu=%.6f "
-            "cooperative_yield_wall_estimate=%.6f trial_setup_wall_estimate=%.6f "
-            "matchup_reconstruction_wall_estimate=%.6f "
-            "standings_playoff_aggregation_wall_estimate=%.6f common_world_wall=%.6f "
-            "standings_wall_estimate=%.6f playoff_wall_estimate=%.6f "
-            "future_pick_wall_estimate=%.6f multiverse_wall_estimate=%.6f "
-            "kernel_tail_wall_estimate=%.6f sample_interval=%s samples=%s "
-            "result_materialization_wall=%.6f result_materialization_cpu=%.6f",
+            "FSFFL simulation profile phase=kernel_summary_exact trials=%s rng_protocol=%s batch=%s "
+            "call_wall=%.6f pre_loop_wall=%.6f common_world_wall=%.6f "
+            "loop_wall=%.6f cooperative_yield_wall=%.6f trial_setup_wall=%.6f "
+            "rng_wall=%.6f rng_cpu=%.6f vectorized_matchup_wall=%.6f "
+            "vectorized_matchup_cpu=%.6f matchup_h2h_scan_wall=%.6f "
+            "standings_wall=%.6f playoff_wall=%.6f future_pick_ordering_wall=%.6f "
+            "multiverse_loop_wall=%.6f aggregation_wall=%.6f loop_residual_wall=%.6f "
+            "result_materialization_wall=%.6f result_materialization_cpu=%.6f "
+            "future_pick_result_wall=%.6f multiverse_result_wall=%.6f "
+            "call_residual_wall=%.6f",
             request.simulation_count, request.rng_protocol, batch_size,
+            call_wall_seconds, pre_loop_wall_seconds, common_world_wall_seconds,
+            loop_wall_seconds, cooperative_yield_wall_seconds, trial_setup_wall_seconds,
             rng_wall_seconds, rng_cpu_seconds, matchup_wall_seconds,
-            matchup_cpu_seconds, cooperative_yield_wall_seconds,
-            trial_setup_wall_seconds, matchup_reconstruction_wall_seconds,
-            aggregation_wall_seconds, common_world_wall_seconds,
-            standings_wall_seconds, playoff_wall_seconds, future_pick_wall_seconds,
-            multiverse_wall_seconds, kernel_tail_wall_seconds,
-            profile_sample_interval, profile_sample_count,
-            result_ended[0] - result_started[0],
+            matchup_cpu_seconds, matchup_reconstruction_wall_seconds,
+            standings_wall_seconds, playoff_wall_seconds,
+            future_pick_ordering_wall_seconds, multiverse_loop_wall_seconds,
+            aggregation_wall_seconds, loop_residual_wall_seconds,
+            result_materialization_wall_seconds,
             result_ended[1] - result_started[1],
+            future_pick_result_wall_seconds, multiverse_result_wall_seconds,
+            call_residual_wall_seconds,
         )
     return result
 

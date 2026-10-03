@@ -726,8 +726,13 @@ def test_numpy_profile_instrumentation_preserves_exact_simulation_output(
 
     assert profiled == baseline
     assert "phase=schedule_compile" in caplog.text
-    assert "phase=kernel_summary" in caplog.text
-    assert "standings_playoff_aggregation_wall_estimate=" in caplog.text
+    assert "phase=kernel_summary_exact" in caplog.text
+    assert "loop_wall=" in caplog.text
+    assert "matchup_h2h_scan_wall=" in caplog.text
+    assert "future_pick_ordering_wall=" in caplog.text
+    assert "loop_residual_wall=" in caplog.text
+    assert "call_residual_wall=" in caplog.text
+    assert "_estimate=" not in caplog.text
 
 
 def test_experimental_50k_runtime_preserves_forecast_and_search_inputs() -> None:
