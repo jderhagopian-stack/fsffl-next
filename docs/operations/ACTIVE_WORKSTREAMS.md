@@ -1887,3 +1887,16 @@ One narrow #359 acceptance-tooling P2 remains: missing surface publication-gener
 
 ### Foundation 4
 #356 remains open/green but unchanged since the current shadow-contract/current-authority artifact checkpoint. Resume it now through live-cohort runtime materialization, persistence/API, restart/reload/resource validation, bounded review and explicit shadow acceptance. This is the primary forward product-capability workstream.
+
+
+## 2026-10-03 — Preserve queued Intrinsic runtime optimization
+
+Foundation 4 correctness/authority comes first, but Intrinsic runtime performance remains an explicit follow-on work item rather than forgotten work.
+
+Historical beta evidence identified the main failure mode as unnecessary cold Shapley rebuilds: ordinary State advances must use dependency-scoped compatibility/persistence/reuse rather than trigger full recomputation. Recent governed hosted refreshes still spend roughly **25–27s** in the current Intrinsic phase when work is actually required, so after #361 Foundation 4 shadow acceptance:
+1. separately measure holistic Long-Term Intrinsic cold materialization, exact compatible restore/reuse, and changed-State rebuild cost;
+2. first eliminate avoidable recomputation through dependency-scoped reuse/persistence and exact fingerprint compatibility;
+3. then optimize unavoidable Shapley/materialization work only if the measured gain is material, preserving exact governed economics and deterministic identity;
+4. report before/after wall time, CPU/RSS, cache/restore latency and semantic equality.
+
+This bounded Intrinsic performance tranche may run immediately after Foundation 4 acceptance and before or alongside the Product Integration rollout; do not let it delay exposure of already-proven capabilities unless latency is materially user-blocking.
