@@ -364,3 +364,22 @@ The reversible experimental deploy completed the real first-load State → Forec
 The batch-500 acceleration's isolated speedup is not enough to justify production adoption on free Render because the actual refresh exceeded the enforced process high-water gate. Full hosted evidence and caveats are in `docs/operations/evidence/simulation_rng_hosted_validation_20260930.md`. Main/#310 was restored exactly; service/deploy is `fsffl-next-private-beta` / `dep-daunc2nlk1mc73di9b1g` / `3671ba0e6ff29ab750b71b8aaa467be0f56e55a9`.
 
 Next executable action before another adoption run: instrument the short-lived memory peak at finer granularity across Forecast, Simulation input/RNG/aggregation, Value, Intrinsic, persistence/publication and concurrent foreground work; reduce the owning transient allocation without changing 50,000 trials or modeled outputs. Then repeat hosted batch-500 acceptance with actual parallel Home/My Team/Product Context reads and restart restore. Management adoption remains withheld.
+
+
+## 2026-10-03 — CURRENT OVERRIDE: Simulation optimization is active
+
+This section supersedes the older text above that still describes general 50K Simulation efficiency as queued behind the Market foreground-latency pass. Management explicitly activated and has been executing the Simulation performance tranche; workers must follow this current override plus `CURRENT_STATE.md` rather than deferring the work.
+
+Accepted measured sequence:
+- corrected exact production baseline: kernel **104.901s**;
+- postseason precompile #351: kernel **61.007s**, postseason **8.836s**;
+- H2H batching/bounding #353/#355 live profile: kernel **43.487s**, H2H **2.528s**;
+- current largest measured phase: team-origin future-pick ordering **17.440s**.
+
+Active next target: PR #357 team-origin ordering, exact-output/replay preserving.
+
+Before H2H closeout, resolve the #355 post-merge P2 so dense H2H storage remains truly independently bounded across chunk transitions (do not retain old and new capped chunks plus a recreated dense baseline simultaneously).
+
+The hosted run that produced the valid 43.487s kernel profile later raised a runtime-availability acceptance failure while serving last-good surfaces during an active replacement generation. Treat that as a narrow lifecycle/acceptance diagnostic, not a reason to discard the performance result or revert Simulation semantics.
+
+After team-origin ordering reaches diminishing returns, re-profile and choose any further Simulation target from measured evidence only. Preserve 50,000 canonical trials, RNG protocol, output semantics and replay identity unless Management separately changes authority.
