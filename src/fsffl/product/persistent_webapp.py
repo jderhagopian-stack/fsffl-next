@@ -796,6 +796,175 @@ _runtime_availability_acceptance_state: dict[str, object] = {
 }
 
 
+_foundation4_acceptance_state: dict[str, object] = {
+    "status": "idle",
+    "contract": "foundation4-shadow-acceptance-v1",
+    "reason": "Foundation 4 acceptance is disabled; normal startup remains restore-only.",
+}
+_foundation4_acceptance_lock = RLock()
+
+
+def _run_foundation4_shadow_acceptance() -> None:
+    mode = os.getenv("FSFFL_FOUNDATION4_ACCEPTANCE_MODE", "build").strip().lower()
+    if mode not in {"build", "restore"}:
+        _foundation4_acceptance_state.update(
+            status="fail",
+            mode=mode,
+            reason="FSFFL_FOUNDATION4_ACCEPTANCE_MODE must be build or restore.",
+        )
+        return
+    if not _startup_restore_complete.wait(timeout=180.0):
+        _foundation4_acceptance_state.update(
+            status="fail",
+            mode=mode,
+            reason="Startup restore did not complete before Foundation 4 acceptance.",
+        )
+        return
+    if not _beta_restore_user:
+        _foundation4_acceptance_state.update(
+            status="fail",
+            mode=mode,
+            reason="No hosted beta user is configured.",
+        )
+        return
+
+    try:
+        context = _runtime_store.get(_beta_restore_user)
+        if context.league_state is None:
+            raise RuntimeError("Foundation 4 acceptance requires restored canonical State")
+        if context.league_state.league.season != 2026:
+            raise RuntimeError("Foundation 4 frozen authority is 2026-only")
+
+        before = _heavy_work_coordinator.snapshot()
+        current_record = _shapley_intrinsic_coordinator.wait_for_terminal(
+            context,
+            timeout_seconds=240.0,
+        )
+        if (
+            current_record.status != IntrinsicBuildStatus.COMPLETED
+            or current_record.contract is None
+        ):
+            raise RuntimeError(
+                "Governed Current Intrinsic was not ready for Foundation 4 acceptance"
+            )
+
+        if mode == "restore":
+            foundation4_record = (
+                _foundation4_shadow_coordinator.restore_compatible_staged(context)
+            )
+            if foundation4_record is None:
+                raise RuntimeError(
+                    "No compatible persisted Foundation 4 shadow was restored"
+                )
+        else:
+            foundation4_record = _foundation4_shadow_coordinator.wait_for_terminal(
+                context,
+                timeout_seconds=240.0,
+            )
+
+        if (
+            foundation4_record.status != IntrinsicBuildStatus.COMPLETED
+            or foundation4_record.contract is None
+        ):
+            raise RuntimeError("Foundation 4 shadow did not reach completed state")
+        contract = foundation4_record.contract
+        component = _foundation4_shadow_loader.current_component(context)
+        if contract.player_count != 335 or len(contract.estimates) != 335:
+            raise RuntimeError("Foundation 4 holistic cohort is not the governed 335 players")
+        if component is None or len(component.estimates) != 335:
+            raise RuntimeError("Foundation 4 Y4-Y7 component is not the governed 335 players")
+        if (
+            contract.current_intrinsic_replaced
+            or contract.authoritative_for_current_intrinsic
+            or contract.display_scaling_applied
+            or contract.market_inputs_used
+        ):
+            raise RuntimeError("Foundation 4 violated the governed shadow/economic boundary")
+        if contract.aggregation != (
+            "phi_Y1 + phi_Y2 + phi_Y3 + phi_Y4 + phi_Y5 + phi_Y6 + phi_Y7 + "
+            "TAIL_Y8_PLUS"
+        ):
+            raise RuntimeError("Foundation 4 aggregation semantics drifted")
+
+        current_by_id = {
+            row.player_id: row for row in current_record.contract.estimates
+        }
+        for estimate in contract.estimates:
+            current = current_by_id.get(estimate.player_id)
+            if current is None:
+                raise RuntimeError("Foundation 4 current-cohort identity mismatch")
+            raw_y1_y3 = sum(
+                float(row.raw_shapley_contribution) for row in current.contributions
+            )
+            if abs(raw_y1_y3 - estimate.current_intrinsic_raw_y1_y3) > 1e-9:
+                raise RuntimeError("Foundation 4 Y1-Y3 raw Shapley semantics drifted")
+            reconstructed = (
+                estimate.current_intrinsic_raw_y1_y3
+                + estimate.long_horizon_raw_y4_y7_reference
+                + estimate.terminal_raw_y8_plus_reference
+            )
+            if abs(reconstructed - estimate.raw_career_forward_reference) > 1e-9:
+                raise RuntimeError("Foundation 4 career-forward economics do not reconcile")
+
+        after = _heavy_work_coordinator.snapshot()
+        _foundation4_acceptance_state.clear()
+        _foundation4_acceptance_state.update(
+            status="pass",
+            contract="foundation4-shadow-acceptance-v1",
+            mode=mode,
+            league_state_id=context.league_state.state_id,
+            dependency_fingerprint=foundation4_record.intrinsic_input_fingerprint,
+            semantic_input_fingerprint=contract.input_fingerprint,
+            player_count=contract.player_count,
+            current_intrinsic_player_count=len(current_record.contract.estimates),
+            long_horizon_player_count=len(component.estimates),
+            aggregation=contract.aggregation,
+            current_intrinsic_replaced=False,
+            display_scaling_applied=False,
+            market_inputs_used=False,
+            rss_before_bytes=before.current_rss_bytes,
+            rss_after_bytes=after.current_rss_bytes,
+            peak_rss_bytes=after.peak_rss_bytes,
+            memory_budget_bytes=after.memory_budget_bytes,
+        )
+        logging.getLogger("uvicorn.error").info(
+            "FSFFL FOUNDATION4 SHADOW ACCEPTANCE PASS data=%s",
+            _foundation4_acceptance_state,
+        )
+    except Exception as exc:
+        _foundation4_acceptance_state.clear()
+        _foundation4_acceptance_state.update(
+            status="fail",
+            contract="foundation4-shadow-acceptance-v1",
+            mode=mode,
+            error_type=type(exc).__name__,
+            reason=str(exc),
+        )
+        logging.getLogger("uvicorn.error").exception(
+            "FSFFL FOUNDATION4 SHADOW ACCEPTANCE FAILED"
+        )
+
+
+def _maybe_start_foundation4_shadow_acceptance() -> None:
+    enabled = os.getenv("FSFFL_RUN_FOUNDATION4_ACCEPTANCE", "0").strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        return
+    with _foundation4_acceptance_lock:
+        if _foundation4_acceptance_state.get("status") == "running":
+            return
+        _foundation4_acceptance_state.clear()
+        _foundation4_acceptance_state.update(
+            status="running",
+            contract="foundation4-shadow-acceptance-v1",
+            mode=os.getenv("FSFFL_FOUNDATION4_ACCEPTANCE_MODE", "build").strip().lower(),
+        )
+    Thread(
+        target=_run_foundation4_shadow_acceptance,
+        name="fsffl-foundation4-shadow-acceptance",
+        daemon=True,
+    ).start()
+
+
 def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
     state = context.league_state
     if state is None:
@@ -1308,6 +1477,13 @@ def hosted_runtime_availability_acceptance_health() -> dict[str, object]:
     return dict(_runtime_availability_acceptance_state)
 
 
+@app.get("/health/foundation4-shadow-acceptance")
+def hosted_foundation4_shadow_acceptance_health() -> dict[str, object]:
+    """Non-sensitive Foundation 4 materialization/restore/resource acceptance proof."""
+
+    return dict(_foundation4_acceptance_state)
+
+
 @app.get("/health/runtime-resources")
 def hosted_runtime_resources() -> dict[str, object]:
     """Non-sensitive process resource/admission telemetry for beta acceptance."""
@@ -1593,3 +1769,4 @@ def _start_lightweight_startup_restore() -> None:
 
 app.router.add_event_handler("startup", _start_lightweight_startup_restore)
 app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)
+app.router.add_event_handler("startup", _maybe_start_foundation4_shadow_acceptance)
