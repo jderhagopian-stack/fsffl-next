@@ -158,6 +158,8 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
     current_intrinsic_replaced: bool = False
     display_scaling_applied: bool = False
     market_inputs_used: bool = False
+    ignored_long_term_residual_rule_stats: tuple[str, ...] = ()
+    scoring_coordinate_limitation: str | None = None
 
     @model_validator(mode="after")
     def validate_contract(self) -> "CareerForwardIntrinsicShadowContract":
@@ -173,6 +175,12 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
             raise ValueError("career-forward shadow is raw economic authority")
         if self.market_inputs_used:
             raise ValueError("career-forward shadow cannot consume Market")
+        if self.ignored_long_term_residual_rule_stats and not (
+            self.scoring_coordinate_limitation or ""
+        ).strip():
+            raise ValueError(
+                "career-forward residual omissions require explicit scoring provenance"
+            )
         return self
 
 
