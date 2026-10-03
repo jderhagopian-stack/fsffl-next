@@ -907,6 +907,11 @@ def _run_foundation4_shadow_acceptance() -> None:
                 raise RuntimeError("Foundation 4 career-forward economics do not reconcile")
 
         after = _heavy_work_coordinator.snapshot()
+        if after.peak_rss_bytes > after.memory_budget_bytes:
+            raise RuntimeError(
+                "Foundation 4 acceptance exceeded the engineering memory budget: "
+                f"{after.peak_rss_bytes} > {after.memory_budget_bytes}"
+            )
         _foundation4_acceptance_state.clear()
         _foundation4_acceptance_state.update(
             status="pass",
