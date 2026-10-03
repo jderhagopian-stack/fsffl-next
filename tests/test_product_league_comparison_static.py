@@ -56,3 +56,21 @@ def test_league_atlas_explicitly_labels_stale_last_good_during_target_rebuild() 
     assert "league-last-good-status" in source
     assert "Derived fields as of " in source
     assert "Replacement league intelligence is rebuilding." not in source
+
+
+def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_intelligence() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "Representative futures" in source
+    assert "sim?.multiverse?.worlds" in source
+    assert "row.projected_slot" in source
+    assert "row.fsffl_intrinsic_pick_value" in source
+    assert "origin-aware" in source
+    assert "generic fallback" in source
+    assert "examples, not extra probability mass" in source
+    assert "world?.team_outcomes||[]" in source
+    assert "outcome?.team_id===managed" in source
+    assert "outcome.regular_season_rank" in source
+    assert "outcome.champion" in source
+    assert "estimate?.distribution?.mean" in source
+    assert "estimate.distribution.mean" in source
+    assert "estimate.expected_value" not in source

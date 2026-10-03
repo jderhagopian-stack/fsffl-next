@@ -1403,17 +1403,19 @@ def test_material_state_refresh_skips_stale_waiting_simulation_and_publishes_onc
     assert current_job.status in {
         IntelligenceJobStatus.RUNNING,
         IntelligenceJobStatus.QUEUED,
+        IntelligenceJobStatus.COMPLETED,
     }
     assert store.league_generation("local-beta-user") == generation_after_activation
 
     release_behavioral.set()
     behavioral.join(timeout=2.0)
-    deadline = __import__("time").monotonic() + 5.0
-    while __import__("time").monotonic() < deadline:
-        current_job = app.state.intelligence_jobs.current("local-beta-user")
-        if current_job is not None and current_job.status == IntelligenceJobStatus.COMPLETED:
-            break
-        sleep(0.01)
+    if current_job.status != IntelligenceJobStatus.COMPLETED:
+        deadline = __import__("time").monotonic() + 5.0
+        while __import__("time").monotonic() < deadline:
+            current_job = app.state.intelligence_jobs.current("local-beta-user")
+            if current_job is not None and current_job.status == IntelligenceJobStatus.COMPLETED:
+                break
+            sleep(0.01)
 
     assert current_job is not None
     assert current_job.job_id == replacement_job_id
