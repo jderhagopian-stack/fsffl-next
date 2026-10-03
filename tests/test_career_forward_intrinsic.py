@@ -7,7 +7,11 @@ from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
     build_career_forward_intrinsic_shadow,
 )
-from fsffl.value.career_tail import CareerTailFeatures, build_career_tail_authority
+from fsffl.value.career_tail import (
+    CAREER_TAIL_SCORING_COORDINATE,
+    CareerTailFeatures,
+    build_career_tail_authority,
+)
 from fsffl.value.long_term_intrinsic import (
     LongTermAnnualAuthority,
     LongTermIntrinsicPlayerEstimate,
@@ -213,6 +217,8 @@ def test_holistic_raw_aggregation_uses_annual_phi_not_discounted_or_display_valu
             experience_years=3.0,
             current_points=100.0,
             prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
         ),
         rules=_rules(),
     )
@@ -256,6 +262,8 @@ def test_holistic_model_authority_sums_bounds_but_does_not_create_outcome_interv
             experience_years=3.0,
             current_points=100.0,
             prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
         ),
         rules=_rules(),
     )
