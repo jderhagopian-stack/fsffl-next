@@ -3,10 +3,10 @@ from __future__ import annotations
 import math
 
 from fsffl.state.models import FrozenModel, LeagueState, Position
-from fsffl.value.career_forward_intrinsic import CareerForwardIntrinsicShadowContract
 from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
     CAREER_FORWARD_RAW_QUANTITY,
+    CareerForwardIntrinsicShadowContract,
 )
 
 
