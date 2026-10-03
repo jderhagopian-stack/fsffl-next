@@ -4,6 +4,7 @@ import pytest
 
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot
 from fsffl.value.career_tail import (
+    CAREER_TAIL_LEGACY_RESEARCH_LINEUP_CAPACITY_SIGNATURE,
     CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE,
     CAREER_TAIL_RESEARCH_ARTIFACT_ID,
     CAREER_TAIL_RESEARCH_ARTIFACT_SHA256,
@@ -14,24 +15,36 @@ from fsffl.value.career_tail import (
 )
 
 
-def _rules(*, wr_count: int = 3) -> LeagueRules:
+def _rules(*, wr_count: int = 3, sleeper_order: bool = False) -> LeagueRules:
+    lineup = (
+        LineupRequirement(slot=RosterSlot.QB, count=1),
+        LineupRequirement(slot=RosterSlot.RB, count=2),
+        LineupRequirement(slot=RosterSlot.WR, count=wr_count),
+        LineupRequirement(slot=RosterSlot.TE, count=1),
+        LineupRequirement(slot=RosterSlot.FLEX, count=1),
+        LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
+    )
+    if sleeper_order:
+        lineup = tuple(sorted(lineup, key=lambda row: row.slot.value))
     return LeagueRules(
         team_count=12,
         roster_size=18,
-        lineup=(
-            LineupRequirement(slot=RosterSlot.QB, count=1),
-            LineupRequirement(slot=RosterSlot.RB, count=2),
-            LineupRequirement(slot=RosterSlot.WR, count=wr_count),
-            LineupRequirement(slot=RosterSlot.TE, count=1),
-            LineupRequirement(slot=RosterSlot.FLEX, count=1),
-            LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
-        ),
+        lineup=lineup,
         scoring=(),
     )
 
 
 def test_frozen_terminal_signature_and_research_evidence_are_exact() -> None:
     assert lineup_capacity_signature(_rules()) == CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE
+    assert lineup_capacity_signature(_rules(sleeper_order=True)) == (
+        CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE
+    )
+    assert CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE == (
+        "a4d9a532c477b9fb2114a33009b94adbe15823748efec46d9701bdcddc8f5363"
+    )
+    assert CAREER_TAIL_LEGACY_RESEARCH_LINEUP_CAPACITY_SIGNATURE == (
+        "fe6d07a77a7f11cd61e1af476e9d6b3fe89b7e59c6aecdeab5eb61c991b21349"
+    )
     assert CAREER_TAIL_RESEARCH_RUN_ID == 37086000162
     assert CAREER_TAIL_RESEARCH_ARTIFACT_ID == 11260487964
     assert CAREER_TAIL_RESEARCH_ARTIFACT_SHA256 == (
