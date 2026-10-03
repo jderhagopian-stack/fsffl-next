@@ -33,7 +33,7 @@ def test_position_map_keeps_current_rank_and_labels_dynasty_breadth_separately()
     assert "This is room breadth, not player-quality value" in source
     assert "api('/api/value/long-term-intrinsic-shadow-v1')" in source
     assert "Long-Term Intrinsic shadow · Y4–Y7 annual fantasy points" in source
-    assert "Array.isArray(longTerm?.annual)" in source
+    assert "Array.isArray(longTerm?.uncertainty?.long_horizon_y4_y7)" in source
     assert "row.year_index+' '+laNum(row.reference_center,1)" in source
     assert "longTermState==='ready'?'not reported':longTermState==='idle'?'not loaded':longTermState" in source
     assert "Current Intrinsic · " in source
