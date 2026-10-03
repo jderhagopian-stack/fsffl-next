@@ -14,6 +14,7 @@ from fsffl.product.foundation4_career_forward_runtime import (
 )
 from fsffl.product.foundation4_shadow_inputs import (
     FOUNDATION4_CURRENT_COHORT_SIZE,
+    FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING,
     provide_foundation4_terminal_features,
 )
 from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
@@ -78,7 +79,7 @@ def _rules() -> LeagueRules:
             LineupRequirement(slot=RosterSlot.FLEX, count=1),
             LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
         ),
-        scoring=FROZEN_I1_STANDARD_SCORING,
+        scoring=FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING,
     )
 
 
@@ -190,15 +191,16 @@ def test_live_sleeper_lineup_order_matches_frozen_terminal_capacity_signature() 
 @pytest.mark.parametrize(
     "scoring",
     (
-        FROZEN_I1_STANDARD_SCORING
-        + (ScoringRule(stat="rec", points=0.5),),
+        FROZEN_I1_STANDARD_SCORING,
         tuple(
             ScoringRule(
                 stat=row.stat,
                 points=6.0 if row.stat == "pass_td" else row.points,
             )
-            for row in FROZEN_I1_STANDARD_SCORING
+            for row in FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING
         ),
+        FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING
+        + (ScoringRule(stat="bonus_pass_yd_400", points=5.0),),
     ),
 )
 def test_runtime_fails_closed_before_aggregating_incompatible_scoring(scoring) -> None:
@@ -209,7 +211,7 @@ def test_runtime_fails_closed_before_aggregating_incompatible_scoring(scoring) -
 
     with pytest.raises(
         ValueError,
-        match="no governed Foundation 4 scoring transform",
+        match="active player-offense scoring is incompatible",
     ):
         loader(_context(rules=rules))
 
