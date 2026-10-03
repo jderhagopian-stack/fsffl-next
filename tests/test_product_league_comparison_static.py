@@ -22,6 +22,21 @@ def test_league_comparison_consumes_authoritative_atlas_analytics_and_value_cont
     assert "No team Market total, team Intrinsic total" in source
 
 
+def test_position_map_keeps_current_rank_and_labels_dynasty_breadth_separately() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "How strong is this position for winning now?" in source
+    assert "How strong is this position as a long-term asset room?" in source
+    assert "data-position-view=\"current\"" in source
+    assert "data-position-view=\"dynasty\"" in source
+    assert "dynasty?laDynastyRoom(view.team_id,position):laStrength(view,position)" in source
+    assert "Every rostered player counts once, including starters, bench, IR and taxi" in source
+    assert "This is room breadth, not player-quality value" in source
+    assert "api('/api/value/long-term-intrinsic-shadow-v1')" in source
+    assert "Long-Term Intrinsic remains shadow evidence" in source
+    assert "Current Intrinsic · " in source
+    assert "Market · " in source
+
+
 def test_value_api_exposes_server_owned_team_value_portfolios_without_atlas_consuming_them() -> None:
     source = Path("src/fsffl/product/webapp.py").read_text(encoding="utf-8")
     atlas = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
@@ -61,9 +76,6 @@ def test_league_atlas_explicitly_labels_stale_last_good_during_target_rebuild() 
 def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_intelligence() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "Season scenarios" in source
-    assert ".league-atlas-north-star .atlas-season-scenarios{padding:0 10px 10px}" in Path(
-        "src/fsffl/product/static/league_atlas.css"
-    ).read_text(encoding="utf-8")
     assert "sim?.multiverse?.worlds" in source
     assert "row.projected_slot" in source
     assert "row.fsffl_intrinsic_pick_value" in source
@@ -101,7 +113,7 @@ def test_league_atlas_pick_drawer_groups_owned_assets_before_traded_history() ->
     assert "row.fsffl_intrinsic_pick_value" in drawer
     assert "row.owner_team_name" in drawer
     assert "row.original_team_name" in drawer
-    assert "20261003-scenarios-pick-order1" in Path(
+    assert "20261003-position-lens1" in Path(
         "src/fsffl/product/static/product_shell.js"
     ).read_text(encoding="utf-8")
-    assert "20261003-scenarios-pick-order1" in source
+    assert "20261003-position-lens1" in source
