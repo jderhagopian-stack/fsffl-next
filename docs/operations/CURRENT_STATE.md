@@ -3225,3 +3225,24 @@ Governed rule classes:
 - **material unsupported** rules that could meaningfully alter player value and cannot be modeled must fail closed or downgrade authority rather than be silently ignored.
 
 Do not implement a strict all-rules-exact gate, and do not special-case only FSFFL half-PPR. Build a general connected-league scoring-coverage policy. FSFFL 0.5 PPR is the first acceptance case. No heuristic multipliers or silent cross-coordinate relabeling.
+
+## 2026-10-03 — Foundation 4 #361 ACCEPTED; Intrinsic runtime performance is next
+
+Foundation 4 is **ACCEPTED / CLOSED** at merged PR #361, merge commit `ef29a0e7f6243a9d429d18c6f76b3a66d4cd0410`.
+
+Accepted proof:
+- exact PR head `4886b91f270bc0c07fcea9b89130132cb503126d` passed full CI (**2,120 passed**, one existing warning) plus Live Forecast trace, corrective provider numerical trace, PR164 regression, Home/League Atlas focused lanes and Private-beta Intrinsic live diagnostics;
+- the first live #361 run built and persisted the Foundation 4 Y4-Y7 component plus holistic career-forward artifacts; its early harness failure is not treated as a model/runtime rejection because the artifacts were subsequently restored exactly by the same merged code;
+- clean same-code Render redeploy `dep-db0h5rugekts739mf5g0` restored the full **335-player** Foundation 4 artifact with semantic identity intact; Foundation 4 restore acceptance passed at **364,875,776 bytes** peak RSS;
+- full runtime-availability acceptance then passed at **402,485,248 bytes** peak RSS, below the **429,496,720-byte** engineering budget and **536,870,900-byte** Render hard limit;
+- Current Intrinsic remained separate and was not replaced; no display scaling, Market input, arbitrary horizon weighting, terminal multiplier or cumulative career SD was introduced;
+- the five previously reviewed rare/unpredictable residual bonuses remain an explicit, typed, immaterial Long-Term Intrinsic omission under the controlling Management disposition. Standalone Current Intrinsic remains unchanged.
+
+Do **not** reopen Foundation 4 model/scoring work or rerun an expensive build solely for harness cosmetics absent contradictory evidence.
+
+Superseded draft PR #356 is closed unmerged and retained only as historical provenance.
+
+**Active next tranche: Intrinsic runtime performance.** Measure three paths separately: (1) cold Long-Term Intrinsic materialization, (2) exact compatible restore/reuse, and (3) changed-State rebuild. Remove unnecessary recomputation or dependency churn first; optimize unavoidable Shapley/materialization computation only if measurement shows material product value.
+
+After that, proceed directly to the approved **Product Integration / Capability Rollout** before Foundation 5. Productize accepted Simulation 2.0 competitive intelligence, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience, using the private-beta shadow -> prove -> expose -> refine cycle.
+

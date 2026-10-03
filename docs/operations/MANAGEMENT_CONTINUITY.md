@@ -632,3 +632,17 @@ Verified generation evidence:
 The runtime now consumes the exact packaged FSFFL Y8+ coefficients/residual bands and pins the regenerated Y4-Y7/terminal semantic identities. The superseded standard/non-PPR freeze is retained only as historical provenance/negative compatibility evidence. No heuristic scoring multiplier, retraining or model redesign was introduced.
 
 Promotion remains Tier C. Required closeout: final exact-head CI and focused validations -> fresh Codex review -> one hosted 335-player build -> same-code restart/restore semantic identity -> resource acceptance -> canonical closeout.
+
+## 2026-10-03 — Re-anchor after Foundation 4 #361 acceptance
+
+Foundation 4 is closed. PR #361 merged as `ef29a0e7f6243a9d429d18c6f76b3a66d4cd0410` after final head `4886b91f270bc0c07fcea9b89130132cb503126d` passed exact-head validation. The first live run created/persisted the Foundation 4 artifacts; a clean same-code redeploy restored the full 335-player artifact with identical semantic identity. Restore acceptance passed at **364,875,776 bytes** peak RSS and full runtime-availability acceptance passed at **402,485,248 bytes**, both under the **429,496,720-byte** engineering budget.
+
+Treat that as substantive Foundation 4 acceptance. Do not reopen model/scoring work or force another expensive build for harness cosmetics unless contradictory evidence appears. Draft #356 is superseded and closed.
+
+Implementation continuation order:
+1. **Intrinsic runtime performance** — measure cold build vs exact restore/reuse vs changed-State rebuild; eliminate unnecessary recomputation first; optimize unavoidable compute only if materially useful.
+2. **Product Integration / Capability Rollout** — expose accepted Simulation 2.0 competitive intelligence, origin-aware pick intelligence and holistic Long-Term Intrinsic across the existing product surfaces for the sole private-beta user; use physical iPhone/Safari feedback to refine.
+3. **Foundation 5** only after the rollout tranche.
+
+Simulation 2.0 is closed. Do not reopen completed Simulation semantics/performance work absent new contradictory evidence or an explicit Management directive.
+
