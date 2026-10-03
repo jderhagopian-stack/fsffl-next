@@ -60,17 +60,25 @@ def test_league_atlas_explicitly_labels_stale_last_good_during_target_rebuild() 
 
 def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_intelligence() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
-    assert "Representative futures" in source
+    assert "Season scenarios" in source
+    assert ".league-atlas-north-star .atlas-season-scenarios{padding:0 10px 10px}" in Path(
+        "src/fsffl/product/static/league_atlas.css"
+    ).read_text(encoding="utf-8")
     assert "sim?.multiverse?.worlds" in source
     assert "row.projected_slot" in source
     assert "row.fsffl_intrinsic_pick_value" in source
-    assert "origin-aware" in source
-    assert "generic fallback" in source
-    assert "examples, not extra probability mass" in source
+    assert "Team-of-origin value" in source
+    assert "Generic class fallback" in source
+    assert "league-wide condition used to select each example" in source
+    assert "Rarity is how often that condition or event appeared in this same run" in source
+    assert "Neither is your team’s odds" in source
+    assert "not a team-specific upside/downside or a separate probability" in source
     assert "world?.team_outcomes||[]" in source
     assert "outcome?.team_id===managed" in source
     assert "outcome.regular_season_rank" in source
     assert "outcome.champion" in source
+    assert "managedWorlds.map(({world,outcome})=>" in source
+    assert "managedWorlds.slice(0,4)" not in source
     assert "estimate?.distribution?.mean" in source
     assert "estimate.distribution.mean" in source
     assert "estimate.expected_value" not in source
@@ -78,3 +86,22 @@ def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_
     assert "world.label" not in source
     assert "world.summary" not in source
     assert "world.description" not in source
+
+
+def test_league_atlas_pick_drawer_groups_owned_assets_before_traded_history() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    drawer = source[source.index("function laPickDrawer()") : source.index("function laActiveTab()")]
+    assert 'class="atlas-pick-group"><h4>Currently owned</h4>' in drawer
+    assert 'class="atlas-pick-group atlas-traded-picks"><h4>Traded away</h4>' in drawer
+    assert drawer.index('class="atlas-pick-group"><h4>Currently owned</h4>') < drawer.index(
+        'class="atlas-pick-group atlas-traded-picks"><h4>Traded away</h4>'
+    )
+    assert "row.pick_id" not in drawer
+    assert "row.projected_slot" in drawer
+    assert "row.fsffl_intrinsic_pick_value" in drawer
+    assert "row.owner_team_name" in drawer
+    assert "row.original_team_name" in drawer
+    assert "20261003-scenarios-pick-order1" in Path(
+        "src/fsffl/product/static/product_shell.js"
+    ).read_text(encoding="utf-8")
+    assert "20261003-scenarios-pick-order1" in source

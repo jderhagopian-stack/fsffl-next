@@ -1,7 +1,7 @@
 # FSFFL NEXT — Management Continuity
 
 ## Updated
-2026-09-28
+2026-10-03
 
 ## Management objective
 First make the hosted product reliably usable. Then return immediately to the upstream foundation program that will make Market / Trade / Intelligence materially stronger.
@@ -658,6 +658,12 @@ Accepted evidence:
 - remaining Intrinsic cost is not the dominant refresh bottleneck: the same hosted acceptance measured Simulation ~68.691s, attaching/publishing ~60.297s and State refresh ~23.692s versus Intrinsic ~14.398s. No further avoidable Intrinsic recomputation was identified that justifies additional model/runtime surgery now.
 
 **ACTIVE: Product Integration / Capability Rollout.** First slice is League Atlas consumption of already-published accepted capability contracts: replayable Simulation representative futures and origin-aware future-pick outlook/value. Preserve authority labels and progressive disclosure; do not create new economics, probability mass, composite scores or recommendations. Holistic Long-Term Intrinsic exposure follows through the governed Value/Player Intelligence product path.
+
+## 2026-10-03 — #367 physical acceptance correction
+
+Render production service `fsffl-next-private-beta` is on #367 merge `32aaa88a59f51b18a237b52ce49915e1225e6c3d` (deploy `dep-db0k3lfavr4c738342rg`, live). Management's two physical acceptance comments are the active product gate. The correction branch `fix/atlas-physical-acceptance-20261003` preserves core League Race ordering, moves the scenario list behind a compact disclosure with explicit league-wide category semantics, separates current owned picks from traded-away originals, and removes raw Sleeper pick IDs from user-facing rows without removing governed slot/value data.
+
+Exact validation/review/deploy and hosted verification remain before return to iPhone/Safari acceptance. Keep Simulation 2.0, Foundation 4 and Intrinsic economics closed. Continue Product Integration after this bounded physical correction.
 
 
 
