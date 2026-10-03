@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 jobs:
@@ -40,6 +40,22 @@ jobs:
       - name: Materialize governed 335-player Y4-Y7 authority
         run: |
           python scripts/build_foundation4_current_long_horizon_authority.py             --model-a-rows /tmp/term/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv             --qb-results /tmp/term/frozen/qb/qb_career_state_deployment_results.json             --raw-seasons /tmp/panel/RAW_PLAYER_SEASONS_RICH.csv             --players /tmp/panel/PLAYERS.csv             --residual-states /tmp/term/frozen/modela/multiyear-intrinsic-model-a/player_specific_trajectory_residual_states.csv             --innovation-states /tmp/term/frozen/modela/multiyear-intrinsic-model-a/within_player_trajectory_innovation_states.csv             --current-route /tmp/route/CURRENT_RESEARCH_ROUTE.csv             --rolling-policy-predictions /tmp/route/ROLLING_POLICY_PREDICTIONS.csv
+      - name: Freeze governed current-cohort production bundle
+        if: success() && github.event_name == 'push'
+        run: |
+          cp /tmp/foundation4_current_long_horizon/CURRENT_COHORT_PRODUCTION_BUNDLE.json.gz.b64 \
+            src/fsffl/value/foundation4_current_cohort_bundle.json.gz.b64
+          cp /tmp/foundation4_current_long_horizon/CURRENT_COHORT_PRODUCTION_BUNDLE.sha256 \
+            src/fsffl/value/foundation4_current_cohort_bundle.sha256
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/fsffl/value/foundation4_current_cohort_bundle.json.gz.b64 \
+            src/fsffl/value/foundation4_current_cohort_bundle.sha256
+          if ! git diff --cached --quiet; then
+            git commit -m "Freeze Foundation 4 current cohort production bundle"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - name: Upload governed Foundation 4 Y4-Y7 current evidence
         if: always()
         uses: actions/upload-artifact@v4
