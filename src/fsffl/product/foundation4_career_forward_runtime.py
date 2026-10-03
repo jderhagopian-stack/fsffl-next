@@ -44,7 +44,7 @@ from .runtime import UserRuntimeContext
 FOUNDATION4_Y4_Y7_ARTIFACT_KIND = "foundation4_long_horizon_y4_y7_shadow"
 FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = "foundation4_career_forward_intrinsic_shadow"
 FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
-FOUNDATION4_RUNTIME_VERSION = "foundation4-career-forward-runtime-v1"
+FOUNDATION4_RUNTIME_VERSION = "foundation4-career-forward-runtime-v2:fsffl-scored-freeze"
 
 
 CurrentIntrinsicLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
@@ -71,7 +71,7 @@ def _rules_payload(context: UserRuntimeContext) -> dict[str, object]:
 class Foundation4CareerForwardShadowLoader:
     """Build/persist the holistic shadow without mutating Current Intrinsic."""
 
-    forecast_model_version = "foundation4:frozen-y4-y7-plus-y8-terminal-v1"
+    forecast_model_version = "foundation4:fsffl-scored-y4-y7-plus-y8-terminal-v2"
 
     def __init__(
         self,
