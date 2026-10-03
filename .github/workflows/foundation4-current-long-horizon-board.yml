@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 jobs:
@@ -56,6 +56,22 @@ jobs:
             --cell-metrics /tmp/route/ROLLING_POLICY_CELL_METRICS.csv \
             --policy-freeze artifacts/research/intrinsic_cell_routing_y4_y8_20260926/CELL_ROUTING_POLICY_FREEZE.json \
             --out-dir /tmp/f4
+      - name: Freeze generated boards into implementation branch
+        run: |
+          mkdir -p src/fsffl/forecast/data src/fsffl/value/data
+          cp /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.json.gz \
+            src/fsffl/forecast/data/foundation4_long_horizon_board_2026.json.gz
+          cp /tmp/f4/FOUNDATION4_CURRENT_TERMINAL_FEATURES_335.json.gz \
+            src/fsffl/value/data/foundation4_terminal_features_2026.json.gz
+          cp /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_SUMMARY.json \
+            src/fsffl/value/data/foundation4_current_board_summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/fsffl/forecast/data src/fsffl/value/data
+          if ! git diff --cached --quiet; then
+            git commit -m "Foundation 4: freeze governed 2026 current cohort boards"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - name: Upload frozen current board evidence
         uses: actions/upload-artifact@v4
         with:
@@ -63,5 +79,7 @@ jobs:
           path: |
             /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.csv
             /tmp/f4/FOUNDATION4_CURRENT_TERMINAL_FEATURES_335.csv
+            /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.json.gz
+            /tmp/f4/FOUNDATION4_CURRENT_TERMINAL_FEATURES_335.json.gz
             /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_SUMMARY.json
           retention-days: 14
