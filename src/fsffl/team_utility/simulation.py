@@ -910,9 +910,11 @@ def _simulate_configured_champion(
     *,
     execution_matchups=None,
 ):
-    if playoff_rules is None or playoff_rules.simulation_unavailability_reason() is not None:
+    if playoff_rules is None:
         return None
     if execution_matchups is None:
+        if playoff_rules.simulation_unavailability_reason() is not None:
+            return None
         execution_matchups = playoff_rules.canonical_execution_matchups()
     seeds = {
         seed: (standings[seed - 1], seed)
@@ -952,14 +954,15 @@ def _simulate_configured_playoff_outcomes(
 ) -> tuple[int, dict[int, int]]:
     """Return champion plus each loser's canonical elimination round."""
 
-    if (
-        playoff_rules is None
-        or playoff_rules.simulation_unavailability_reason() is not None
-    ):
+    if playoff_rules is None:
         raise ValueError(
             "future-pick playoff elimination requires governed playoff structure"
         )
     if execution_matchups is None:
+        if playoff_rules.simulation_unavailability_reason() is not None:
+            raise ValueError(
+                "future-pick playoff elimination requires governed playoff structure"
+            )
         execution_matchups = playoff_rules.canonical_execution_matchups()
     seeds = {
         seed: (standings[seed - 1], seed)
