@@ -5,6 +5,9 @@ on:
     branches: [work/foundation4-holistic-career-forward-shadow]
     paths:
       - scripts/materialize_foundation4_current_long_horizon_board.py
+      - scripts/materialize_foundation4_fsffl_coordinate.py
+      - scripts/run_foundation4_career_tail_research.py
+      - scripts/package_foundation4_fsffl_tail.py
       - .github/workflows/foundation4-current-long-horizon-board.yml
   workflow_dispatch:
 
@@ -40,9 +43,9 @@ jobs:
           unzip -oq /tmp/term.zip -d /tmp/term
           gh api repos/${{ github.repository }}/actions/artifacts/10916355135/zip > /tmp/route.zip
           unzip -oq /tmp/route.zip -d /tmp/route
-      - name: Materialize governed 2026 all-policy board
+      - name: Materialize governed 2026 FSFFL-scored all-policy board
         run: |
-          python scripts/materialize_foundation4_current_long_horizon_board.py \
+          python scripts/materialize_foundation4_fsffl_coordinate.py \
             --development-module /tmp/dev.py \
             --route-module /tmp/route.py \
             --model-a-rows /tmp/term/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
@@ -51,11 +54,21 @@ jobs:
             --players /tmp/panel/PLAYERS.csv \
             --residual-states /tmp/term/frozen/modela/multiyear-intrinsic-model-a/player_specific_trajectory_residual_states.csv \
             --innovation-states /tmp/term/frozen/modela/multiyear-intrinsic-model-a/within_player_trajectory_innovation_states.csv \
-            --board artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_STANDARD_COORDINATE_BOARD_335.csv \
+            --board artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_CONNECTED_LEAGUE_BOARD_335.csv \
             --current-route /tmp/route/CURRENT_RESEARCH_ROUTE.csv \
-            --cell-metrics /tmp/route/ROLLING_POLICY_CELL_METRICS.csv \
             --policy-freeze artifacts/research/intrinsic_cell_routing_y4_y8_20260926/CELL_ROUTING_POLICY_FREEZE.json \
+            --connected-rules artifacts/implementation/forecast_source_coordinate_20260919/CONNECTED_LEAGUE_RULES.json \
             --out-dir /tmp/f4
+      - name: Recalibrate governed Y8+ terminal authority in FSFFL scoring
+        run: |
+          python scripts/run_foundation4_career_tail_research.py \
+            --player-seasons /tmp/f4/FOUNDATION4_FSFFL_TERMINAL_PLAYER_SEASONS.csv \
+            --out-dir /tmp/f4-tail \
+            --scoring-coordinate connected_league_fantasy_points
+          python scripts/package_foundation4_fsffl_tail.py \
+            --evidence /tmp/f4-tail/TERMINAL_TAIL_EVIDENCE.json \
+            --out /tmp/f4/FOUNDATION4_FSFFL_CAREER_TAIL_RUNTIME.json \
+            --research-run-id "$GITHUB_RUN_ID"
       - name: Freeze generated boards into implementation branch
         run: |
           mkdir -p src/fsffl/forecast/data src/fsffl/value/data
@@ -65,6 +78,8 @@ jobs:
             src/fsffl/value/data/foundation4_terminal_features_2026.json.gz
           cp /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_SUMMARY.json \
             src/fsffl/value/data/foundation4_current_board_summary.json
+          cp /tmp/f4/FOUNDATION4_FSFFL_CAREER_TAIL_RUNTIME.json \
+            src/fsffl/value/data/foundation4_career_tail_fsffl_2026.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/fsffl/forecast/data src/fsffl/value/data
@@ -82,4 +97,11 @@ jobs:
             /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.json.gz
             /tmp/f4/FOUNDATION4_CURRENT_TERMINAL_FEATURES_335.json.gz
             /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_SUMMARY.json
+            /tmp/f4/FOUNDATION4_FSFFL_ROLLING_POLICY_CELL_METRICS.csv
+            /tmp/f4/FOUNDATION4_FSFFL_ROLLING_POLICY_PREDICTIONS.csv
+            /tmp/f4-tail/TERMINAL_TAIL_EVIDENCE.json
+            /tmp/f4-tail/RESEARCH_CLOSEOUT.md
+            /tmp/f4-tail/ROLLING_VALIDATION.csv
+            /tmp/f4-tail/FINAL_HOLDOUT_PREDICTIONS.csv
+            /tmp/f4/FOUNDATION4_FSFFL_CAREER_TAIL_RUNTIME.json
           retention-days: 14
