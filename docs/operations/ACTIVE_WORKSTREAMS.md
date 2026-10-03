@@ -1867,3 +1867,23 @@ Still required before Foundation 4 acceptance: current-cohort runtime materializ
 
 ### Foundation 4
 #356 remains the active implementation PR and is green/mergeable, but has not moved past the current shadow-contract + current-authority artifact checkpoint. Continue immediately into full current-cohort runtime materialization, persistence/API, restart/reload identity, resource validation, review and explicit shadow acceptance.
+
+
+## 2026-10-03 — ACTIVE after #360 hosted acceptance
+
+### Simulation
+#360 exact live 50k acceptance is complete:
+- kernel **43.800s** vs original corrected **104.901s**;
+- future-pick ordering **12.704s**;
+- H2H **2.056s**;
+- postseason **8.376s**;
+- acceptance peak RSS **393,076,736 bytes** under budget;
+- runtime availability **PASS**;
+- restored-refresh total **211.082s**.
+
+Do not treat #360 as an additional proven speedup over #357; host wall-time variation moved multiple subphases. The major performance program has nevertheless cut the exact kernel by ~58% from the corrected baseline. Before doing more kernel work, require a clear material-return case from fresh measured evidence.
+
+One narrow #359 acceptance-tooling P2 remains: missing surface publication-generation IDs must fail closed.
+
+### Foundation 4
+#356 remains open/green but unchanged since the current shadow-contract/current-authority artifact checkpoint. Resume it now through live-cohort runtime materialization, persistence/API, restart/reload/resource validation, bounded review and explicit shadow acceptance. This is the primary forward product-capability workstream.
