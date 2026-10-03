@@ -1,6 +1,6 @@
 # FSFFL NEXT — Active Workstreams
 
-Updated: 2026-09-25
+Updated: 2026-10-03
 
 ## Management
 **State:** ACTIVE  
@@ -1970,3 +1970,8 @@ Accepted evidence:
 
 **ACTIVE: Product Integration / Capability Rollout.** First slice is League Atlas consumption of already-published accepted capability contracts: replayable Simulation representative futures and origin-aware future-pick outlook/value. Preserve authority labels and progressive disclosure; do not create new economics, probability mass, composite scores or recommendations. Holistic Long-Term Intrinsic exposure follows through the governed Value/Player Intelligence product path.
 
+## 2026-10-03 — Physical League Atlas feedback; bounded correction
+
+Product Integration remains **ACTIVE**. #367 is accepted for payload plumbing and live, but its physical iPhone/Safari treatment is not accepted. The management comments require compact progressive disclosure for representative worlds, accurate league-wide category/rarity framing, and currently owned picks above a separated traded-away section.
+
+Current corrective branch: `fix/atlas-physical-acceptance-20261003`. Scope is `league_comparison.js`, its stylesheet/cache-busters and focused presentation tests. Preserve all governed pick projections and Value means; do not touch Simulation selection/math/RNG/replay, Foundation 4 or Intrinsic economics. Once exact-head validation/review and deployment are clean, return to physical iPhone/Safari, then continue the rollout rather than starting Foundation 5.

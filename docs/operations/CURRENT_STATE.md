@@ -1,6 +1,6 @@
 # FSFFL NEXT — Current State
 
-Updated: 2026-09-25
+Updated: 2026-10-03
 
 ## Product state
 FSFFL NEXT is in private beta. The canonical authority chain remains:
@@ -3259,3 +3259,10 @@ Accepted evidence:
 
 **ACTIVE: Product Integration / Capability Rollout.** First slice is League Atlas consumption of already-published accepted capability contracts: replayable Simulation representative futures and origin-aware future-pick outlook/value. Preserve authority labels and progressive disclosure; do not create new economics, probability mass, composite scores or recommendations. Holistic Long-Term Intrinsic exposure follows through the governed Value/Player Intelligence product path.
 
+## 2026-10-03 — League Atlas physical-acceptance correction active
+
+PR #367 (`32aaa88a59f51b18a237b52ce49915e1225e6c3d`) is merged and live on Render deployment `dep-db0k3lfavr4c738342rg`. Its two Management physical-acceptance comments remain open product findings: the Representative Futures block is too prominent and category wording can imply team-specific upside/downside; owned and traded-away picks must be separated in the team drawer.
+
+The Multiverse contract was verified in `src/fsffl/team_utility/simulation.py`: plausible upside/downside are selected from league-total scoring tails; rarity is empirical context for the selected league-level metric/event (or representative typicality); each team's finish is a result within that sampled world, not what the world category means for that team. The bounded presentation correction is on `fix/atlas-physical-acceptance-20261003`: League Race remains first, scenarios are collapsed with league-level semantics disclosed, and pick rows are grouped into currently owned then traded-away while retaining current-owner/original-team facts and governed slot/Value fields. Raw provider pick IDs are omitted from display. No Simulation, replay, probability, Foundation 4 or Intrinsic economics change is authorized.
+
+After exact-head review and CI, merge/deploy the clean correction, verify the hosted surface, return to iPhone/Safari acceptance, then continue the Product Integration rollout.
