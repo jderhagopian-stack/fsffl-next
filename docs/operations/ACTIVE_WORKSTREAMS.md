@@ -1809,3 +1809,29 @@ Uncertainty remains separated:
 - no cumulative career standard deviation or cross-horizon covariance is authorized.
 
 Next bounded work: freeze the fitted terminal coefficients/residual bands in production-readable evidence, implement the pure terminal Value consumer plus holistic aggregator, materialize the current cohort in shadow, persist/serve it separately from Current Intrinsic, validate resources/semantics, and perform bounded review. Foundation 4 is still incomplete until that implementation/live-cohort path is accepted.
+
+
+## 2026-10-03 — ACTIVE: Simulation team-origin ordering + Foundation 4 shadow implementation
+
+### Simulation performance
+The H2H production optimization is proven materially effective on the live #355 build:
+- H2H **20.355s -> 2.528s**;
+- kernel **61.007s -> 43.487s** versus the accepted #351 baseline;
+- team-origin future-pick ordering is now the largest measured phase at **17.440s**.
+
+Active PR #357 targets team-origin ordering and is green on CI/focused regression. Before promotion, close the outstanding #355 Codex P2 so dense H2H working memory is truly independently bounded during chunk transitions, then prove exact output/replay equivalence and one governed hosted 50k before/after profile.
+
+A runtime-availability acceptance failure also occurred after the successful 50k profile while last-good surfaces were served during a newer working-generation rebuild. Diagnose this narrowly; do not reopen Simulation semantics or discard the valid performance measurement.
+
+### Foundation 4
+Career-tail governance #352 is merged and accepted for bounded shadow implementation. No real implementation PR is active yet; closed draft #356 had no delta.
+
+Next executable implementation:
+1. freeze corrected Y8+ terminal coefficients/residual evidence;
+2. implement terminal Value consumer + holistic raw aggregator;
+3. materialize current cohort in shadow;
+4. persist and API-serve separately from Current Intrinsic;
+5. validate semantics, restart/reload and resources;
+6. bounded review/acceptance.
+
+After Foundation 4 acceptance, run the **Product Integration / Capability Rollout** tranche before Foundation 5: expose accepted Simulation 2.0, origin-aware pick and holistic Long-Term Intrinsic capabilities to the sole private-beta user using the existing product surfaces, then continue to PIT historical-market evidence.
