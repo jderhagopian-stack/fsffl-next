@@ -61,6 +61,9 @@ def test_league_atlas_explicitly_labels_stale_last_good_during_target_rebuild() 
 def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_intelligence() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "Season scenarios" in source
+    assert ".league-atlas-north-star .atlas-season-scenarios{padding:0 10px 10px}" in Path(
+        "src/fsffl/product/static/league_atlas.css"
+    ).read_text(encoding="utf-8")
     assert "sim?.multiverse?.worlds" in source
     assert "row.projected_slot" in source
     assert "row.fsffl_intrinsic_pick_value" in source
