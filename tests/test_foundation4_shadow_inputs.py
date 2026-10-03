@@ -73,6 +73,12 @@ def test_frozen_board_known_coordinate_and_terminal_transport_are_exact() -> Non
     )
 
 
+    terminal = provide_foundation4_terminal_features()
+    missing_prior = [row for row in terminal.values() if row.prior_points is None]
+    assert missing_prior
+    assert all(row.prior_points is None for row in missing_prior)
+
+
 def test_terminal_signature_remains_separate_from_frozen_board_identity() -> None:
     # Board identity alone is never authority for a different lineup-capacity game.
     assert CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE == (
