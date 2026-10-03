@@ -67,3 +67,10 @@ def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_
     assert "origin-aware" in source
     assert "generic fallback" in source
     assert "examples, not extra probability mass" in source
+    assert "world?.team_outcomes||[]" in source
+    assert "outcome?.team_id===managed" in source
+    assert "outcome.regular_season_rank" in source
+    assert "outcome.champion" in source
+    assert "estimate?.distribution?.mean" in source
+    assert "estimate.distribution.mean" in source
+    assert "estimate.expected_value" not in source
