@@ -2,15 +2,21 @@ from __future__ import annotations
 
 import pytest
 
+from fsffl.forecast.future_contract import CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE
 from fsffl.product.foundation4_shadow_inputs import (
     FOUNDATION4_CURRENT_COHORT_SIZE,
+    FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE,
     FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256,
     FOUNDATION4_LONG_HORIZON_ROW_COUNT,
     FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256,
     foundation4_long_horizon_rows,
+    foundation4_standard_scoring_is_exactly_compatible,
     provide_foundation4_long_horizon_forecast_contract,
+    provide_foundation4_long_horizon_forecast_contract_for_rules,
     provide_foundation4_terminal_features,
 )
+from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
+from fsffl.state.models import LeagueRules, ScoringRule
 from fsffl.value.career_tail import CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE
 
 
@@ -23,6 +29,10 @@ def test_frozen_foundation4_current_boards_are_complete_and_semantically_pinned(
     assert len(terminal) == FOUNDATION4_CURRENT_COHORT_SIZE == 335
     assert len(contract.player_ids) == 335
     assert set(contract.player_ids) == set(terminal)
+    assert contract.scoring_coordinate == FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE
+    assert {row.scoring_coordinate for row in contract.forecasts} == {
+        FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE
+    }
     assert contract.provenance["current_board_semantic_sha256"] == (
         FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256
     )
@@ -79,8 +89,55 @@ def test_frozen_board_known_coordinate_and_terminal_transport_are_exact() -> Non
     assert all(row.prior_points is None for row in missing_prior)
 
 
+def _standard_rules() -> LeagueRules:
+    return LeagueRules(
+        team_count=12,
+        roster_size=18,
+        scoring=FROZEN_I1_STANDARD_SCORING,
+    )
+
+
+def test_frozen_board_relabels_only_for_exact_standard_scoring_equivalence() -> None:
+    rules = _standard_rules()
+    assert foundation4_standard_scoring_is_exactly_compatible(rules) is True
+
+    connected = provide_foundation4_long_horizon_forecast_contract_for_rules(rules)
+
+    assert connected.scoring_coordinate == CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE
+    assert {row.scoring_coordinate for row in connected.forecasts} == {
+        CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE
+    }
+    assert connected.provenance["source_scoring_coordinate"] == (
+        FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE
+    )
+    assert connected.provenance["coordinate_equivalence"] == (
+        "exact_frozen_standard_scoring_match"
+    )
+
+
+@pytest.mark.parametrize(
+    "scoring",
+    (
+        FROZEN_I1_STANDARD_SCORING
+        + (ScoringRule(stat="rec", points=0.5),),
+        tuple(
+            ScoringRule(
+                stat=row.stat,
+                points=6.0 if row.stat == "pass_td" else row.points,
+            )
+            for row in FROZEN_I1_STANDARD_SCORING
+        ),
+    ),
+)
+def test_frozen_board_fails_closed_on_incompatible_connected_scoring(scoring) -> None:
+    rules = LeagueRules(team_count=12, roster_size=18, scoring=scoring)
+    assert foundation4_standard_scoring_is_exactly_compatible(rules) is False
+    with pytest.raises(ValueError, match="no governed Foundation 4 scoring transform"):
+        provide_foundation4_long_horizon_forecast_contract_for_rules(rules)
+
+
 def test_terminal_signature_remains_separate_from_frozen_board_identity() -> None:
     # Board identity alone is never authority for a different lineup-capacity game.
     assert CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE == (
-        "fe6d07a77a7f11cd61e1af476e9d6b3fe89b7e59c6aecdeab5eb61c991b21349"
+        "a4d9a532c477b9fb2114a33009b94adbe15823748efec46d9701bdcddc8f5363"
     )
