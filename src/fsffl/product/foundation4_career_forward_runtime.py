@@ -34,6 +34,7 @@ from fsffl.value.shapley_intrinsic_contract import (
 
 from .foundation4_shadow_inputs import (
     FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256,
+    FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS,
     FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256,
     provide_foundation4_long_horizon_forecast_contract_for_rules,
     provide_foundation4_terminal_features,
@@ -44,7 +45,10 @@ from .runtime import UserRuntimeContext
 FOUNDATION4_Y4_Y7_ARTIFACT_KIND = "foundation4_long_horizon_y4_y7_shadow"
 FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = "foundation4_career_forward_intrinsic_shadow"
 FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
-FOUNDATION4_RUNTIME_VERSION = "foundation4-career-forward-runtime-v2:fsffl-scored-freeze"
+FOUNDATION4_RUNTIME_VERSION = (
+    "foundation4-career-forward-runtime-v3:"
+    "fsffl-material-scoring-with-rare-residual-omission"
+)
 
 
 CurrentIntrinsicLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
@@ -307,6 +311,20 @@ class Foundation4CareerForwardShadowLoader:
             current,
             component,
             tails,
+        ).model_copy(
+            update={
+                "ignored_long_term_residual_rule_stats": (
+                    FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS
+                ),
+                "scoring_coordinate_limitation": (
+                    "Foundation 4 Y4+ omits fum_rec, fum_rec_td, st_ff, "
+                    "st_fum_rec and st_td as immaterial/unpredictable residual "
+                    "bonuses. Standalone Current Intrinsic remains unchanged; its "
+                    "Y1-Y3 contributions may retain the bounded current scorer's "
+                    "residual estimate. No historical residual reconstruction, "
+                    "retraining, or heuristic multiplier is applied."
+                ),
+            }
         )
         self._persist(
             context,
