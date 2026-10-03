@@ -1,0 +1,248 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from time import monotonic, sleep
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from fsffl.product.foundation4_career_forward_runtime import (
+    FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
+    FOUNDATION4_Y4_Y7_ARTIFACT_KIND,
+    Foundation4CareerForwardShadowLoader,
+)
+from fsffl.product.foundation4_shadow_inputs import (
+    FOUNDATION4_CURRENT_COHORT_SIZE,
+    provide_foundation4_terminal_features,
+)
+from fsffl.product.foundation4_shadow_routes import (
+    FOUNDATION4_CAREER_FORWARD_ENDPOINT,
+    FOUNDATION4_Y4_Y7_ENDPOINT,
+    install_foundation4_shadow_routes,
+)
+from fsffl.product.intrinsic_background import (
+    IntrinsicBuildStatus,
+    ShapleyIntrinsicBackgroundCoordinator,
+)
+from fsffl.product.runtime import PrivateBetaRuntimeStore, UserRuntimeContext
+from fsffl.state.models import (
+    League,
+    LeagueRules,
+    LeagueState,
+    LineupRequirement,
+    RosterSlot,
+)
+from fsffl.value.shapley_intrinsic_contract import (
+    CompletedSourceFactProvenance,
+    DiagnosticH1Evidence,
+    ShapleyHorizonProvenance,
+    ShapleyHorizonUncertainty,
+    ShapleyIntrinsicAvailability,
+    ShapleyIntrinsicContract,
+    ShapleyIntrinsicCoverage,
+    ShapleyIntrinsicHorizonContribution,
+    ShapleyIntrinsicPlayerEstimate,
+)
+
+
+class MemoryPersistence:
+    def __init__(self) -> None:
+        self.artifacts = []
+
+    def get_reusable_artifact(self, key):
+        return next(
+            (
+                row
+                for row in reversed(self.artifacts)
+                if row.key == key and getattr(row, "reusable", True)
+            ),
+            None,
+        )
+
+    def put_artifact(self, record):
+        self.artifacts.append(record)
+
+
+def _rules() -> LeagueRules:
+    return LeagueRules(
+        team_count=12,
+        roster_size=18,
+        lineup=(
+            LineupRequirement(slot=RosterSlot.QB, count=1),
+            LineupRequirement(slot=RosterSlot.RB, count=2),
+            LineupRequirement(slot=RosterSlot.WR, count=3),
+            LineupRequirement(slot=RosterSlot.TE, count=1),
+            LineupRequirement(slot=RosterSlot.FLEX, count=1),
+            LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
+        ),
+        scoring=(),
+    )
+
+
+def _context() -> UserRuntimeContext:
+    state = LeagueState(
+        league=League(
+            league_id="sleeper:foundation4-test",
+            name="Foundation 4 Test",
+            season=2026,
+            rules=_rules(),
+        ),
+        as_of=datetime(2026, 10, 2, 12, 0, tzinfo=UTC),
+    )
+    return UserRuntimeContext(user_id="local-beta-user", league_state=state)
+
+
+def _current_intrinsic() -> ShapleyIntrinsicContract:
+    terminal = provide_foundation4_terminal_features()
+    provenance = ShapleyHorizonProvenance(
+        authority="test-governed-current",
+        source="test",
+        model_version="test-current-v1",
+    )
+    uncertainty = ShapleyHorizonUncertainty(evidence_path="test")
+    estimates = []
+    for player_id in sorted(terminal):
+        contributions = tuple(
+            ShapleyIntrinsicHorizonContribution(
+                year_index=year,
+                target_season=2025 + year,
+                raw_shapley_contribution=float(year),
+                discount_factor=1.0,
+                discounted_contribution=float(year),
+                provenance=provenance,
+                uncertainty=uncertainty,
+            )
+            for year in (1, 2, 3)
+        )
+        estimates.append(
+            ShapleyIntrinsicPlayerEstimate(
+                player_id=player_id,
+                raw_intrinsic_value=6.0,
+                contributions=contributions,
+                diagnostic_h1=DiagnosticH1Evidence(
+                    target_season=2026,
+                    anticipated_points=0.0,
+                    provenance=provenance.model_copy(
+                        update={"diagnostic_only": True, "included_in_intrinsic": False}
+                    ),
+                    uncertainty=uncertainty,
+                    included_in_intrinsic=False,
+                ),
+            )
+        )
+    return ShapleyIntrinsicContract(
+        status=ShapleyIntrinsicAvailability.READY,
+        evaluation_season=2026,
+        completed_source_season=2025,
+        target_years=(2026, 2027, 2028),
+        completed_source_provenance=CompletedSourceFactProvenance(
+            source_version="test"
+        ),
+        coverage=ShapleyIntrinsicCoverage(
+            player_count=len(estimates),
+            year_1_forecast_players=len(estimates),
+            year_2_i1_players=len(estimates),
+            year_3_i1_players=len(estimates),
+            rich_path_players=len(estimates),
+            reduced_or_fallback_players=0,
+        ),
+        estimates=tuple(estimates),
+    )
+
+
+def _loader(persistence, calls):
+    current = _current_intrinsic()
+
+    def current_loader(_context):
+        calls.append("current")
+        return current
+
+    return Foundation4CareerForwardShadowLoader(
+        current_intrinsic_loader=current_loader,
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        persistence_store=persistence,
+    )
+
+
+def test_full_current_cohort_materializes_and_persists_both_shadow_artifacts() -> None:
+    persistence = MemoryPersistence()
+    calls = []
+    loader = _loader(persistence, calls)
+    context = _context()
+
+    contract = loader(context)
+
+    assert contract.player_count == FOUNDATION4_CURRENT_COHORT_SIZE == 335
+    assert len(contract.estimates) == 335
+    assert contract.current_intrinsic_replaced is False
+    assert contract.display_scaling_applied is False
+    assert contract.market_inputs_used is False
+    assert calls == ["current"]
+    kinds = {row.key.artifact_kind for row in persistence.artifacts}
+    assert FOUNDATION4_Y4_Y7_ARTIFACT_KIND in kinds
+    assert FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND in kinds
+
+
+def test_restart_restore_is_semantically_identical_and_skips_rebuild() -> None:
+    persistence = MemoryPersistence()
+    first_calls = []
+    first_loader = _loader(persistence, first_calls)
+    context = _context()
+    built = first_loader(context)
+
+    second_calls = []
+    second_loader = _loader(persistence, second_calls)
+    restored = second_loader.restore_compatible(context)
+
+    assert restored is not None
+    assert restored == built
+    assert restored.input_fingerprint == built.input_fingerprint
+    assert second_loader.intrinsic_input_fingerprint(context) == (
+        first_loader.intrinsic_input_fingerprint(context)
+    )
+    assert second_calls == []
+    component = second_loader.restore_component(context)
+    assert component is not None
+    assert len(component.estimates) == 335
+
+
+def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    persistence = MemoryPersistence()
+    calls = []
+    loader = _loader(persistence, calls)
+    context = _context()
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", context.league_state)
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(loader, max_workers=1)
+    app = FastAPI()
+    install_foundation4_shadow_routes(
+        app,
+        runtime_store=store,
+        loader=loader,
+        coordinator=coordinator,
+    )
+    client = TestClient(app)
+
+    deadline = monotonic() + 10.0
+    response = client.get(FOUNDATION4_CAREER_FORWARD_ENDPOINT)
+    while response.status_code == 202 and monotonic() < deadline:
+        sleep(0.02)
+        response = client.get(FOUNDATION4_CAREER_FORWARD_ENDPOINT)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "shadow_ready"
+    assert payload["player_count"] == 335
+    assert payload["current_intrinsic_replaced"] is False
+    assert payload["display_scaling_applied"] is False
+    assert payload["market_inputs_used"] is False
+
+    component = client.get(FOUNDATION4_Y4_Y7_ENDPOINT)
+    assert component.status_code == 200
+    component_payload = component.json()
+    assert component_payload["status"] == "shadow_ready"
+    assert len(component_payload["estimates"]) == 335
+    assert coordinator.current(store.get("local-beta-user")).status == (
+        IntrinsicBuildStatus.COMPLETED
+    )
