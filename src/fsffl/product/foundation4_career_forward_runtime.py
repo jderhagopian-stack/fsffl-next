@@ -190,7 +190,7 @@ class Foundation4CareerForwardShadowLoader:
         forecast = provide_foundation4_long_horizon_forecast_contract()
         expected_input = long_term_intrinsic_input_fingerprint(
             forecast,
-            context.league_state.league.rules,
+            rules=context.league_state.league.rules,
         )
         record = self._persistence_store.get_reusable_artifact(
             ArtifactKey(
