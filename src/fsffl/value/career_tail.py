@@ -82,9 +82,11 @@ CAREER_TAIL_SCORING_COORDINATE = str(
     _CAREER_TAIL_RUNTIME_PACKAGE["scoring_coordinate"]
 )
 CAREER_TAIL_RESEARCH_RUN_ID = int(_CAREER_TAIL_RUNTIME_PACKAGE["research_run_id"])
-# The retained workflow artifact packages the exact runtime JSON plus its generating
-# evidence. The runtime provenance pins the semantic JSON identity directly.
-CAREER_TAIL_RESEARCH_ARTIFACT_SHA256 = CAREER_TAIL_RUNTIME_PACKAGE_SEMANTIC_SHA256
+# SHA-256 of retained GitHub Actions artifact 11263913850. Keep this distinct
+# from the canonical semantic digest of the packaged runtime JSON above.
+CAREER_TAIL_RESEARCH_ARTIFACT_SHA256 = (
+    "6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22"
+)
 CAREER_TAIL_SHAPLEY_PERMUTATIONS = int(
     _CAREER_TAIL_RUNTIME_PACKAGE["shapley_permutations"]
 )
