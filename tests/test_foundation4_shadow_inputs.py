@@ -6,9 +6,12 @@ from fsffl.forecast.future_contract import CONNECTED_LEAGUE_FANTASY_POINTS_COORD
 from fsffl.product.foundation4_shadow_inputs import (
     FOUNDATION4_CURRENT_COHORT_SIZE,
     FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE,
+    FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING,
+    FOUNDATION4_FSFFL_SCORING_COORDINATE,
     FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256,
     FOUNDATION4_LONG_HORIZON_ROW_COUNT,
     FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256,
+    foundation4_fsffl_scoring_is_compatible,
     foundation4_long_horizon_rows,
     foundation4_standard_scoring_is_exactly_compatible,
     provide_foundation4_long_horizon_forecast_contract,
@@ -34,18 +37,18 @@ def test_frozen_foundation4_current_boards_are_complete_and_semantically_pinned(
     assert len(terminal) == FOUNDATION4_CURRENT_COHORT_SIZE == 335
     assert len(contract.player_ids) == 335
     assert set(contract.player_ids) == set(terminal)
-    assert contract.scoring_coordinate == FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE
+    assert contract.scoring_coordinate == FOUNDATION4_FSFFL_SCORING_COORDINATE
     assert {row.scoring_coordinate for row in contract.forecasts} == {
-        FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE
+        FOUNDATION4_FSFFL_SCORING_COORDINATE
     }
     assert contract.provenance["current_board_semantic_sha256"] == (
         FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256
     )
     assert FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256 == (
-        "dad883347facaccbf98bdfc86835b8e650ddfc2789c1ebb95de31ec4a6640f71"
+        "3caddc5c33be83088eaca30d8c1ac7031022f08668a031a0a3b08616aed773c2"
     )
     assert FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256 == (
-        "be5c6b8d5523c0c3af70aaf0eace0bc268d97b97efa4191482a522252933b81b"
+        "ef52ccaaef0749d6d1e5786c351714570c0d0a0ea811cc1cf940fe2adac8c867"
     )
 
     grouped: dict[str, list] = {}
@@ -71,19 +74,19 @@ def test_frozen_board_known_coordinate_and_terminal_transport_are_exact() -> Non
         and row.year_index == 4
         and row.policy_id == "baseline"
     )
-    assert wr_y4.central_expectation == pytest.approx(43.51065415007779)
-    assert wr_y4.absolute_error_80 == pytest.approx(39.53513665106696)
-    assert wr_y4.absolute_error_90 == pytest.approx(62.73912571756577)
+    assert wr_y4.central_expectation == pytest.approx(70.94683777854785)
+    assert wr_y4.absolute_error_80 == pytest.approx(49.06099766506673)
+    assert wr_y4.absolute_error_90 == pytest.approx(78.2335011086601)
+    assert wr_y4.scoring_coordinate == FOUNDATION4_FSFFL_SCORING_COORDINATE
 
     feature = provide_foundation4_terminal_features()["sleeper:player:10213"]
     assert feature.age_years == pytest.approx(24.485102363498225)
     assert feature.experience_years == pytest.approx(3.0)
-    assert feature.current_points == pytest.approx(80.75)
-    assert feature.prior_points == pytest.approx(106.7)
-    assert feature.current_points_coordinate == (
-        "governed_2026_standard_y1_full_season_expectation_proxy"
-    )
-    assert "without inventing a YTD annualization multiplier" in (
+    assert feature.current_points == pytest.approx(106.353)
+    assert feature.prior_points == pytest.approx(133.2)
+    assert feature.current_points_coordinate == FOUNDATION4_FSFFL_SCORING_COORDINATE
+    assert feature.prior_points_coordinate == FOUNDATION4_FSFFL_SCORING_COORDINATE
+    assert "exact FSFFL scoring transform" in (
         feature.live_feature_transport_limitation or ""
     )
 
@@ -110,9 +113,16 @@ def _standard_rules() -> LeagueRules:
     )
 
 
-def test_frozen_board_relabels_only_for_exact_standard_scoring_equivalence() -> None:
-    rules = _standard_rules()
-    assert foundation4_standard_scoring_is_exactly_compatible(rules) is True
+def _fsffl_rules() -> LeagueRules:
+    return _standard_rules().model_copy(
+        update={"scoring": FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING}
+    )
+
+
+def test_frozen_board_uses_direct_fsffl_scoring_authority() -> None:
+    rules = _fsffl_rules()
+    assert foundation4_fsffl_scoring_is_compatible(rules) is True
+    assert foundation4_standard_scoring_is_exactly_compatible(rules) is False
 
     connected = provide_foundation4_long_horizon_forecast_contract_for_rules(rules)
 
@@ -121,31 +131,46 @@ def test_frozen_board_relabels_only_for_exact_standard_scoring_equivalence() -> 
         CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE
     }
     assert connected.provenance["source_scoring_coordinate"] == (
-        FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE
+        FOUNDATION4_FSFFL_SCORING_COORDINATE
     )
-    assert connected.provenance["coordinate_equivalence"] == (
-        "exact_frozen_standard_scoring_match"
+    assert connected.provenance["coordinate_compatibility"] == (
+        "exact_fsffl_scoring_freeze"
     )
+    assert connected.provenance["scoring_materialization"] == (
+        "direct_historical_fsffl_target_recalibration"
+    )
+
+
+def test_zero_point_exotic_rule_does_not_break_fsffl_scoring_freeze() -> None:
+    rules = _fsffl_rules().model_copy(
+        update={
+            "scoring": FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING
+            + (ScoringRule(stat="bonus_pass_yd_400", points=0.0),)
+        }
+    )
+    assert foundation4_fsffl_scoring_is_compatible(rules) is True
+    assert provide_foundation4_long_horizon_forecast_contract_for_rules(rules)
 
 
 @pytest.mark.parametrize(
     "scoring",
     (
-        FROZEN_I1_STANDARD_SCORING
-        + (ScoringRule(stat="rec", points=0.5),),
+        FROZEN_I1_STANDARD_SCORING,
         tuple(
             ScoringRule(
                 stat=row.stat,
                 points=6.0 if row.stat == "pass_td" else row.points,
             )
-            for row in FROZEN_I1_STANDARD_SCORING
+            for row in FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING
         ),
+        FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING
+        + (ScoringRule(stat="bonus_pass_yd_400", points=5.0),),
     ),
 )
-def test_frozen_board_fails_closed_on_incompatible_connected_scoring(scoring) -> None:
-    rules = _standard_rules().model_copy(update={"scoring": scoring})
-    assert foundation4_standard_scoring_is_exactly_compatible(rules) is False
-    with pytest.raises(ValueError, match="no governed Foundation 4 scoring transform"):
+def test_frozen_board_fails_closed_on_materially_incompatible_scoring(scoring) -> None:
+    rules = _fsffl_rules().model_copy(update={"scoring": scoring})
+    assert foundation4_fsffl_scoring_is_compatible(rules) is False
+    with pytest.raises(ValueError, match="active player-offense scoring is incompatible"):
         provide_foundation4_long_horizon_forecast_contract_for_rules(rules)
 
 
