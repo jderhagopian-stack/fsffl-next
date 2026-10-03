@@ -17,6 +17,8 @@ from fsffl.team_utility.simulation import (
     PYTHON_RANDOM_GAUSS_V1,
     _numpy_regular_season_matchup_batches,
     _settings_derived_playoff_rules,
+    _simulate_configured_champion,
+    _simulate_configured_playoff_outcomes,
 )
 
 
@@ -478,4 +480,54 @@ def test_playoff_execution_plan_is_compiled_once_per_simulation(monkeypatch) -> 
     simulate_regular_season(request)
 
     assert calls == 1
+
+def test_precompiled_playoff_plan_preserves_exact_results_and_rng_state() -> None:
+    rules = _settings_derived_playoff_rules(6, 15)
+    assert rules is not None
+    standings = list(range(12))
+    playoff_scoring = {
+        week: tuple(
+            (100.0 + team_index * 2.0 + week, 8.0 + team_index % 4)
+            for team_index in range(12)
+        )
+        for week in rules.round_weeks
+    }
+    compiled = rules.canonical_execution_matchups()
+
+    for seed in range(25):
+        legacy_rng = Random(seed)
+        compiled_rng = Random(seed)
+        legacy = _simulate_configured_playoff_outcomes(
+            standings,
+            rules,
+            playoff_scoring,
+            legacy_rng.gauss,
+        )
+        optimized = _simulate_configured_playoff_outcomes(
+            standings,
+            rules,
+            playoff_scoring,
+            compiled_rng.gauss,
+            execution_matchups=compiled,
+        )
+        assert optimized == legacy
+        assert compiled_rng.getstate() == legacy_rng.getstate()
+
+        legacy_rng = Random(seed)
+        compiled_rng = Random(seed)
+        legacy_champion = _simulate_configured_champion(
+            standings,
+            rules,
+            playoff_scoring,
+            legacy_rng.gauss,
+        )
+        optimized_champion = _simulate_configured_champion(
+            standings,
+            rules,
+            playoff_scoring,
+            compiled_rng.gauss,
+            execution_matchups=compiled,
+        )
+        assert optimized_champion == legacy_champion
+        assert compiled_rng.getstate() == legacy_rng.getstate()
 
