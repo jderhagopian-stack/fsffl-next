@@ -272,15 +272,19 @@ class Foundation4CareerForwardShadowLoader:
         if restored is not None:
             return restored
 
+        # Scoring-coordinate compatibility is an authority precondition for the
+        # holistic sum.  Validate it before loading Current Intrinsic so an
+        # incompatible league cannot spend work or appear partially materialized.
+        long_forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
+            context.league_state.league.rules
+        )
+
         current = self._current_intrinsic_loader(context)
         if current.status != ShapleyIntrinsicAvailability.READY:
             raise ValueError(
                 "Foundation 4 requires ready governed Current Intrinsic Y1-Y3"
             )
 
-        long_forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
-            context.league_state.league.rules
-        )
         component = build_long_term_intrinsic_shadow(
             long_forecast,
             rules=context.league_state.league.rules,
