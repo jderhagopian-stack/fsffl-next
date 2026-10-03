@@ -655,14 +655,29 @@ def test_forced_small_h2h_chunks_preserve_complete_result_and_replay(
 
     original = simulation_module._numpy_h2h_points_batch
     observed_rows: list[int] = []
+    allocating_calls = 0
+    reused_buffer_ids: list[int] = []
 
-    def capture_rows(scores, compiled_schedule, team_count, base_h2h_points):
+    def capture_rows(
+        scores,
+        compiled_schedule,
+        team_count,
+        base_h2h_points,
+        *,
+        out=None,
+    ):
+        nonlocal allocating_calls
         observed_rows.append(int(scores.shape[0]))
+        if out is None:
+            allocating_calls += 1
+        else:
+            reused_buffer_ids.append(id(out))
         return original(
             scores,
             compiled_schedule,
             team_count,
             base_h2h_points,
+            out=out,
         )
 
     # 8 teams -> 512 bytes/world. Force a three-world dense H2H chunk while
@@ -682,6 +697,9 @@ def test_forced_small_h2h_chunks_preserve_complete_result_and_replay(
     assert observed_rows
     assert max(observed_rows) <= 3
     assert len(observed_rows) > 1
+    assert allocating_calls == 1
+    assert reused_buffer_ids
+    assert len(set(reused_buffer_ids)) == 1
     assert chunked == baseline
     assert chunked.model_dump(mode="json") == baseline.model_dump(mode="json")
 
