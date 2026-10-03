@@ -77,6 +77,7 @@ from .private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from .vnext_future_forecast_provider import (
     VNEXT_FORECAST_VERSION,
     provide_vnext_future_forecast_contract,
+    vnext_future_forecast_input_fingerprint,
 )
 from .progressive_delivery_routes import install_progressive_delivery_routes
 from .provisional_k_dst_routes import install_provisional_k_dst_routes
@@ -215,6 +216,9 @@ _shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
     future_forecast_builder=provide_vnext_future_forecast_contract,
     future_forecast_model_version=VNEXT_FORECAST_VERSION,
     future_missing_fact_family="vnext_future_forecast_coordinate",
+    future_forecast_input_fingerprint_resolver=(
+        vnext_future_forecast_input_fingerprint
+    ),
 )
 _player_future_forecast_cache = PlayerFutureForecastCache(
     future_forecast_builder=provide_vnext_future_forecast_contract,
