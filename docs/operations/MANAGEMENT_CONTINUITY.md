@@ -573,3 +573,10 @@ Do not lose the previously identified Intrinsic optimization work. There are two
 - **speed the rebuild that is genuinely necessary** only after profiling the accepted Foundation 4 holistic path.
 
 Recent hosted lifecycle evidence still puts the current Intrinsic phase at roughly **25–27s** when it runs. After #361 Foundation 4 correctness/persistence/hosted acceptance, run a bounded Intrinsic performance profile and optimize only measured material costs while preserving exact Current Intrinsic / Long-Term Intrinsic economics, fingerprints and restart identity. This should happen before or alongside Product Integration, not be forgotten behind the Simulation work.
+
+
+## 2026-10-03 — Foundation 4 scoring-coordinate management gate
+
+PR #361's Codex P1 corrections are directionally correct, but one exposes a non-negotiable acceptance condition: the production target FSFFL league is 0.5 PPR and the current frozen Y4-Y7 board is standard/non-PPR. A fail-closed half-PPR result is safer than mixing incompatible units, but it is not acceptable Foundation 4 completion for this product.
+
+Before Foundation 4 merge/promotion, produce a governed FSFFL-compatible Y4-Y7 + tail coordinate by direct 0.5-PPR materialization or a validated exact transform. Do not use an arbitrary multiplier. Preserve Current Intrinsic separately, the holistic raw Y1-Y7 + Y8+ economic definition, uncertainty typing and lineup-capacity governance. Add a direct FSFFL 0.5-PPR acceptance regression.
