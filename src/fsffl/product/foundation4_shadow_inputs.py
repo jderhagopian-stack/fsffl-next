@@ -7,14 +7,18 @@ import math
 from importlib.resources import files
 from typing import Any
 
+from fsffl.forecast.future_contract import CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE
+from fsffl.forecast.league_scoring import classify_scoring_coverage
 from fsffl.forecast.long_horizon_contract import (
     LONG_HORIZON_AUTHORITY_MAP_SHA256,
     LONG_HORIZON_AUTHORITY_MAP_VERSION,
     LongHorizonForecastAuthorityContract,
     LongHorizonPolicyForecast,
 )
-from fsffl.state.models import Position
+from fsffl.state.models import LeagueRules, Position
 from fsffl.value.career_tail import CareerTailFeatures
+
+from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 
 
 FOUNDATION4_CURRENT_BOARD_RUN_ID = 37090518110
@@ -30,6 +34,12 @@ FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION = (
 )
 FOUNDATION4_LONG_HORIZON_FORECAST_SOURCE = (
     "fsffl:frozen_cell_routing_current_coordinate"
+)
+FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE = (
+    "fsffl_frozen_standard_non_ppr_fantasy_points_v1"
+)
+FOUNDATION4_SCORING_EQUIVALENCE_VERSION = (
+    "foundation4-exact-standard-scoring-equivalence-v1"
 )
 FOUNDATION4_CURRENT_COHORT_SIZE = 335
 FOUNDATION4_LONG_HORIZON_ROW_COUNT = FOUNDATION4_CURRENT_COHORT_SIZE * 4 * 4
@@ -60,7 +70,15 @@ def foundation4_long_horizon_rows() -> tuple[LongHorizonPolicyForecast, ...]:
         raise ValueError("Foundation 4 long-horizon board row count is not governed")
     if _canonical_digest(raw_rows) != FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256:
         raise ValueError("Foundation 4 long-horizon board semantic digest mismatch")
-    rows = tuple(LongHorizonPolicyForecast.model_validate(row) for row in raw_rows)
+    rows = tuple(
+        LongHorizonPolicyForecast.model_validate(
+            {
+                **row,
+                "scoring_coordinate": FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE,
+            }
+        )
+        for row in raw_rows
+    )
     if len({row.player_id for row in rows}) != FOUNDATION4_CURRENT_COHORT_SIZE:
         raise ValueError("Foundation 4 long-horizon board player count is not governed")
     return rows
@@ -68,9 +86,12 @@ def foundation4_long_horizon_rows() -> tuple[LongHorizonPolicyForecast, ...]:
 
 def provide_foundation4_long_horizon_forecast_contract(
 ) -> LongHorizonForecastAuthorityContract:
+    """Return the frozen board in the coordinate it was actually materialized in."""
+
     rows = foundation4_long_horizon_rows()
     return LongHorizonForecastAuthorityContract(
         evaluation_season=2026,
+        scoring_coordinate=FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE,
         authority_map_version=LONG_HORIZON_AUTHORITY_MAP_VERSION,
         authority_map_sha256=LONG_HORIZON_AUTHORITY_MAP_SHA256,
         forecast_model_version=FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION,
@@ -83,9 +104,77 @@ def provide_foundation4_long_horizon_forecast_contract(
             "rolling_route_run_id": 36271080037,
             "rolling_route_artifact_id": 10916355135,
             "authority_map_sha256": LONG_HORIZON_AUTHORITY_MAP_SHA256,
+            "source_scoring_coordinate": FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE,
             "runtime_refit": False,
             "current_named_players_used_for_model_selection": False,
         },
+    )
+
+
+def foundation4_standard_scoring_is_exactly_compatible(rules: LeagueRules) -> bool:
+    """True only when active player-offense scoring equals the frozen standard unit."""
+
+    coverage = classify_scoring_coverage(rules)
+    if (
+        coverage.blocks_full_downstream_authority
+        or coverage.provisional_residual_rule_stats
+        or coverage.unsupported_rule_stats
+    ):
+        return False
+
+    expected = {
+        row.stat: float(row.points)
+        for row in FROZEN_I1_STANDARD_SCORING
+        if float(row.points) != 0.0
+    }
+    supported = set(coverage.supported_rule_stats)
+    actual = {
+        row.stat: float(row.points)
+        for row in rules.scoring
+        if row.stat in supported and float(row.points) != 0.0
+    }
+    return actual == expected
+
+
+def provide_foundation4_long_horizon_forecast_contract_for_rules(
+    rules: LeagueRules,
+) -> LongHorizonForecastAuthorityContract:
+    """Relabel only an exactly equivalent standard-scoring league coordinate.
+
+    No multiplier or approximation is authorized for Foundation 4.  Non-standard
+    leagues must fail closed until a separately governed Y4-Y7/tail transform exists.
+    """
+
+    if not foundation4_standard_scoring_is_exactly_compatible(rules):
+        raise ValueError(
+            "Foundation 4 frozen Y4-Y7 board uses the standard/non-PPR scoring "
+            "coordinate; connected-league scoring is incompatible and no governed "
+            "Foundation 4 scoring transform is authorized"
+        )
+
+    frozen = provide_foundation4_long_horizon_forecast_contract()
+    rows = tuple(
+        row.model_copy(
+            update={"scoring_coordinate": CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE}
+        )
+        for row in frozen.forecasts
+    )
+    return frozen.model_copy(
+        update={
+            "scoring_coordinate": CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+            "forecast_model_version": (
+                f"{frozen.forecast_model_version}:"
+                f"{FOUNDATION4_SCORING_EQUIVALENCE_VERSION}"
+            ),
+            "forecasts": rows,
+            "provenance": {
+                **frozen.provenance,
+                "coordinate_equivalence": "exact_frozen_standard_scoring_match",
+                "coordinate_equivalence_version": (
+                    FOUNDATION4_SCORING_EQUIVALENCE_VERSION
+                ),
+            },
+        }
     )
 
 
