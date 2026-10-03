@@ -2488,3 +2488,39 @@ Therefore **Foundation 4 remains ACTIVE / INCOMPLETE**. Next work is the smalles
 
 Do not invent discount rates, horizon weights, age/youth multipliers, survival coefficients, terminal-value assumptions, or cross-lens display-index arithmetic. Foundation 4 product promotion still requires holistic implementation, live-cohort validation, shadow persistence/API serving, resource acceptance, and explicit Management promotion.
 
+## 2026-10-02 — Foundation 4 career-tail governance RESOLVED for shadow implementation
+
+PR #346 remains accepted only as the governed Y4-Y7 component; Foundation 4 remains ACTIVE / INCOMPLETE.
+
+Frozen career-tail research on branch `research/foundation4-career-tail-governance-20261002` resolves the two missing governance questions strongly enough for bounded shadow implementation:
+
+- holistic raw economic semantics are dimensional addition of compatible annual league-capacity Shapley marginal fantasy-point coordinates:
+  `phi_Y1 + ... + phi_Y7 + TAIL_Y8_PLUS`;
+- no display index, discount, horizon preference weight, age/youth multiplier, survival multiplier, terminal multiplier or Market input is introduced;
+- Current Intrinsic remains the separate governed discounted Y1-Y3 product lens; holistic Long-Term reuses only its annual raw Y1-Y3 Shapley coordinates;
+- #346 remains the separate Y4-Y7 component; holistic Long-Term reuses its annual authority coordinates, never its 0-10000 ruler;
+- Y8+ is a direct cumulative career Shapley target from literal Y8 through career end, not a perpetuity or carried Y8 value;
+- the terminal artifact is lineup-capacity-specific and fails closed on a nonmatching league signature.
+
+Corrected frozen study evidence after exact-head review:
+- workflow run `37086000162`;
+- research artifact `11260487964`, digest `sha256:505ba72e71ddcb868c1673386f2a516d64e1a087fe2d8d9807572cb24cd99aa6`;
+- rolling and final-holdout validation are grouped by `player_id` with zero train/test player overlap;
+- log-target families use training-only Duan smearing to target expected original-scale cumulative Y8+ mass;
+- supported terminal families: `direct_ridge` + `two_part_state`;
+- terminal authority: coarse / set-valued;
+- grouped rolling validation: 2,752 rows; RMSE 147.454 / 146.037 and Spearman 0.117 / 0.302 for direct ridge / two-part;
+- untouched 2011 holdout: 559 scored rows, 8 right-censored rows excluded rather than zeroed;
+- holdout RMSE: 85.719 direct ridge / 80.041 two-part;
+- holdout Spearman: 0.192 / 0.316;
+- combined empirical outer-80 coverage: 61.2%; outer-90: 93.0%;
+- central model-family envelope coverage only 2.7%, confirming model-authority spread is not an outcome interval.
+
+Uncertainty remains separated:
+- annual/current Y1-Y3 uncertainty remains governed by Current Intrinsic;
+- Y4-Y7 model-authority and within-model uncertainty remain as accepted in #346;
+- Y8+ supported-family spread is terminal model-authority uncertainty;
+- terminal empirical residual bands are ordinary outcome uncertainty;
+- no cumulative career standard deviation or cross-horizon covariance is authorized.
+
+Next bounded work: freeze the fitted terminal coefficients/residual bands in production-readable evidence, implement the pure terminal Value consumer plus holistic aggregator, materialize the current cohort in shadow, persist/serve it separately from Current Intrinsic, validate resources/semantics, and perform bounded review. Foundation 4 is still incomplete until that implementation/live-cohort path is accepted.
