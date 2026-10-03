@@ -1,0 +1,28 @@
+{
+  "authority": "frozen_accepted_y4_y7_policy_materialization",
+  "authority_map_sha256": "487555fac2e5fd0823c6a70d29b1c1e60fbf2adc0e1bb8140f9f43e6ee0e9e00",
+  "current_source": "FINAL_STANDARD_COORDINATE_BOARD_335.csv",
+  "evaluation_season": 2026,
+  "horizons": [
+    4,
+    5,
+    6,
+    7
+  ],
+  "materialization_semantics": "one-time application of frozen research candidates/routes to the governed 2026 current coordinate; runtime consumes the frozen resulting board only",
+  "model_refit_at_runtime": false,
+  "player_count": 335,
+  "policies": [
+    "baseline",
+    "hard_router",
+    "soft_stack",
+    "blanket_75_25"
+  ],
+  "rolling_route_artifact_id": 10916355135,
+  "rolling_route_run_id": 36271080037,
+  "row_count": 5360,
+  "terminal_current_points_coordinate": "governed_2026_standard_y1_full_season_expectation_proxy",
+  "terminal_feature_player_count": 335,
+  "terminal_prior_points_coordinate": "completed_2025_fantasy_production",
+  "terminal_ytd_annualization_multiplier_used": false
+}
