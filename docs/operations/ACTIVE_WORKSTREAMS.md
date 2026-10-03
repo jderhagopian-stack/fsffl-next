@@ -1923,3 +1923,8 @@ Historical beta evidence identified the main failure mode as unnecessary cold Sh
 4. report before/after wall time, CPU/RSS, cache/restore latency and semantic equality.
 
 This bounded Intrinsic performance tranche may run immediately after Foundation 4 acceptance and before or alongside the Product Integration rollout; do not let it delay exposure of already-proven capabilities unless latency is materially user-blocking.
+
+
+## 2026-10-03 — #361 exact-head validation retrigger
+
+The Foundation 4 branch has now directly materialized/recalibrated the governed long-horizon and terminal artifacts in the FSFFL scoring coordinate. The generated frozen-board commit `7a845b63969acb831225cc4ab5abb44e5f24c444` was authored by `github-actions[bot]`; its pull-request workflow records ended as `action_required` with no jobs, so they are not valid exact-head validation. This management checkpoint intentionally creates a normal branch commit to retrigger the required PR validation on the post-generation artifact head. Do not merge until those exact-head checks run and pass, the scoring-policy coverage remains consistent with Management's modeled/residual/ignorable/material-unsupported rule classes, and the targeted hosted build/restore acceptance is complete.
