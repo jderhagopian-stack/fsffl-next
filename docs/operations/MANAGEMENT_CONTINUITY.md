@@ -545,3 +545,12 @@ Current management handoff:
 - #356 is not yet Foundation 4 completion. Next: live cohort -> persistence/API -> restart/reload/resources -> bounded review/acceptance.
 - Then execute the approved Product Integration / Capability Rollout tranche for the sole private-beta user before starting Foundation 5.
 - Continue updating CURRENT_STATE, ACTIVE_WORKSTREAMS, MANAGEMENT_CONTINUITY and relevant workstream docs at each target/acceptance transition.
+
+
+## 2026-10-03 — Management handoff after #359/#360
+
+- #359 is merged but not fully closed from a management-quality perspective: fix the post-merge Codex P2 so **every** presentation surface must carry the expected publication generation during atomic last-good acceptance; missing generation IDs must fail closed.
+- #360 is merged/live; obtain one governed 50k hosted profile before claiming further performance gains or choosing another target.
+- Keep Simulation at 50k with exact RNG/replay/model semantics.
+- #356 Foundation 4 is still the substantive implementation workstream and should continue in parallel; do not park it while optimizing Simulation.
+- Foundation 4 completion path remains live cohort -> persistence/API -> restart/reload/resources -> bounded acceptance -> Product Integration / Capability Rollout -> Foundation 5.
