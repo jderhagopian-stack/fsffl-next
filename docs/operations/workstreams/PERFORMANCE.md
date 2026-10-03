@@ -400,3 +400,12 @@ After team-origin ordering reaches diminishing returns, re-profile and choose an
 #358 is now merged/live and closes the #355 H2H chunk-lifetime P2 with one reusable independently bounded dense buffer and direct historical-baseline population. CI/focused regression pass.
 
 Do not pick another optimization target from stale numbers. First run one fresh governed #358 50k profile and use that measured decomposition. The recurring runtime-availability acceptance failure after successful publication is a separate narrow lifecycle/acceptance diagnostic and must not be conflated with Simulation model correctness.
+
+
+## 2026-10-03 — #360 live; fresh benchmark pending
+
+#360 is merged/live and introduces an exact-preserving fast path for the dominant two-team future-pick tiebreak groups plus order-independent bitmask topology-cache keys. CI is green.
+
+Do not infer savings from code structure. Run one governed 50k hosted profile on exact #360 and re-rank hotspots from that result. Current last measured checkpoint is #357 kernel **42.895s** with team-origin ordering **11.593s**.
+
+The atomic-last-good acceptance correction in #359 is orthogonal to Simulation model performance. A post-merge P2 remains because missing publication-generation IDs can escape the acceptance equality check; close that acceptance-tooling hole separately.
