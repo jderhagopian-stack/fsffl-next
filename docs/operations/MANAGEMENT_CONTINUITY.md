@@ -532,3 +532,16 @@ Current management intent:
 - After Foundation 4 passes shadow/persistence/API/resource acceptance, **pause the foundation-only cadence for one Product Integration / Capability Rollout tranche**. Put the accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic into the existing private-beta UI for the sole current user; use physical iPhone/Safari acceptance for the interaction/presentation change.
 - Then continue to Foundation 5 PIT historical-market evidence while incorporating product feedback.
 - Keep canonical `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, `MANAGEMENT_CONTINUITY.md` and the relevant workstream file updated at each acceptance/target transition; do not rely on chat history as durable authority.
+
+
+## 2026-10-03 — Management continuity after #357/#358 and active #356
+
+Current management handoff:
+- #357 is merged. Hosted 50k target phase moved **17.440s -> 11.593s** for team-origin ordering; kernel measured **42.895s** on that run.
+- #358 is merged/live and closes the outstanding H2H chunk-lifetime memory-bound P2 by reusing one bounded dense buffer instead of overlapping old/new chunks and a second baseline.
+- Do not declare the Simulation optimization sequence closed until one fresh governed 50k run on #358 verifies current timing/RSS/output identity.
+- The runtime-availability acceptance failure recurred after #357 publication while last-good surfaces were being served during an active newer generation. Treat this as a narrow lifecycle/acceptance issue; do not reopen Simulation 2.0 semantics.
+- Foundation 4 draft #356 is substantive and green. It freezes the governed terminal artifact and implements the pure career-tail consumer + holistic raw career-forward aggregator. The current-authority CI job passed and emitted artifact **11261836244**.
+- #356 is not yet Foundation 4 completion. Next: live cohort -> persistence/API -> restart/reload/resources -> bounded review/acceptance.
+- Then execute the approved Product Integration / Capability Rollout tranche for the sole private-beta user before starting Foundation 5.
+- Continue updating CURRENT_STATE, ACTIVE_WORKSTREAMS, MANAGEMENT_CONTINUITY and relevant workstream docs at each target/acceptance transition.
