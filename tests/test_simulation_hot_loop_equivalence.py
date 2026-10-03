@@ -685,3 +685,201 @@ def test_forced_small_h2h_chunks_preserve_complete_result_and_replay(
     assert chunked == baseline
     assert chunked.model_dump(mode="json") == baseline.model_dump(mode="json")
 
+def _legacy_draft_order_groups_reference(
+    team_indexes,
+    *,
+    wins,
+    points_for,
+    games_by_team,
+    h2h_points,
+    h2h_games,
+    **_ignored,
+):
+    def group_equal(indexes, value_for):
+        groups = []
+        for index in indexes:
+            value = value_for(index)
+            if groups and value_for(groups[-1][0]) == value:
+                groups[-1].append(index)
+            else:
+                groups.append([index])
+        return groups
+
+    ordered = sorted(
+        team_indexes,
+        key=lambda index: (
+            wins[index] / games_by_team[index],
+            points_for[index],
+        ),
+    )
+    record_groups = group_equal(
+        ordered,
+        lambda index: wins[index] / games_by_team[index],
+    )
+    output = []
+    for record_group in record_groups:
+        if len(record_group) == 1:
+            output.append(record_group)
+            continue
+
+        h2h_game_totals = {
+            index: sum(
+                h2h_games[index][other]
+                for other in record_group
+                if other != index
+            )
+            for index in record_group
+        }
+        h2h_resolvable = (
+            all(value > 0 for value in h2h_game_totals.values())
+            and len(set(h2h_game_totals.values())) == 1
+        )
+        h2h_groups = [record_group]
+        if h2h_resolvable:
+            h2h_pct = {
+                index: (
+                    sum(
+                        h2h_points[index][other]
+                        for other in record_group
+                        if other != index
+                    )
+                    / h2h_game_totals[index]
+                )
+                for index in record_group
+            }
+            if len(set(h2h_pct.values())) > 1:
+                h2h_ordered = sorted(record_group, key=lambda index: h2h_pct[index])
+                h2h_groups = group_equal(
+                    h2h_ordered,
+                    lambda index: h2h_pct[index],
+                )
+
+        for h2h_group in h2h_groups:
+            pf_ordered = sorted(h2h_group, key=lambda index: points_for[index])
+            output.extend(
+                group_equal(
+                    pf_ordered,
+                    lambda index: points_for[index],
+                )
+            )
+    return output
+
+
+@pytest.mark.parametrize(
+    ("team_indexes", "wins", "points_for", "games_by_team"),
+    (
+        (
+            [0, 1, 2, 3, 4, 5],
+            [2.0, 2.0, 1.0, 1.0, 3.0, 3.0],
+            [410.0, 390.0, 300.0, 300.0, 500.0, 480.0],
+            [4, 4, 4, 4, 4, 4],
+        ),
+        (
+            [0, 1, 2, 3, 4, 5],
+            [2.0, 2.5, 1.0, 1.5, 3.0, 2.0],
+            [410.0, 390.0, 300.0, 300.0, 500.0, 480.0],
+            [4, 5, 4, 6, 6, 4],
+        ),
+    ),
+)
+def test_optimized_draft_order_groups_match_legacy_governed_sequence(
+    team_indexes,
+    wins,
+    points_for,
+    games_by_team,
+) -> None:
+    import fsffl.team_utility.simulation as simulation_module
+
+    h2h_games = [
+        [0, 2, 1, 1, 0, 0],
+        [2, 0, 1, 1, 0, 0],
+        [1, 1, 0, 2, 0, 0],
+        [1, 1, 2, 0, 0, 0],
+        [0, 0, 0, 0, 0, 2],
+        [0, 0, 0, 0, 2, 0],
+    ]
+    h2h_points = [
+        [0.0, 2.0, 0.5, 0.5, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.5, 0.0, 0.0],
+        [0.5, 0.0, 0.0, 1.5, 0.0, 0.0],
+        [0.5, 0.5, 0.5, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+        [0.0, 0.0, 0.0, 1.0, 1.0, 0.0],
+    ]
+    expected = _legacy_draft_order_groups_reference(
+        team_indexes,
+        wins=wins,
+        points_for=points_for,
+        games_by_team=games_by_team,
+        h2h_points=h2h_points,
+        h2h_games=h2h_games,
+    )
+    actual = simulation_module._regular_season_draft_order_groups(
+        team_indexes,
+        wins=wins,
+        points_for=points_for,
+        games_by_team=games_by_team,
+        h2h_points=h2h_points,
+        h2h_games=h2h_games,
+        h2h_topology_cache={},
+        uniform_games=len(set(games_by_team)) == 1,
+    )
+    assert actual == expected
+
+
+@pytest.mark.parametrize("seed", (23, 2718, 20261003))
+def test_team_origin_ordering_optimization_preserves_complete_simulation(
+    monkeypatch,
+    seed,
+) -> None:
+    import fsffl.team_utility.simulation as simulation_module
+
+    team_ids = tuple("abcdefgh")
+    rules = _settings_derived_playoff_rules(4, 5)
+    assert rules is not None
+    schedule = (
+        ScheduledMatchup(week=1, home_team_id="a", away_team_id="b"),
+        ScheduledMatchup(week=1, home_team_id="c", away_team_id="d"),
+        ScheduledMatchup(week=1, home_team_id="e", away_team_id="f"),
+        ScheduledMatchup(week=1, home_team_id="g", away_team_id="h"),
+        ScheduledMatchup(week=2, home_team_id="a", away_team_id="c"),
+        ScheduledMatchup(week=2, home_team_id="b", away_team_id="d"),
+        ScheduledMatchup(week=2, home_team_id="e", away_team_id="g"),
+        ScheduledMatchup(week=2, home_team_id="f", away_team_id="h"),
+        ScheduledMatchup(week=3, home_team_id="a", away_team_id="d"),
+        ScheduledMatchup(week=3, home_team_id="b", away_team_id="c"),
+        ScheduledMatchup(week=3, home_team_id="e", away_team_id="h"),
+        ScheduledMatchup(week=3, home_team_id="f", away_team_id="g"),
+    )
+    request = RegularSeasonSimulationInput(
+        scoring=tuple(
+            TeamScoringDistribution(
+                team_id=team_id,
+                mean_points=105.0 + index * 4.0,
+                stddev_points=9.0 + (index % 3),
+                model_version="team-origin-ordering-equivalence-v1",
+            )
+            for index, team_id in enumerate(team_ids)
+        ),
+        schedule=schedule,
+        playoff_team_count=4,
+        playoff_rules=rules,
+        future_pick_draft_season=2027,
+        simulation_count=1_000,
+        seed=seed,
+        model_version="team-origin-ordering-equivalence-v1",
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=500,
+    )
+
+    optimized = simulate_regular_season(request)
+    monkeypatch.setattr(
+        simulation_module,
+        "_regular_season_draft_order_groups",
+        _legacy_draft_order_groups_reference,
+    )
+    legacy_grouping = simulate_regular_season(request)
+
+    assert optimized == legacy_grouping
+    assert optimized.model_dump(mode="json") == legacy_grouping.model_dump(mode="json")
+

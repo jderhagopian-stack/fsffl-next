@@ -1126,6 +1126,50 @@ def _group_equal_values(
     return groups
 
 
+_DRAFT_H2H_TOPOLOGY_CACHE_MAX = 4096
+
+
+def _draft_order_common_h2h_games(
+    team_indexes,
+    h2h_games,
+    topology_cache=None,
+) -> int:
+    """Return common in-group H2H games when the governed tiebreak is resolvable."""
+
+    canonical_group = tuple(sorted(team_indexes))
+    if len(canonical_group) <= 1:
+        return 0
+    if topology_cache is not None:
+        cached = topology_cache.get(canonical_group)
+        if cached is not None:
+            return cached
+
+    common_games = None
+    for index in canonical_group:
+        row = h2h_games[index]
+        total = 0
+        for other in canonical_group:
+            if other != index:
+                total += row[other]
+        if total <= 0:
+            result = 0
+            break
+        if common_games is None:
+            common_games = total
+        elif total != common_games:
+            result = 0
+            break
+    else:
+        result = int(common_games or 0)
+
+    if (
+        topology_cache is not None
+        and len(topology_cache) < _DRAFT_H2H_TOPOLOGY_CACHE_MAX
+    ):
+        topology_cache[canonical_group] = result
+    return result
+
+
 def _regular_season_draft_order_groups(
     team_indexes,
     *,
@@ -1134,6 +1178,8 @@ def _regular_season_draft_order_groups(
     games_by_team,
     h2h_points,
     h2h_games,
+    h2h_topology_cache=None,
+    uniform_games: bool = False,
 ) -> list[list[int]]:
     """Order earlier picks by record, resolvable H2H, then lower Points For.
 
@@ -1142,63 +1188,92 @@ def _regular_season_draft_order_groups(
     than inventing a hidden final tiebreak.
     """
 
-    ordered = sorted(
-        team_indexes,
-        key=lambda index: (
-            wins[index] / games_by_team[index],
-            points_for[index],
-        ),
-    )
-    record_groups = _group_equal_values(
-        ordered,
-        lambda index: wins[index] / games_by_team[index],
-    )
+    if uniform_games:
+        ordered = sorted(
+            team_indexes,
+            key=lambda index: (wins[index], points_for[index]),
+        )
+        record_value = wins.__getitem__
+    else:
+        ordered = sorted(
+            team_indexes,
+            key=lambda index: (
+                wins[index] / games_by_team[index],
+                points_for[index],
+            ),
+        )
+
+        def record_value(index):
+            return wins[index] / games_by_team[index]
+
     output: list[list[int]] = []
-    for record_group in record_groups:
+    group_start = 0
+    while group_start < len(ordered):
+        first_record = record_value(ordered[group_start])
+        group_end = group_start + 1
+        while (
+            group_end < len(ordered)
+            and record_value(ordered[group_end]) == first_record
+        ):
+            group_end += 1
+        record_group = ordered[group_start:group_end]
+
         if len(record_group) == 1:
             output.append(record_group)
+            group_start = group_end
             continue
 
-        h2h_game_totals = {
-            index: sum(
-                h2h_games[index][other]
-                for other in record_group
-                if other != index
-            )
-            for index in record_group
-        }
-        h2h_resolvable = (
-            all(value > 0 for value in h2h_game_totals.values())
-            and len(set(h2h_game_totals.values())) == 1
+        common_h2h_games = _draft_order_common_h2h_games(
+            record_group,
+            h2h_games,
+            h2h_topology_cache,
         )
-        h2h_groups = [record_group]
-        if h2h_resolvable:
-            h2h_pct = {
-                index: (
-                    sum(
-                        h2h_points[index][other]
-                        for other in record_group
-                        if other != index
-                    )
-                    / h2h_game_totals[index]
-                )
-                for index in record_group
-            }
-            if len(set(h2h_pct.values())) > 1:
-                h2h_ordered = sorted(record_group, key=lambda index: h2h_pct[index])
-                h2h_groups = _group_equal_values(
-                    h2h_ordered,
-                    lambda index: h2h_pct[index],
-                )
+        if common_h2h_games:
+            # Every tied team has the same positive H2H denominator by the
+            # governed resolvability rule. Point totals therefore have exactly
+            # the same ordering/equality relation as the old H2H percentages.
+            h2h_rows = []
+            for index in record_group:
+                row = h2h_points[index]
+                total = 0.0
+                for other in record_group:
+                    if other != index:
+                        total += row[other]
+                h2h_rows.append((index, total))
+            h2h_rows.sort(key=lambda item: (item[1], points_for[item[0]]))
 
-        for h2h_group in h2h_groups:
-            pf_ordered = sorted(h2h_group, key=lambda index: points_for[index])
-            output.extend(
-                _group_equal_values(
-                    pf_ordered,
-                    lambda index: points_for[index],
-                )
-            )
+            subgroup: list[int] = []
+            subgroup_h2h = None
+            subgroup_pf = None
+            for index, h2h_total in h2h_rows:
+                pf = points_for[index]
+                if subgroup and (
+                    h2h_total != subgroup_h2h or pf != subgroup_pf
+                ):
+                    output.append(subgroup)
+                    subgroup = []
+                if not subgroup:
+                    subgroup_h2h = h2h_total
+                    subgroup_pf = pf
+                subgroup.append(index)
+            if subgroup:
+                output.append(subgroup)
+        else:
+            # record_group is already stable Points-For order.
+            subgroup = []
+            subgroup_pf = None
+            for index in record_group:
+                pf = points_for[index]
+                if subgroup and pf != subgroup_pf:
+                    output.append(subgroup)
+                    subgroup = []
+                if not subgroup:
+                    subgroup_pf = pf
+                subgroup.append(index)
+            if subgroup:
+                output.append(subgroup)
+
+        group_start = group_end
     return output
 
 
@@ -1213,13 +1288,18 @@ def _accumulate_slot_groups(
     slot = start_slot
     for group in groups:
         width = len(group)
+        if width == 1:
+            slot_counts[group[0]][slot - 1] += 1.0
+            slot += 1
+            continue
         weight = 1.0 / width
+        slot_end = slot + width
         for team_idx in group:
-            for slot_in_round in range(slot, slot + width):
-                slot_counts[team_idx][slot_in_round - 1] += weight
-        slot += width
+            team_slots = slot_counts[team_idx]
+            for slot_in_round in range(slot, slot_end):
+                team_slots[slot_in_round - 1] += weight
+        slot = slot_end
     return slot
-
 
 def _multiverse_rarity_label(
     probability: float | None,
@@ -1950,6 +2030,25 @@ def simulate_regular_season(
             ]
             future_pick_unavailability_reason = None
 
+    draft_h2h_topology_cache = (
+        {} if future_pick_slot_counts is not None else None
+    )
+    draft_uniform_games = bool(
+        future_pick_slot_counts is not None
+        and games_by_team
+        and len(set(games_by_team)) == 1
+    )
+    future_pick_elimination_buckets = None
+    if (
+        future_pick_slot_counts is not None
+        and future_pick_policy is not None
+        and not future_pick_policy.placement_games_affect_order
+        and request.playoff_rules is not None
+    ):
+        future_pick_elimination_buckets = [
+            [] for _ in range(request.playoff_rules.round_count + 1)
+        ]
+
     batched_h2h_games = None
     if is_batched and future_pick_slot_counts is not None:
         mutable_h2h_games = [row.copy() for row in actual_h2h_games]
@@ -2386,6 +2485,8 @@ def simulate_regular_season(
                 games_by_team=games_by_team,
                 h2h_points=h2h_points,
                 h2h_games=h2h_games,
+                h2h_topology_cache=draft_h2h_topology_cache,
+                uniform_games=draft_uniform_games,
             )
             next_slot = _accumulate_slot_groups(
                 future_pick_slot_counts,
@@ -2411,17 +2512,27 @@ def simulate_regular_season(
                     raise ValueError(
                         "future-pick playoff elimination was not simulated"
                     )
-                eliminated_by_round: dict[int, list[int]] = {}
+                if future_pick_elimination_buckets is None:
+                    raise ValueError(
+                        "future-pick elimination buckets were not compiled"
+                    )
+                for bucket in future_pick_elimination_buckets:
+                    bucket.clear()
                 for team_idx, round_number in playoff_elimination_rounds.items():
-                    eliminated_by_round.setdefault(round_number, []).append(team_idx)
-                for round_number in sorted(eliminated_by_round):
+                    future_pick_elimination_buckets[round_number].append(team_idx)
+                for round_number in range(1, len(future_pick_elimination_buckets)):
+                    eliminated = future_pick_elimination_buckets[round_number]
+                    if not eliminated:
+                        continue
                     round_groups = _regular_season_draft_order_groups(
-                        eliminated_by_round[round_number],
+                        eliminated,
                         wins=wins,
                         points_for=points_for,
                         games_by_team=games_by_team,
                         h2h_points=h2h_points,
                         h2h_games=h2h_games,
+                        h2h_topology_cache=draft_h2h_topology_cache,
+                        uniform_games=draft_uniform_games,
                     )
                     next_slot = _accumulate_slot_groups(
                         future_pick_slot_counts,
