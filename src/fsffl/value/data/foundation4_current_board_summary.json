@@ -1,16 +1,15 @@
 {
-  "authority": "frozen_accepted_y4_y7_policy_materialization",
-  "authority_map_sha256": "487555fac2e5fd0823c6a70d29b1c1e60fbf2adc0e1bb8140f9f43e6ee0e9e00",
-  "current_source": "FINAL_STANDARD_COORDINATE_BOARD_335.csv",
+  "authority": "frozen_policy_fsffl_scoring_direct_recalibration",
+  "current_source": "FINAL_CONNECTED_LEAGUE_BOARD_335.csv",
   "evaluation_season": 2026,
+  "historical_scoring_transform": "nflverse_standard + 0.5*receptions + passing_interceptions + fumbles_lost",
   "horizons": [
     4,
     5,
     6,
     7
   ],
-  "materialization_semantics": "one-time application of frozen research candidates/routes to the governed 2026 current coordinate; runtime consumes the frozen resulting board only",
-  "model_refit_at_runtime": false,
+  "model_family_search_reopened": false,
   "player_count": 335,
   "policies": [
     "baseline",
@@ -18,11 +17,11 @@
     "soft_stack",
     "blanket_75_25"
   ],
-  "rolling_route_artifact_id": 10916355135,
-  "rolling_route_run_id": 36271080037,
+  "route_policy_search_reopened": false,
   "row_count": 5360,
-  "terminal_current_points_coordinate": "governed_2026_standard_y1_full_season_expectation_proxy",
+  "scoring_coordinate": "connected_league_fantasy_points",
+  "terminal_current_points_coordinate": "connected_league_fantasy_points",
   "terminal_feature_player_count": 335,
-  "terminal_prior_points_coordinate": "completed_2025_fantasy_production",
-  "terminal_ytd_annualization_multiplier_used": false
+  "terminal_prior_points_coordinate": "connected_league_fantasy_points",
+  "uncertainty_recalibrated_on_fsffl_target": true
 }
