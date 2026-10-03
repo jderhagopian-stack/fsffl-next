@@ -14,6 +14,12 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
+from fsffl.value.career_forward_intrinsic import (
+    CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
+    CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
+    CareerForwardIntrinsicPlayerEstimate,
+    CareerForwardIntrinsicShadowContract,
+)
 
 
 NOW = datetime(2026, 10, 3, tzinfo=UTC)
@@ -25,6 +31,30 @@ def _state() -> LeagueState:
         retrieved_at=NOW,
         effective_at=NOW,
         source_version="fixture-v1",
+    )
+
+
+def _career_forward(state: LeagueState, values: dict[str, tuple[Position, float]]):
+    estimates = tuple(
+        CareerForwardIntrinsicPlayerEstimate.model_construct(
+            player_id=player_id,
+            position=position,
+            raw_career_forward_reference=value,
+        )
+        for player_id, (position, value) in values.items()
+    )
+    return CareerForwardIntrinsicShadowContract.model_construct(
+        evaluation_season=state.league.season,
+        input_fingerprint="fixture-fingerprint",
+        current_intrinsic_contract_version="fixture-current",
+        long_horizon_contract_version="fixture-y4-y7",
+        long_horizon_value_model_version="fixture-model",
+        career_tail_model_version="fixture-tail",
+        lineup_capacity_signature="fixture-lineup",
+        estimates=estimates,
+        player_count=len(estimates),
+        model_version=CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
+        contract_version=CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
     )
     teams = (
         Team(team_id="alpha", league_id="league", display_name="Alpha"),
@@ -73,18 +103,97 @@ def _state() -> LeagueState:
     )
 
 
-def test_dynasty_room_breadth_counts_every_rostered_player_once_and_ranks_by_count() -> None:
-    rows = build_dynasty_position_rooms(_state(), positions=(Position.RB,))
+def test_dynasty_room_sums_raw_career_forward_once_and_ranks_equal_totals_together() -> None:
+    state = _state()
+    contract = _career_forward(
+        state,
+        {
+            "a1": (Position.RB, 10.0),
+            "a2": (Position.RB, 10.0),
+            "a3": (Position.RB, 30.0),
+            "a4": (Position.RB, -10.0),
+            "b1": (Position.RB, 40.0),
+        },
+    )
+    rows = build_dynasty_position_rooms(
+        state,
+        career_forward=contract,
+        evidence_state_id=state.state_id,
+        positions=(Position.RB,),
+    )
     by_team = {row.team_id: row for row in rows}
 
     assert by_team["alpha"].rostered_player_count == 4
-    assert by_team["alpha"].league_rank == 1
     assert by_team["beta"].rostered_player_count == 1
-    assert by_team["beta"].league_rank == 2
-    assert by_team["alpha"].model_version == "analytics-dynasty-position-room-breadth-v1"
+    assert by_team["alpha"].room_raw == 40.0
+    assert by_team["beta"].room_raw == 40.0
+    assert by_team["alpha"].league_rank == by_team["beta"].league_rank == 1
+    assert by_team["alpha"].strength_index == by_team["beta"].strength_index == 100.0
+    assert by_team["alpha"].model_version == "analytics-dynasty-position-room-career-forward-v1"
 
 
-def test_dynasty_room_breadth_gives_equal_counts_the_same_rank() -> None:
-    rows = build_dynasty_position_rooms(_state(), positions=(Position.TE,))
-    assert {row.rostered_player_count for row in rows} == {0}
-    assert {row.league_rank for row in rows} == {1}
+def test_dynasty_room_fails_closed_when_any_rostered_player_evidence_is_missing() -> None:
+    state = _state()
+    contract = _career_forward(
+        state,
+        {"a1": (Position.RB, 10.0), "b1": (Position.RB, 20.0)},
+    )
+    rows = build_dynasty_position_rooms(
+        state,
+        career_forward=contract,
+        evidence_state_id=state.state_id,
+        positions=(Position.RB,),
+    )
+    by_team = {row.team_id: row for row in rows}
+    assert by_team["alpha"].rostered_player_count == 4
+    assert by_team["alpha"].room_raw is None
+    assert by_team["alpha"].league_rank is None
+    assert by_team["beta"].room_raw == 20.0
+    assert by_team["beta"].league_rank is None
+    assert by_team["beta"].strength_index is None
+    assert by_team["beta"].coverage_count == 1
+
+
+def test_dynasty_room_requires_exact_state_evidence() -> None:
+    state = _state()
+    contract = _career_forward(
+        state,
+        {
+            "a1": (Position.RB, 10.0),
+            "a2": (Position.RB, 20.0),
+            "a3": (Position.RB, 30.0),
+            "a4": (Position.RB, 40.0),
+            "b1": (Position.RB, 50.0),
+        },
+    )
+    mismatch = build_dynasty_position_rooms(
+        state,
+        career_forward=contract,
+        evidence_state_id="another-state",
+        positions=(Position.RB,),
+    )
+    assert all(row.room_raw is None and row.league_rank is None for row in mismatch)
+    assert all(row.room_raw is None for row in mismatch)
+
+
+def test_dynasty_room_requires_actual_position_match() -> None:
+    state = _state()
+    contract = _career_forward(
+        state,
+        {
+            "a1": (Position.WR, 10.0),
+            "a2": (Position.RB, 20.0),
+            "a3": (Position.RB, 30.0),
+            "a4": (Position.RB, 40.0),
+            "b1": (Position.RB, 50.0),
+        },
+    )
+    wrong_position = build_dynasty_position_rooms(
+        state,
+        career_forward=contract,
+        evidence_state_id=state.state_id,
+        positions=(Position.RB,),
+    )
+    alpha = next(row for row in wrong_position if row.team_id == "alpha")
+    assert alpha.room_raw is None
+    assert alpha.rostered_player_count == 4

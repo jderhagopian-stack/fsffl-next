@@ -665,6 +665,12 @@ Render production service `fsffl-next-private-beta` is on #367 merge `32aaa88a59
 
 Exact validation/review/deploy and hosted verification remain before return to iPhone/Safari acceptance. Keep Simulation 2.0, Foundation 4 and Intrinsic economics closed. Continue Product Integration after this bounded physical correction.
 
+## 2026-10-03 — #369 Current | Dynasty position lens
+
+Issue #369 implementation is based on #368 merge `225c0a5982879da534832b8430c8349efb24c35b`. Discovery found no existing governed team-by-position long-term metric. The Current map continues consuming the exact published optimized-starter strength rows. Dynasty uses a separately versioned Analytics roster-breadth diagnostic: count each canonically rostered player once at actual position, including starters, bench, IR and taxi; rank by count and team ID for ties. Any incomplete team roster/player-position evidence suppresses the league-relative rank.
+
+The Dynasty drawer keeps roster slot/depth, age, Market, Current Intrinsic and per-player holistic Long-Term Intrinsic shadow evidence as separate evidence. Foundation 4 remains shadow-only and is not used to rank a team or combined with Current Intrinsic or Market. The Long-Term endpoint is fetched only after opening Dynasty player detail. No Simulation 2.0 or Foundation 4 economics changed. Exact-head CI/review, production deployment verification and physical iPhone/Safari acceptance remain required before closeout.
+
 
 
 ## 2026-10-03 — Management continuity: Product Integration PR #366 active
@@ -700,3 +706,6 @@ Management direction:
 7. Foundation 5 PIT historical-market evidence remains **next after the rollout tranche**, not before it.
 
 A successor Management chat should begin by reading `OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this file, `workstreams/IMPLEMENTATION.md`, applicable directives/product IA, and the live #366 exact head/reviews/checks. Repo state is authoritative; do not reconstruct development state from prior chat.
+## 2026-10-03 — #370 Management formula disposition
+
+The earlier roster-breadth ranking description is superseded by Management’s approval on PR #370. Dynasty room strength uses Foundation 4 `raw_career_forward_reference`, summed once per canonically rostered player at actual QB/RB/WR/TE position, including starters, bench, IR and taxi. Do not weight players or sum display indices. Rank descending only when every team’s room has complete same-State evidence; ties share rank. The optional index is `100 × room raw / league-average room raw` only for a positive mean. Missing evidence is never zero-filled. Roster count is secondary Breadth/Depth evidence. Current optimized-starter ranking is unchanged. Complete focused tests, full CI, fresh exact-head review, then hosted and iPhone/Safari acceptance; no Simulation 2.0 or Foundation 4 economic change.

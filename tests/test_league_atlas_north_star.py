@@ -169,14 +169,14 @@ def test_atlas_contract_aggregates_current_state_and_preserves_unavailable_layer
     assert payload["simulation"]["status"] == "unavailable"
     assert payload["simulation"]["teams"] == []
     assert "Simulation evidence" in payload["simulation"]["reason"]
-    assert len(payload["dynasty_position_rooms"]) == 8
+    assert len(payload["dynasty_position_breadth"]) == 8
     alpha_rb = next(
         row
-        for row in payload["dynasty_position_rooms"]
+        for row in payload["dynasty_position_breadth"]
         if row["team_id"] == "a" and row["position"] == "RB"
     )
     assert alpha_rb["rostered_player_count"] == 0
-    assert alpha_rb["league_rank"] == 1
+    assert alpha_rb["league_rank"] is None
     assert payload["preseason_expectation"]["status"] == "unavailable"
     assert payload["preseason_expectation"]["teams"] == []
 

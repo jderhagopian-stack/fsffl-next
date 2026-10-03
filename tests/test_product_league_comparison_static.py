@@ -22,26 +22,36 @@ def test_league_comparison_consumes_authoritative_atlas_analytics_and_value_cont
     assert "No team Market total, team Intrinsic total" in source
 
 
-def test_position_map_keeps_current_rank_and_labels_dynasty_breadth_separately() -> None:
+def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authority() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "How strong is this position for winning now?" in source
     assert "How strong is this position as a long-term asset room?" in source
     assert "data-position-view=\"current\"" in source
     assert "data-position-view=\"dynasty\"" in source
     assert "dynasty?laDynastyRoom(view.team_id,position):laStrength(view,position)" in source
-    assert "bandRank=(firstTiedRank+lastTiedRank)/2" in source
-    assert "Every rostered player counts once, including starters, bench, IR and taxi" in source
-    assert "This is room breadth, not player-quality value" in source
+    assert "api('/api/league/dynasty-position-rooms')" in source
+    assert "raw holistic career-forward reference" in source
+    assert "rostered · breadth" in source
     assert "api('/api/value/long-term-intrinsic-shadow-v1')" in source
-    assert "Long-Term Intrinsic shadow · Y4–Y7 annual fantasy points" in source
     assert "Array.isArray(longTerm?.uncertainty?.long_horizon_y4_y7)" in source
-    assert "row.year_index+' '+laNum(row.reference_center,1)" in source
+    assert "longTerm?.raw_career_forward_reference" in source
+    assert "Y4–Y7 marginal Shapley" in source
     assert "longTermState==='ready'?'not reported':longTermState==='idle'?'not loaded':longTermState==='stale'" in source
     assert "longTermState==='stale'?'not loaded for this last-good state'" in source
     assert "longTermStatus==='stale'?'Long-Term Intrinsic is not loaded for this last-good State.'" in source
-    assert source.count("fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale") == 2
+    assert source.count("fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale") == 4
     assert "Current Intrinsic · " in source
     assert "Market · " in source
+
+
+def test_dynasty_room_metric_is_owned_by_analytics_and_exact_state_route() -> None:
+    analytics = Path("src/fsffl/analytics/dynasty_position_room.py").read_text(encoding="utf-8")
+    routes = Path("src/fsffl/product/foundation4_shadow_routes.py").read_text(encoding="utf-8")
+    assert "estimate.raw_career_forward_reference" in analytics
+    assert "career_forward=record.contract" in routes
+    assert "evidence_state_id=record.league_state_id" in routes
+    assert "record.league_state_id != state.state_id" in routes
+    assert "authoritative_for_product_ranking" not in analytics
 
 
 def test_value_api_exposes_server_owned_team_value_portfolios_without_atlas_consuming_them() -> None:

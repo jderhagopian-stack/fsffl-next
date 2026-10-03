@@ -552,7 +552,7 @@ def build_league_atlas_payload(
         "as_of": state.as_of.isoformat(),
         "last_completed_week": completed_through_week(state),
         "managed_team_id": runtime.selected_team_id,
-        "dynasty_position_rooms": [
+        "dynasty_position_breadth": [
             row.model_dump(mode="json")
             for row in build_dynasty_position_rooms(state)
         ],
