@@ -1118,6 +1118,70 @@ def test_vnext_semantic_future_contract_is_materialized_once_across_unrelated_st
     assert calls == ["future", "future"]
 
 
+def test_vnext_semantic_future_contract_cache_invalidates_for_coverage_provenance() -> None:
+    state, observation = _fixture()
+    calls: list[str] = []
+
+    def counted_builder(**kwargs):
+        calls.append("future")
+        return provide_vnext_future_forecast_contract(**kwargs)
+
+    evidence = _authority_evidence(observation)
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: evidence,
+        future_forecast_builder=counted_builder,
+        future_forecast_model_version=VNEXT_FORECAST_VERSION,
+        future_missing_fact_family="vnext_future_forecast_coordinate",
+        future_forecast_input_fingerprint_resolver=(
+            vnext_future_forecast_input_fingerprint
+        ),
+    )
+    loader.intrinsic_input_fingerprint(_context(state, observation))
+    assert calls == ["future"]
+
+    unknown = Player(
+        player_id="unsupported-player",
+        full_name="Unsupported Player",
+        position=Position.QB,
+        provider_refs=(ProviderRef(provider="sleeper", external_id="unsupported"),),
+    )
+    unknown_year_one = observation.model_copy(
+        update={"player_id": unknown.player_id}
+    )
+    expanded_state = state.model_copy(
+        update={
+            "players": (*state.players, unknown),
+            "player_states": (
+                *state.player_states,
+                PlayerState(
+                    player_id=unknown.player_id,
+                    as_of=state.as_of,
+                    provenance=state.player_states[0].provenance,
+                ),
+            ),
+        }
+    )
+    expanded_evidence = _authority_evidence(observation)
+    expanded_evidence.league_scored_forecasts = (
+        observation,
+        unknown_year_one,
+    )
+    expanded_loader_context = UserRuntimeContext(
+        user_id="user",
+        league_state=expanded_state,
+        forecast_evidence=cast(
+            Any,
+            SimpleNamespace(
+                raw_forecasts=expanded_evidence.raw_forecasts,
+                league_scored_forecasts=expanded_evidence.league_scored_forecasts,
+            ),
+        ),
+    )
+    loader._year_one_loader = lambda _state: expanded_evidence
+    loader.intrinsic_input_fingerprint(expanded_loader_context)
+    assert calls == ["future", "future"]
+
+
 def test_intrinsic_input_fingerprint_ignores_unrelated_league_state_changes() -> None:
     state, observation = _fixture()
     context = _context(state, observation)
