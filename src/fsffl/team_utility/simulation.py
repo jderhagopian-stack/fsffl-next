@@ -1547,15 +1547,53 @@ def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
         remaining -= count
 
 
-def _numpy_regular_season_matchup_batches(scores, compiled_schedule, team_count):
-    """Accumulate one bounded batch in the same matchup-addition order."""
+def _numpy_regular_season_matchup_batch_products(
+    scores,
+    compiled_schedule,
+    team_count,
+    *,
+    base_h2h_points=None,
+    include_h2h: bool = False,
+):
+    """Accumulate all schedule-derived products for one bounded NumPy batch.
+
+    The schedule is still traversed in canonical matchup order, but once per
+    batch rather than once per trial. Regular-season wins/points retain the
+    established addition order. H2H outcomes use only exact 0/0.5/1 increments,
+    while Multiverse blowout/upset selection preserves the scalar path's
+    first-on-exact-tie behavior.
+    """
     import numpy as np
 
-    wins = np.zeros((scores.shape[0], team_count), dtype=np.float64)
-    points_for = np.zeros((scores.shape[0], team_count), dtype=np.float64)
-    for matchup_index, (home_idx, away_idx, *_draw_parameters) in enumerate(
-        compiled_schedule
-    ):
+    count = scores.shape[0]
+    wins = np.zeros((count, team_count), dtype=np.float64)
+    points_for = np.zeros((count, team_count), dtype=np.float64)
+    h2h_points = None
+    if include_h2h:
+        base = (
+            np.zeros((team_count, team_count), dtype=np.float64)
+            if base_h2h_points is None
+            else np.asarray(base_h2h_points, dtype=np.float64)
+        )
+        h2h_points = np.broadcast_to(
+            base,
+            (count, team_count, team_count),
+        ).copy()
+
+    blowout_margin = np.full(count, -1.0, dtype=np.float64)
+    blowout_index = np.full(count, -1, dtype=np.int64)
+    upset_disadvantage = np.zeros(count, dtype=np.float64)
+    upset_margin = np.zeros(count, dtype=np.float64)
+    upset_index = np.full(count, -1, dtype=np.int64)
+
+    for matchup_index, (
+        home_idx,
+        away_idx,
+        home_mean,
+        _home_stddev,
+        away_mean,
+        _away_stddev,
+    ) in enumerate(compiled_schedule):
         home = scores[:, 2 * matchup_index]
         away = scores[:, 2 * matchup_index + 1]
         points_for[:, home_idx] += home
@@ -1567,6 +1605,52 @@ def _numpy_regular_season_matchup_batches(scores, compiled_schedule, team_count)
         wins[:, away_idx] += away_wins
         wins[:, home_idx] += ties * 0.5
         wins[:, away_idx] += ties * 0.5
+
+        if h2h_points is not None:
+            h2h_points[:, home_idx, away_idx] += home_wins
+            h2h_points[:, away_idx, home_idx] += away_wins
+            tie_points = ties * 0.5
+            h2h_points[:, home_idx, away_idx] += tie_points
+            h2h_points[:, away_idx, home_idx] += tie_points
+
+        margins = np.abs(home - away)
+        replace_blowout = margins > blowout_margin
+        blowout_margin[replace_blowout] = margins[replace_blowout]
+        blowout_index[replace_blowout] = matchup_index
+
+        disadvantage = np.zeros(count, dtype=np.float64)
+        if home_mean < away_mean:
+            disadvantage[home_wins] = away_mean - home_mean
+        elif away_mean < home_mean:
+            disadvantage[away_wins] = home_mean - away_mean
+        replace_upset = (disadvantage > upset_disadvantage) | (
+            (disadvantage == upset_disadvantage)
+            & (disadvantage > 0.0)
+            & (margins > upset_margin)
+        )
+        upset_disadvantage[replace_upset] = disadvantage[replace_upset]
+        upset_margin[replace_upset] = margins[replace_upset]
+        upset_index[replace_upset] = matchup_index
+
+    return (
+        wins,
+        points_for,
+        h2h_points,
+        blowout_margin,
+        blowout_index,
+        upset_disadvantage,
+        upset_margin,
+        upset_index,
+    )
+
+
+def _numpy_regular_season_matchup_batches(scores, compiled_schedule, team_count):
+    """Compatibility wrapper returning the established wins/points products."""
+    wins, points_for, *_unused = _numpy_regular_season_matchup_batch_products(
+        scores,
+        compiled_schedule,
+        team_count,
+    )
     return wins, points_for
 
 
@@ -1708,6 +1792,12 @@ def simulate_regular_season(
     score_batch_offset = 0
     numpy_batch_wins = None
     numpy_batch_points = None
+    numpy_batch_h2h_points = None
+    numpy_batch_blowout_margin = None
+    numpy_batch_blowout_index = None
+    numpy_batch_upset_disadvantage = None
+    numpy_batch_upset_margin = None
+    numpy_batch_upset_index = None
     rng_wall_seconds = 0.0
     rng_cpu_seconds = 0.0
     matchup_wall_seconds = 0.0
@@ -1826,6 +1916,14 @@ def simulate_regular_season(
                 [0.0] * team_count for _ in range(team_count)
             ]
             future_pick_unavailability_reason = None
+
+    batched_h2h_games = None
+    if is_batched and future_pick_slot_counts is not None:
+        mutable_h2h_games = [row.copy() for row in actual_h2h_games]
+        for home_idx, away_idx, *_draw_parameters in compiled_schedule:
+            mutable_h2h_games[home_idx][away_idx] += 1
+            mutable_h2h_games[away_idx][home_idx] += 1
+        batched_h2h_games = tuple(tuple(row) for row in mutable_h2h_games)
 
     common_world_started = _profile_wall_clock() if profile_enabled else None
     # Common-world coordinates intentionally fingerprint only the factual baseline,
@@ -1984,8 +2082,14 @@ def simulate_regular_season(
         trial_setup_started = _profile_wall_clock() if profile_enabled else None
         wins = actual_wins.copy()
         points_for = actual_points_for.copy()
-        h2h_points = [row.copy() for row in actual_h2h_points]
-        h2h_games = [row.copy() for row in actual_h2h_games]
+        h2h_points = (
+            None if is_batched else [row.copy() for row in actual_h2h_points]
+        )
+        h2h_games = (
+            batched_h2h_games
+            if is_batched
+            else [row.copy() for row in actual_h2h_games]
+        )
         trial_score_row = None
         trial_biggest_blowout: tuple[float, int, float, float] | None = None
         trial_biggest_upset: tuple[float, float, int, float, float] | None = None
@@ -2002,10 +2106,21 @@ def simulate_regular_season(
                     rng_wall_seconds += rng_ended[0] - rng_started[0]
                     rng_cpu_seconds += rng_ended[1] - rng_started[1]
                 matchup_started = _profile_clock() if profile_enabled else None
-                numpy_batch_wins, numpy_batch_points = (
-                    _numpy_regular_season_matchup_batches(
-                        score_batch, compiled_schedule, team_count
-                    )
+                (
+                    numpy_batch_wins,
+                    numpy_batch_points,
+                    numpy_batch_h2h_points,
+                    numpy_batch_blowout_margin,
+                    numpy_batch_blowout_index,
+                    numpy_batch_upset_disadvantage,
+                    numpy_batch_upset_margin,
+                    numpy_batch_upset_index,
+                ) = _numpy_regular_season_matchup_batch_products(
+                    score_batch,
+                    compiled_schedule,
+                    team_count,
+                    base_h2h_points=actual_h2h_points,
+                    include_h2h=batched_h2h_games is not None,
                 )
                 if matchup_started is not None:
                     matchup_ended = _profile_clock()
@@ -2015,9 +2130,10 @@ def simulate_regular_season(
             batched_trial_setup_started = (
                 _profile_wall_clock() if profile_enabled else None
             )
-            trial_score_row = score_batch[score_batch_offset]
-            simulated_wins = numpy_batch_wins[score_batch_offset].tolist()
-            simulated_points = numpy_batch_points[score_batch_offset].tolist()
+            batch_row_index = score_batch_offset
+            trial_score_row = score_batch[batch_row_index]
+            simulated_wins = numpy_batch_wins[batch_row_index].tolist()
+            simulated_points = numpy_batch_points[batch_row_index].tolist()
             trial_wins = [
                 actual_wins[index] + simulated_wins[index]
                 for index in range(team_count)
@@ -2108,59 +2224,33 @@ def simulate_regular_season(
         else:
             wins = trial_wins
             points_for = trial_points
-            if trial_score_row is not None:
-                for matchup_index, row in enumerate(compiled_schedule):
-                    (
-                        home_idx,
-                        away_idx,
-                        home_mean,
-                        _home_stddev,
-                        away_mean,
-                        _away_stddev,
-                    ) = row
-                    home = float(trial_score_row[2 * matchup_index])
-                    away = float(trial_score_row[2 * matchup_index + 1])
-                    _record_head_to_head_result(
-                        home_idx,
-                        away_idx,
-                        home,
-                        away,
-                        h2h_points,
-                        h2h_games,
-                    )
-                    margin = abs(home - away)
-                    if (
-                        trial_biggest_blowout is None
-                        or margin > trial_biggest_blowout[0]
-                    ):
-                        trial_biggest_blowout = (
-                            margin,
-                            matchup_index,
-                            home,
-                            away,
-                        )
-                    upset_disadvantage = 0.0
-                    if home > away and home_mean < away_mean:
-                        upset_disadvantage = away_mean - home_mean
-                    elif away > home and away_mean < home_mean:
-                        upset_disadvantage = home_mean - away_mean
-                    if upset_disadvantage > 0.0:
-                        upset_key = (upset_disadvantage, margin)
-                        if (
-                            trial_biggest_upset is None
-                            or upset_key
-                            > (
-                                trial_biggest_upset[0],
-                                trial_biggest_upset[1],
-                            )
-                        ):
-                            trial_biggest_upset = (
-                                upset_disadvantage,
-                                margin,
-                                matchup_index,
-                                home,
-                                away,
-                            )
+            if numpy_batch_h2h_points is not None:
+                h2h_points = numpy_batch_h2h_points[batch_row_index]
+            if (
+                trial_score_row is not None
+                and numpy_batch_blowout_index is not None
+                and int(numpy_batch_blowout_index[batch_row_index]) >= 0
+            ):
+                matchup_index = int(numpy_batch_blowout_index[batch_row_index])
+                trial_biggest_blowout = (
+                    float(numpy_batch_blowout_margin[batch_row_index]),
+                    matchup_index,
+                    float(trial_score_row[2 * matchup_index]),
+                    float(trial_score_row[2 * matchup_index + 1]),
+                )
+            if (
+                trial_score_row is not None
+                and numpy_batch_upset_index is not None
+                and int(numpy_batch_upset_index[batch_row_index]) >= 0
+            ):
+                matchup_index = int(numpy_batch_upset_index[batch_row_index])
+                trial_biggest_upset = (
+                    float(numpy_batch_upset_disadvantage[batch_row_index]),
+                    float(numpy_batch_upset_margin[batch_row_index]),
+                    matchup_index,
+                    float(trial_score_row[2 * matchup_index]),
+                    float(trial_score_row[2 * matchup_index + 1]),
+                )
         if matchup_reconstruction_started is not None:
             matchup_reconstruction_wall_seconds += (
                 _profile_wall_clock() - matchup_reconstruction_started

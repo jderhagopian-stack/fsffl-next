@@ -16,6 +16,7 @@ from fsffl.team_utility.simulation import (
     NUMPY_PCG64_BATCHED_GAUSS_V1,
     PYTHON_RANDOM_GAUSS_V1,
     _numpy_regular_season_matchup_batches,
+    _settings_derived_playoff_rules,
 )
 
 
@@ -442,4 +443,151 @@ def test_exact_profiler_preserves_full_numpy_output_and_replay_identity(monkeypa
     assert profiled == baseline
     assert profiled.simulation_input_fingerprint == baseline.simulation_input_fingerprint
     assert profiled.common_world_regular_season_coordinate == baseline.common_world_regular_season_coordinate
+
+def _scalar_numpy_batch_products_reference(
+    scores,
+    compiled_schedule,
+    team_count,
+    *,
+    base_h2h_points=None,
+    include_h2h=False,
+):
+    import numpy as np
+
+    count = scores.shape[0]
+    wins = np.zeros((count, team_count), dtype=np.float64)
+    points_for = np.zeros((count, team_count), dtype=np.float64)
+    h2h_points = (
+        np.broadcast_to(
+            np.asarray(base_h2h_points, dtype=np.float64),
+            (count, team_count, team_count),
+        ).copy()
+        if include_h2h
+        else None
+    )
+    blowout_margin = np.full(count, -1.0, dtype=np.float64)
+    blowout_index = np.full(count, -1, dtype=np.int64)
+    upset_disadvantage = np.zeros(count, dtype=np.float64)
+    upset_margin = np.zeros(count, dtype=np.float64)
+    upset_index = np.full(count, -1, dtype=np.int64)
+
+    for trial_index in range(count):
+        biggest_blowout = None
+        biggest_upset = None
+        for matchup_index, (
+            home_idx,
+            away_idx,
+            home_mean,
+            _home_stddev,
+            away_mean,
+            _away_stddev,
+        ) in enumerate(compiled_schedule):
+            home = float(scores[trial_index, 2 * matchup_index])
+            away = float(scores[trial_index, 2 * matchup_index + 1])
+            points_for[trial_index, home_idx] += home
+            points_for[trial_index, away_idx] += away
+            if home > away:
+                wins[trial_index, home_idx] += 1.0
+                if h2h_points is not None:
+                    h2h_points[trial_index, home_idx, away_idx] += 1.0
+            elif away > home:
+                wins[trial_index, away_idx] += 1.0
+                if h2h_points is not None:
+                    h2h_points[trial_index, away_idx, home_idx] += 1.0
+            else:
+                wins[trial_index, home_idx] += 0.5
+                wins[trial_index, away_idx] += 0.5
+                if h2h_points is not None:
+                    h2h_points[trial_index, home_idx, away_idx] += 0.5
+                    h2h_points[trial_index, away_idx, home_idx] += 0.5
+
+            margin = abs(home - away)
+            if biggest_blowout is None or margin > biggest_blowout[0]:
+                biggest_blowout = (margin, matchup_index)
+
+            disadvantage = 0.0
+            if home > away and home_mean < away_mean:
+                disadvantage = away_mean - home_mean
+            elif away > home and away_mean < home_mean:
+                disadvantage = home_mean - away_mean
+            if disadvantage > 0.0:
+                key = (disadvantage, margin)
+                if biggest_upset is None or key > biggest_upset[:2]:
+                    biggest_upset = (disadvantage, margin, matchup_index)
+
+        if biggest_blowout is not None:
+            blowout_margin[trial_index] = biggest_blowout[0]
+            blowout_index[trial_index] = biggest_blowout[1]
+        if biggest_upset is not None:
+            upset_disadvantage[trial_index] = biggest_upset[0]
+            upset_margin[trial_index] = biggest_upset[1]
+            upset_index[trial_index] = biggest_upset[2]
+
+    return (
+        wins,
+        points_for,
+        h2h_points,
+        blowout_margin,
+        blowout_index,
+        upset_disadvantage,
+        upset_margin,
+        upset_index,
+    )
+
+
+@pytest.mark.parametrize("seed", (17, 2718, 20261003))
+def test_batched_h2h_products_preserve_complete_simulation_result(
+    monkeypatch,
+    seed,
+) -> None:
+    import fsffl.team_utility.simulation as simulation_module
+
+    team_ids = tuple("abcdefgh")
+    rules = _settings_derived_playoff_rules(4, 5)
+    assert rules is not None
+    schedule = (
+        ScheduledMatchup(week=1, home_team_id="a", away_team_id="b"),
+        ScheduledMatchup(week=1, home_team_id="c", away_team_id="d"),
+        ScheduledMatchup(week=1, home_team_id="e", away_team_id="f"),
+        ScheduledMatchup(week=1, home_team_id="g", away_team_id="h"),
+        ScheduledMatchup(week=2, home_team_id="a", away_team_id="c"),
+        ScheduledMatchup(week=2, home_team_id="b", away_team_id="d"),
+        ScheduledMatchup(week=2, home_team_id="e", away_team_id="g"),
+        ScheduledMatchup(week=2, home_team_id="f", away_team_id="h"),
+        ScheduledMatchup(week=3, home_team_id="a", away_team_id="d"),
+        ScheduledMatchup(week=3, home_team_id="b", away_team_id="c"),
+        ScheduledMatchup(week=3, home_team_id="e", away_team_id="h"),
+        ScheduledMatchup(week=3, home_team_id="f", away_team_id="g"),
+    )
+    request = RegularSeasonSimulationInput(
+        scoring=tuple(
+            TeamScoringDistribution(
+                team_id=team_id,
+                mean_points=105.0 + index * 4.0,
+                stddev_points=9.0 + (index % 3),
+                model_version="h2h-batch-equivalence-v1",
+            )
+            for index, team_id in enumerate(team_ids)
+        ),
+        schedule=schedule,
+        playoff_team_count=4,
+        playoff_rules=rules,
+        future_pick_draft_season=2027,
+        simulation_count=1_000,
+        seed=seed,
+        model_version="h2h-batch-equivalence-v1",
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=500,
+    )
+
+    optimized = simulate_regular_season(request)
+    monkeypatch.setattr(
+        simulation_module,
+        "_numpy_regular_season_matchup_batch_products",
+        _scalar_numpy_batch_products_reference,
+    )
+    scalar_reference = simulate_regular_season(request)
+
+    assert optimized == scalar_reference
+    assert optimized.model_dump(mode="json") == scalar_reference.model_dump(mode="json")
 
