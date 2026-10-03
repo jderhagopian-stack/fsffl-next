@@ -20,7 +20,11 @@ from fsffl.value.shapley_intrinsic import (
 
 OUT = Path("artifacts/research/foundation4_career_forward_20261002")
 POSITIONS = ("QB", "RB", "WR", "TE")
-FROZEN_Y8_CANDIDATE = "specialist|forecast10|two_part_ridge"
+FROZEN_TERMINAL_ANCHOR_CANDIDATE = "specialist|forecast10|two_part_ridge"
+TERMINAL_ANCHOR_HORIZON = 7
+FROZEN_ELIGIBLE_BASE_SEASONS = (2013, 2014, 2015)
+FROZEN_DEVELOPMENT_BASE_SEASONS = (2013, 2014)
+FROZEN_HOLDOUT_BASE_SEASONS = (2015,)
 MIN_POST_Y8_OBSERVED_SEASONS = 3
 
 
@@ -68,22 +72,30 @@ def build_inputs(dev, args):
     return base, long, raw, players
 
 
-def y8_predictions(dev, long: pd.DataFrame, base_seasons: tuple[int, ...]) -> pd.DataFrame:
+def terminal_anchor_predictions(
+    dev,
+    long: pd.DataFrame,
+    base_seasons: tuple[int, ...],
+) -> pd.DataFrame:
     records: list[dict[str, object]] = []
     for base_season in base_seasons:
-        evaluation = long[(long.horizon == 8) & (long.base_season == base_season)]
+        evaluation = long[
+            (long.horizon == TERMINAL_ANCHOR_HORIZON)
+            & (long.base_season == base_season)
+        ]
         for position in POSITIONS:
             ev = evaluation[evaluation.position == position]
             if ev.empty:
                 continue
             train = long[
-                (long.horizon == 8)
+                (long.horizon == TERMINAL_ANCHOR_HORIZON)
                 & (long.position == position)
                 & (long.target_season < base_season)
             ]
             if len(train) < dev.MIN_TRAIN_ROWS or train.base_season.nunique() < 2:
                 raise RuntimeError(
-                    f"insufficient frozen Y8 training evidence for {position} base {base_season}"
+                    "insufficient frozen terminal-anchor training evidence "
+                    f"for {position} base {base_season}"
                 )
             pred, p_active = dev.fit_predict(
                 train,
@@ -96,11 +108,14 @@ def y8_predictions(dev, long: pd.DataFrame, base_seasons: tuple[int, ...]) -> pd
                 records.append(
                     {
                         "base_season": int(base_season),
+                        "anchor_target_season": int(
+                            base_season + TERMINAL_ANCHOR_HORIZON - 1
+                        ),
                         "target_y8_season": int(base_season + 7),
                         "player_id": str(row.player_id),
                         "position": position,
-                        "predicted_y8_points": float(pred[index]),
-                        "predicted_y8_p_active": (
+                        "predicted_anchor_points": float(pred[index]),
+                        "predicted_anchor_p_active": (
                             float(p_active[index])
                             if np.isfinite(p_active[index])
                             else np.nan
@@ -198,8 +213,11 @@ def fit_tail_models(train: pd.DataFrame, evaluation: pd.DataFrame) -> pd.DataFra
         if tr.empty or ev.empty:
             continue
         candidate_features = {
-            "anchor": ["predicted_y8_shapley"],
-            "anchor_plus_pactive": ["predicted_y8_shapley", "predicted_y8_p_active"],
+            "anchor": ["predicted_anchor_shapley"],
+            "anchor_plus_pactive": [
+                "predicted_anchor_shapley",
+                "predicted_anchor_p_active",
+            ],
         }
         for candidate, features in candidate_features.items():
             tr_fit = tr.dropna(subset=features + ["actual_tail"])
@@ -240,69 +258,23 @@ def main() -> None:
     _base, long, raw, players = build_inputs(dev, args)
     source_max_season = int(raw.season.max())
 
-    y8 = long[long.horizon == 8]
-    eligible = []
-    for season in sorted(int(x) for x in y8.base_season.unique()):
-        if season + 7 <= source_max_season - MIN_POST_Y8_OBSERVED_SEASONS:
-            candidate = y8[y8.base_season == season]
-            if all(
-                len(
-                    long[
-                        (long.horizon == 8)
-                        & (long.position == position)
-                        & (long.target_season < season)
-                    ]
-                )
-                >= dev.MIN_TRAIN_ROWS
-                for position in POSITIONS
-                if not candidate[candidate.position == position].empty
-            ):
-                eligible.append(season)
-    if len(eligible) < 4:
-        anchor_inventory = {}
-        for anchor_horizon in (7, 8):
-            supported = []
-            source = long[long.horizon == anchor_horizon]
-            for season in sorted(int(x) for x in source.base_season.unique()):
-                if season + 7 > source_max_season - MIN_POST_Y8_OBSERVED_SEASONS:
-                    continue
-                candidate = source[source.base_season == season]
-                if all(
-                    len(
-                        long[
-                            (long.horizon == anchor_horizon)
-                            & (long.position == position)
-                            & (long.target_season < season)
-                        ]
-                    )
-                    >= dev.MIN_TRAIN_ROWS
-                    for position in POSITIONS
-                    if not candidate[candidate.position == position].empty
-                ):
-                    supported.append(season)
-            anchor_inventory[f"Y{anchor_horizon}"] = supported
-        OUT.mkdir(parents=True, exist_ok=True)
-        inventory = {
-            "state": "TERMINAL_EVIDENCE_AVAILABILITY_GATE",
-            "authority": "research_only_no_outcome_scoring",
-            "source_max_season": source_max_season,
-            "minimum_post_y8_observed_seasons": MIN_POST_Y8_OBSERVED_SEASONS,
-            "eligible_base_seasons_by_anchor": anchor_inventory,
-            "outcomes_opened": False,
-            "disposition": "RESEARCH_DESIGN_REQUIRES_EVIDENCE_AVAILABILITY_CORRECTION",
-        }
-        (OUT / "EVIDENCE_AVAILABILITY.json").write_text(
-            json.dumps(inventory, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
-        raise SystemExit(
-            "insufficient Y8 chronology before outcome scoring; "
-            f"availability={anchor_inventory}"
-        )
-    holdout_seasons = tuple(eligible[-2:])
-    development_seasons = tuple(eligible[:-2])
+    eligible = list(FROZEN_ELIGIBLE_BASE_SEASONS)
+    development_seasons = FROZEN_DEVELOPMENT_BASE_SEASONS
+    holdout_seasons = FROZEN_HOLDOUT_BASE_SEASONS
 
-    pred = y8_predictions(dev, long, tuple(eligible))
+    source = long[long.horizon == TERMINAL_ANCHOR_HORIZON]
+    available = set(int(x) for x in source.base_season.unique())
+    if not set(eligible).issubset(available):
+        raise SystemExit(
+            "frozen terminal-anchor seasons are no longer present in the source panel"
+        )
+    for season in eligible:
+        if season + 7 > source_max_season - MIN_POST_Y8_OBSERVED_SEASONS:
+            raise SystemExit(
+                f"frozen terminal base {season} lacks required post-Y8 follow-up"
+            )
+
+    pred = terminal_anchor_predictions(dev, long, tuple(eligible))
 
     needed_actual_seasons = range(min(eligible) + 7, source_max_season + 1)
     actual_phi: dict[int, dict[str, float]] = {}
@@ -316,18 +288,25 @@ def main() -> None:
             season_seed=FROZEN_SHAPLEY_SEED + season,
         )
 
-    pred["predicted_y8_shapley"] = np.nan
+    pred["predicted_anchor_shapley"] = np.nan
     for base_season in eligible:
         board = pred[pred.base_season == base_season][
-            ["player_id", "position", "predicted_y8_points"]
+            ["player_id", "position", "predicted_anchor_points"]
         ].copy()
         values = shapley_board(
             board,
-            weight_column="predicted_y8_points",
-            season_seed=FROZEN_SHAPLEY_SEED + base_season + 7,
+            weight_column="predicted_anchor_points",
+            season_seed=(
+                FROZEN_SHAPLEY_SEED
+                + base_season
+                + TERMINAL_ANCHOR_HORIZON
+                - 1
+            ),
         )
         idx = pred.base_season == base_season
-        pred.loc[idx, "predicted_y8_shapley"] = pred.loc[idx, "player_id"].map(values)
+        pred.loc[idx, "predicted_anchor_shapley"] = pred.loc[
+            idx, "player_id"
+        ].map(values)
 
     status_map, status_column = player_status_map(players)
     records: list[dict[str, object]] = []
@@ -353,9 +332,9 @@ def main() -> None:
                 "target_y8_season": target_y8,
                 "player_id": player_id,
                 "position": row.position,
-                "predicted_y8_points": float(row.predicted_y8_points),
-                "predicted_y8_p_active": float(row.predicted_y8_p_active),
-                "predicted_y8_shapley": float(row.predicted_y8_shapley),
+                "predicted_anchor_points": float(row.predicted_anchor_points),
+                "predicted_anchor_p_active": float(row.predicted_anchor_p_active),
+                "predicted_anchor_shapley": float(row.predicted_anchor_shapley),
                 "actual_tail": total,
                 "tail_observed_seasons": observed_years,
                 "tail_active_seasons": active_years,
@@ -461,8 +440,9 @@ def main() -> None:
             "null_candidate": "term_structure_only_no_holistic_scalar",
         },
         "tail": {
-            "anchor_horizon": "Y8",
-            "frozen_forecast_candidate": FROZEN_Y8_CANDIDATE,
+            "anchor_horizon": "Y7",
+            "tail_horizon": "Y8+",
+            "frozen_forecast_candidate": FROZEN_TERMINAL_ANCHOR_CANDIDATE,
             "candidate_models": ["zero_tail_baseline", "anchor", "anchor_plus_pactive"],
             "source_max_season": source_max_season,
             "minimum_post_y8_observed_seasons": MIN_POST_Y8_OBSERVED_SEASONS,
@@ -498,6 +478,7 @@ def main() -> None:
         f"Disposition: **{disposition}**",
         "",
         f"Source max season: {source_max_season}",
+        f"Terminal anchor: Y{TERMINAL_ANCHOR_HORIZON}",
         f"Development base seasons: {development_seasons}",
         f"Untouched terminal holdout base seasons: {holdout_seasons}",
         f"Explicit player status column: {status_column or 'UNAVAILABLE'}",
