@@ -2549,3 +2549,17 @@ Next bounded work: freeze the fitted terminal coefficients/residual bands in pro
 8. Continue into the approved Product Integration / Capability Rollout tranche before Foundation 5.
 
 Simulation 2.0 major semantics/performance work is complete. Do not reopen it absent contradictory evidence or a new Management directive; the only known residue is narrow acceptance-tooling cleanup around fail-closed `publication_generation_id` checking.
+
+
+## 2026-10-03 — Foundation 4 fresh Codex P1: residual scoring-coordinate consistency
+
+Fresh exact-head Codex review of #361 head `38d9eeeadfd64c7ca57ace6bc3062882cfe6f152` found one P1: the regenerated FSFFL-scored long-horizon/terminal artifacts omit rare residual rules that Current Intrinsic's connected-league Y1 scoring currently includes through provisional residual priors (`fum_rec`, `fum_rec_td`, `st_ff`, `st_fum_rec`, `st_td`). That makes the holistic sum dimensionally inconsistent even though the major linear FSFFL scoring rules are aligned.
+
+Management disposition follows the already-governed scoring policy:
+- do **not** reconstruct/model every rare event merely for literal rule parity;
+- these named rules are rare/exotic provisional-residual events without strong player-level predictive signal, so the preferred Foundation 4 correction is to **explicitly omit them from the effective Intrinsic scoring coordinate across Y1-Y3, Y4-Y7 and Y8+ consistently**, with typed provenance;
+- Forecast may retain its separately governed provisional residual behavior, but holistic Intrinsic must not mix a Y1-Y3 coordinate that includes those residual points with long-horizon/tail coordinates that omit them;
+- only include a residual rule in holistic Intrinsic if one governed predictive treatment can be applied consistently across historical training/current/long-horizon/tail coordinates;
+- no heuristic multipliers, fake historical reconstruction, or silent relabeling.
+
+Required next path: correct the effective Intrinsic coordinate -> regenerate/refreeze only what the coordinate change requires -> full exact-head CI + focused validation -> fresh Codex review -> hosted 335-player build/persistence/API/restart/resource acceptance -> Foundation 4 closeout.
