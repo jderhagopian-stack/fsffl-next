@@ -55,11 +55,15 @@ def build_dynasty_position_rooms(
             for team_id, roster_positions in roster_players.items()
         }
         ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
-        ranks = (
-            {team_id: rank for rank, (team_id, _) in enumerate(ordered, start=1)}
-            if complete
-            else {}
-        )
+        ranks: dict[str, int] = {}
+        if complete:
+            prior_count: int | None = None
+            prior_rank = 0
+            for index, (team_id, count) in enumerate(ordered, start=1):
+                if count != prior_count:
+                    prior_rank = index
+                    prior_count = count
+                ranks[team_id] = prior_rank
         for team in teams:
             count = counts.get(team.team_id)
             output.append(

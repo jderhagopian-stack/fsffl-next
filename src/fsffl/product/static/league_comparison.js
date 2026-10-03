@@ -301,7 +301,7 @@ async function loadLeagueValueLenses(){
   fsfflLeagueStructureState.valueStatus='unavailable';fsfflLeagueStructureState.valueError='Governed value-lens preparation did not complete within the bounded polling window.';renderLeagueComparison();
 }
 async function laLoadLongTermEvidence(){
-  if(fsfflLeagueStructureState.longTermStatus!=='idle')return;
+  if(!['idle','building'].includes(fsfflLeagueStructureState.longTermStatus))return;
   const requestedStateId=fsfflLeagueStructureState.atlas?.league_state_id||null;
   fsfflLeagueStructureState.longTermStatus='loading';renderLeagueComparison();
   try{

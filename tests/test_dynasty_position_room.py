@@ -82,3 +82,9 @@ def test_dynasty_room_breadth_counts_every_rostered_player_once_and_ranks_by_cou
     assert by_team["beta"].rostered_player_count == 1
     assert by_team["beta"].league_rank == 2
     assert by_team["alpha"].model_version == "analytics-dynasty-position-room-breadth-v1"
+
+
+def test_dynasty_room_breadth_gives_equal_counts_the_same_rank() -> None:
+    rows = build_dynasty_position_rooms(_state(), positions=(Position.TE,))
+    assert {row.rostered_player_count for row in rows} == {0}
+    assert {row.league_rank for row in rows} == {1}
