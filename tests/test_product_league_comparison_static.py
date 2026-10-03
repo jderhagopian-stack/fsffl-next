@@ -74,3 +74,7 @@ def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_
     assert "estimate?.distribution?.mean" in source
     assert "estimate.distribution.mean" in source
     assert "estimate.expected_value" not in source
+    assert "world?.rarity?.label" in source
+    assert "world.label" not in source
+    assert "world.summary" not in source
+    assert "world.description" not in source
