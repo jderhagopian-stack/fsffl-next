@@ -564,3 +564,12 @@ Current management handoff:
 - The recurring last-good-during-rebuild acceptance failure was not reproduced: #359 path passed. Still close its post-merge P2 so any missing per-surface publication generation fails closed.
 - Shift management emphasis back toward Foundation 4 #356. It is open/green but has not advanced since the shadow-contract/current-authority checkpoint.
 - Next Foundation 4 gates: live cohort -> persistence/API -> restart/reload/resources -> bounded shadow acceptance -> Product Integration / Capability Rollout -> Foundation 5.
+
+
+## 2026-10-03 — Intrinsic performance continuity note
+
+Do not lose the previously identified Intrinsic optimization work. There are two distinct goals:
+- **avoid unnecessary rebuilds** via dependency-scoped compatibility, durable persistence and exact restore/reuse; historical cold Shapley rebuilds were multi-minute;
+- **speed the rebuild that is genuinely necessary** only after profiling the accepted Foundation 4 holistic path.
+
+Recent hosted lifecycle evidence still puts the current Intrinsic phase at roughly **25–27s** when it runs. After #361 Foundation 4 correctness/persistence/hosted acceptance, run a bounded Intrinsic performance profile and optimize only measured material costs while preserving exact Current Intrinsic / Long-Term Intrinsic economics, fingerprints and restart identity. This should happen before or alongside Product Integration, not be forgotten behind the Simulation work.
