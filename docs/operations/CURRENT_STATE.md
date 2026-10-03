@@ -3125,3 +3125,20 @@ Foundation 4 implementation is now substantive. Draft PR #356 (`Foundation 4: im
 Current #356 validation is green: full CI and PR164 focused regression pass, including the `foundation4-current-long-horizon` CI job. That job produced artifact **11261836244** at the current head. #356 is still a **shadow-contract implementation**, not Foundation 4 acceptance: live-cohort wiring, persistence/API serving, restart/reload/resource validation and bounded review/promotion remain ahead.
 
 Management sequence remains: finish Foundation 4 shadow acceptance -> Product Integration / Capability Rollout to the sole private-beta user -> Foundation 5 PIT historical-market evidence.
+
+
+## 2026-10-03 — #359/#360 current Simulation checkpoint; Foundation 4 #356 still active
+
+Simulation advanced after the #358 memory-safety closeout.
+
+PR #359 (`Acceptance: recognize atomic last-good during truthful rebuild`) merged as `f1cbca89befab8d28ca5591af6f640c14cf09d0d`. It addresses the recurring hosted acceptance false-negative where a truthful `rebuilding` working generation coexists with atomic last-good presentation. However, post-merge Codex P2 identified one remaining acceptance-hole: entries in `publication_generations` that omit `publication_generation_id` are currently filtered out instead of being required to equal the expected last-good generation. Close this narrow acceptance-tooling P2 before declaring the lifecycle acceptance correction complete.
+
+PR #360 (`Simulation: fast-path two-team future-pick tiebreak groups`) merged as `06e01ab016d5591ea1e667e4ea73b21568b8e677` and is live. It preserves governed draft-order semantics while fast-pathing the dominant two-team elimination groups and using order-independent bitmask H2H topology cache keys. CI passed. No governed hosted 50k profile has yet landed on #360; do not claim additional savings until that profile is captured.
+
+Current accepted performance checkpoint remains:
+- corrected original kernel baseline **104.901s**;
+- post-postseason #351 kernel **61.007s**;
+- post-H2H #355 kernel **43.487s**;
+- #357 hosted kernel **42.895s**, team-origin ordering **11.593s**.
+
+Foundation 4 draft #356 remains open at head `f6cbba6fe6ca95ef3039b1eab6fddaba49d637fa`, mergeable and green. It has not advanced since the shadow-contract/current-authority materialization checkpoint. Resume it through live-cohort runtime materialization, persistence/API, restart/reload/resource validation and bounded review. Do not let Simulation performance work starve Foundation 4.
