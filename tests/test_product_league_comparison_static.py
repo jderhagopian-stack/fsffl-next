@@ -66,7 +66,9 @@ def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_
     assert "row.fsffl_intrinsic_pick_value" in source
     assert "Team-of-origin value" in source
     assert "Generic class fallback" in source
-    assert "league-wide situation used to select each example" in source
+    assert "league-wide condition used to select each example" in source
+    assert "Rarity is how often that condition or event appeared in this same run" in source
+    assert "Neither is your team’s odds" in source
     assert "not a team-specific upside/downside or a separate probability" in source
     assert "world?.team_outcomes||[]" in source
     assert "outcome?.team_id===managed" in source
