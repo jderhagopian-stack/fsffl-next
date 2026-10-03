@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from time import monotonic, sleep
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -168,13 +169,20 @@ def _loader(persistence, calls):
     )
 
 
-def test_full_current_cohort_materializes_and_persists_both_shadow_artifacts() -> None:
+@pytest.fixture(scope="module")
+def materialized():
     persistence = MemoryPersistence()
     calls = []
     loader = _loader(persistence, calls)
     context = _context()
-
     contract = loader(context)
+    return persistence, calls, loader, context, contract
+
+
+def test_full_current_cohort_materializes_and_persists_both_shadow_artifacts(
+    materialized,
+) -> None:
+    persistence, calls, _loader_instance, _context_instance, contract = materialized
 
     assert contract.player_count == FOUNDATION4_CURRENT_COHORT_SIZE == 335
     assert len(contract.estimates) == 335
@@ -187,13 +195,10 @@ def test_full_current_cohort_materializes_and_persists_both_shadow_artifacts() -
     assert FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND in kinds
 
 
-def test_restart_restore_is_semantically_identical_and_skips_rebuild() -> None:
-    persistence = MemoryPersistence()
-    first_calls = []
-    first_loader = _loader(persistence, first_calls)
-    context = _context()
-    built = first_loader(context)
-
+def test_restart_restore_is_semantically_identical_and_skips_rebuild(
+    materialized,
+) -> None:
+    persistence, _calls, first_loader, context, built = materialized
     second_calls = []
     second_loader = _loader(persistence, second_calls)
     restored = second_loader.restore_compatible(context)
@@ -210,12 +215,14 @@ def test_restart_restore_is_semantically_identical_and_skips_rebuild() -> None:
     assert len(component.estimates) == 335
 
 
-def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(monkeypatch) -> None:
+def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(
+    monkeypatch,
+    materialized,
+) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
-    persistence = MemoryPersistence()
-    calls = []
-    loader = _loader(persistence, calls)
-    context = _context()
+    persistence, _calls, _first_loader, context, _built = materialized
+    api_calls = []
+    loader = _loader(persistence, api_calls)
     store = PrivateBetaRuntimeStore()
     store.set_league_state("local-beta-user", context.league_state)
     coordinator = ShapleyIntrinsicBackgroundCoordinator(loader, max_workers=1)
@@ -250,3 +257,4 @@ def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(monkeypatch
     assert coordinator.current(store.get("local-beta-user")).status == (
         IntrinsicBuildStatus.COMPLETED
     )
+    assert api_calls == []
