@@ -1,0 +1,52 @@
+name: Foundation 4 Career Tail Research
+
+on:
+  push:
+    branches:
+      - research/foundation4-career-tail-governance-20261002
+    paths:
+      - scripts/run_foundation4_career_tail_research.py
+      - docs/operations/directives/20261002_FOUNDATION4_CAREER_TAIL_GOVERNANCE.md
+      - .github/workflows/foundation4-career-tail-research.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install governed research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn
+      - name: Restore frozen historical player-season evidence
+        run: |
+          mkdir -p artifacts/research/foundation4_career_tail_20261002/input
+          gh api repos/${{ github.repository }}/actions/artifacts/10899387479/zip > /tmp/term-structure.zip
+          unzip -q /tmp/term-structure.zip -d artifacts/research/foundation4_career_tail_20261002/input
+          test -f artifacts/research/foundation4_career_tail_20261002/input/PLAYER_SEASONS.csv
+          echo "ea72f312148f01b8066419e8f12cb3a04a4dbbd99fd6e0b7dc975c65cc2446b5  /tmp/term-structure.zip" > /tmp/expected.txt
+          sha256sum -c /tmp/expected.txt
+      - name: Run frozen terminal-tail study
+        run: |
+          python scripts/run_foundation4_career_tail_research.py \
+            --player-seasons artifacts/research/foundation4_career_tail_20261002/input/PLAYER_SEASONS.csv
+      - name: Upload durable research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation4-career-tail-research
+          path: |
+            artifacts/research/foundation4_career_tail_20261002/TERMINAL_TAIL_EVIDENCE.json
+            artifacts/research/foundation4_career_tail_20261002/RESEARCH_CLOSEOUT.md
+            artifacts/research/foundation4_career_tail_20261002/ROLLING_VALIDATION.csv
+            artifacts/research/foundation4_career_tail_20261002/FINAL_HOLDOUT_PREDICTIONS.csv
+          retention-days: 30
