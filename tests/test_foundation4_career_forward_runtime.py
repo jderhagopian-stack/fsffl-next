@@ -239,6 +239,20 @@ def test_full_current_cohort_materializes_and_persists_both_shadow_artifacts(
     assert contract.current_intrinsic_replaced is False
     assert contract.display_scaling_applied is False
     assert contract.market_inputs_used is False
+    assert contract.ignored_long_term_residual_rule_stats == (
+        "fum_rec",
+        "fum_rec_td",
+        "st_ff",
+        "st_fum_rec",
+        "st_td",
+    )
+    assert "Standalone Current Intrinsic remains unchanged" in (
+        contract.scoring_coordinate_limitation or ""
+    )
+    # Management refinement: do not subtract the rare residual lane from the
+    # standalone Current Intrinsic contribution merely to align the Long-Term
+    # frozen coordinate.
+    assert {row.current_intrinsic_raw_y1_y3 for row in contract.estimates} == {6.0}
     assert calls == ["current"]
     kinds = {row.key.artifact_kind for row in persistence.artifacts}
     assert FOUNDATION4_Y4_Y7_ARTIFACT_KIND in kinds
