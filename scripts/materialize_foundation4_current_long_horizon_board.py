@@ -180,6 +180,44 @@ def main() -> None:
     result = pd.DataFrame(rows).sort_values(
         ["player_id", "year_index", "policy_id"]
     ).reset_index(drop=True)
+
+    # Freeze the scale-compatible terminal feature coordinate in the same evidence
+    # job. The retrospective terminal study used full-season base-year production;
+    # during the 2026 season we therefore use the governed full-season Y1 point
+    # coordinate as an explicitly labeled live proxy rather than annualizing YTD.
+    prior_2025 = {
+        str(row.player_id): float(row.fantasy_target)
+        for row in raw[raw.season == 2025].itertuples()
+    }
+    terminal_rows = []
+    for row in board.itertuples():
+        historical_id = (
+            None
+            if pd.isna(row.historical_gsis_id)
+            else str(row.historical_gsis_id)
+        )
+        prior = prior_2025.get(historical_id) if historical_id is not None else None
+        terminal_rows.append({
+            "player_id": str(row.player_id),
+            "position": str(row.position),
+            "age_years": float(row.age),
+            "experience_years": float(row.experience),
+            "current_points": max(0.0, float(row.standard_y1_points)),
+            "prior_points": prior,
+            "prior_missing": prior is None,
+            "current_points_coordinate": (
+                "governed_2026_standard_y1_full_season_expectation_proxy"
+            ),
+            "prior_points_coordinate": "completed_2025_fantasy_production",
+            "live_feature_transport_limitation": (
+                "terminal calibration used retrospective completed base-season production; "
+                "2026 shadow uses the governed full-season Y1 point coordinate to preserve "
+                "the training scale without inventing a YTD annualization multiplier"
+            ),
+        })
+    terminal = pd.DataFrame(terminal_rows).sort_values("player_id").reset_index(drop=True)
+    if len(terminal) != 335 or terminal.player_id.nunique() != 335:
+        raise SystemExit("terminal feature snapshot must cover the governed 335-player cohort")
     if len(result) != 335 * 4 * 4:
         raise SystemExit(f"expected 5360 rows, got {len(result)}")
     counts = result.groupby("player_id").size()
@@ -190,6 +228,10 @@ def main() -> None:
 
     csv_path = out / "FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.csv"
     result.to_csv(csv_path, index=False)
+    terminal.to_csv(
+        out / "FOUNDATION4_CURRENT_TERMINAL_FEATURES_335.csv",
+        index=False,
+    )
     summary = {
         "authority": "frozen_accepted_y4_y7_policy_materialization",
         "player_count": 335,
@@ -202,6 +244,12 @@ def main() -> None:
         "authority_map_sha256": "487555fac2e5fd0823c6a70d29b1c1e60fbf2adc0e1bb8140f9f43e6ee0e9e00",
         "current_source": "FINAL_STANDARD_COORDINATE_BOARD_335.csv",
         "model_refit_at_runtime": False,
+        "terminal_feature_player_count": int(len(terminal)),
+        "terminal_current_points_coordinate": (
+            "governed_2026_standard_y1_full_season_expectation_proxy"
+        ),
+        "terminal_prior_points_coordinate": "completed_2025_fantasy_production",
+        "terminal_ytd_annualization_multiplier_used": False,
         "materialization_semantics": (
             "one-time application of frozen research candidates/routes to the governed "
             "2026 current coordinate; runtime consumes the frozen resulting board only"
