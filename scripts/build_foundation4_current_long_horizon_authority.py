@@ -6,7 +6,19 @@ import gzip
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
+
+# Foundation 4 replay must be reproducible across Actions runners. Set numerical
+# thread controls before importing NumPy/scikit-learn so BLAS reductions cannot
+# change routed/stacked current-cohort predictions across otherwise identical runs.
+for _name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+):
+    os.environ[_name] = "1"
 
 import numpy as np
 import pandas as pd
