@@ -42,8 +42,10 @@ Sensitivity values from prior research may be cited as evidence about scale frag
 
 Y8+ is not zero and value does not end at Y7.
 
-The terminal study may use Y8 only as a noisy tail anchor. It must:
-- use frozen PIT Y8 forecasts and realized future football outcomes;
+The terminal study uses **Y7**, the last accepted governed annual component, as the tail anchor and predicts the residual **Y8+** career economics. This evidence-availability correction was frozen before any terminal outcomes were scored: the retained panel offered three eligible Y7 base cohorts (2013-2015) but only two Y8 cohorts under the three-post-Y8-season rule.
+
+It must:
+- use frozen PIT Y7 forecasts and realized Y8+ future football outcomes;
 - replay predicted/realized annual boards through the same lineup-capacity Shapley economy;
 - estimate residual post-Y8 career economics from historical cohorts only;
 - distinguish completed careers from right-censored careers;
@@ -53,19 +55,27 @@ The terminal study may use Y8 only as a noisy tail anchor. It must:
 
 Candidate terminal models are predeclared and deliberately small:
 1. **zero-tail baseline** — diagnostic only, never promotable;
-2. **Y8 Shapley anchor** — historical terminal residual modeled from frozen predicted Y8 Shapley;
-3. **Y8 Shapley + frozen p_active anchor** — same with the accepted Y8 active-probability signal.
+2. **Y7 Shapley anchor** — historical Y8+ residual modeled from frozen predicted Y7 Shapley;
+3. **Y7 Shapley + frozen p_active anchor** — same with the accepted Y7 active-probability signal.
 
 Coefficients must be learned only from historical training cohorts. No hand-set age, youth, survival or terminal multiplier is permitted.
 
 ## Chronology / censoring protocol
 
 - Build eligible historical base seasons from the retained PIT panel.
-- A base season is eligible for terminal validation only when Y8 is observed and at least three post-Y8 seasons are present in the retained source panel.
-- The last two eligible base seasons are the untouched terminal holdout; earlier eligible seasons are development/training.
+- A base season is eligible for terminal validation only when governed Y7 can be generated point-in-time and at least three post-Y8 seasons are present in the retained source panel.
+- The frozen eligible base seasons are 2013, 2014 and 2015. Seasons 2013-2014 are development/training; 2015 is the untouched terminal holdout.
 - A player whose observed career reaches the source panel's final season is right-censored. Censored rows are not silently converted to completed-career zeros.
 - Point-error scoring of residual lifetime tail is restricted to uncensored rows; censored lower-bound behavior is reported separately.
 - If position-level uncensored support is too sparse to fit/score a candidate, that position remains unavailable rather than pooled or guessed.
+
+## Pre-outcome evidence-availability correction
+
+The first workflow pass stopped before model/outcome scoring because the original four-cohort Y8 design was impossible on the retained panel. A dedicated availability-only pass then proved:
+- governed Y7 anchor: eligible base seasons **2013, 2014, 2015**;
+- coarse Y8 anchor: eligible base seasons **2014, 2015**.
+
+No terminal outcome was opened in either pass. Management therefore freezes Y7 as the anchor and 2015 as the single chronological holdout rather than weakening the three-post-Y8-season observation rule.
 
 ## Tail uncertainty
 
@@ -75,7 +85,7 @@ Research outputs must include:
 - candidate disagreement / coefficient stability / position coverage;
 - residual tail error quantiles on untouched historical holdout;
 - right-censoring rate;
-- Y8 annual Forecast uncertainty provenance;
+- Y7 annual Forecast uncertainty provenance plus explicit Y8+ terminal-model uncertainty;
 - an explicit statement that cross-horizon covariance is still not authorized unless this study directly validates it.
 
 No precise cumulative career standard deviation may be emitted from independent annual variances.
