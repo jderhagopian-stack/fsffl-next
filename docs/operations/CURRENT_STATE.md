@@ -3178,3 +3178,14 @@ Interpretation:
 The prior recurring runtime-availability false-negative is no longer reproduced on this run: #359's truthful atomic-last-good handling produced a PASS while the product remained available through rebuild/publication. A post-merge Codex P2 on #359 still remains to harden the acceptance tool: missing per-surface `publication_generation_id` must fail closed rather than be filtered out. Close that tooling hole separately; it does not invalidate this observed successful runtime path.
 
 Foundation 4 draft #356 remains open at head `f6cbba6fe6ca95ef3039b1eab6fddaba49d637fa` and has not advanced since its green shadow-contract/current-authority checkpoint. It is now the more important forward-progress lane: continue live-cohort materialization, persistence/API, restart/reload/resource validation and bounded shadow acceptance.
+
+
+## 2026-10-03 — Foundation 4 #361 scoring-coordinate blocker exposed by Codex P1 closeout
+
+PR #361 advanced to head `8e79d9f86fc0522fc6973c5bbdfa78e38f5c7210`. The two specific Codex P1 findings were addressed in code:
+- lineup-capacity identity is now canonical/order-independent rather than provider-row-order-sensitive;
+- the frozen Y4-Y7 board is explicitly labeled as standard/non-PPR and no longer silently relabeled as connected-league scoring when the coordinates differ.
+
+This second correction exposes a genuine Foundation 4 product blocker for the actual FSFFL target league: the live league is 0.5 PPR, while the current frozen Y4-Y7 board is standard/non-PPR. The new code therefore correctly fails closed for FSFFL rather than aggregating incompatible Y1-Y3 and Y4-Y7 units.
+
+Foundation 4 must **not** be promoted with half-PPR merely unavailable. Before merge/hosted acceptance, complete one governed scoring-coordinate path for FSFFL: either materialize the Y4-Y7/terminal authority directly in the connected 0.5-PPR coordinate or validate a lawful exact transform that preserves compatible Shapley economics. No heuristic multiplier or silent relabeling is authorized. Add direct FSFFL 0.5-PPR acceptance coverage. This is a bounded scoring-coordinate completion issue, not a reopening of the career-tail model family/governance.
