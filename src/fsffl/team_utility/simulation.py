@@ -1136,19 +1136,21 @@ def _draft_order_common_h2h_games(
 ) -> int:
     """Return common in-group H2H games when the governed tiebreak is resolvable."""
 
-    canonical_group = tuple(sorted(team_indexes))
-    if len(canonical_group) <= 1:
+    if len(team_indexes) <= 1:
         return 0
+    group_key = 0
+    for index in team_indexes:
+        group_key |= 1 << index
     if topology_cache is not None:
-        cached = topology_cache.get(canonical_group)
+        cached = topology_cache.get(group_key)
         if cached is not None:
             return cached
 
     common_games = None
-    for index in canonical_group:
+    for index in team_indexes:
         row = h2h_games[index]
         total = 0
-        for other in canonical_group:
+        for other in team_indexes:
             if other != index:
                 total += row[other]
         if total <= 0:
@@ -1166,7 +1168,7 @@ def _draft_order_common_h2h_games(
         topology_cache is not None
         and len(topology_cache) < _DRAFT_H2H_TOPOLOGY_CACHE_MAX
     ):
-        topology_cache[canonical_group] = result
+        topology_cache[group_key] = result
     return result
 
 
@@ -1220,6 +1222,32 @@ def _regular_season_draft_order_groups(
 
         if len(record_group) == 1:
             output.append(record_group)
+            group_start = group_end
+            continue
+
+        if len(record_group) == 2:
+            first, second = record_group
+            first_games = h2h_games[first][second]
+            second_games = h2h_games[second][first]
+            h2h_resolvable = first_games > 0 and first_games == second_games
+            first_h2h = h2h_points[first][second] if h2h_resolvable else 0.0
+            second_h2h = h2h_points[second][first] if h2h_resolvable else 0.0
+            first_key = (
+                first_h2h if h2h_resolvable else 0.0,
+                points_for[first],
+            )
+            second_key = (
+                second_h2h if h2h_resolvable else 0.0,
+                points_for[second],
+            )
+            if first_key < second_key:
+                output.append([first])
+                output.append([second])
+            elif second_key < first_key:
+                output.append([second])
+                output.append([first])
+            else:
+                output.append(record_group)
             group_start = group_end
             continue
 
