@@ -62,5 +62,6 @@ jobs:
           name: foundation4-current-long-horizon-board
           path: |
             /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.csv
+            /tmp/f4/FOUNDATION4_CURRENT_TERMINAL_FEATURES_335.csv
             /tmp/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_SUMMARY.json
           retention-days: 14
