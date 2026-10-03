@@ -32,10 +32,12 @@ def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authorit
     assert "api('/api/league/dynasty-position-rooms')" in source
     assert "raw holistic career-forward reference" in source
     assert "rostered · breadth" in source
+    assert "peerRooms.filter(item=>item.room_raw===row.room_raw).length" in source
     assert "api('/api/value/long-term-intrinsic-shadow-v1')" in source
     assert "Array.isArray(longTerm?.uncertainty?.long_horizon_y4_y7)" in source
     assert "longTerm?.raw_career_forward_reference" in source
     assert "Y4–Y7 marginal Shapley" in source
+    assert "payload?.league_state_id!==requestedStateId" in source
     assert "longTermState==='ready'?'not reported':longTermState==='idle'?'not loaded':longTermState==='stale'" in source
     assert "longTermState==='stale'?'not loaded for this last-good state'" in source
     assert "longTermStatus==='stale'?'Long-Term Intrinsic is not loaded for this last-good State.'" in source
@@ -50,6 +52,7 @@ def test_dynasty_room_metric_is_owned_by_analytics_and_exact_state_route() -> No
     assert "estimate.raw_career_forward_reference" in analytics
     assert "career_forward=record.contract" in routes
     assert "evidence_state_id=record.league_state_id" in routes
+    assert 'payload["league_state_id"] = record.league_state_id' in routes
     assert "record.league_state_id != state.state_id" in routes
     assert "authoritative_for_product_ranking" not in analytics
 

@@ -32,34 +32,12 @@ def _state() -> LeagueState:
         effective_at=NOW,
         source_version="fixture-v1",
     )
-
-
-def _career_forward(state: LeagueState, values: dict[str, tuple[Position, float]]):
-    estimates = tuple(
-        CareerForwardIntrinsicPlayerEstimate.model_construct(
-            player_id=player_id,
-            position=position,
-            raw_career_forward_reference=value,
-        )
-        for player_id, (position, value) in values.items()
-    )
-    return CareerForwardIntrinsicShadowContract.model_construct(
-        evaluation_season=state.league.season,
-        input_fingerprint="fixture-fingerprint",
-        current_intrinsic_contract_version="fixture-current",
-        long_horizon_contract_version="fixture-y4-y7",
-        long_horizon_value_model_version="fixture-model",
-        career_tail_model_version="fixture-tail",
-        lineup_capacity_signature="fixture-lineup",
-        estimates=estimates,
-        player_count=len(estimates),
-        model_version=CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
-        contract_version=CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
-    )
     teams = (
         Team(team_id="alpha", league_id="league", display_name="Alpha"),
         Team(team_id="beta", league_id="league", display_name="Beta"),
     )
+
+
     team_states = (
         TeamState(
             team_id="alpha",
@@ -100,6 +78,30 @@ def _career_forward(state: LeagueState, values: dict[str, tuple[Position, float]
             PlayerState(player_id=player_id, as_of=NOW, provenance=provenance)
             for player_id in ("a1", "a2", "a3", "a4", "b1")
         ),
+    )
+
+
+def _career_forward(state: LeagueState, values: dict[str, tuple[Position, float]]):
+    estimates = tuple(
+        CareerForwardIntrinsicPlayerEstimate.model_construct(
+            player_id=player_id,
+            position=position,
+            raw_career_forward_reference=value,
+        )
+        for player_id, (position, value) in values.items()
+    )
+    return CareerForwardIntrinsicShadowContract.model_construct(
+        evaluation_season=state.league.season,
+        input_fingerprint="fixture-fingerprint",
+        current_intrinsic_contract_version="fixture-current",
+        long_horizon_contract_version="fixture-y4-y7",
+        long_horizon_value_model_version="fixture-model",
+        career_tail_model_version="fixture-tail",
+        lineup_capacity_signature="fixture-lineup",
+        estimates=estimates,
+        player_count=len(estimates),
+        model_version=CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
+        contract_version=CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
     )
 
 

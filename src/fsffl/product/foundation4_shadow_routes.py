@@ -61,7 +61,9 @@ def install_foundation4_shadow_routes(
                 status_code=503,
                 detail="Foundation 4 lifecycle completed without a holistic contract",
             )
-        return record.contract.model_dump(mode="json")
+        payload = record.contract.model_dump(mode="json")
+        payload["league_state_id"] = record.league_state_id
+        return payload
 
     @app.get("/api/league/dynasty-position-rooms")
     def dynasty_position_rooms(user_id: str = Depends(require_beta_user)):
