@@ -241,6 +241,8 @@ def test_holistic_raw_aggregation_uses_annual_phi_not_discounted_or_display_valu
     assert row.display_index_arithmetic_used is False
     assert row.market_inputs_used is False
     assert row.current_intrinsic_replaced is False
+    assert result.long_horizon_contract_version == long_term.contract_version
+    assert result.long_horizon_contract_version != long_term.forecast_contract_version
 
 
 def test_holistic_model_authority_sums_bounds_but_does_not_create_outcome_interval() -> None:
