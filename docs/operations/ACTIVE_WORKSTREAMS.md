@@ -1856,3 +1856,14 @@ Draft PR #356 is now a real implementation branch, not a placeholder. Current he
 Implemented so far: frozen Y8+ terminal artifact, lineup-signature-gated terminal consumer, holistic raw Y1-Y7 + tail aggregator, uncertainty separation and deterministic semantic fingerprinting.
 
 Still required before Foundation 4 acceptance: current-cohort runtime materialization, persistence/API wiring, restart/reload identity, resource validation, bounded review and explicit shadow acceptance. After that, execute Product Integration / Capability Rollout before Foundation 5.
+
+
+## 2026-10-03 — Active work requiring continuation
+
+### Simulation
+#359 merged the truthful atomic-last-good acceptance correction, but a post-merge Codex P2 remains: every probed presentation surface must report the expected `publication_generation_id`; missing generation IDs must fail acceptance rather than being silently excluded.
+
+#360 is merged/live and fast-paths dominant two-team future-pick ordering groups. CI is green. Required next step is one governed hosted 50k profile on exact live #360, followed by measured re-ranking of remaining Simulation hotspots. Preserve 50k/RNG/replay/model semantics.
+
+### Foundation 4
+#356 remains the active implementation PR and is green/mergeable, but has not moved past the current shadow-contract + current-authority artifact checkpoint. Continue immediately into full current-cohort runtime materialization, persistence/API, restart/reload identity, resource validation, review and explicit shadow acceptance.
