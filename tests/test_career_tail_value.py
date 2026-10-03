@@ -36,6 +36,24 @@ def _rules(*, wr_count: int = 3, sleeper_order: bool = False) -> LeagueRules:
     )
 
 
+def _features(
+    *,
+    position: Position,
+    current_points: float = 100.0,
+    prior_points: float | None = 80.0,
+) -> CareerTailFeatures:
+    return CareerTailFeatures(
+        player_id="p1",
+        position=position,
+        age_years=25.0,
+        experience_years=3.0,
+        current_points=current_points,
+        prior_points=prior_points,
+        current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+        prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+    )
+
+
 def test_frozen_terminal_signature_and_research_evidence_are_exact() -> None:
     assert lineup_capacity_signature(_rules()) == CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE
     assert lineup_capacity_signature(_rules(sleeper_order=True)) == (
@@ -51,6 +69,10 @@ def test_frozen_terminal_signature_and_research_evidence_are_exact() -> None:
     assert CAREER_TAIL_RESEARCH_ARTIFACT_ID == 11263913850
     assert CAREER_TAIL_RESEARCH_ARTIFACT_SHA256 == (
         "33158a26d50e71809cf0f38a7d479fda05ccbaa9fbd5703ba894c1cba4560537"
+    )
+    assert CAREER_TAIL_SCORING_COORDINATE == "connected_league_fantasy_points"
+    assert CAREER_TAIL_MODEL_VERSION == (
+        "career-tail-two-family-v1:fsffl-connected-scoring-recalibration-v1"
     )
 
 
