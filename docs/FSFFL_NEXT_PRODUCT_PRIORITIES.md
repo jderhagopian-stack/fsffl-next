@@ -16,7 +16,7 @@ The product should combine:
 
 ## Operating principle
 
-The project should not optimize for the number of models, dashboards, cards, or research layers completed. It should optimize for durable user value.
+The project should not optimize for the number of models, dashboards, cards, PRs, or research layers completed. It should optimize for durable user value.
 
 Every major development phase must answer two questions:
 1. Did we build the capability correctly?
@@ -101,7 +101,26 @@ Treat UI/product work and bringing existing model capabilities online as one coo
 
 The current beta should become substantially more useful before the project opens many new research families.
 
-Every major surface must answer a distinct owner question and earn its place.
+The North Star remains **SEE → UNDERSTAND → INTERACT → DRILL DEEPER**. The product should feel simple, visual, modern, mobile-first, and consumer-friendly on the surface while preserving analytical depth underneath.
+
+Every major surface must answer a distinct owner question and earn its place. Do not solve information architecture problems by simply adding more cards, charts, or jargon.
+
+## Product/UI transformation remains a first-class Phase 3 goal
+
+The aesthetic, organizational, and interaction redesign continues in parallel with model/intelligence work.
+
+Default product behavior should emphasize:
+- graphical comparison and scanning before prose;
+- obvious numerical hierarchy;
+- player/team identity;
+- compact charts, bands, bars, rings/gauges, heat maps, before/after comparisons, and distributions where they improve understanding;
+- fewer repetitive cards and long mobile lists;
+- intentional mobile layouts rather than compressed desktop layouts;
+- concise first-read interpretation with deeper methodology and provenance on drill-down;
+- consumer language by default, model terminology secondarily;
+- clear action paths from insight to deeper analysis.
+
+The canonical North Star product directive remains authoritative for visual and interaction direction. Intelligence improvements must strengthen that experience, not postpone it.
 
 ## Home — “What should I care about right now?”
 Focus on prioritized, actionable changes rather than generic summary cards.
@@ -168,6 +187,123 @@ Productionize the governed owner-intelligence stack:
 - proposal fit routed to Trade Center;
 - no fabricated rejection evidence or acceptance odds.
 
+## Canonical value architecture — three distinct value questions
+
+FSFFL should not collapse all player value into one universal number. The product should distinguish three separate economic coordinates:
+
+1. **Broad Market Value — “What does the broader dynasty market think this asset is worth?”**
+   - external consensus / exchange benchmark;
+   - format-aware and evidence-backed;
+   - reflects observed market pricing and sentiment;
+   - remains distinct from FSFFL's own fundamental estimate.
+
+2. **FSFFL Intrinsic Value — “What does FSFFL think this asset is actually worth?”**
+   - independent multi-year football/economic value;
+   - informed by Forecast-owned future production, career trajectory, development/decline, attrition, uncertainty, longevity, replacement-adjusted surplus, and defensible league-level scarcity/opportunity cost;
+   - must remain meaningfully independent from Market Value;
+   - may disagree with broader consensus by design;
+   - team-specific roster need does not belong inside this coordinate.
+
+3. **League Market Value — “What does this specific league appear to think this asset is worth?”**
+   - league-specific exchange coordinate inferred from actual league transactions and governed league-level evidence;
+   - may reflect positional premiums, pick appetite, package preferences, consolidation behavior, scarcity, liquidity, and recurring league pricing patterns;
+   - must not be confused with one specific owner's preference or one team's need.
+
+**Team Utility remains downstream and separate:** “What is this asset worth to this particular franchise in this situation?”
+
+Decision and Search should eventually exploit disagreement among Broad Market Value, FSFFL Intrinsic Value, League Market Value, and Team Utility rather than collapsing them into an opaque master score.
+
+Examples of useful disagreement:
+- Intrinsic > Broad Market > League Market can indicate a potential league-specific buy opportunity.
+- League Market > Broad Market > Intrinsic can indicate a potential sell-high environment.
+- Team Utility can then determine whether that market opportunity actually fits the focal franchise.
+
+## Projected Player Career Trajectories — first-class Forecast/product capability
+
+FSFFL should expose a governed, player-specific view of how a career is expected to develop over time rather than reducing dynasty analysis to a single current projection or age curve.
+
+The underlying trajectory belongs to **Forecast authority** and should estimate year-by-year production, survival/attrition, development/plateau/decline, and uncertainty using only empirically supported inputs. Candidate evidence includes:
+- age and NFL experience;
+- position;
+- player archetype when it can be defined and validated without circularity;
+- historical production, usage, efficiency, and statistical profile;
+- development path and career stage;
+- durability / injury history when governed point-in-time evidence and calibration support its use;
+- role, opportunity, draft/career pedigree, team/contract context, or other football evidence only where they add validated incremental signal;
+- position- and career-state-specific historical analog/cohort evidence.
+
+The end-state product should present the trajectory visually and probabilistically, not as false precision. Desired outputs include:
+- median year-by-year projected production path;
+- plausible upside/downside or percentile bands;
+- survival / meaningful-role probability where appropriate;
+- expected development, peak, plateau, and decline shape;
+- confidence/uncertainty and evidence coverage;
+- concise explanation of the major evidence driving the curve.
+
+The player-facing trajectory should not be productized as a polished curve until multi-year Forecast path/horizon consistency is sufficiently validated. Once governed, the same Forecast trajectory should feed rather than duplicate truth across:
+- FSFFL Intrinsic Value;
+- player drill-down/profile experiences;
+- My Team age/value-duration and roster-risk views;
+- Trade Center long-term consequences;
+- buy-low / sell-high and opportunity discovery;
+- rookie/development analysis;
+- aging-risk alerts;
+- future Analytics and reporting surfaces.
+
+Do not create a separate presentation-layer career model, generic age bonus/penalty, or unsupported injury/archetype adjustment. Presentation visualizes Forecast-owned trajectory truth; it does not invent it.
+
+## Decision-intelligence sequence inside Phase 3
+
+The current Decision/Value work should follow this sequence so the reason for the intrinsic-value research is not lost:
+
+### 1. Separate Decision dimensions and fail closed — foundation completed
+- near-term competitive impact and long-term franchise value remain separate dimensions;
+- market economics remain separate from both;
+- incomplete evidence must not masquerade as a comprehensive final trade disposition;
+- Simulation-backed analysis is still incomplete when required Value evidence is absent.
+
+### 2. FSFFL Intrinsic Value — current research focus
+- draft PR #131 is the canonical research workstream;
+- existing affine mapping is a control, not presumed truth;
+- benchmark transparent multi-year replacement-adjusted surplus **Model A** using strict chronological reconstruction;
+- compare candidate replacement definitions empirically;
+- preserve uncertainty, provenance, and market independence;
+- richer hybrid **Model B** remains blocked unless Model A leaves a demonstrated, identifiable residual problem;
+- no production promotion without evidence-supported promotion criteria.
+
+### 3. Strategic conflict resolution — next after intrinsic foundation
+Interpret cases where a deal helps now but hurts long-term value, or vice versa.
+- calculated competitive state and optional owner horizon may shape interpretation;
+- strategic posture remains owner agency, not a replacement for calculated state;
+- do not create a crude contender multiplier or opaque weighted master score;
+- outputs should be explainable in plain English, e.g. “strong near-term gain, moderate long-term loss.”
+
+### 4. Bounded Trade Grades
+After the underlying dimensions are mature enough:
+- provide user-friendly bounded grades/ranges with visible confidence/evidence completeness;
+- grades summarize authoritative Decision dimensions; they do not create new model truth;
+- uncertainty should widen ranges/lower confidence rather than erase useful guidance.
+
+### 5. Directional Owner Intelligence
+Use actual Behavioral evidence to improve negotiation guidance:
+- historical owner tendencies may inform approach, package shape, and proposal fit;
+- avoid fabricated acceptance probabilities;
+- confidence, recency, coverage, and stability remain visible.
+
+### 6. League Market Value
+After the Intrinsic Value foundation is sufficiently governed:
+- build a league-level pricing coordinate using historical league transactions and other admissible league evidence;
+- separate persistent league pricing behavior from one owner's idiosyncratic preference;
+- preserve Broad Market Value and Intrinsic Value as independent reference coordinates.
+
+### 7. Search/Decision exploitation
+Trade Finder and Trade Center should use the value-coordinate disagreements to identify and explain opportunities:
+- buy-low / sell-high candidates;
+- league-specific mispricing;
+- premium targets where FSFFL believes market/league price understates football value;
+- overvalued assets where league pricing materially exceeds FSFFL intrinsic value;
+- only then apply Team Utility and bilateral Decision consequences.
+
 ## Team/Owner-Adjusted Value
 Bring the existing governed contract into practical use only when evidence supports it:
 - universal Market Value remains immutable baseline truth;
@@ -178,12 +314,15 @@ Bring the existing governed contract into practical use only when evidence suppo
 - no hidden default coefficient simply because a concept “should matter.”
 
 ### Phase 3 exit gate
-Core product work is not done because the screens look better. Before moving primary product focus to major new historical experiences, verify that:
+Core product work is not done because the screens look better or because backend models exist. Before moving primary product focus to major new historical experiences, verify that:
 - each core surface answers a clearly different question;
-- a user can understand the primary view without reading model documentation;
+- the default experience is visually understandable without reading model documentation;
+- the North Star visual/interaction grammar is recognizably present across major surfaces;
 - advanced provenance/method detail is available but secondary;
+- Broad Market, FSFFL Intrinsic, League Market, and Team Utility are conceptually and technically separated where available;
+- governed multi-year player trajectories can be exposed when Forecast path/horizon consistency is sufficiently validated, with uncertainty rather than false precision;
 - the live beta produces recognizable, useful Behavioral owner insights where evidence exists;
-- Trade Finder regularly surfaces credible acquisition paths beyond trivial Cardinal matches;
+- Trade Finder regularly surfaces credible acquisition paths beyond trivial cardinal matches;
 - Trade Center explains why a deal helps/hurts each side in plain English;
 - repeated dashboard cards and redundant metrics have been materially reduced;
 - mobile layouts are functional and intentionally designed, not merely compressed desktop layouts;
@@ -230,6 +369,11 @@ Direction:
 - parallelize independent provider work where safe;
 - optimize without reducing model fidelity.
 
+Current unresolved commercial concern:
+- fresh high-fidelity Simulation remains expensive, including 50,000-run scenarios;
+- optimize the Simulation kernel/runtime, caching, reuse, orchestration, and persistence without reducing requested simulation fidelity;
+- exact-repeat reuse is useful but does not eliminate the need to reduce genuinely fresh analysis latency.
+
 Performance work should target measured bottlenecks rather than broad speculative rewrites.
 
 ---
@@ -244,7 +388,9 @@ Current focus includes diagnosing compressed expected-win distributions by separ
 - fallback/projection coverage;
 - expected-win spread.
 
-Do not “fix” compressed results with arbitrary presentation multipliers. Correct the earliest authoritative layer where evidence shows the distortion originates.
+Multi-year Forecast validation also includes trajectory-shape / horizon-consistency calibration so player-specific career paths remain reliable as information is recursively propagated into farther seasons.
+
+Do not “fix” compressed results or multi-year trajectory problems with arbitrary presentation multipliers. Correct the earliest authoritative layer where evidence shows the distortion originates.
 
 ---
 
@@ -264,6 +410,8 @@ Every material parameter should have:
 Do not replace parameters solely by intuition, and do not force known effects to zero solely because perfect coefficients are unavailable.
 
 Avoid opening broad new parameter-research families when the current product phase has unresolved high-impact usability or reliability problems, unless the research is needed to fix one of those problems.
+
+The intrinsic-value work in PR #131 is justified within Phase 3 because it repairs a material missing Decision dimension and directly supports Trade Finder / Trade Center usefulness.
 
 ---
 
@@ -377,6 +525,8 @@ Includes:
 - cross-league analytics;
 - mobile adaptation.
 
+The three-value architecture should become a major Analytics lens here, including Broad Market vs FSFFL Intrinsic vs League Market rankings and residuals.
+
 The terminal presents intelligence; it does not create model truth.
 
 ---
@@ -411,6 +561,7 @@ Possible learned evidence includes:
 - draft outcomes;
 - roster trajectories;
 - realized fantasy outcomes;
+- league-specific pricing tendencies;
 - eventual acceptance / negotiation priors where valid observed evidence exists.
 
 Governance:
@@ -447,6 +598,8 @@ Non-negotiables:
 - Presentation never calculates model truth.
 - Search never invents Value/Decision truth.
 - Behavioral Intelligence does not mutate universal Market Value directly.
+- Broad Market Value, FSFFL Intrinsic Value, League Market Value, and Team Utility remain distinct coordinates/decision inputs and must not be collapsed into one hidden universal score.
+- League Market Value describes league-level exchange behavior; owner-specific preference belongs in Behavioral / owner-adjusted context.
 - Simulation owns stochastic competitive outcomes.
 - Decision owns bilateral consequences, legality, package economics, materiality, and disposition.
 - Overlapping signals must be controlled/residualized/attributed once.
@@ -478,15 +631,18 @@ Rules:
 
 1. Finish private-beta/runtime stabilization.
 2. Finish Persistent League State & Incremental Sync and prove restore/revalidation behavior.
-3. Run the coordinated Core Product Usefulness + Existing Intelligence Online phase.
-4. Build Historical Intelligence after the core live beta is demonstrably useful.
-5. Build League History, Lore, Franchise Timeline, and personality experiences.
-6. Build FSFFL Publications as polished narrative products over governed outputs.
-7. Expand Analytics / investigation surfaces.
-8. Add scenario / future experiences.
-9. Continue Product Validation, Performance, Forecast/Simulation validation, and Parameter Recalibration across all phases.
-10. Grow the longer-term FSFFL Evidence Warehouse and proprietary intelligence flywheel.
-11. Complete commercialization hardening before broad launch.
+3. Continue the coordinated Phase 3 program: North Star UI/product transformation plus existing intelligence online.
+4. Within Phase 3 Decision intelligence: complete Intrinsic Value Model A research/benchmarking, including governed multi-year Forecast trajectory/horizon validation; then strategic conflict resolution, bounded Trade Grades, directional Owner Intelligence, and League Market Value.
+5. Productize player-specific career trajectories once the Forecast path is sufficiently validated, and connect the same governed trajectory into Intrinsic Value, player/team views, Trade Center, and opportunity discovery rather than creating duplicate truth.
+6. Connect Broad Market / Intrinsic / League Market disagreement to Trade Finder, Trade Center, and Team Utility while continuing commercial-latency work.
+7. Build Historical Intelligence after the core live beta is demonstrably useful.
+8. Build League History, Lore, Franchise Timeline, and personality experiences.
+9. Build FSFFL Publications as polished narrative products over governed outputs.
+10. Expand Analytics / investigation surfaces.
+11. Add scenario / future experiences.
+12. Continue Product Validation, Performance, Forecast/Simulation validation, and Parameter Recalibration across all phases.
+13. Grow the longer-term FSFFL Evidence Warehouse and proprietary intelligence flywheel.
+14. Complete commercialization hardening before broad launch.
 
 ---
 
