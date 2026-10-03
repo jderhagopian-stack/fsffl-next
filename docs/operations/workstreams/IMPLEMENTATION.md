@@ -2635,3 +2635,16 @@ First remove unnecessary recomputation, duplicate materialization/persistence, o
 ### NEXT — Product Integration / Capability Rollout
 After the performance tranche, continue directly into the approved one-user private-beta rollout of accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic across Home / Franchise / League / Market / More. Do not begin Foundation 5 first.
 
+## 2026-10-03 — Intrinsic runtime performance CLOSED; Product Integration ACTIVE
+
+Intrinsic runtime-performance tranche is **CLOSED**.
+
+Accepted evidence:
+- #363 merged/live and changed-State `restored_refresh` improved `building_intrinsic` from **27.610s** to **14.398s** (~47.9% reduction) while full runtime availability passed at **409,612,288 bytes** peak RSS, below the **429,496,720-byte** engineering budget;
+- the changed-State path restored compatible Intrinsic rather than rebuilding Shapley economics;
+- narrow post-merge Codex P2 was closed by #364: the semantic Future Forecast reuse fingerprint now includes the coverage/provenance counts emitted by the cached contract, preventing stale coverage audit provenance without changing Intrinsic economics;
+- #364 exact-head focused lanes passed; the first full-CI attempt had one unrelated resource-boundary timing-race failure while 2,121 tests passed, and an exact same-head rerun passed;
+- remaining Intrinsic cost is not the dominant refresh bottleneck: the same hosted acceptance measured Simulation ~68.691s, attaching/publishing ~60.297s and State refresh ~23.692s versus Intrinsic ~14.398s. No further avoidable Intrinsic recomputation was identified that justifies additional model/runtime surgery now.
+
+**ACTIVE: Product Integration / Capability Rollout.** First slice is League Atlas consumption of already-published accepted capability contracts: replayable Simulation representative futures and origin-aware future-pick outlook/value. Preserve authority labels and progressive disclosure; do not create new economics, probability mass, composite scores or recommendations. Holistic Long-Term Intrinsic exposure follows through the governed Value/Player Intelligence product path.
+
