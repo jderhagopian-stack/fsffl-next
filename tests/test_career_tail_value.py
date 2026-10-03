@@ -6,9 +6,11 @@ from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterS
 from fsffl.value.career_tail import (
     CAREER_TAIL_LEGACY_RESEARCH_LINEUP_CAPACITY_SIGNATURE,
     CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE,
+    CAREER_TAIL_MODEL_VERSION,
     CAREER_TAIL_RESEARCH_ARTIFACT_ID,
     CAREER_TAIL_RESEARCH_ARTIFACT_SHA256,
     CAREER_TAIL_RESEARCH_RUN_ID,
+    CAREER_TAIL_SCORING_COORDINATE,
     CareerTailFeatures,
     build_career_tail_authority,
     lineup_capacity_signature,
@@ -45,29 +47,22 @@ def test_frozen_terminal_signature_and_research_evidence_are_exact() -> None:
     assert CAREER_TAIL_LEGACY_RESEARCH_LINEUP_CAPACITY_SIGNATURE == (
         "fe6d07a77a7f11cd61e1af476e9d6b3fe89b7e59c6aecdeab5eb61c991b21349"
     )
-    assert CAREER_TAIL_RESEARCH_RUN_ID == 37086000162
-    assert CAREER_TAIL_RESEARCH_ARTIFACT_ID == 11260487964
+    assert CAREER_TAIL_RESEARCH_RUN_ID == 37096263982
+    assert CAREER_TAIL_RESEARCH_ARTIFACT_ID == 11263913850
     assert CAREER_TAIL_RESEARCH_ARTIFACT_SHA256 == (
-        "505ba72e71ddcb868c1673386f2a516d64e1a087fe2d8d9807572cb24cd99aa6"
+        "33158a26d50e71809cf0f38a7d479fda05ccbaa9fbd5703ba894c1cba4560537"
     )
 
 
 def test_terminal_consumer_reproduces_frozen_duan_smearing_models() -> None:
-    features = CareerTailFeatures(
-        player_id="p1",
-        position=Position.WR,
-        age_years=25.0,
-        experience_years=3.0,
-        current_points=100.0,
-        prior_points=80.0,
-    )
+    features = _features(position=Position.WR)
     result = build_career_tail_authority(features, rules=_rules())
 
     direct, two_part = result.model_predictions
     assert direct.model_id == "direct_ridge"
-    assert direct.central == pytest.approx(18.699463819835348)
+    assert direct.central == pytest.approx(22.726148609726526)
     assert two_part.model_id == "two_part_state"
-    assert two_part.central == pytest.approx(41.14841166841441)
+    assert two_part.central == pytest.approx(49.55368760450343)
     assert result.model_authority_low == pytest.approx(direct.central)
     assert result.model_authority_high == pytest.approx(two_part.central)
     assert result.reference_center == pytest.approx(
@@ -84,25 +79,11 @@ def test_terminal_consumer_reproduces_frozen_duan_smearing_models() -> None:
 
 def test_prior_missing_is_explicit_feature_not_imputed_as_observed_zero() -> None:
     missing = build_career_tail_authority(
-        CareerTailFeatures(
-            player_id="p1",
-            position=Position.RB,
-            age_years=25.0,
-            experience_years=3.0,
-            current_points=100.0,
-            prior_points=None,
-        ),
+        _features(position=Position.RB, prior_points=None),
         rules=_rules(),
     )
     observed_zero = build_career_tail_authority(
-        CareerTailFeatures(
-            player_id="p1",
-            position=Position.RB,
-            age_years=25.0,
-            experience_years=3.0,
-            current_points=100.0,
-            prior_points=0.0,
-        ),
+        _features(position=Position.RB, prior_points=0.0),
         rules=_rules(),
     )
     assert missing.features.feature_vector[-1] == 1.0
@@ -113,6 +94,15 @@ def test_prior_missing_is_explicit_feature_not_imputed_as_observed_zero() -> Non
 def test_terminal_consumer_fails_closed_on_different_lineup_capacity() -> None:
     with pytest.raises(ValueError, match="lineup-capacity signature"):
         build_career_tail_authority(
+            _features(position=Position.WR),
+            rules=_rules(wr_count=2),
+        )
+
+
+
+def test_terminal_consumer_rejects_pre_recalibration_point_coordinate() -> None:
+    with pytest.raises(ValueError, match="outside the governed FSFFL scoring coordinate"):
+        build_career_tail_authority(
             CareerTailFeatures(
                 player_id="p1",
                 position=Position.WR,
@@ -121,5 +111,5 @@ def test_terminal_consumer_fails_closed_on_different_lineup_capacity() -> None:
                 current_points=100.0,
                 prior_points=80.0,
             ),
-            rules=_rules(wr_count=2),
+            rules=_rules(),
         )
