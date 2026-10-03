@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import importlib.util
 import json
 from pathlib import Path
@@ -232,6 +233,22 @@ def main() -> None:
         out / "FOUNDATION4_CURRENT_TERMINAL_FEATURES_335.csv",
         index=False,
     )
+    long_rows = result.where(pd.notna(result), None).to_dict(orient="records")
+    terminal_json_rows = terminal.where(pd.notna(terminal), None).to_dict(orient="records")
+    with gzip.open(
+        out / "FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.json.gz",
+        "wt",
+        encoding="utf-8",
+        compresslevel=9,
+    ) as handle:
+        json.dump(long_rows, handle, sort_keys=True, separators=(",", ":"))
+    with gzip.open(
+        out / "FOUNDATION4_CURRENT_TERMINAL_FEATURES_335.json.gz",
+        "wt",
+        encoding="utf-8",
+        compresslevel=9,
+    ) as handle:
+        json.dump(terminal_json_rows, handle, sort_keys=True, separators=(",", ":"))
     summary = {
         "authority": "frozen_accepted_y4_y7_policy_materialization",
         "player_count": 335,
