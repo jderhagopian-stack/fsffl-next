@@ -887,10 +887,9 @@ def _playoff_distributions(
     raise ValueError("configured championship simulation requires playoff scoring evidence")
 
 
-def _playoff_game(left, right, playoff_scoring, week, gauss):
+def _playoff_game_from_week_scoring(left, right, week_scoring, gauss):
     left_idx, left_seed = left
     right_idx, right_seed = right
-    week_scoring = playoff_scoring[week]
     left_mean, left_std = week_scoring[left_idx]
     right_mean, right_std = week_scoring[right_idx]
     left_points = left_mean if left_std == 0 else max(0.0, gauss(left_mean, left_std))
@@ -902,29 +901,13 @@ def _playoff_game(left, right, playoff_scoring, week, gauss):
     return left if left_seed < right_seed else right
 
 
-def _simulate_configured_champion(standings, playoff_rules, playoff_scoring, gauss):
-    if playoff_rules is None or playoff_rules.simulation_unavailability_reason() is not None:
-        return None
-    seeds = {
-        seed: (standings[seed - 1], seed)
-        for seed in range(1, playoff_rules.playoff_team_count + 1)
-    }
-    winners = {}
-    for matchup in playoff_rules.canonical_execution_matchups():
-        left = (
-            seeds[matchup.participant_a.seed_number]
-            if matchup.participant_a.seed_number is not None
-            else winners[matchup.participant_a.winner_of_matchup_id]
-        )
-        right = (
-            seeds[matchup.participant_b.seed_number]
-            if matchup.participant_b.seed_number is not None
-            else winners[matchup.participant_b.winner_of_matchup_id]
-        )
-        winners[matchup.matchup_id] = _playoff_game(
-            left, right, playoff_scoring, matchup.week, gauss
-        )
-    return winners[playoff_rules.championship_matchup_id][0]
+def _playoff_game(left, right, playoff_scoring, week, gauss):
+    return _playoff_game_from_week_scoring(
+        left,
+        right,
+        playoff_scoring[week],
+        gauss,
+    )
 
 
 def _playoff_game_result(left, right, playoff_scoring, week, gauss):
@@ -933,78 +916,118 @@ def _playoff_game_result(left, right, playoff_scoring, week, gauss):
     return winner, loser
 
 
-def _simulate_configured_playoff_outcomes(
-    standings,
+def _compile_playoff_execution_plan(
     playoff_rules,
     playoff_scoring,
+    canonical_matchups,
+):
+    """Compile one immutable bracket into compact trial-loop references.
+
+    Positive participant refs are original seed numbers. Negative refs identify
+    a previously executed matchup by zero-based plan index. Canonical matchup
+    order and side order are inherited exactly from LeaguePlayoffRules.
+    """
+
+    if playoff_rules is None or playoff_scoring is None or not canonical_matchups:
+        raise ValueError("configured championship simulation requires governed playoff structure")
+    matchup_indexes = {
+        matchup.matchup_id: index
+        for index, matchup in enumerate(canonical_matchups)
+    }
+
+    def participant_ref(reference) -> int:
+        if reference.seed_number is not None:
+            return reference.seed_number
+        source_index = matchup_indexes[reference.winner_of_matchup_id]
+        return -(source_index + 1)
+
+    games = tuple(
+        (
+            participant_ref(matchup.participant_a),
+            participant_ref(matchup.participant_b),
+            matchup.round_number,
+            playoff_scoring[matchup.week],
+        )
+        for matchup in canonical_matchups
+    )
+    return (
+        playoff_rules.playoff_team_count,
+        games,
+        matchup_indexes[playoff_rules.championship_matchup_id],
+    )
+
+
+def _compiled_playoff_participant(reference, seeds, winners):
+    return seeds[reference - 1] if reference > 0 else winners[-reference - 1]
+
+
+def _simulate_compiled_champion(standings, execution_plan, gauss):
+    playoff_team_count, games, championship_index = execution_plan
+    seeds = [
+        (standings[index], index + 1)
+        for index in range(playoff_team_count)
+    ]
+    winners = [None] * len(games)
+    for game_index, (left_ref, right_ref, _round_number, week_scoring) in enumerate(games):
+        left = _compiled_playoff_participant(left_ref, seeds, winners)
+        right = _compiled_playoff_participant(right_ref, seeds, winners)
+        winners[game_index] = _playoff_game_from_week_scoring(
+            left,
+            right,
+            week_scoring,
+            gauss,
+        )
+    return winners[championship_index][0]
+
+
+def _simulate_compiled_playoff_outcomes(
+    standings,
+    execution_plan,
     gauss,
     *,
     profile_timings: list[float] | None = None,
 ) -> tuple[int, dict[int, int]]:
-    """Return champion plus each loser's canonical elimination round."""
+    """Execute a precompiled bracket and return champion plus elimination rounds."""
 
     helper_started = _profile_wall_clock() if profile_timings is not None else None
+    playoff_team_count, games, championship_index = execution_plan
 
     phase_started = _profile_wall_clock() if profile_timings is not None else None
-    if (
-        playoff_rules is None
-        or playoff_rules.simulation_unavailability_reason() is not None
-    ):
-        raise ValueError(
-            "future-pick playoff elimination requires governed playoff structure"
-        )
-    if phase_started is not None:
-        profile_timings[0] += _profile_wall_clock() - phase_started
-
-    phase_started = _profile_wall_clock() if profile_timings is not None else None
-    seeds = {
-        seed: (standings[seed - 1], seed)
-        for seed in range(1, playoff_rules.playoff_team_count + 1)
-    }
+    seeds = [
+        (standings[index], index + 1)
+        for index in range(playoff_team_count)
+    ]
+    winners = [None] * len(games)
+    elimination_round: dict[int, int] = {}
     if phase_started is not None:
         profile_timings[1] += _profile_wall_clock() - phase_started
 
-    phase_started = _profile_wall_clock() if profile_timings is not None else None
-    execution_matchups = playoff_rules.canonical_execution_matchups()
-    if phase_started is not None:
-        profile_timings[2] += _profile_wall_clock() - phase_started
-
-    winners = {}
-    elimination_round: dict[int, int] = {}
-    for matchup in execution_matchups:
+    for game_index, (left_ref, right_ref, round_number, week_scoring) in enumerate(games):
         phase_started = _profile_wall_clock() if profile_timings is not None else None
-        left = (
-            seeds[matchup.participant_a.seed_number]
-            if matchup.participant_a.seed_number is not None
-            else winners[matchup.participant_a.winner_of_matchup_id]
-        )
-        right = (
-            seeds[matchup.participant_b.seed_number]
-            if matchup.participant_b.seed_number is not None
-            else winners[matchup.participant_b.winner_of_matchup_id]
-        )
+        left = _compiled_playoff_participant(left_ref, seeds, winners)
+        right = _compiled_playoff_participant(right_ref, seeds, winners)
         if phase_started is not None:
             profile_timings[3] += _profile_wall_clock() - phase_started
 
         phase_started = _profile_wall_clock() if profile_timings is not None else None
-        winner, loser = _playoff_game_result(
+        winner = _playoff_game_from_week_scoring(
             left,
             right,
-            playoff_scoring,
-            matchup.week,
+            week_scoring,
             gauss,
         )
+        loser = right if winner == left else left
         if phase_started is not None:
             profile_timings[4] += _profile_wall_clock() - phase_started
 
         phase_started = _profile_wall_clock() if profile_timings is not None else None
-        winners[matchup.matchup_id] = winner
-        elimination_round[loser[0]] = matchup.round_number
+        winners[game_index] = winner
+        elimination_round[loser[0]] = round_number
         if phase_started is not None:
             profile_timings[5] += _profile_wall_clock() - phase_started
 
     phase_started = _profile_wall_clock() if profile_timings is not None else None
-    champion = winners[playoff_rules.championship_matchup_id][0]
+    champion = winners[championship_index][0]
     if phase_started is not None:
         profile_timings[6] += _profile_wall_clock() - phase_started
     if helper_started is not None:
@@ -1696,7 +1719,18 @@ def simulate_regular_season(
     common_world_wall_seconds = 0.0
     standings_wall_seconds = 0.0
     playoff_wall_seconds = 0.0
-    postseason_profile_timings = [0.0] * 8 if profile_enabled else None
+    postseason_detail_profile_enabled = (
+        profile_enabled
+        and os.getenv(
+            "FSFFL_SIMULATION_POSTSEASON_PROFILE_DETAIL",
+            "",
+        ).strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
+    postseason_profile_timings = (
+        [0.0] * 8 if postseason_detail_profile_enabled else None
+    )
+    postseason_compile_wall_seconds = 0.0
     future_pick_ordering_wall_seconds = 0.0
     multiverse_loop_wall_seconds = 0.0
     future_pick_result_wall_seconds = 0.0
@@ -1755,6 +1789,24 @@ def simulate_regular_season(
         if championship_supported
         else None
     )
+    canonical_playoff_matchups = ()
+    playoff_execution_plan = None
+    if championship_supported and request.playoff_rules is not None and playoff_scoring is not None:
+        postseason_compile_started = (
+            _profile_wall_clock() if profile_enabled else None
+        )
+        canonical_playoff_matchups = (
+            request.playoff_rules.canonical_execution_matchups()
+        )
+        playoff_execution_plan = _compile_playoff_execution_plan(
+            request.playoff_rules,
+            playoff_scoring,
+            canonical_playoff_matchups,
+        )
+        if postseason_compile_started is not None:
+            postseason_compile_wall_seconds = (
+                _profile_wall_clock() - postseason_compile_started
+            )
 
     future_pick_slot_counts: list[list[float]] | None = None
     if future_pick_policy is not None:
@@ -1859,7 +1911,7 @@ def simulate_regular_season(
                 "playoff_rules": request.playoff_rules.model_dump(mode="json"),
                 "canonical_execution_matchups": [
                     item.model_dump(mode="json")
-                    for item in request.playoff_rules.canonical_execution_matchups()
+                    for item in canonical_playoff_matchups
                 ],
                 "postseason_randomness_by_week": postseason_randomness_by_week,
             }
@@ -2151,17 +2203,18 @@ def simulate_regular_season(
                 )
             elif future_pick_slot_counts is not None and future_pick_policy is not None:
                 champion, playoff_elimination_rounds = (
-                    _simulate_configured_playoff_outcomes(
+                    _simulate_compiled_playoff_outcomes(
                         standings,
-                        request.playoff_rules,
-                        playoff_scoring,
+                        playoff_execution_plan,
                         playoff_gauss,
                         profile_timings=postseason_profile_timings,
                     )
                 )
             else:
-                champion = _simulate_configured_champion(
-                    standings, request.playoff_rules, playoff_scoring, playoff_gauss
+                champion = _simulate_compiled_champion(
+                    standings,
+                    playoff_execution_plan,
+                    playoff_gauss,
                 )
             champion_count[champion] += 1
         else:
@@ -2724,12 +2777,13 @@ def simulate_regular_season(
             )
             _logger.info(
                 "FSFFL simulation profile phase=postseason_exact "
-                "playoff_wall=%.6f helper_wall=%.6f validation_wall=%.6f "
+                "playoff_wall=%.6f compile_once_wall=%.6f helper_wall=%.6f validation_wall=%.6f "
                 "seed_setup_wall=%.6f bracket_canonicalize_wall=%.6f "
                 "participant_resolution_wall=%.6f game_execution_wall=%.6f "
                 "bookkeeping_wall=%.6f result_lookup_wall=%.6f "
                 "helper_residual_wall=%.6f outer_residual_wall=%.6f",
                 playoff_wall_seconds,
+                postseason_compile_wall_seconds,
                 postseason_helper_wall,
                 postseason_validate_wall,
                 postseason_seed_setup_wall,
