@@ -25,6 +25,7 @@ from fsffl.value.long_term_intrinsic import (
     LONG_TERM_INTRINSIC_MODEL_VERSION,
     LongTermIntrinsicShadowContract,
     build_long_term_intrinsic_shadow,
+    long_term_intrinsic_input_fingerprint,
 )
 from fsffl.value.shapley_intrinsic_contract import (
     ShapleyIntrinsicAvailability,
@@ -165,25 +166,14 @@ class Foundation4CareerForwardShadowLoader:
         )
         if record is None:
             return None
+        payload = dict(record.payload)
+        dependency = payload.pop("_foundation4_dependency_fingerprint", None)
+        if dependency != fingerprint:
+            return None
         try:
-            contract = CareerForwardIntrinsicShadowContract.model_validate(
-                dict(record.payload)
-            )
+            contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
         except (TypeError, ValueError):
             return None
-        if contract.input_fingerprint != record.key.input_fingerprint:
-            # The artifact key is a dependency fingerprint while the contract
-            # fingerprint is the final composed-content fingerprint. They are
-            # intentionally distinct, so compare via persisted dependency metadata.
-            dependency = record.payload.get("_foundation4_dependency_fingerprint")
-            if dependency != fingerprint:
-                return None
-            payload = dict(record.payload)
-            payload.pop("_foundation4_dependency_fingerprint", None)
-            try:
-                contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
-            except (TypeError, ValueError):
-                return None
         with self._lock:
             self._cached_user_id = context.user_id
             self._cached_fingerprint = fingerprint
@@ -197,11 +187,19 @@ class Foundation4CareerForwardShadowLoader:
     ) -> LongTermIntrinsicShadowContract | None:
         if self._persistence_store is None or context.league_state is None:
             return None
-        record = self._persistence_store.get_latest_reusable_artifact(
-            artifact_kind=FOUNDATION4_Y4_Y7_ARTIFACT_KIND,
-            scope_kind=FOUNDATION4_SCOPE_KIND,
-            scope_id=context.league_state.league.league_id,
-            model_version=LONG_TERM_INTRINSIC_MODEL_VERSION,
+        forecast = provide_foundation4_long_horizon_forecast_contract()
+        expected_input = long_term_intrinsic_input_fingerprint(
+            forecast,
+            context.league_state.league.rules,
+        )
+        record = self._persistence_store.get_reusable_artifact(
+            ArtifactKey(
+                artifact_kind=FOUNDATION4_Y4_Y7_ARTIFACT_KIND,
+                scope_kind=FOUNDATION4_SCOPE_KIND,
+                scope_id=context.league_state.league.league_id,
+                input_fingerprint=expected_input,
+                model_version=LONG_TERM_INTRINSIC_MODEL_VERSION,
+            )
         )
         if record is None:
             return None
