@@ -16,6 +16,7 @@ from fsffl.product.foundation4_shadow_inputs import (
     FOUNDATION4_CURRENT_COHORT_SIZE,
     provide_foundation4_terminal_features,
 )
+from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 from fsffl.product.foundation4_shadow_routes import (
     FOUNDATION4_CAREER_FORWARD_ENDPOINT,
     FOUNDATION4_Y4_Y7_ENDPOINT,
@@ -32,6 +33,7 @@ from fsffl.state.models import (
     LeagueState,
     LineupRequirement,
     RosterSlot,
+    ScoringRule,
 )
 from fsffl.value.shapley_intrinsic_contract import (
     CompletedSourceFactProvenance,
@@ -76,17 +78,17 @@ def _rules() -> LeagueRules:
             LineupRequirement(slot=RosterSlot.FLEX, count=1),
             LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
         ),
-        scoring=(),
+        scoring=FROZEN_I1_STANDARD_SCORING,
     )
 
 
-def _context() -> UserRuntimeContext:
+def _context(*, rules: LeagueRules | None = None) -> UserRuntimeContext:
     state = LeagueState(
         league=League(
             league_id="sleeper:foundation4-test",
             name="Foundation 4 Test",
             season=2026,
-            rules=_rules(),
+            rules=rules or _rules(),
         ),
         as_of=datetime(2026, 10, 2, 12, 0, tzinfo=UTC),
         teams=(),
@@ -167,6 +169,52 @@ def _loader(persistence, calls):
         current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
         persistence_store=persistence,
     )
+
+
+def test_live_sleeper_lineup_order_matches_frozen_terminal_capacity_signature() -> None:
+    rules = _rules().model_copy(
+        update={
+            "lineup": tuple(sorted(_rules().lineup, key=lambda row: row.slot.value))
+        }
+    )
+    persistence = MemoryPersistence()
+    calls = []
+    loader = _loader(persistence, calls)
+
+    contract = loader(_context(rules=rules))
+
+    assert contract.player_count == FOUNDATION4_CURRENT_COHORT_SIZE
+    assert calls == ["current"]
+
+
+@pytest.mark.parametrize(
+    "scoring",
+    (
+        FROZEN_I1_STANDARD_SCORING
+        + (ScoringRule(stat="rec", points=0.5),),
+        tuple(
+            ScoringRule(
+                stat=row.stat,
+                points=6.0 if row.stat == "pass_td" else row.points,
+            )
+            for row in FROZEN_I1_STANDARD_SCORING
+        ),
+    ),
+)
+def test_runtime_fails_closed_before_aggregating_incompatible_scoring(scoring) -> None:
+    persistence = MemoryPersistence()
+    calls = []
+    loader = _loader(persistence, calls)
+    rules = _rules().model_copy(update={"scoring": scoring})
+
+    with pytest.raises(
+        ValueError,
+        match="no governed Foundation 4 scoring transform",
+    ):
+        loader(_context(rules=rules))
+
+    assert calls == []
+    assert persistence.artifacts == []
 
 
 @pytest.fixture(scope="module")
