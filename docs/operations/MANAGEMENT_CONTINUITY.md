@@ -516,3 +516,19 @@ Hosted benchmark status:
 - therefore **no #353 hosted 50k benchmark is yet valid**. Do not infer savings from CI or local structure and do not advance team-origin ordering until the governed hosted exact profile lands.
 
 Next executable action: let Render resolve/cancel the stuck deployment lane, verify exact #353 is live, run one governed 50k exact profile, compare combined batch schedule-product + residual H2H cost and kernel/full-Simulation wall time against the accepted #351 baseline, then advance to team-origin ordering only if H2H has reached diminishing returns.
+
+
+## 2026-10-03 — Management continuity checkpoint: performance + Foundation 4 + rollout
+
+Current management intent:
+
+- Keep Simulation authority at **50,000**; do not reopen trial-count/RNG/model semantics.
+- Postseason optimization is accepted. H2H optimization is also materially proven in production: **20.355s -> 2.528s**, with the exact kernel now **43.487s** on the representative governed run.
+- The next measured Simulation target is **team-origin future-pick ordering (~17.440s)** via PR #357.
+- Do not declare H2H memory-safety closed until the post-merge #355 Codex P2 is fixed: release/reuse chunk storage so old + new dense H2H chunks/baselines cannot overlap beyond the intended bound.
+- The runtime-availability acceptance failure observed after the successful profile is a narrow lifecycle/acceptance issue to root-cause separately; it does not reopen accepted Simulation semantics.
+- Foundation 4 career-tail governance #352 is accepted. Empty draft #356 was closed and is not substantive implementation. Start the real holistic career-forward shadow implementation from current main.
+- Product definition remains: **Current Intrinsic = separate Y1-Y3 lens; Long-Term Intrinsic = holistic career-forward value from today across all future years**, built from compatible raw economics rather than display-index arithmetic.
+- After Foundation 4 passes shadow/persistence/API/resource acceptance, **pause the foundation-only cadence for one Product Integration / Capability Rollout tranche**. Put the accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic into the existing private-beta UI for the sole current user; use physical iPhone/Safari acceptance for the interaction/presentation change.
+- Then continue to Foundation 5 PIT historical-market evidence while incorporating product feedback.
+- Keep canonical `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, `MANAGEMENT_CONTINUITY.md` and the relevant workstream file updated at each acceptance/target transition; do not rely on chat history as durable authority.
