@@ -1835,3 +1835,24 @@ Next executable implementation:
 6. bounded review/acceptance.
 
 After Foundation 4 acceptance, run the **Product Integration / Capability Rollout** tranche before Foundation 5: expose accepted Simulation 2.0, origin-aware pick and holistic Long-Term Intrinsic capabilities to the sole private-beta user using the existing product surfaces, then continue to PIT historical-market evidence.
+
+
+## 2026-10-03 — ACTIVE checkpoint after #357/#358
+
+### Simulation performance
+#357 is merged and its hosted 50k profile reduced team-origin future-pick ordering from **17.440s -> 11.593s** (~33.5%). The exact kernel measured **42.895s** on that run. #358 is merged/live and closes the H2H chunk-lifetime memory-bound P2; CI/focused regression are green.
+
+Immediate Simulation actions:
+1. run one clean governed 50k profile on live #358;
+2. verify exact outputs/replay identity and bounded RSS remain intact;
+3. root-cause the recurring runtime-availability acceptance failure narrowly (last-good serving during a newer working generation);
+4. only then choose any further performance target from the new measured profile.
+
+Do not lower 50k or reopen RNG/model semantics.
+
+### Foundation 4
+Draft PR #356 is now a real implementation branch, not a placeholder. Current head `f6cbba6fe6ca95ef3039b1eab6fddaba49d637fa` is mergeable and green on CI + PR164. The new CI `foundation4-current-long-horizon` job also passed and emitted artifact **11261836244**.
+
+Implemented so far: frozen Y8+ terminal artifact, lineup-signature-gated terminal consumer, holistic raw Y1-Y7 + tail aggregator, uncertainty separation and deterministic semantic fingerprinting.
+
+Still required before Foundation 4 acceptance: current-cohort runtime materialization, persistence/API wiring, restart/reload identity, resource validation, bounded review and explicit shadow acceptance. After that, execute Product Integration / Capability Rollout before Foundation 5.
