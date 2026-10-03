@@ -10,6 +10,7 @@ from fsffl.value.career_tail import (
     CAREER_TAIL_RESEARCH_ARTIFACT_ID,
     CAREER_TAIL_RESEARCH_ARTIFACT_SHA256,
     CAREER_TAIL_RESEARCH_RUN_ID,
+    CAREER_TAIL_RUNTIME_PACKAGE_SEMANTIC_SHA256,
     CAREER_TAIL_SCORING_COORDINATE,
     CareerTailFeatures,
     build_career_tail_authority,
@@ -68,6 +69,9 @@ def test_frozen_terminal_signature_and_research_evidence_are_exact() -> None:
     assert CAREER_TAIL_RESEARCH_RUN_ID == 37096263982
     assert CAREER_TAIL_RESEARCH_ARTIFACT_ID == 11263913850
     assert CAREER_TAIL_RESEARCH_ARTIFACT_SHA256 == (
+        "6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22"
+    )
+    assert CAREER_TAIL_RUNTIME_PACKAGE_SEMANTIC_SHA256 == (
         "33158a26d50e71809cf0f38a7d479fda05ccbaa9fbd5703ba894c1cba4560537"
     )
     assert CAREER_TAIL_SCORING_COORDINATE == "connected_league_fantasy_points"
