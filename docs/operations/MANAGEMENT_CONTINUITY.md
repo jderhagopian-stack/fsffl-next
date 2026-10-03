@@ -659,3 +659,38 @@ Accepted evidence:
 
 **ACTIVE: Product Integration / Capability Rollout.** First slice is League Atlas consumption of already-published accepted capability contracts: replayable Simulation representative futures and origin-aware future-pick outlook/value. Preserve authority labels and progressive disclosure; do not create new economics, probability mass, composite scores or recommendations. Holistic Long-Term Intrinsic exposure follows through the governed Value/Player Intelligence product path.
 
+
+
+## 2026-10-03 — Management continuity: Product Integration PR #366 active
+
+Foundation 4 and the bounded Intrinsic performance tranche are closed. Accepted recent sequence:
+- #361 Foundation 4 merged and substantively accepted with full 335-player Long-Term Intrinsic persistence/restore/resource proof;
+- #363 materially reduced changed-State Intrinsic time from 27.610s to 14.398s while staying under the engineering RSS budget;
+- #364 closed the semantic Future Forecast reuse-fingerprint provenance/coverage P2;
+- #365 closed the Intrinsic performance tranche and activated Product Integration / Capability Rollout.
+
+**Current active development is PR #366 — `Product: roll accepted intelligence into League Atlas`**, branch `product/capability-rollout-1-league-atlas-20261003`, observed head `e43b089700864acdb9080950d5a3a1549a65911c`.
+
+#366 is the first rollout slice only. It consumes already-governed League Atlas payloads to expose:
+- replayable representative Simulation futures in progressive disclosure;
+- origin-aware future-pick outlook / Intrinsic pick-value intelligence;
+- no new model math, probability mass, composite team score, recommendation, or authority.
+
+Current exact-head evidence:
+- focused/trace checks are green;
+- full CI has one failure with **2,122 passed**: `test_material_state_refresh_skips_stale_waiting_simulation_and_publishes_once` observed the replacement intelligence job as already `COMPLETED` rather than only `RUNNING/QUEUED`; this is a timing-sensitive resource-boundary assertion and must be reconciled before merge, not automatically treated as a product regression;
+- Codex exact-head review found two real rollout defects that must be fixed before promotion:
+  1. **P1** representative-futures UI reads nonexistent top-level world fields; managed-team rank/champion data must be taken from each world's `team_outcomes`, otherwise the section never renders;
+  2. **P2** pick drawer reads nonexistent `expected_value`; governed Intrinsic pick value is serialized under the estimate distribution mean, otherwise the authority label renders without the numeric value.
+- PR is open, non-draft, mergeable, but not merge-ready until those findings and the CI failure are resolved and exact-head validation/review is green.
+
+Management direction:
+1. finish #366 narrowly; do not reopen accepted Simulation 2.0, Foundation 4, or Intrinsic economics;
+2. require focused/static contract coverage that proves the actual payload shape for Multiverse team outcomes and PickValueEstimate distribution mean;
+3. reconcile the one full-CI failure proportionately and rerun exact-head CI;
+4. obtain fresh review after corrections;
+5. merge/deploy only when clean, then physically inspect League Atlas on iPhone/Safari for usefulness, density, progressive disclosure and semantic clarity;
+6. continue the Product Integration tranche after the first slice, including governed holistic Long-Term Intrinsic exposure through the Value/Player Intelligence path and other already-approved existing surfaces as appropriate;
+7. Foundation 5 PIT historical-market evidence remains **next after the rollout tranche**, not before it.
+
+A successor Management chat should begin by reading `OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this file, `workstreams/IMPLEMENTATION.md`, applicable directives/product IA, and the live #366 exact head/reviews/checks. Repo state is authoritative; do not reconstruct development state from prior chat.
