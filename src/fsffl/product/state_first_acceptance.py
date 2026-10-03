@@ -463,6 +463,46 @@ def _probe_surface_during_simulation(
     )
 
 
+def _require_last_good_presentation_during_rebuild(
+    observed_surface: dict[str, object],
+) -> None:
+    """Validate truthful rebuilding status while one atomic last-good generation is served."""
+
+    publication_generations = observed_surface.get("publication_generations")
+    generation_id = str(observed_surface.get("publication_generation_id") or "")
+    generation_values = (
+        {
+            str(value)
+            for value in publication_generations.values()
+            if value
+        }
+        if isinstance(publication_generations, dict)
+        else set()
+    )
+    presentation_modes = observed_surface.get("presentation_modes")
+    served_modes = (
+        tuple(value for value in presentation_modes.values() if value is not None)
+        if isinstance(presentation_modes, dict)
+        else ()
+    )
+    if (
+        observed_surface.get("reconciliation_status") != "running"
+        or observed_surface.get("working_generation_active") is not True
+        or observed_surface.get("readiness_status") != "rebuilding"
+        or observed_surface.get("publication_status")
+        != "serving_last_good_during_update"
+        or observed_surface.get("presentation_snapshot_available") is not True
+        or not generation_id
+        or generation_values != {generation_id}
+        or not served_modes
+        or any(mode != "stale_last_good" for mode in served_modes)
+    ):
+        raise StateFirstAcceptanceError(
+            "restored refresh did not truthfully serve one atomic last-good "
+            f"publication while reporting working-generation progress: {observed_surface}"
+        )
+
+
 def run_state_first_restored_refresh_acceptance(
     *,
     store: PersistentPrivateBetaRuntimeStore,
@@ -540,15 +580,7 @@ def run_state_first_restored_refresh_acceptance(
             f"restored refresh Simulation foreground probe failed: {surface_error[0]}"
         )
 
-    if (
-        observed_surface.get("reconciliation_status") != "running"
-        or observed_surface.get("working_generation_active") is not True
-        or observed_surface.get("readiness_status") != "full"
-    ):
-        raise StateFirstAcceptanceError(
-            "restored refresh did not preserve full published readiness while "
-            f"reporting working-generation progress: {observed_surface}"
-        )
+    _require_last_good_presentation_during_rebuild(observed_surface)
     if observed_surface.get("state_id") != before.get("state_id"):
         raise StateFirstAcceptanceError(
             "restored refresh changed the served State before atomic publication"
