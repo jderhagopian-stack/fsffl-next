@@ -259,8 +259,45 @@ def main() -> None:
             ):
                 eligible.append(season)
     if len(eligible) < 4:
+        anchor_inventory = {}
+        for anchor_horizon in (7, 8):
+            supported = []
+            source = long[long.horizon == anchor_horizon]
+            for season in sorted(int(x) for x in source.base_season.unique()):
+                if season + 7 > source_max_season - MIN_POST_Y8_OBSERVED_SEASONS:
+                    continue
+                candidate = source[source.base_season == season]
+                if all(
+                    len(
+                        long[
+                            (long.horizon == anchor_horizon)
+                            & (long.position == position)
+                            & (long.target_season < season)
+                        ]
+                    )
+                    >= dev.MIN_TRAIN_ROWS
+                    for position in POSITIONS
+                    if not candidate[candidate.position == position].empty
+                ):
+                    supported.append(season)
+            anchor_inventory[f"Y{anchor_horizon}"] = supported
+        OUT.mkdir(parents=True, exist_ok=True)
+        inventory = {
+            "state": "TERMINAL_EVIDENCE_AVAILABILITY_GATE",
+            "authority": "research_only_no_outcome_scoring",
+            "source_max_season": source_max_season,
+            "minimum_post_y8_observed_seasons": MIN_POST_Y8_OBSERVED_SEASONS,
+            "eligible_base_seasons_by_anchor": anchor_inventory,
+            "outcomes_opened": False,
+            "disposition": "RESEARCH_DESIGN_REQUIRES_EVIDENCE_AVAILABILITY_CORRECTION",
+        }
+        (OUT / "EVIDENCE_AVAILABILITY.json").write_text(
+            json.dumps(inventory, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
         raise SystemExit(
-            f"need at least four chronologically eligible Y8 base seasons; got {eligible}"
+            "insufficient Y8 chronology before outcome scoring; "
+            f"availability={anchor_inventory}"
         )
     holdout_seasons = tuple(eligible[-2:])
     development_seasons = tuple(eligible[:-2])
