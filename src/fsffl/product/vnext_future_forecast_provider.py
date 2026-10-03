@@ -724,6 +724,14 @@ def vnext_future_forecast_input_fingerprint(
     payload = {
         "league_id": league_state.league.league_id,
         "evaluation_season": league_state.league.season,
+        "governed_state_subject_count": len(governed_ids),
+        "excluded_non_h3_subject_count": len(
+            {
+                item.player_id
+                for item in league_year_one
+                if item.player_id not in governed_ids
+            }
+        ),
         "forecast_model_version": VNEXT_FORECAST_VERSION,
         "forecast_source": VNEXT_FUTURE_FORECAST_SOURCE,
         "future_state_primitive_version": FUTURE_STATE_PRIMITIVE_VERSION,
