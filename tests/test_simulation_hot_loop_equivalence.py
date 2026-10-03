@@ -16,6 +16,7 @@ from fsffl.team_utility.simulation import (
     NUMPY_PCG64_BATCHED_GAUSS_V1,
     PYTHON_RANDOM_GAUSS_V1,
     _numpy_regular_season_matchup_batches,
+    _settings_derived_playoff_rules,
 )
 
 
@@ -445,9 +446,26 @@ def test_exact_profiler_preserves_full_numpy_output_and_replay_identity(monkeypa
 
 def test_playoff_execution_plan_is_compiled_once_per_simulation(monkeypatch) -> None:
     from fsffl.state.models import LeaguePlayoffRules
-    from scripts.benchmark_simulation_performance import _request
 
-    request = _request(simulation_count=200)
+    rules = _settings_derived_playoff_rules(6, 15)
+    assert rules is not None
+    request = RegularSeasonSimulationInput(
+        scoring=tuple(
+            TeamScoringDistribution(
+                team_id=f"team-{index}",
+                mean_points=100.0 + index,
+                stddev_points=12.0,
+                model_version="playoff-compile-test",
+            )
+            for index in range(12)
+        ),
+        schedule=(),
+        playoff_team_count=6,
+        playoff_rules=rules,
+        simulation_count=200,
+        seed=20261003,
+        model_version="playoff-compile-test",
+    )
     original = LeaguePlayoffRules.canonical_execution_matchups
     calls = 0
 
