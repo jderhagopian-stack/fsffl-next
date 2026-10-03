@@ -2563,3 +2563,15 @@ Management disposition follows the already-governed scoring policy:
 - no heuristic multipliers, fake historical reconstruction, or silent relabeling.
 
 Required next path: correct the effective Intrinsic coordinate -> regenerate/refreeze only what the coordinate change requires -> full exact-head CI + focused validation -> fresh Codex review -> hosted 335-player build/persistence/API/restart/resource acceptance -> Foundation 4 closeout.
+
+
+## 2026-10-03 — Management refinement: rare residuals are immaterial, do not overengineer
+
+Supersedes the stricter residual-coordinate correction immediately above.
+
+- Preserve accepted standalone Current Intrinsic Y1-Y3 unchanged.
+- Treat `fum_rec`, `fum_rec_td`, `st_ff`, `st_fum_rec`, and `st_td` as rare/unpredictable residual bonuses that are **immaterial for holistic Long-Term Intrinsic** and may be intentionally excluded from long-horizon career valuation with explicit provenance.
+- Do not retrain, reconstruct historical rare-event totals, or regenerate Foundation 4 artifacts solely to reproduce these residual points.
+- If excluding the residual contribution from the Y1-Y3 raw input used only by the holistic aggregator is a trivial isolated projection-layer adjustment, it is allowed; it must not alter standalone Current Intrinsic authority. If it is not trivial, accept/document the immaterial mismatch rather than opening another modeling tranche.
+- Continue to require exact alignment for material/predictable scoring rules (receptions, yardage, touchdowns, interceptions, fumbles lost, etc.).
+- Use risk-proportionate validation only, then proceed to hosted build/persistence/restart/resource acceptance and close Foundation 4 if clean.
