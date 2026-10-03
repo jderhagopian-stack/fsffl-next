@@ -593,3 +593,20 @@ Policy:
 - fail closed or downgrade only when an unsupported rule is material enough to change valuation meaningfully.
 
 This creates one coherent effective scoring coordinate per league while avoiding fake precision. FSFFL 0.5 PPR must pass as the first live acceptance case. Do not use heuristic scoring multipliers.
+
+
+## 2026-10-03 — DURABLE IMPLEMENTATION RE-ANCHOR (chat history is non-authoritative)
+
+Implementation continuity must not depend on ChatGPT conversation history. If the Implementation chat loses visible context, **resume from this repo record plus PR #361 and the other canonical operations docs**.
+
+Current active work:
+- Foundation 4 / PR #361: `Foundation 4: materialize and persist career-forward shadow`.
+- Current observed head at this checkpoint: `fbb417901db9297717a9244803f25696295bf713` (PR may advance after this note; always re-read the live PR head first).
+- The branch now carries directly FSFFL-scored Y4-Y7 and Y8+ authority, with regenerated/frozen package identities and tests being reconciled to that authority.
+- At this checkpoint, all focused lanes except full CI are green; full CI is still running on the exact head.
+- Preserve Management scoring policy: model material/predictable league scoring rules; use only governed residual/event treatments; explicitly omit genuinely rare/unpredictable bonuses with provenance and consistent omission across Y1-Y3/Y4-Y7/Y8+; fail closed or downgrade on materially important unsupported rules. No heuristic multipliers and no incompatible-coordinate arithmetic.
+- If exact-head validation is green, request fresh Codex review and proceed directly through hosted 335-player build, persistence/API, restart/restore semantic identity, and resource acceptance.
+- After Foundation 4 acceptance, run the queued Intrinsic runtime-performance tranche (reuse/persist-first, then optimize unavoidable Shapley/materialization cost) and then the approved Product Integration / Capability Rollout tranche before Foundation 5.
+- Simulation 2.0 major semantics/performance work is complete; do not reopen it except for the narrow acceptance-tooling P2 or new contradictory evidence.
+
+Startup rule for any replacement/new Implementation chat: read `docs/operations/OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this `MANAGEMENT_CONTINUITY.md`, the applicable directive(s), and the live PR #361 exact head before acting. The repo is the durable authority; chat text is only a transport layer.
