@@ -3,6 +3,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import math
 from importlib.resources import files
 from typing import Any
 
@@ -104,13 +105,16 @@ def provide_foundation4_terminal_features() -> dict[str, CareerTailFeatures]:
         if player_id in output:
             raise ValueError("Foundation 4 terminal feature board has duplicate player_id")
         prior = raw.get("prior_points")
+        prior_value = None if prior is None else float(prior)
+        if prior_value is not None and not math.isfinite(prior_value):
+            prior_value = None
         output[player_id] = CareerTailFeatures(
             player_id=player_id,
             position=Position(str(raw["position"])),
             age_years=float(raw["age_years"]),
             experience_years=float(raw["experience_years"]),
             current_points=float(raw["current_points"]),
-            prior_points=(None if prior is None else float(prior)),
+            prior_points=prior_value,
             current_points_coordinate=str(raw["current_points_coordinate"]),
             prior_points_coordinate=str(raw["prior_points_coordinate"]),
             live_feature_transport_limitation=str(
