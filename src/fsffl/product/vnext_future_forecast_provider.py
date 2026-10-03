@@ -678,6 +678,75 @@ def build_vnext_future_forecast_contract(
 
 
 
+def vnext_future_forecast_input_fingerprint(
+    *,
+    league_state: LeagueState,
+    raw_forecasts: tuple[ForecastObservation, ...],
+    league_year_one: tuple[ForecastObservation, ...],
+) -> str:
+    """Return the semantic inputs that can change the frozen vNext contract.
+
+    The accepted vNext runtime consumes canonical player/Sleeper identity plus the
+    connected-league Year-1 fantasy-point coordinate. raw_forecasts remains in
+    the provider boundary for contract compatibility but is not consumed by the
+    frozen A2/Burr materialization. Point-in-time State metadata, rosters, standings,
+    injuries and provider retrieval timestamps therefore must not force another
+    670-row materialization.
+    """
+
+    del raw_forecasts
+    governed_ids = set(governed_future_state_player_ids(league_state))
+    league_by_id = {
+        item.player_id: item
+        for item in league_year_one
+        if item.player_id in governed_ids
+    }
+    eligible_ids = tuple(sorted(governed_ids & set(league_by_id)))
+    identities = []
+    year_one = []
+    for player_id in eligible_ids:
+        source = governed_future_state_source_row(league_state, player_id)
+        observation = league_by_id[player_id]
+        identities.append(
+            {
+                "player_id": player_id,
+                "position": source.position,
+                "sleeper_external_id": source.sleeper_external_id,
+            }
+        )
+        year_one.append(
+            {
+                "player_id": player_id,
+                "position": observation.position.value,
+                "mean": float(observation.distribution.mean),
+            }
+        )
+    payload = {
+        "league_id": league_state.league.league_id,
+        "evaluation_season": league_state.league.season,
+        "forecast_model_version": VNEXT_FORECAST_VERSION,
+        "forecast_source": VNEXT_FUTURE_FORECAST_SOURCE,
+        "future_state_primitive_version": FUTURE_STATE_PRIMITIVE_VERSION,
+        "ratio_nodes_sha256": VNEXT_RATIO_NODES_SHA256,
+        "rules": {
+            "team_count": league_state.league.rules.team_count,
+            "lineup": [
+                {"slot": item.slot.value, "count": item.count}
+                for item in league_state.league.rules.lineup
+            ],
+            "scoring": [
+                {"stat": item.stat, "points": item.points}
+                for item in league_state.league.rules.scoring
+            ],
+        },
+        "identities": identities,
+        "league_year_one": year_one,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
 def provide_vnext_future_forecast_contract(
     *,
     league_state: LeagueState,
