@@ -2550,6 +2550,32 @@ Next bounded work: freeze the fitted terminal coefficients/residual bands in pro
 
 Simulation 2.0 major semantics/performance work is complete. Do not reopen it absent contradictory evidence or a new Management directive; the only known residue is narrow acceptance-tooling cleanup around fail-closed `publication_generation_id` checking.
 
+
+## 2026-10-03 — Foundation 4 fresh Codex P1: residual scoring-coordinate consistency
+
+Fresh exact-head Codex review of #361 head `38d9eeeadfd64c7ca57ace6bc3062882cfe6f152` found one P1: the regenerated FSFFL-scored long-horizon/terminal artifacts omit rare residual rules that Current Intrinsic's connected-league Y1 scoring currently includes through provisional residual priors (`fum_rec`, `fum_rec_td`, `st_ff`, `st_fum_rec`, `st_td`). That makes the holistic sum dimensionally inconsistent even though the major linear FSFFL scoring rules are aligned.
+
+Management disposition follows the already-governed scoring policy:
+- do **not** reconstruct/model every rare event merely for literal rule parity;
+- these named rules are rare/exotic provisional-residual events without strong player-level predictive signal, so the preferred Foundation 4 correction is to **explicitly omit them from the effective Intrinsic scoring coordinate across Y1-Y3, Y4-Y7 and Y8+ consistently**, with typed provenance;
+- Forecast may retain its separately governed provisional residual behavior, but holistic Intrinsic must not mix a Y1-Y3 coordinate that includes those residual points with long-horizon/tail coordinates that omit them;
+- only include a residual rule in holistic Intrinsic if one governed predictive treatment can be applied consistently across historical training/current/long-horizon/tail coordinates;
+- no heuristic multipliers, fake historical reconstruction, or silent relabeling.
+
+Required next path: correct the effective Intrinsic coordinate -> regenerate/refreeze only what the coordinate change requires -> full exact-head CI + focused validation -> fresh Codex review -> hosted 335-player build/persistence/API/restart/resource acceptance -> Foundation 4 closeout.
+
+
+## 2026-10-03 — Management refinement: rare residuals are immaterial, do not overengineer
+
+Supersedes the stricter residual-coordinate correction immediately above.
+
+- Preserve accepted standalone Current Intrinsic Y1-Y3 unchanged.
+- Treat `fum_rec`, `fum_rec_td`, `st_ff`, `st_fum_rec`, and `st_td` as rare/unpredictable residual bonuses that are **immaterial for holistic Long-Term Intrinsic** and may be intentionally excluded from long-horizon career valuation with explicit provenance.
+- Do not retrain, reconstruct historical rare-event totals, or regenerate Foundation 4 artifacts solely to reproduce these residual points.
+- If excluding the residual contribution from the Y1-Y3 raw input used only by the holistic aggregator is a trivial isolated projection-layer adjustment, it is allowed; it must not alter standalone Current Intrinsic authority. If it is not trivial, accept/document the immaterial mismatch rather than opening another modeling tranche.
+- Continue to require exact alignment for material/predictable scoring rules (receptions, yardage, touchdowns, interceptions, fumbles lost, etc.).
+- Use risk-proportionate validation only, then proceed to hosted build/persistence/restart/resource acceptance and close Foundation 4 if clean.
+
 ## 2026-10-03 — Foundation 4 #361 FSFFL artifact-freeze correction
 
 The directly recalibrated FSFFL-scored Foundation 4 artifacts are now the intended packaged authority; model-family and routing research remain frozen and were not reopened.
@@ -2565,3 +2591,19 @@ Verified generation evidence:
 The runtime now consumes the exact packaged FSFFL Y8+ coefficients/residual bands and pins the regenerated Y4-Y7/terminal semantic identities. The superseded standard/non-PPR freeze is retained only as historical provenance/negative compatibility evidence. No heuristic scoring multiplier, retraining or model redesign was introduced.
 
 Promotion remains Tier C. Required closeout: final exact-head CI and focused validations -> fresh Codex review -> one hosted 335-player build -> same-code restart/restore semantic identity -> resource acceptance -> canonical closeout.
+
+## 2026-10-03 — #361 residual-scoring P1 proportionate disposition
+
+Management refinement is controlling. The five residual categories `fum_rec`, `fum_rec_td`, `st_ff`, `st_fum_rec`, and `st_td` are treated as rare/unpredictable and immaterial for Foundation 4 Long-Term Intrinsic.
+
+Implementation disposition:
+- standalone Current Intrinsic Y1-Y3 remains unchanged;
+- no historical residual reconstruction, model retraining, or artifact regeneration is authorized or performed for these residuals;
+- the already-frozen Y4-Y7 and terminal artifacts are truthful for the material/predictable FSFFL scoring coordinate because their historical transform never included these five categories;
+- Foundation 4 compatibility now ignores only these five accepted residual stats at their governed FSFFL coefficients (or zero/absent) while still requiring exact material/predictable scoring alignment;
+- Y4+ omission is typed in forecast/terminal provenance;
+- the holistic career-forward artifact explicitly records that Current Y1-Y3 may retain the bounded provisional residual lane while Y4+ omits it as an accepted immaterial mismatch;
+- no isolated Y1-Y3 subtraction is made because the current three-horizon projection contract does not expose a trivial residual-only coordinate; manufacturing one would reopen modeling rather than perform a projection-layer subtraction.
+
+Validation is intentionally risk-proportionate: run existing Foundation 4 focused lanes and ordinary CI only, then proceed directly to hosted 335-player build/persistence/API/restart/resource acceptance if green.
+
