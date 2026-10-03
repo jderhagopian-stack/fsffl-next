@@ -3052,3 +3052,42 @@ Uncertainty remains separated:
 - no cumulative career standard deviation or cross-horizon covariance is authorized.
 
 Next bounded work: freeze the fitted terminal coefficients/residual bands in production-readable evidence, implement the pure terminal Value consumer plus holistic aggregator, materialize the current cohort in shadow, persist/serve it separately from Current Intrinsic, validate resources/semantics, and perform bounded review. Foundation 4 is still incomplete until that implementation/live-cohort path is accepted.
+
+
+## 2026-10-03 — Simulation H2H optimization hosted result; team-origin ordering now active
+
+PR #355 (`Simulation: bound H2H batch memory independently`) is merged and live as `a4ce4f967d6307757006ce8cd104e48013f251fd`.
+
+Representative governed FSFFL 50,000-run hosted profile on the live #355 build:
+- exact kernel wall: **43.487s**;
+- matchup/H2H reconstruction: **2.528s**, down from the accepted #351 baseline **20.355s** (~87.6% reduction);
+- team-origin future-pick ordering: **17.440s** and is now the largest measured kernel phase;
+- postseason: **6.848s**;
+- RNG: **3.963s**;
+- standings: **3.080s**;
+- Multiverse loop: **2.194s**;
+- Simulation build peak RSS observed at **388,083,712 bytes**, below the **429,496,720-byte** engineering budget.
+
+The H2H tranche therefore achieved a material exact-preserving production speedup. Production Simulation authority remains **50,000** with `numpy-pcg64-batched-gauss-v1`, batch 500; no model semantics or replay identity changed.
+
+Two narrow closeout items remain:
+1. Codex P2 on #355 correctly notes that the dense H2H chunk cap is not a strict peak-working-set bound during chunk replacement because the old chunk can remain live while the next chunk and a dense baseline are allocated. Close this memory-safety issue before declaring the H2H tranche fully complete.
+2. The same hosted acceptance run ended with a **runtime-availability acceptance failure** while a newer working generation was rebuilding and last-good surfaces were being served. Treat this as a narrow acceptance/lifecycle diagnostic until root-caused; it does not invalidate the successful exact 50k Simulation profile or reopen Simulation semantics.
+
+PR #357 (`Simulation: optimize team-origin future-pick ordering`) is now open, mergeable and green on CI/focused regression at head `da6912abc8797e601d2032d9bf3891aff0fcc44d`. It is the correct next measured optimization target, but the #355 memory-safety P2 must be resolved on or before the promotion path. Hosted before/after evidence is still required before accepting #357.
+
+## 2026-10-03 — Foundation 4 implementation handoff after career-tail governance
+
+PR #352 is merged and the corrected grouped-player / Duan-smearing career-tail research contract is accepted for bounded shadow implementation. Foundation 4 remains **ACTIVE / INCOMPLETE**.
+
+A placeholder draft PR #356 was opened with no file delta and closed unmerged; it is not an implementation checkpoint. The next real Foundation 4 work must begin from current main and:
+- freeze the corrected governed Y8+ terminal artifact/coefficients and residual evidence;
+- implement the pure lineup-signature-gated terminal Value consumer;
+- aggregate compatible raw `phi_Y1 ... phi_Y7 + TAIL_Y8_PLUS` economics without display-index arithmetic or invented preference weights;
+- materialize the full current cohort in shadow;
+- persist/API-serve the holistic career-forward shadow separately from Current Intrinsic and the internal Y4-Y7 component;
+- validate live-cohort semantics, restart/reload identity and resources.
+
+Current Intrinsic remains the separate Y1-Y3 lens. The eventual user-facing Long-Term Intrinsic is the holistic all-future-years career-forward value.
+
+Management rollout sequence after Foundation 4 acceptance: **run a bounded Product Integration / Capability Rollout tranche before Foundation 5**. Because the private beta presently has one user, use a simple shadow -> prove -> expose -> refine cycle rather than multi-cohort rollout. Productize accepted Simulation 2.0 competitive intelligence, origin-aware pick intelligence and holistic Long-Term Intrinsic in the existing Home / Franchise / League / Market / More experience, then proceed to Foundation 5 while incorporating physical iPhone/Safari feedback.
