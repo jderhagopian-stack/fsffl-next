@@ -54,6 +54,8 @@ jobs:
             src/fsffl/value/foundation4_current_cohort_bundle.sha256
           if ! git diff --cached --quiet; then
             git commit -m "Freeze Foundation 4 current cohort production bundle"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
       - name: Upload governed Foundation 4 Y4-Y7 current evidence
