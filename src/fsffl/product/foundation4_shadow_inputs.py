@@ -36,6 +36,16 @@ FOUNDATION4_LONG_HORIZON_FORECAST_SOURCE = (
     "fsffl:frozen_cell_routing_fsffl_scoring_recalibration"
 )
 FOUNDATION4_FSFFL_SCORING_COORDINATE = CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE
+FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS = (
+    "fum_rec",
+    "fum_rec_td",
+    "st_ff",
+    "st_fum_rec",
+    "st_td",
+)
+FOUNDATION4_LONG_TERM_RESIDUAL_OMISSION_POLICY = (
+    "rare_unpredictable_residual_bonuses_omitted_from_long_term_intrinsic"
+)
 # Retained only as provenance for the superseded pre-recalibration board.
 FOUNDATION4_FROZEN_STANDARD_SCORING_COORDINATE = (
     "fsffl_frozen_standard_non_ppr_fantasy_points_v1"
@@ -165,27 +175,46 @@ def foundation4_fsffl_scoring_is_compatible(rules: LeagueRules) -> bool:
 
     Kicker/DST rules stay outside this player-offense Intrinsic coordinate. Zero-point
     rules are inert. Material unsupported player-offense rules remain fail-closed.
-    The bounded residual/two-point rules are accepted only at the exact coefficients
-    used in the retained FSFFL recalibration run.
+    Material predictable rules and retained bounded two-point treatment must match
+    the frozen recalibration. The explicitly governed rare residual bonuses are
+    permitted in the live league but omitted from Foundation 4 Long-Term Intrinsic;
+    they are not reconstructed into the historical Y4+ targets.
     """
 
     coverage = classify_scoring_coverage(rules)
     if coverage.blocks_full_downstream_authority or coverage.unsupported_rule_stats:
         return False
-    active_player_stats = set(coverage.supported_rule_stats) | set(
-        coverage.provisional_residual_rule_stats
-    )
+    ignored = set(FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS)
+    active_player_stats = (
+        set(coverage.supported_rule_stats)
+        | set(coverage.provisional_residual_rule_stats)
+    ) - ignored
     expected = {
         row.stat: float(row.points)
         for row in FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING
-        if float(row.points) != 0.0
+        if row.stat not in ignored and float(row.points) != 0.0
     }
     actual = {
         row.stat: float(row.points)
         for row in rules.scoring
         if row.stat in active_player_stats and float(row.points) != 0.0
     }
-    return actual == expected
+    if actual != expected:
+        return False
+
+    # The omission decision is intentionally narrow to the accepted FSFFL residual
+    # coefficients (or zero/absent). A materially different coefficient is a new
+    # scoring policy question rather than silently inheriting this exception.
+    expected_ignored = {
+        row.stat: float(row.points)
+        for row in FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING
+        if row.stat in ignored
+    }
+    configured = {row.stat: float(row.points) for row in rules.scoring}
+    return all(
+        configured.get(stat, 0.0) in (0.0, expected_points)
+        for stat, expected_points in expected_ignored.items()
+    )
 
 
 def provide_foundation4_long_horizon_forecast_contract_for_rules(
@@ -209,7 +238,22 @@ def provide_foundation4_long_horizon_forecast_contract_for_rules(
                 "coordinate_compatibility_version": FOUNDATION4_SCORING_FREEZE_VERSION,
                 "modeled_rule_stats": list(coverage.supported_rule_stats),
                 "governed_residual_rule_stats": list(
-                    coverage.provisional_residual_rule_stats
+                    sorted(
+                        set(coverage.provisional_residual_rule_stats)
+                        - set(FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS)
+                    )
+                ),
+                "intentionally_omitted_immaterial_residual_rule_stats": list(
+                    FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS
+                ),
+                "residual_omission_policy": (
+                    FOUNDATION4_LONG_TERM_RESIDUAL_OMISSION_POLICY
+                ),
+                "current_intrinsic_boundary": (
+                    "standalone Current Intrinsic remains unchanged; its Y1-Y3 "
+                    "projection may retain bounded provisional residual scoring, "
+                    "while Foundation 4 Y4+ omits these immaterial/unpredictable "
+                    "bonuses without historical reconstruction"
                 ),
                 "ignored_non_lineup_rule_stats": list(
                     coverage.ignored_non_lineup_rule_stats
@@ -258,8 +302,12 @@ def provide_foundation4_terminal_features() -> dict[str, CareerTailFeatures]:
             prior_points=prior_value,
             current_points_coordinate=str(raw["current_points_coordinate"]),
             prior_points_coordinate=str(raw["prior_points_coordinate"]),
-            live_feature_transport_limitation=str(
-                raw["live_feature_transport_limitation"]
+            live_feature_transport_limitation=(
+                str(raw["live_feature_transport_limitation"])
+                + "; Foundation 4 Long-Term Intrinsic intentionally omits rare/"
+                "unpredictable residual scoring bonuses "
+                + ",".join(FOUNDATION4_LONG_TERM_IGNORED_RESIDUAL_RULE_STATS)
+                + "; standalone Current Intrinsic is unchanged"
             ),
         )
     if len(output) != FOUNDATION4_CURRENT_COHORT_SIZE:
