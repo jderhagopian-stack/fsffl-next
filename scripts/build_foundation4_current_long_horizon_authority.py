@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import gzip
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -303,6 +306,72 @@ def main() -> None:
         rules=_rules(),
     )
 
+    terminal_features: list[dict[str, object]] = []
+    seen_terminal_ids: set[str] = set()
+    for _, player in current.iterrows():
+        player_id = str(player.source_player_id)
+        if player_id in seen_terminal_ids:
+            raise SystemExit(f"duplicate current terminal feature player: {player_id}")
+        seen_terminal_ids.add(player_id)
+        age = pd.to_numeric(player.age, errors="coerce")
+        experience = pd.to_numeric(player.experience, errors="coerce")
+        current_points = pd.to_numeric(player.y1, errors="coerce")
+        prior_points = pd.to_numeric(player.prior_points, errors="coerce")
+        if pd.isna(age) or pd.isna(experience) or pd.isna(current_points):
+            raise SystemExit(
+                "Foundation 4 terminal features require age, experience and current "
+                f"production for every governed player; missing={player_id}"
+            )
+        terminal_features.append(
+            {
+                "player_id": player_id,
+                "position": str(player.position),
+                "age_years": max(0.0, float(age)),
+                "experience_years": max(0.0, float(experience)),
+                "current_points": max(0.0, float(current_points)),
+                "prior_points": (
+                    None if pd.isna(prior_points) else max(0.0, float(prior_points))
+                ),
+            }
+        )
+    terminal_features.sort(key=lambda item: str(item["player_id"]))
+    if len(terminal_features) != len(shadow.estimates):
+        raise SystemExit(
+            "Foundation 4 terminal/current-cohort coverage mismatch: "
+            f"{len(terminal_features)} != {len(shadow.estimates)}"
+        )
+    if {str(item["player_id"]) for item in terminal_features} != {
+        item.player_id for item in shadow.estimates
+    }:
+        raise SystemExit(
+            "Foundation 4 terminal feature subjects do not match Y4-Y7 authority"
+        )
+
+    production_bundle = {
+        "bundle_version": "foundation4-current-cohort-production-bundle-v1",
+        "evaluation_season": CURRENT_SEASON,
+        "y4_y7_shadow": shadow.model_dump(mode="json"),
+        "terminal_features": terminal_features,
+        "provenance": {
+            "routing_artifact_id": 10916355135,
+            "historical_panel_artifact_id": 10912862252,
+            "historical_term_artifact_id": 10899387479,
+            "current_player_count": len(terminal_features),
+            "market_inputs_used": False,
+            "display_index_inputs_used": False,
+            "historical_fitting_runs_in_web_process": False,
+        },
+    }
+    production_bytes = json.dumps(
+        production_bundle,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    production_sha256 = hashlib.sha256(production_bytes).hexdigest()
+    production_b64 = base64.b64encode(
+        gzip.compress(production_bytes, compresslevel=9, mtime=0)
+    ).decode("ascii")
+
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "LONG_HORIZON_FORECAST_AUTHORITY.json").write_text(
         json.dumps(contract.model_dump(mode="json"), indent=2, sort_keys=True),
@@ -317,12 +386,27 @@ def main() -> None:
         orient="records",
         indent=2,
     )
+    (OUT / "TERMINAL_FEATURES.json").write_text(
+        json.dumps(terminal_features, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    (OUT / "CURRENT_COHORT_PRODUCTION_BUNDLE.json.gz.b64").write_text(
+        production_b64 + "\n",
+        encoding="utf-8",
+    )
+    (OUT / "CURRENT_COHORT_PRODUCTION_BUNDLE.sha256").write_text(
+        production_sha256 + "\n",
+        encoding="utf-8",
+    )
     summary = {
         "player_count": len(shadow.estimates),
+        "terminal_feature_count": len(terminal_features),
         "forecast_rows": len(contract.forecasts),
         "long_term_input_fingerprint": shadow.input_fingerprint,
         "contract_version": shadow.contract_version,
         "forecast_contract_version": contract.contract_version,
+        "production_bundle_version": production_bundle["bundle_version"],
+        "production_bundle_sha256": production_sha256,
         "market_inputs_used": False,
         "display_scaling_applied": False,
     }
