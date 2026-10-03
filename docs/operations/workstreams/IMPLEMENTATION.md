@@ -2524,3 +2524,28 @@ Uncertainty remains separated:
 - no cumulative career standard deviation or cross-horizon covariance is authorized.
 
 Next bounded work: freeze the fitted terminal coefficients/residual bands in production-readable evidence, implement the pure terminal Value consumer plus holistic aggregator, materialize the current cohort in shadow, persist/serve it separately from Current Intrinsic, validate resources/semantics, and perform bounded review. Foundation 4 is still incomplete until that implementation/live-cohort path is accepted.
+
+
+## 2026-10-03 — DURABLE IMPLEMENTATION RE-ANCHOR / FOUNDATION 4 #361
+
+**This file is the Implementation workstream authority when chat history is missing or truncated.** Do not rely on the visible ChatGPT transcript for continuity. At startup/recovery, read `docs/operations/OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, `MANAGEMENT_CONTINUITY.md`, this file, applicable directives, and the live PR exact head.
+
+### Current active work
+- Foundation 4 / PR #361: `Foundation 4: materialize and persist career-forward shadow`.
+- The branch has moved from the accepted standard/non-PPR research coordinate to directly recalibrated **FSFFL-scored** Y4-Y7 and Y8+ authority, with regenerated package identities and tests being aligned to the new governed freeze.
+- Management scoring policy is broader than an FSFFL-only patch: material/predictable league scoring rules must be modeled; governed residual/event rules may be included; genuinely rare/unpredictable bonuses may be explicitly omitted with typed provenance and consistent omission across Y1-Y3/Y4-Y7/Y8+; materially important unsupported rules fail closed or downgrade authority. No heuristic multipliers and no incompatible-coordinate arithmetic.
+- The first post-regeneration exact-head CI exposed stale semantic-digest constants. Those identities were then corrected.
+- A later exact-head CI exposed stale standard-coordinate fixtures/expected values. Implementation has been correcting those without reopening the accepted model family/economics.
+- At this management checkpoint the live PR head is `617e8df761dd0a1cb57fd5987ccdb7f23d6ff53b`; always re-read the live head because it may advance. Five focused lanes are green; full CI and Private-beta Intrinsic diagnostics are still running.
+
+### Required closeout
+1. Get full exact-head CI + all focused Foundation 4 lanes green on the FSFFL-scored freeze.
+2. Request fresh exact-head Codex review; explicitly disposition any P1/P2 findings.
+3. Run targeted hosted 335-player build acceptance.
+4. Prove persistence/API serving and same-code restart/restore with identical semantic identity and no unnecessary Current-Intrinsic rebuild.
+5. Prove resource safety under the engineering memory budget.
+6. Update canonical operations docs and merge/promote Foundation 4 if clean.
+7. Immediately run the queued Intrinsic runtime-performance tranche: dependency-scoped reuse/persistence first, then optimize only measured unavoidable Shapley/materialization cost.
+8. Continue into the approved Product Integration / Capability Rollout tranche before Foundation 5.
+
+Simulation 2.0 major semantics/performance work is complete. Do not reopen it absent contradictory evidence or a new Management directive; the only known residue is narrow acceptance-tooling cleanup around fail-closed `publication_generation_id` checking.
