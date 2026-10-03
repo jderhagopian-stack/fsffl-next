@@ -3142,3 +3142,39 @@ Current accepted performance checkpoint remains:
 - #357 hosted kernel **42.895s**, team-origin ordering **11.593s**.
 
 Foundation 4 draft #356 remains open at head `f6cbba6fe6ca95ef3039b1eab6fddaba49d637fa`, mergeable and green. It has not advanced since the shadow-contract/current-authority materialization checkpoint. Resume it through live-cohort runtime materialization, persistence/API, restart/reload/resource validation and bounded review. Do not let Simulation performance work starve Foundation 4.
+
+
+## 2026-10-03 — #360 governed hosted acceptance completed
+
+Exact live #360 (`06e01ab016d5591ea1e667e4ea73b21568b8e677`) completed the required governed FSFFL 50,000-run hosted profile and runtime-availability acceptance.
+
+50k Simulation profile:
+- exact kernel wall **43.800s**;
+- team-origin future-pick ordering **12.704s**;
+- H2H **2.056s**;
+- postseason **8.376s**;
+- standings **3.166s**;
+- RNG **5.069s**;
+- Multiverse **2.142s**;
+- lineup compilation **1.192s**;
+- weekly scoring/input panel **12.900s**;
+- Team Utility / Analytics view assembly **9.605s**.
+
+Resource/availability acceptance:
+- Simulation-build peak RSS **391,729,152 bytes**;
+- overall acceptance peak RSS **393,076,736 bytes**;
+- engineering budget **429,496,720 bytes**;
+- hard Render limit **536,870,900 bytes**;
+- runtime-availability acceptance **PASS**;
+- one State build / one 50k Simulation / downstream Value + Intrinsic / completed atomic publication;
+- restored-refresh total elapsed **211.082s**.
+
+Interpretation:
+- compared with the corrected pre-optimization kernel baseline **104.901s**, the current exact kernel is ~**58.2% lower wall time** while retaining 50k/RNG/replay/model semantics;
+- #360 does not show a clean additional wall-time win over #357 on this CPU-throttled host (kernel 43.800s vs 42.895s; future-pick ordering 12.704s vs 11.593s), so do not claim #360 as a measured speedup beyond its structural exact-preserving fast path;
+- H2H remains successfully reduced to ~2s-class work;
+- team-origin ordering remains the largest measured kernel phase, but further optimization should be justified by material expected gain rather than continuing indefinitely.
+
+The prior recurring runtime-availability false-negative is no longer reproduced on this run: #359's truthful atomic-last-good handling produced a PASS while the product remained available through rebuild/publication. A post-merge Codex P2 on #359 still remains to harden the acceptance tool: missing per-surface `publication_generation_id` must fail closed rather than be filtered out. Close that tooling hole separately; it does not invalidate this observed successful runtime path.
+
+Foundation 4 draft #356 remains open at head `f6cbba6fe6ca95ef3039b1eab6fddaba49d637fa` and has not advanced since its green shadow-contract/current-authority checkpoint. It is now the more important forward-progress lane: continue live-cohort materialization, persistence/API, restart/reload/resource validation and bounded shadow acceptance.
