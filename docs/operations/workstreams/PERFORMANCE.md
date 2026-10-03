@@ -383,3 +383,20 @@ Before H2H closeout, resolve the #355 post-merge P2 so dense H2H storage remains
 The hosted run that produced the valid 43.487s kernel profile later raised a runtime-availability acceptance failure while serving last-good surfaces during an active replacement generation. Treat that as a narrow lifecycle/acceptance diagnostic, not a reason to discard the performance result or revert Simulation semantics.
 
 After team-origin ordering reaches diminishing returns, re-profile and choose any further Simulation target from measured evidence only. Preserve 50,000 canonical trials, RNG protocol, output semantics and replay identity unless Management separately changes authority.
+
+
+## 2026-10-03 — Simulation performance checkpoint after #357/#358
+
+#357 optimized exact team-origin draft ordering and is merged. Governed hosted 50k profile:
+- kernel **42.895s**;
+- future-pick ordering **11.593s** vs **17.440s** on #355 (~33.5% reduction);
+- H2H **6.274s**;
+- postseason **5.786s**;
+- standings **2.904s**;
+- RNG **4.799s**;
+- Multiverse **3.808s**;
+- Simulation-build peak RSS **389,877,760 bytes** under the engineering budget.
+
+#358 is now merged/live and closes the #355 H2H chunk-lifetime P2 with one reusable independently bounded dense buffer and direct historical-baseline population. CI/focused regression pass.
+
+Do not pick another optimization target from stale numbers. First run one fresh governed #358 50k profile and use that measured decomposition. The recurring runtime-availability acceptance failure after successful publication is a separate narrow lifecycle/acceptance diagnostic and must not be conflated with Simulation model correctness.
