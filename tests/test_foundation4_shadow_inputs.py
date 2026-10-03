@@ -16,7 +16,12 @@ from fsffl.product.foundation4_shadow_inputs import (
     provide_foundation4_terminal_features,
 )
 from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
-from fsffl.state.models import LeagueRules, ScoringRule
+from fsffl.state.models import (
+    LeagueRules,
+    LineupRequirement,
+    RosterSlot,
+    ScoringRule,
+)
 from fsffl.value.career_tail import CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE
 
 
@@ -93,6 +98,14 @@ def _standard_rules() -> LeagueRules:
     return LeagueRules(
         team_count=12,
         roster_size=18,
+        lineup=(
+            LineupRequirement(slot=RosterSlot.QB, count=1),
+            LineupRequirement(slot=RosterSlot.RB, count=2),
+            LineupRequirement(slot=RosterSlot.WR, count=3),
+            LineupRequirement(slot=RosterSlot.TE, count=1),
+            LineupRequirement(slot=RosterSlot.FLEX, count=1),
+            LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
+        ),
         scoring=FROZEN_I1_STANDARD_SCORING,
     )
 
@@ -130,7 +143,7 @@ def test_frozen_board_relabels_only_for_exact_standard_scoring_equivalence() -> 
     ),
 )
 def test_frozen_board_fails_closed_on_incompatible_connected_scoring(scoring) -> None:
-    rules = LeagueRules(team_count=12, roster_size=18, scoring=scoring)
+    rules = _standard_rules().model_copy(update={"scoring": scoring})
     assert foundation4_standard_scoring_is_exactly_compatible(rules) is False
     with pytest.raises(ValueError, match="no governed Foundation 4 scoring transform"):
         provide_foundation4_long_horizon_forecast_contract_for_rules(rules)
