@@ -938,9 +938,14 @@ def _simulate_configured_playoff_outcomes(
     playoff_rules,
     playoff_scoring,
     gauss,
+    *,
+    profile_timings: list[float] | None = None,
 ) -> tuple[int, dict[int, int]]:
     """Return champion plus each loser's canonical elimination round."""
 
+    helper_started = _profile_wall_clock() if profile_timings is not None else None
+
+    phase_started = _profile_wall_clock() if profile_timings is not None else None
     if (
         playoff_rules is None
         or playoff_rules.simulation_unavailability_reason() is not None
@@ -948,13 +953,26 @@ def _simulate_configured_playoff_outcomes(
         raise ValueError(
             "future-pick playoff elimination requires governed playoff structure"
         )
+    if phase_started is not None:
+        profile_timings[0] += _profile_wall_clock() - phase_started
+
+    phase_started = _profile_wall_clock() if profile_timings is not None else None
     seeds = {
         seed: (standings[seed - 1], seed)
         for seed in range(1, playoff_rules.playoff_team_count + 1)
     }
+    if phase_started is not None:
+        profile_timings[1] += _profile_wall_clock() - phase_started
+
+    phase_started = _profile_wall_clock() if profile_timings is not None else None
+    execution_matchups = playoff_rules.canonical_execution_matchups()
+    if phase_started is not None:
+        profile_timings[2] += _profile_wall_clock() - phase_started
+
     winners = {}
     elimination_round: dict[int, int] = {}
-    for matchup in playoff_rules.canonical_execution_matchups():
+    for matchup in execution_matchups:
+        phase_started = _profile_wall_clock() if profile_timings is not None else None
         left = (
             seeds[matchup.participant_a.seed_number]
             if matchup.participant_a.seed_number is not None
@@ -965,6 +983,10 @@ def _simulate_configured_playoff_outcomes(
             if matchup.participant_b.seed_number is not None
             else winners[matchup.participant_b.winner_of_matchup_id]
         )
+        if phase_started is not None:
+            profile_timings[3] += _profile_wall_clock() - phase_started
+
+        phase_started = _profile_wall_clock() if profile_timings is not None else None
         winner, loser = _playoff_game_result(
             left,
             right,
@@ -972,9 +994,21 @@ def _simulate_configured_playoff_outcomes(
             matchup.week,
             gauss,
         )
+        if phase_started is not None:
+            profile_timings[4] += _profile_wall_clock() - phase_started
+
+        phase_started = _profile_wall_clock() if profile_timings is not None else None
         winners[matchup.matchup_id] = winner
         elimination_round[loser[0]] = matchup.round_number
+        if phase_started is not None:
+            profile_timings[5] += _profile_wall_clock() - phase_started
+
+    phase_started = _profile_wall_clock() if profile_timings is not None else None
     champion = winners[playoff_rules.championship_matchup_id][0]
+    if phase_started is not None:
+        profile_timings[6] += _profile_wall_clock() - phase_started
+    if helper_started is not None:
+        profile_timings[7] += _profile_wall_clock() - helper_started
     return champion, elimination_round
 
 
@@ -1662,6 +1696,7 @@ def simulate_regular_season(
     common_world_wall_seconds = 0.0
     standings_wall_seconds = 0.0
     playoff_wall_seconds = 0.0
+    postseason_profile_timings = [0.0] * 8 if profile_enabled else None
     future_pick_ordering_wall_seconds = 0.0
     multiverse_loop_wall_seconds = 0.0
     future_pick_result_wall_seconds = 0.0
@@ -2121,6 +2156,7 @@ def simulate_regular_season(
                         request.playoff_rules,
                         playoff_scoring,
                         playoff_gauss,
+                        profile_timings=postseason_profile_timings,
                     )
                 )
             else:
@@ -2666,6 +2702,45 @@ def simulate_regular_season(
             0.0,
             call_wall_seconds - call_accounted_wall_seconds,
         )
+        if postseason_profile_timings is not None:
+            (
+                postseason_validate_wall,
+                postseason_seed_setup_wall,
+                postseason_bracket_canonicalize_wall,
+                postseason_participant_resolution_wall,
+                postseason_game_execution_wall,
+                postseason_bookkeeping_wall,
+                postseason_result_lookup_wall,
+                postseason_helper_wall,
+            ) = postseason_profile_timings
+            postseason_accounted_wall = (
+                postseason_validate_wall
+                + postseason_seed_setup_wall
+                + postseason_bracket_canonicalize_wall
+                + postseason_participant_resolution_wall
+                + postseason_game_execution_wall
+                + postseason_bookkeeping_wall
+                + postseason_result_lookup_wall
+            )
+            _logger.info(
+                "FSFFL simulation profile phase=postseason_exact "
+                "playoff_wall=%.6f helper_wall=%.6f validation_wall=%.6f "
+                "seed_setup_wall=%.6f bracket_canonicalize_wall=%.6f "
+                "participant_resolution_wall=%.6f game_execution_wall=%.6f "
+                "bookkeeping_wall=%.6f result_lookup_wall=%.6f "
+                "helper_residual_wall=%.6f outer_residual_wall=%.6f",
+                playoff_wall_seconds,
+                postseason_helper_wall,
+                postseason_validate_wall,
+                postseason_seed_setup_wall,
+                postseason_bracket_canonicalize_wall,
+                postseason_participant_resolution_wall,
+                postseason_game_execution_wall,
+                postseason_bookkeeping_wall,
+                postseason_result_lookup_wall,
+                max(0.0, postseason_helper_wall - postseason_accounted_wall),
+                max(0.0, playoff_wall_seconds - postseason_helper_wall),
+            )
         _logger.info(
             "FSFFL simulation profile phase=kernel_summary_exact trials=%s rng_protocol=%s batch=%s "
             "call_wall=%.6f pre_loop_wall=%.6f common_world_wall=%.6f "
