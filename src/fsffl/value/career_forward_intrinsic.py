@@ -325,7 +325,7 @@ def build_career_forward_intrinsic_shadow(
             tails,
         ),
         current_intrinsic_contract_version=current.contract_version,
-        long_horizon_contract_version=long_term.forecast_contract_version,
+        long_horizon_contract_version=long_term.contract_version,
         long_horizon_value_model_version=long_term.value_model_version,
         career_tail_model_version=next(iter(tails.values())).model_version,
         lineup_capacity_signature=lineup_signature,
