@@ -409,3 +409,22 @@ Do not pick another optimization target from stale numbers. First run one fresh 
 Do not infer savings from code structure. Run one governed 50k hosted profile on exact #360 and re-rank hotspots from that result. Current last measured checkpoint is #357 kernel **42.895s** with team-origin ordering **11.593s**.
 
 The atomic-last-good acceptance correction in #359 is orthogonal to Simulation model performance. A post-merge P2 remains because missing publication-generation IDs can escape the acceptance equality check; close that acceptance-tooling hole separately.
+
+
+## 2026-10-03 — #360 hosted 50k acceptance result
+
+Exact live #360 governed profile:
+- kernel **43.800s**;
+- team-origin ordering **12.704s**;
+- H2H **2.056s**;
+- postseason **8.376s**;
+- standings **3.166s**;
+- RNG **5.069s**;
+- Multiverse **2.142s**;
+- acceptance peak RSS **393,076,736 bytes**;
+- restored-refresh total **211.082s**;
+- runtime availability **PASS**.
+
+Relative to corrected baseline kernel **104.901s**, the active production kernel is ~58.2% faster. #360 did not materially beat #357's single-run 42.895s kernel / 11.593s ordering result, so do not continue micro-optimizing based on nominal sub-second or one-run differences. Any next Simulation performance tranche must identify a clearly material exact-preserving gain from fresh evidence.
+
+The #359 acceptance-tool P2 (missing publication-generation IDs must fail closed) is a narrow tooling correction, not a Simulation model/performance blocker.
