@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from random import Random
+
 import pytest
 
 from fsffl.state.models import (
@@ -13,7 +15,11 @@ from fsffl.team_utility import (
     TeamScoringDistribution,
     simulate_regular_season,
 )
-from fsffl.team_utility.simulation import _settings_derived_playoff_rules
+from fsffl.team_utility.simulation import (
+    _compile_playoff_execution_plan,
+    _settings_derived_playoff_rules,
+    _simulate_compiled_playoff_outcomes,
+)
 
 
 def _seed(number: int) -> PlayoffParticipantRef:
@@ -513,3 +519,110 @@ def test_nested_playoff_start_must_follow_regular_season_even_without_duplicate_
             lineup=(),
             scoring=(),
         )
+
+def _legacy_configured_playoff_outcomes_for_equivalence(
+    standings,
+    playoff_rules,
+    playoff_scoring,
+    gauss,
+):
+    seeds = {
+        seed: (standings[seed - 1], seed)
+        for seed in range(1, playoff_rules.playoff_team_count + 1)
+    }
+    winners = {}
+    elimination_round = {}
+    for matchup in playoff_rules.canonical_execution_matchups():
+        left = (
+            seeds[matchup.participant_a.seed_number]
+            if matchup.participant_a.seed_number is not None
+            else winners[matchup.participant_a.winner_of_matchup_id]
+        )
+        right = (
+            seeds[matchup.participant_b.seed_number]
+            if matchup.participant_b.seed_number is not None
+            else winners[matchup.participant_b.winner_of_matchup_id]
+        )
+        week_scoring = playoff_scoring[matchup.week]
+        left_idx, left_seed = left
+        right_idx, right_seed = right
+        left_mean, left_std = week_scoring[left_idx]
+        right_mean, right_std = week_scoring[right_idx]
+        left_points = (
+            left_mean
+            if left_std == 0
+            else max(0.0, gauss(left_mean, left_std))
+        )
+        right_points = (
+            right_mean
+            if right_std == 0
+            else max(0.0, gauss(right_mean, right_std))
+        )
+        if left_points > right_points:
+            winner = left
+        elif right_points > left_points:
+            winner = right
+        else:
+            winner = left if left_seed < right_seed else right
+        loser = right if winner == left else left
+        winners[matchup.matchup_id] = winner
+        elimination_round[loser[0]] = matchup.round_number
+    champion = winners[playoff_rules.championship_matchup_id][0]
+    return champion, elimination_round
+
+
+@pytest.mark.parametrize("playoff_team_count", (2, 4, 6, 8))
+@pytest.mark.parametrize("authority", ("settings_derived_standard", "provider_observed_exact"))
+@pytest.mark.parametrize("seed", (7, 12345, 20261002))
+def test_precompiled_playoff_executor_is_exactly_equivalent_and_rng_identical(
+    playoff_team_count,
+    authority,
+    seed,
+) -> None:
+    rules = _settings_derived_playoff_rules(playoff_team_count, 15)
+    assert rules is not None
+    if authority == "provider_observed_exact":
+        rules = rules.model_copy(
+            update={
+                "bracket_authority": "provider_observed_exact",
+                "bracket_derivation_policy": None,
+                "matchups": rules.effective_matchups(),
+            }
+        )
+
+    playoff_scoring = {
+        week: tuple(
+            (
+                92.0 + team_index * 4.25 + week * 0.5,
+                8.0 + (team_index % 4),
+            )
+            for team_index in range(playoff_team_count)
+        )
+        for week in rules.round_weeks
+    }
+    canonical = rules.canonical_execution_matchups()
+    plan = _compile_playoff_execution_plan(rules, playoff_scoring, canonical)
+
+    legacy_rng = Random(seed ^ 0x5F3759DF)
+    compiled_rng = Random(seed ^ 0x5F3759DF)
+    base = list(range(playoff_team_count))
+    for world_index in range(25):
+        offset = world_index % playoff_team_count
+        standings = base[offset:] + base[:offset]
+        if world_index % 2:
+            standings = list(reversed(standings))
+        expected = _legacy_configured_playoff_outcomes_for_equivalence(
+            standings,
+            rules,
+            playoff_scoring,
+            legacy_rng.gauss,
+        )
+        actual = _simulate_compiled_playoff_outcomes(
+            standings,
+            plan,
+            compiled_rng.gauss,
+        )
+        assert actual == expected
+
+    assert compiled_rng.getstate() == legacy_rng.getstate()
+
