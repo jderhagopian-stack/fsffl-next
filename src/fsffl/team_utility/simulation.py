@@ -902,15 +902,24 @@ def _playoff_game(left, right, playoff_scoring, week, gauss):
     return left if left_seed < right_seed else right
 
 
-def _simulate_configured_champion(standings, playoff_rules, playoff_scoring, gauss):
+def _simulate_configured_champion(
+    standings,
+    playoff_rules,
+    playoff_scoring,
+    gauss,
+    *,
+    execution_matchups=None,
+):
     if playoff_rules is None or playoff_rules.simulation_unavailability_reason() is not None:
         return None
+    if execution_matchups is None:
+        execution_matchups = playoff_rules.canonical_execution_matchups()
     seeds = {
         seed: (standings[seed - 1], seed)
         for seed in range(1, playoff_rules.playoff_team_count + 1)
     }
     winners = {}
-    for matchup in playoff_rules.canonical_execution_matchups():
+    for matchup in execution_matchups:
         left = (
             seeds[matchup.participant_a.seed_number]
             if matchup.participant_a.seed_number is not None
@@ -938,6 +947,8 @@ def _simulate_configured_playoff_outcomes(
     playoff_rules,
     playoff_scoring,
     gauss,
+    *,
+    execution_matchups=None,
 ) -> tuple[int, dict[int, int]]:
     """Return champion plus each loser's canonical elimination round."""
 
@@ -948,13 +959,15 @@ def _simulate_configured_playoff_outcomes(
         raise ValueError(
             "future-pick playoff elimination requires governed playoff structure"
         )
+    if execution_matchups is None:
+        execution_matchups = playoff_rules.canonical_execution_matchups()
     seeds = {
         seed: (standings[seed - 1], seed)
         for seed in range(1, playoff_rules.playoff_team_count + 1)
     }
     winners = {}
     elimination_round: dict[int, int] = {}
-    for matchup in playoff_rules.canonical_execution_matchups():
+    for matchup in execution_matchups:
         left = (
             seeds[matchup.participant_a.seed_number]
             if matchup.participant_a.seed_number is not None
@@ -1720,6 +1733,14 @@ def simulate_regular_season(
         if championship_supported
         else None
     )
+    # Bracket topology is immutable for every world in one Simulation run.
+    # Compile/canonicalize it once so 50,000 worlds execute the same governed
+    # games without repeatedly rebuilding/sorting/copying Pydantic rule objects.
+    playoff_execution_matchups = (
+        request.playoff_rules.canonical_execution_matchups()
+        if championship_supported and request.playoff_rules is not None
+        else ()
+    )
 
     future_pick_slot_counts: list[list[float]] | None = None
     if future_pick_policy is not None:
@@ -1824,7 +1845,7 @@ def simulate_regular_season(
                 "playoff_rules": request.playoff_rules.model_dump(mode="json"),
                 "canonical_execution_matchups": [
                     item.model_dump(mode="json")
-                    for item in request.playoff_rules.canonical_execution_matchups()
+                    for item in playoff_execution_matchups
                 ],
                 "postseason_randomness_by_week": postseason_randomness_by_week,
             }
@@ -2121,11 +2142,16 @@ def simulate_regular_season(
                         request.playoff_rules,
                         playoff_scoring,
                         playoff_gauss,
+                        execution_matchups=playoff_execution_matchups,
                     )
                 )
             else:
                 champion = _simulate_configured_champion(
-                    standings, request.playoff_rules, playoff_scoring, playoff_gauss
+                    standings,
+                    request.playoff_rules,
+                    playoff_scoring,
+                    playoff_gauss,
+                    execution_matchups=playoff_execution_matchups,
                 )
             champion_count[champion] += 1
         else:
