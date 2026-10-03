@@ -1683,7 +1683,11 @@ def _numpy_h2h_points_batch(
         ):
             raise ValueError("H2H output buffer is incompatible with requested chunk")
         storage = out
-    h2h_points = storage[: scores.shape[0]]
+    h2h_points = (
+        storage
+        if storage.shape[0] == scores.shape[0]
+        else storage[: scores.shape[0]]
+    )
     for home_idx, row in enumerate(base_h2h_points):
         for away_idx, value in enumerate(row):
             h2h_points[:, home_idx, away_idx] = value
