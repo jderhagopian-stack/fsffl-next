@@ -403,3 +403,43 @@ def test_50000_run_output_matches_governed_settings_derived_postseason_baseline(
     )
     digest = hashlib.sha256(payload.encode()).hexdigest()
     assert digest == expected
+
+def test_exact_profiler_preserves_full_numpy_output_and_replay_identity(monkeypatch) -> None:
+    base = RegularSeasonSimulationInput(
+        scoring=(
+            TeamScoringDistribution(
+                team_id="a", mean_points=128, stddev_points=14, model_version="profile-v1"
+            ),
+            TeamScoringDistribution(
+                team_id="b", mean_points=119, stddev_points=11, model_version="profile-v1"
+            ),
+            TeamScoringDistribution(
+                team_id="c", mean_points=111, stddev_points=13, model_version="profile-v1"
+            ),
+            TeamScoringDistribution(
+                team_id="d", mean_points=104, stddev_points=10, model_version="profile-v1"
+            ),
+        ),
+        schedule=(
+            ScheduledMatchup(week=1, home_team_id="a", away_team_id="b"),
+            ScheduledMatchup(week=1, home_team_id="c", away_team_id="d"),
+            ScheduledMatchup(week=2, home_team_id="a", away_team_id="c"),
+            ScheduledMatchup(week=2, home_team_id="b", away_team_id="d"),
+        ),
+        playoff_team_count=2,
+        simulation_count=500,
+        seed=20261002,
+        model_version="profile-equivalence-v1",
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=500,
+    )
+
+    monkeypatch.delenv("FSFFL_SIMULATION_PROFILE", raising=False)
+    baseline = simulate_regular_season(base)
+    monkeypatch.setenv("FSFFL_SIMULATION_PROFILE", "1")
+    profiled = simulate_regular_season(base)
+
+    assert profiled == baseline
+    assert profiled.simulation_input_fingerprint == baseline.simulation_input_fingerprint
+    assert profiled.common_world_regular_season_coordinate == baseline.common_world_regular_season_coordinate
+
