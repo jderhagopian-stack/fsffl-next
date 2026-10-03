@@ -88,6 +88,10 @@ def _context() -> UserRuntimeContext:
             rules=_rules(),
         ),
         as_of=datetime(2026, 10, 2, 12, 0, tzinfo=UTC),
+        teams=(),
+        team_states=(),
+        players=(),
+        player_states=(),
     )
     return UserRuntimeContext(user_id="local-beta-user", league_state=state)
 
