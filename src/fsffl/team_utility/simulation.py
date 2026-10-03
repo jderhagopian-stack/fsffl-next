@@ -1547,39 +1547,77 @@ def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
         remaining -= count
 
 
+_NUMPY_H2H_BATCH_MAX_BYTES = 4 * 1024 * 1024
+
+
+def _numpy_h2h_rows_per_chunk(team_count: int, requested_rows: int) -> int:
+    """Bound dense H2H working memory independently of the RNG score batch.
+
+    One world necessarily costs O(teams^2), matching the canonical H2H matrix.
+    The guard prevents multiplying that cost by an arbitrarily large configured
+    batch. If one world's matrix alone exceeds the byte ceiling, process exactly
+    one world at a time rather than amplifying it by the batch size.
+    """
+
+    if team_count <= 0:
+        raise ValueError("team_count must be positive")
+    if requested_rows <= 0:
+        raise ValueError("requested_rows must be positive")
+    bytes_per_world = team_count * team_count * 8
+    bounded_rows = max(1, _NUMPY_H2H_BATCH_MAX_BYTES // bytes_per_world)
+    return min(requested_rows, bounded_rows)
+
+
+def _numpy_h2h_points_batch(
+    scores,
+    compiled_schedule,
+    team_count,
+    base_h2h_points,
+):
+    """Build exact H2H points for one independently bounded world chunk."""
+
+    import numpy as np
+
+    base = np.asarray(base_h2h_points, dtype=np.float64)
+    if base.shape != (team_count, team_count):
+        raise ValueError("base H2H points shape conflicts with team_count")
+    h2h_points = np.broadcast_to(
+        base,
+        (scores.shape[0], team_count, team_count),
+    ).copy()
+    for matchup_index, (home_idx, away_idx, *_draw_parameters) in enumerate(
+        compiled_schedule
+    ):
+        home = scores[:, 2 * matchup_index]
+        away = scores[:, 2 * matchup_index + 1]
+        home_wins = home > away
+        away_wins = away > home
+        ties = ~(home_wins | away_wins)
+        h2h_points[:, home_idx, away_idx] += home_wins
+        h2h_points[:, away_idx, home_idx] += away_wins
+        tie_points = ties * 0.5
+        h2h_points[:, home_idx, away_idx] += tie_points
+        h2h_points[:, away_idx, home_idx] += tie_points
+    return h2h_points
+
+
 def _numpy_regular_season_matchup_batch_products(
     scores,
     compiled_schedule,
     team_count,
-    *,
-    base_h2h_points=None,
-    include_h2h: bool = False,
 ):
-    """Accumulate all schedule-derived products for one bounded NumPy batch.
+    """Accumulate non-H2H schedule products for one bounded NumPy batch.
 
-    The schedule is still traversed in canonical matchup order, but once per
-    batch rather than once per trial. Regular-season wins/points retain the
-    established addition order. H2H outcomes use only exact 0/0.5/1 increments,
-    while Multiverse blowout/upset selection preserves the scalar path's
-    first-on-exact-tie behavior.
+    Dense H2H matrices are intentionally excluded so their working set can be
+    chunked under an independent byte ceiling. Regular-season wins/points retain
+    the established addition order, and Multiverse blowout/upset selection
+    preserves the scalar path's first-on-exact-tie behavior.
     """
     import numpy as np
 
     count = scores.shape[0]
     wins = np.zeros((count, team_count), dtype=np.float64)
     points_for = np.zeros((count, team_count), dtype=np.float64)
-    h2h_points = None
-    if include_h2h:
-        base = (
-            np.zeros((team_count, team_count), dtype=np.float64)
-            if base_h2h_points is None
-            else np.asarray(base_h2h_points, dtype=np.float64)
-        )
-        h2h_points = np.broadcast_to(
-            base,
-            (count, team_count, team_count),
-        ).copy()
-
     blowout_margin = np.full(count, -1.0, dtype=np.float64)
     blowout_index = np.full(count, -1, dtype=np.int64)
     upset_disadvantage = np.zeros(count, dtype=np.float64)
@@ -1606,13 +1644,6 @@ def _numpy_regular_season_matchup_batch_products(
         wins[:, home_idx] += ties * 0.5
         wins[:, away_idx] += ties * 0.5
 
-        if h2h_points is not None:
-            h2h_points[:, home_idx, away_idx] += home_wins
-            h2h_points[:, away_idx, home_idx] += away_wins
-            tie_points = ties * 0.5
-            h2h_points[:, home_idx, away_idx] += tie_points
-            h2h_points[:, away_idx, home_idx] += tie_points
-
         margins = np.abs(home - away)
         replace_blowout = margins > blowout_margin
         blowout_margin[replace_blowout] = margins[replace_blowout]
@@ -1635,7 +1666,7 @@ def _numpy_regular_season_matchup_batch_products(
     return (
         wins,
         points_for,
-        h2h_points,
+        None,
         blowout_margin,
         blowout_index,
         upset_disadvantage,
@@ -1652,7 +1683,6 @@ def _numpy_regular_season_matchup_batches(scores, compiled_schedule, team_count)
         team_count,
     )
     return wins, points_for
-
 
 def simulate_regular_season(
     request: RegularSeasonSimulationInput,
@@ -1793,6 +1823,9 @@ def simulate_regular_season(
     numpy_batch_wins = None
     numpy_batch_points = None
     numpy_batch_h2h_points = None
+    numpy_h2h_chunk_start = 0
+    numpy_h2h_chunk_end = 0
+    numpy_h2h_chunk_rows = 0
     numpy_batch_blowout_margin = None
     numpy_batch_blowout_index = None
     numpy_batch_upset_disadvantage = None
@@ -2119,8 +2152,14 @@ def simulate_regular_season(
                     score_batch,
                     compiled_schedule,
                     team_count,
-                    base_h2h_points=actual_h2h_points,
-                    include_h2h=batched_h2h_games is not None,
+                )
+                numpy_batch_h2h_points = None
+                numpy_h2h_chunk_start = 0
+                numpy_h2h_chunk_end = 0
+                numpy_h2h_chunk_rows = (
+                    _numpy_h2h_rows_per_chunk(team_count, len(score_batch))
+                    if batched_h2h_games is not None
+                    else 0
                 )
                 if matchup_started is not None:
                     matchup_ended = _profile_clock()
@@ -2224,8 +2263,25 @@ def simulate_regular_season(
         else:
             wins = trial_wins
             points_for = trial_points
-            if numpy_batch_h2h_points is not None:
-                h2h_points = numpy_batch_h2h_points[batch_row_index]
+            if batched_h2h_games is not None:
+                if not (
+                    numpy_batch_h2h_points is not None
+                    and numpy_h2h_chunk_start <= batch_row_index < numpy_h2h_chunk_end
+                ):
+                    numpy_h2h_chunk_start = batch_row_index
+                    numpy_h2h_chunk_end = min(
+                        len(score_batch),
+                        numpy_h2h_chunk_start + numpy_h2h_chunk_rows,
+                    )
+                    numpy_batch_h2h_points = _numpy_h2h_points_batch(
+                        score_batch[numpy_h2h_chunk_start:numpy_h2h_chunk_end],
+                        compiled_schedule,
+                        team_count,
+                        actual_h2h_points,
+                    )
+                h2h_points = numpy_batch_h2h_points[
+                    batch_row_index - numpy_h2h_chunk_start
+                ]
             if (
                 trial_score_row is not None
                 and numpy_batch_blowout_index is not None

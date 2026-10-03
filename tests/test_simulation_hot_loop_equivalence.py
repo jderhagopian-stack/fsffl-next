@@ -591,3 +591,97 @@ def test_batched_h2h_products_preserve_complete_simulation_result(
     assert optimized == scalar_reference
     assert optimized.model_dump(mode="json") == scalar_reference.model_dump(mode="json")
 
+def test_h2h_dense_working_set_is_bounded_independently_of_rng_batch() -> None:
+    import fsffl.team_utility.simulation as simulation_module
+
+    assert simulation_module._numpy_h2h_rows_per_chunk(12, 500) == 500
+
+    rows = simulation_module._numpy_h2h_rows_per_chunk(64, 50_000)
+    assert rows == 128
+    assert (
+        rows * 64 * 64 * 8
+        <= simulation_module._NUMPY_H2H_BATCH_MAX_BYTES
+    )
+
+    # If one world's canonical matrix alone exceeds the ceiling, the guard still
+    # removes batch amplification: exactly one world is materialized at a time.
+    assert simulation_module._numpy_h2h_rows_per_chunk(1024, 50_000) == 1
+
+
+def test_forced_small_h2h_chunks_preserve_complete_result_and_replay(
+    monkeypatch,
+) -> None:
+    import fsffl.team_utility.simulation as simulation_module
+
+    team_ids = tuple("abcdefgh")
+    rules = _settings_derived_playoff_rules(4, 5)
+    assert rules is not None
+    schedule = (
+        ScheduledMatchup(week=1, home_team_id="a", away_team_id="b"),
+        ScheduledMatchup(week=1, home_team_id="c", away_team_id="d"),
+        ScheduledMatchup(week=1, home_team_id="e", away_team_id="f"),
+        ScheduledMatchup(week=1, home_team_id="g", away_team_id="h"),
+        ScheduledMatchup(week=2, home_team_id="a", away_team_id="c"),
+        ScheduledMatchup(week=2, home_team_id="b", away_team_id="d"),
+        ScheduledMatchup(week=2, home_team_id="e", away_team_id="g"),
+        ScheduledMatchup(week=2, home_team_id="f", away_team_id="h"),
+        ScheduledMatchup(week=3, home_team_id="a", away_team_id="d"),
+        ScheduledMatchup(week=3, home_team_id="b", away_team_id="c"),
+        ScheduledMatchup(week=3, home_team_id="e", away_team_id="h"),
+        ScheduledMatchup(week=3, home_team_id="f", away_team_id="g"),
+    )
+    request = RegularSeasonSimulationInput(
+        scoring=tuple(
+            TeamScoringDistribution(
+                team_id=team_id,
+                mean_points=105.0 + index * 4.0,
+                stddev_points=9.0 + (index % 3),
+                model_version="h2h-memory-bound-v1",
+            )
+            for index, team_id in enumerate(team_ids)
+        ),
+        schedule=schedule,
+        playoff_team_count=4,
+        playoff_rules=rules,
+        future_pick_draft_season=2027,
+        simulation_count=500,
+        seed=20261003,
+        model_version="h2h-memory-bound-v1",
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=500,
+    )
+
+    baseline = simulate_regular_season(request)
+
+    original = simulation_module._numpy_h2h_points_batch
+    observed_rows: list[int] = []
+
+    def capture_rows(scores, compiled_schedule, team_count, base_h2h_points):
+        observed_rows.append(int(scores.shape[0]))
+        return original(
+            scores,
+            compiled_schedule,
+            team_count,
+            base_h2h_points,
+        )
+
+    # 8 teams -> 512 bytes/world. Force a three-world dense H2H chunk while
+    # leaving the canonical 500-world score/RNG batch unchanged.
+    monkeypatch.setattr(
+        simulation_module,
+        "_NUMPY_H2H_BATCH_MAX_BYTES",
+        8 * 8 * 8 * 3,
+    )
+    monkeypatch.setattr(
+        simulation_module,
+        "_numpy_h2h_points_batch",
+        capture_rows,
+    )
+    chunked = simulate_regular_season(request)
+
+    assert observed_rows
+    assert max(observed_rows) <= 3
+    assert len(observed_rows) > 1
+    assert chunked == baseline
+    assert chunked.model_dump(mode="json") == baseline.model_dump(mode="json")
+
