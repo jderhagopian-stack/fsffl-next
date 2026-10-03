@@ -443,3 +443,21 @@ def test_exact_profiler_preserves_full_numpy_output_and_replay_identity(monkeypa
     assert profiled.simulation_input_fingerprint == baseline.simulation_input_fingerprint
     assert profiled.common_world_regular_season_coordinate == baseline.common_world_regular_season_coordinate
 
+def test_playoff_execution_plan_is_compiled_once_per_simulation(monkeypatch) -> None:
+    from fsffl.state.models import LeaguePlayoffRules
+    from scripts.benchmark_simulation_performance import _request
+
+    request = _request(simulation_count=200)
+    original = LeaguePlayoffRules.canonical_execution_matchups
+    calls = 0
+
+    def counted(self):
+        nonlocal calls
+        calls += 1
+        return original(self)
+
+    monkeypatch.setattr(LeaguePlayoffRules, "canonical_execution_matchups", counted)
+    simulate_regular_season(request)
+
+    assert calls == 1
+
