@@ -44,6 +44,7 @@ SHAPLEY_INTRINSIC_SCOPE_KIND = "league_intrinsic_inputs"
 
 YearOneAuthorityLoader = Callable[[LeagueState], LiveForecastEvidence]
 FutureForecastBuilder = Callable[..., FutureForecastContract]
+FutureForecastInputFingerprintResolver = Callable[..., str]
 _logger = logging.getLogger("fsffl.product.performance")
 
 
@@ -302,6 +303,9 @@ class PrivateBetaShapleyContractLoader:
         future_forecast_builder: FutureForecastBuilder | None = None,
         future_forecast_model_version: str = "future-forecast-provider:unconfigured",
         future_missing_fact_family: str = "future_forecast_coordinate",
+        future_forecast_input_fingerprint_resolver: (
+            FutureForecastInputFingerprintResolver | None
+        ) = None,
     ) -> None:
         self._lock = RLock()
         self._year_one_loader = year_one_loader
@@ -309,6 +313,12 @@ class PrivateBetaShapleyContractLoader:
         self._future_forecast_builder = future_forecast_builder
         self._future_forecast_model_version = str(future_forecast_model_version)
         self._future_missing_fact_family = str(future_missing_fact_family)
+        self._future_forecast_input_fingerprint_resolver = (
+            future_forecast_input_fingerprint_resolver
+        )
+        self._future_contract_lock = RLock()
+        self._future_contract_cache_key: str | None = None
+        self._future_contract_cache: FutureForecastContract | None = None
         self._cached_key: str | None = None
         self._cached_contract: ShapleyIntrinsicContract | None = None
         self._cached_user_id: str | None = None
@@ -389,6 +399,71 @@ class PrivateBetaShapleyContractLoader:
             )
         )
 
+    def _resolve_future_contract(
+        self,
+        *,
+        league_state: LeagueState,
+        evidence: LiveForecastEvidence,
+        year_one: tuple[ForecastObservation, ...],
+    ) -> FutureForecastContract:
+        """Materialize Future Forecast once per provider-owned semantic identity."""
+
+        if self._future_forecast_builder is None:
+            raise ValueError("Future Forecast provider is not configured")
+
+        cache_key: str | None = None
+        resolver = self._future_forecast_input_fingerprint_resolver
+        if resolver is not None:
+            cache_key = str(
+                resolver(
+                    league_state=league_state,
+                    raw_forecasts=evidence.raw_forecasts,
+                    league_year_one=year_one,
+                )
+            ).strip()
+            if not cache_key:
+                raise ValueError("Future Forecast semantic input fingerprint is blank")
+
+        phase_started = perf_counter()
+        with self._future_contract_lock:
+            if (
+                cache_key is not None
+                and cache_key == self._future_contract_cache_key
+                and self._future_contract_cache is not None
+            ):
+                contract = self._future_contract_cache
+                _logger.info(
+                    "FSFFL Intrinsic phase future-contract forecast=%s players=%s "
+                    "elapsed=%.3fs cache_hit=true",
+                    contract.forecast_model_version,
+                    len(contract.player_ids),
+                    perf_counter() - phase_started,
+                )
+                return contract
+
+            contract = self._future_forecast_builder(
+                league_state=league_state,
+                raw_forecasts=evidence.raw_forecasts,
+                league_year_one=year_one,
+            )
+            if not isinstance(contract, FutureForecastContract):
+                raise ValueError(
+                    "Future Forecast provider must return FutureForecastContract"
+                )
+            if cache_key is not None:
+                self._future_contract_cache_key = cache_key
+                self._future_contract_cache = contract
+
+        _logger.info(
+            "FSFFL Intrinsic phase future-contract forecast=%s players=%s "
+            "elapsed=%.3fs cache_hit=false",
+            contract.forecast_model_version,
+            len(contract.player_ids),
+            perf_counter() - phase_started,
+        )
+        return contract
+
+
     def _compatibility_identity(
         self,
         context: UserRuntimeContext,
@@ -427,15 +502,11 @@ class PrivateBetaShapleyContractLoader:
             if not year_one:
                 raise ValueError("Preserved preseason Year-1 Forecast evidence is empty")
             source_ids = _preseason_source_ids(evidence)
-            future_contract = self._future_forecast_builder(
+            future_contract = self._resolve_future_contract(
                 league_state=league_state,
-                raw_forecasts=evidence.raw_forecasts,
-                league_year_one=year_one,
+                evidence=evidence,
+                year_one=year_one,
             )
-            if not isinstance(future_contract, FutureForecastContract):
-                raise ValueError(
-                    "Future Forecast provider must return FutureForecastContract"
-                )
             h3_player_ids = set(future_contract.player_ids)
             h3_year_one = tuple(
                 item for item in year_one if item.player_id in h3_player_ids
@@ -586,21 +657,10 @@ class PrivateBetaShapleyContractLoader:
             )
 
         try:
-            phase_started = perf_counter()
-            future_contract = self._future_forecast_builder(
+            future_contract = self._resolve_future_contract(
                 league_state=league_state,
-                raw_forecasts=evidence.raw_forecasts,
-                league_year_one=year_one,
-            )
-            if not isinstance(future_contract, FutureForecastContract):
-                raise ValueError(
-                    "Future Forecast provider must return FutureForecastContract"
-                )
-            _logger.info(
-                "FSFFL Intrinsic phase future-contract forecast=%s players=%s elapsed=%.3fs",
-                future_contract.forecast_model_version,
-                len(future_contract.player_ids),
-                perf_counter() - phase_started,
+                evidence=evidence,
+                year_one=year_one,
             )
         except ValueError as exc:
             return build_unavailable_shapley_intrinsic_contract(
