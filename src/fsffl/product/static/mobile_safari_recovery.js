@@ -59,7 +59,8 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       const current=await resilientApi('/api/connect/sleeper/background/current',{},2);
       if(current?.league_external_id!==leagueId)return null;
       if(['queued','running'].includes(current.status))return current;
-      if(['completed','failed'].includes(current.status)&&current.operation===operation)return current;
+      if(current.status==='completed'&&current.operation===operation)return current;
+      if(current.status==='failed'&&current.operation===operation)return current;
     }catch(error){
       if(!isTransportError(error))throw error;
     }
