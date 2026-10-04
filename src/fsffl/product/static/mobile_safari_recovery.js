@@ -207,7 +207,20 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         {},
         2,
       );
-      if(freshness?.refresh_due===true||freshness?.refresh_in_progress===true)void refreshStoredLeague(leagueId,baselineStateId);
+      let latestStateId=baselineStateId;
+      try{
+        const latest=await resilientApi('/api/product-context',{},2);
+        if(contextMatchesLeague(latest,leagueId)&&latest?.state_id){
+          latestStateId=latest.state_id;
+          if(latestStateId!==baselineStateId){
+            const selected=await restoreSelectedTeam(latest);
+            applyConnectedContext(selected);
+          }
+        }
+      }catch(error){
+        console.info('FSFFL post-freshness context check unavailable; preserving current State',error);
+      }
+      if(freshness?.refresh_due===true||freshness?.refresh_in_progress===true)void refreshStoredLeague(leagueId,latestStateId);
     }catch(error){
       console.info('FSFFL saved-session freshness check unavailable; preserving current State',error);
     }
