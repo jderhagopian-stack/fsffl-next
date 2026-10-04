@@ -75,8 +75,12 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     if(existing?.operation===operation&&(['queued','running'].includes(existing.status)||(attachOnly&&['completed','failed'].includes(existing.status))))return existing;
     if(attachOnly)return null;
     if(operation==='refresh'&&existing?.operation==='connect'&&['queued','running','completed'].includes(existing.status)){
-      if(['queued','running'].includes(existing.status))await performBackgroundImport(leagueId,null,'connect',true);
+      if(['queued','running'].includes(existing.status)){
+        try{await performBackgroundImport(leagueId,null,'connect',true)}
+        catch(error){console.info('FSFFL competing connect ended before due refresh; rechecking freshness',error)}
+      }
       const freshness=await resilientApi('/api/connect/sleeper/background/freshness?league_external_id='+encodeURIComponent(leagueId),{},2);
+      if(freshness?.connect_in_progress===true)return{status:'completed',operation:'refresh',league_external_id:leagueId};
       if(freshness?.refresh_in_progress===true)return await startBackgroundImport(leagueId,'refresh',true);
       if(freshness?.refresh_due!==true)return{status:'completed',operation:'refresh',league_external_id:leagueId};
     }

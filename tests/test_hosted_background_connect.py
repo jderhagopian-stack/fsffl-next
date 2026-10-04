@@ -128,7 +128,7 @@ def test_mobile_connect_has_one_poll_owner_and_uses_state_before_terminal_connec
         "function waitForBackgroundImport", 1
     )[0]
     assert "let nextContextProbeAt=0" in perform
-    assert "operation==='connect'&&Date.now()>=nextContextProbeAt" in perform
+    assert "operation==='connect'&&!attachOnly&&Date.now()>=nextContextProbeAt" in perform
     assert "const usable=await usableConnectedContext(leagueId)" in perform
     assert "if(usable)return usable" in perform
     assert perform.index("if(usable)return usable") < perform.index("job?.status==='completed'")
@@ -1152,7 +1152,7 @@ def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() 
 def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due() -> None:
     script = r"""
       const fs=require('fs'),vm=require('vm'),assert=require('assert');
-      const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',completedBeforeCheck=condition==='completed-before-check',attachCompleted=condition==='attach-completed',attachFailed=condition==='attach-failed',connectThenDue=condition==='connect-in-progress-then-due',dueConnectActive=condition==='due-connect-active',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
+      const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',completedBeforeCheck=condition==='completed-before-check',attachCompleted=condition==='attach-completed',attachFailed=condition==='attach-failed',connectThenDue=condition==='connect-in-progress-then-due',dueConnectActive=condition==='due-connect-active',dueConnectFailed=condition==='due-connect-failed',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
       let currentReads=0,contextReads=0,freshnessReads=0;const syncStates=[];
       global.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,String(value)),removeItem:key=>storage.delete(key)};
       global.document={visibilityState:'visible',querySelector:()=>null,createElement:tag=>({tagName:tag,dataset:{}}),head:{appendChild(){}},addEventListener(){}};
@@ -1163,8 +1163,8 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
       global.api=async(path,options={})=>{
         calls.push([path,options.method||'GET']);
         if(path==='/api/product-context'){contextReads+=1;const advanced=completedBeforeCheck?contextReads>1:inProgress?contextReads>1:attachCompleted?contextReads>1:connectThenDue?contextReads>1:dueConnectActive?contextReads>2:false;return{league_id:'sleeper:123',state_id:advanced?'state-2':'state-1',teams:[],team_id:null};}
-        if(path.startsWith('/api/connect/sleeper/background/freshness?')){freshnessReads+=1;if(connectThenDue)return freshnessReads===1?{refresh_due:false,connect_in_progress:true,reason:'connect_in_progress'}:{refresh_due:true,reason:'full_refresh_due'};if(dueConnectActive)return{refresh_due:true,reason:'full_refresh_due'};return{refresh_due:due,refresh_in_progress:inProgress||attachCompleted||attachFailed,reason:due?'full_refresh_due':(inProgress||attachCompleted||attachFailed)?'refresh_in_progress':'provider_current'};}
-        if(path==='/api/connect/sleeper/background/current')return dueConnectActive?(++currentReads<=2?{league_external_id:'123',status:'running',operation:'connect'}:{league_external_id:'123',status:'completed',operation:'connect'}):connectThenDue?(++currentReads===1?{league_external_id:'123',status:'running',operation:'connect'}:{league_external_id:'123',status:'completed',operation:'connect'}):inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'} ):attachCompleted?{league_external_id:'123',status:'completed',operation:'refresh'}:attachFailed?{league_external_id:'123',status:'failed',operation:'refresh',error:'provider refresh failed'}:{};
+        if(path.startsWith('/api/connect/sleeper/background/freshness?')){freshnessReads+=1;if(connectThenDue)return freshnessReads===1?{refresh_due:false,connect_in_progress:true,reason:'connect_in_progress'}:{refresh_due:true,reason:'full_refresh_due'};if(dueConnectActive||dueConnectFailed)return{refresh_due:true,reason:'full_refresh_due'};return{refresh_due:due,refresh_in_progress:inProgress||attachCompleted||attachFailed,reason:due?'full_refresh_due':(inProgress||attachCompleted||attachFailed)?'refresh_in_progress':'provider_current'};}
+        if(path==='/api/connect/sleeper/background/current')return dueConnectFailed?{league_external_id:'123',status:'failed',operation:'connect',error:'connect failed'}:dueConnectActive?(++currentReads<=2?{league_external_id:'123',status:'running',operation:'connect'}:{league_external_id:'123',status:'completed',operation:'connect'}):connectThenDue?(++currentReads===1?{league_external_id:'123',status:'running',operation:'connect'}:{league_external_id:'123',status:'completed',operation:'connect'}):inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'} ):attachCompleted?{league_external_id:'123',status:'completed',operation:'refresh'}:attachFailed?{league_external_id:'123',status:'failed',operation:'refresh',error:'provider refresh failed'}:{};
         if(path==='/api/connect/sleeper/background/refresh'&&options.method==='POST')return{status:'completed',operation:'refresh',league_external_id:'123'};
         throw new Error('unexpected API '+path);
       };
@@ -1177,13 +1177,15 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
         assert.strictEqual(calls.some(([path])=>path==='/api/connect/sleeper/background/freshness?league_external_id=123'),true);
         if(!attachFailed)assert.strictEqual(calls.filter(([path])=>path==='/api/product-context').length>=2,true,'a bounded post-freshness or job-completion context read reconciles State');
         if(inProgress||attachCompleted||connectThenDue)assert.strictEqual(state.context.state_id,'state-2','restored session attaches to active or just-completed work and adopts the new context');
-        if(connectThenDue){assert.strictEqual(freshnessReads,2,'connect completion is followed by one bounded freshness recheck');assert.strictEqual(currentReads>=2,true,'attach-only connect waits for terminal job status before rechecking freshness');}
+        if(connectThenDue){assert.strictEqual(freshnessReads,3,'connect completion receives bounded due checks before provider handoff');assert.strictEqual(currentReads>=2,true,'attach-only connect waits for terminal job status before rechecking freshness');}
         if(dueConnectActive){assert.strictEqual(freshnessReads,2,'due provider refresh is rechecked after competing connect completion');assert.strictEqual(currentReads>=3,true,'due refresh waits for competing connect terminal status');assert.strictEqual(state.context.state_id,'state-2');}
         if(completedBeforeCheck)assert.strictEqual(state.context.state_id,'state-2','restored session reconciles an already-completed refresh without reposting');
         if(attachFailed)assert.strictEqual(syncStates.includes('stale'),true,'failed attached refresh remains visible as stale');
       })().catch(error=>{console.error(error);process.exitCode=1});
     """
-    for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed", "attach-failed", "connect-in-progress-then-due", "due-connect-active"):
+    if(dueConnectFailed){assert.strictEqual(refreshPosts.length,1,'a failed competing connect does not suppress an independently due provider refresh');assert.strictEqual(freshnessReads,2,'failed connect receives one bounded freshness recheck');}
+    """
+    for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed", "attach-failed", "connect-in-progress-then-due", "due-connect-active", "due-connect-failed"):
         completed = subprocess.run(
             ["node", "-e", script, condition],
             check=False,
