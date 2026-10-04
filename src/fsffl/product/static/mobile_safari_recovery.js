@@ -207,7 +207,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         {},
         2,
       );
-      if(freshness?.refresh_due===true)void refreshStoredLeague(leagueId,baselineStateId);
+      if(freshness?.refresh_due===true||freshness?.refresh_in_progress===true)void refreshStoredLeague(leagueId,baselineStateId);
     }catch(error){
       console.info('FSFFL saved-session freshness check unavailable; preserving current State',error);
     }

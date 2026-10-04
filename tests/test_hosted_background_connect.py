@@ -1042,13 +1042,14 @@ def test_session_restore_freshness_read_reuses_governed_cursor_before_refresh(
             fingerprint="fingerprint-current",
         )
 
-    def client_for(cursor, probe_loader=probe):
+    def client_for(cursor, probe_loader=probe, coordinator=None):
         application = FastAPI()
         install_hosted_connect_routes(
             application,
             runtime_store=store,
             state_loader=lambda _league: league_state,
             behavioral_coordinator=SimpleNamespace(start=lambda **_kwargs: None),
+            coordinator=coordinator,
             persistence_store=Persistence(cursor),  # type: ignore[arg-type]
             sync_probe_loader=probe_loader,
             full_refresh_seconds=3600,
@@ -1062,6 +1063,25 @@ def test_session_restore_freshness_read_reuses_governed_cursor_before_refresh(
     assert current.status_code == 200
     assert current.json() == {"refresh_due": False, "reason": "provider_current"}
     assert len(probe_calls) == 1
+
+    in_progress = client_for(
+        make_cursor(now),
+        coordinator=SimpleNamespace(
+            current=lambda _user: SimpleNamespace(
+                league_external_id=external_id,
+                status=LeagueConnectStatus.RUNNING,
+            )
+        ),
+    ).get(
+        "/api/connect/sleeper/background/freshness",
+        params={"league_external_id": external_id},
+    )
+    assert in_progress.status_code == 200
+    assert in_progress.json() == {
+        "refresh_due": False,
+        "refresh_in_progress": True,
+        "reason": "refresh_in_progress",
+    }
 
     changed_probe = client_for(make_cursor(now), lambda _league: SleeperSyncProbe(
         league_external_id=external_id,
@@ -1098,7 +1118,7 @@ def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() 
     )[0]
     assert "refreshStoredLeagueIfDue(leagueId,context.state_id)" in restore
     assert "waitForBackgroundImport(leagueId,null,'connect')" in restore
-    assert "freshness?.refresh_due===true" in source
+    assert "freshness?.refresh_due===true||freshness?.refresh_in_progress===true" in source
     assert "waitForBackgroundImport(leagueId,null,'refresh')" in source
     assert "function refreshStoredLeagueIfDue" in source
 
@@ -1106,7 +1126,8 @@ def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() 
 def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due() -> None:
     script = r"""
       const fs=require('fs'),vm=require('vm'),assert=require('assert');
-      const due=process.argv[1]==='due',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
+      const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
+      let currentReads=0,contextReads=0;
       global.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,String(value)),removeItem:key=>storage.delete(key)};
       global.document={visibilityState:'visible',querySelector:()=>null,createElement:tag=>({tagName:tag,dataset:{}}),head:{appendChild(){}},addEventListener(){}};
       global.CustomEvent=class{constructor(type,init){this.type=type;this.detail=init?.detail}};
@@ -1115,22 +1136,23 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
       global.applyContext=()=>{};global.fetch=()=>Promise.resolve({ok:true});
       global.api=async(path,options={})=>{
         calls.push([path,options.method||'GET']);
-        if(path==='/api/product-context')return{league_id:'sleeper:123',state_id:'state-1',teams:[],team_id:null};
-        if(path.startsWith('/api/connect/sleeper/background/freshness?'))return{refresh_due:due,reason:due?'full_refresh_due':'provider_current'};
-        if(path==='/api/connect/sleeper/background/current')return{};
+        if(path==='/api/product-context')return{league_id:'sleeper:123',state_id:inProgress&&++contextReads>1?'state-2':'state-1',teams:[],team_id:null};
+        if(path.startsWith('/api/connect/sleeper/background/freshness?'))return{refresh_due:due,refresh_in_progress:inProgress,reason:due?'full_refresh_due':inProgress?'refresh_in_progress':'provider_current'};
+        if(path==='/api/connect/sleeper/background/current')return inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'}):{};
         if(path==='/api/connect/sleeper/background/refresh'&&options.method==='POST')return{status:'completed',operation:'refresh',league_external_id:'123'};
         throw new Error('unexpected API '+path);
       };
       vm.runInThisContext(fs.readFileSync('src/fsffl/product/static/mobile_safari_recovery.js','utf8'));
       (async()=>{
         assert.strictEqual(await window.fsfflRestoreSession(),true);
-        await new Promise(resolve=>setTimeout(resolve,20));
+        await new Promise(resolve=>setTimeout(resolve,inProgress?900:20));
         const refreshPosts=calls.filter(([path,method])=>path==='/api/connect/sleeper/background/refresh'&&method==='POST');
-        assert.strictEqual(refreshPosts.length,due?1:0,'only governed due freshness may launch provider POST');
+        assert.strictEqual(refreshPosts.length,due?1:0,'only governed due freshness may launch a new provider POST');
         assert.strictEqual(calls.some(([path])=>path==='/api/connect/sleeper/background/freshness?league_external_id=123'),true);
+        if(inProgress)assert.strictEqual(state.context.state_id,'state-2','restored session attaches to completion and adopts the new context');
       })().catch(error=>{console.error(error);process.exitCode=1});
     """
-    for condition in ("current", "due"):
+    for condition in ("current", "due", "in-progress"):
         completed = subprocess.run(
             ["node", "-e", script, condition],
             check=False,
