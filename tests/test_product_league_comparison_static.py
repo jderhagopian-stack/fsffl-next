@@ -109,9 +109,16 @@ def test_current_publication_forces_one_state_safe_atlas_promotion_without_reset
     assert "One bounded retry covers a publication/read race without polling or loops." in shell
     assert "publication_generation_id:fsfflLeagueStructureState.atlas?.publication_generation_id||null" in atlas
     assert "fetchFsfflLeagueComparison({force,expectedGeneration})" in atlas
-    assert "const publicationMatches=contextGeneration===atlasGeneration" in atlas
+    assert "const publicationMatches=expectedGeneration===atlasGeneration" in atlas
     assert "if(!force&&publicationMatches&&fsfflLeagueStructureState.atlas" in atlas
     assert "laAtlasPayloadsAligned(results[0],results[1],stateId,expectedGeneration)" in atlas
+    assert "laValueLensResponseMatches(requestId,fsfflLeagueValueLensRequestId" in atlas
+    assert "laAtlasContextTarget(context,force=false,requestedGeneration=null)" in atlas
+    assert "latestTarget.stateId!==stateId" in atlas
+    assert "latestTarget.generationId!==expectedGeneration" in atlas
+    assert "publicationMatches=expectedGeneration===atlasGeneration" in atlas
+    assert "if(!stillCurrent(payload?.publication_generation_id||null))return" in atlas
+    assert "fsfflLeagueStructureState.valueLenses=payload" in atlas
     assert "atlasPayload.publication_generation_id!==expectedGeneration" in atlas
     assert "positionLens:fsfflLeagueStructureState.positionLens" in atlas
     assert "fsfflLeagueStructureState.positionLens=retainedViewState?.positionLens||'current'" in atlas
@@ -166,6 +173,56 @@ def test_atlas_load_rejects_cross_generation_payload_pairs():
         assert.strictEqual(sandbox.aligned(atlas,views,'state-1','g2'),false);
         assert.strictEqual(sandbox.aligned(atlas,{league_state_id:'state-2'},'state-2',null),false);
         assert.strictEqual(sandbox.aligned({league_state_id:'state-2'},{league_state_id:'state-2'},'state-2',null),true);
+        """
+    )
+    completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_atlas_reentry_uses_verified_last_good_identity_during_rebuild_only():
+    import subprocess
+    import textwrap
+
+    script = textwrap.dedent(
+        r"""
+        const fs=require('fs'),vm=require('vm'),assert=require('assert');
+        const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+        const start=source.indexOf('function laAtlasContextTarget(');
+        const end=source.indexOf('let fsfflLeagueValueLensRequestId',start);
+        assert(start>=0&&end>start,'production served-publication target helper must exist');
+        const sandbox={};
+        vm.runInNewContext(source.slice(start,end)+`\nthis.target=laAtlasContextTarget;`,sandbox);
+        const rebuilding={state_id:'target-state',publication_generation_id:'target-generation',capability_readiness:{overall_status:'rebuilding',publication:{generation_id:'target-generation'},served_last_good:{available:true,league_state_id:'served-state',publication_generation_id:'served-generation'}}};
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(sandbox.target(rebuilding))),{canonicalStateId:'target-state',stateId:'served-state',generationId:'served-generation'});
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(sandbox.target(rebuilding,true,'target-generation'))),{canonicalStateId:'target-state',stateId:'target-state',generationId:'target-generation'});
+        const ready={...rebuilding,capability_readiness:{overall_status:'full',publication:{generation_id:'target-generation'},served_last_good:{available:false}}};
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(sandbox.target(ready))),{canonicalStateId:'target-state',stateId:'target-state',generationId:'target-generation'});
+        const unverified={...rebuilding,capability_readiness:{...rebuilding.capability_readiness,served_last_good:{...rebuilding.capability_readiness.served_last_good,available:false}}};
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(sandbox.target(unverified))),{canonicalStateId:'target-state',stateId:'target-state',generationId:'target-generation'});
+        """
+    )
+    completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_atlas_value_lens_response_cannot_overwrite_a_newer_publication():
+    import subprocess
+    import textwrap
+
+    script = textwrap.dedent(
+        r"""
+        const fs=require('fs'),vm=require('vm'),assert=require('assert');
+        const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+        const start=source.indexOf('function laValueLensResponseMatches(');
+        const end=source.indexOf('let fsfflLeagueValueLensRequestId',start);
+        assert(start>=0&&end>start,'production value-lens generation fence must exist');
+        const sandbox={};
+        vm.runInNewContext(source.slice(start,end)+`\nthis.matches=laValueLensResponseMatches;`,sandbox);
+        assert.strictEqual(sandbox.matches(2,2,'state-2','state-2','g2','g2','g2'),true);
+        assert.strictEqual(sandbox.matches(1,2,'state-1','state-2','g1','g2','g1'),false);
+        assert.strictEqual(sandbox.matches(2,2,'state-2','state-2','g1','g2','g1'),false);
+        assert.strictEqual(sandbox.matches(2,2,'state-2','state-2','g2','g2','g1'),false);
+        assert.strictEqual(sandbox.matches(2,2,'state-2','state-2',null,null,null),true);
         """
     )
     completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)

@@ -296,19 +296,25 @@ function renderLeagueComparison(){
   bindLeagueActions();setTimeout(laApplyDeepLinkFocus,0);
 }
 async function loadLeagueValueLenses(){
+  const requestId=++fsfflLeagueValueLensRequestId;
+  const requestedStateId=fsfflLeagueStructureState.atlas?.league_state_id||null;
+  const requestedGeneration=fsfflLeagueStructureState.atlas?.publication_generation_id||null;
+  const stillCurrent=(payloadGeneration=requestedGeneration)=>laValueLensResponseMatches(requestId,fsfflLeagueValueLensRequestId,requestedStateId,fsfflLeagueStructureState.atlas?.league_state_id||null,requestedGeneration,fsfflLeagueStructureState.atlas?.publication_generation_id||null,payloadGeneration);
   fsfflLeagueStructureState.valueStatus='loading';renderLeagueComparison();
   for(let attempt=0;attempt<80;attempt+=1){
     try{
       const payload=await api('/api/league/value-lenses');
+      if(!stillCurrent(payload?.publication_generation_id||null))return;
       if(payload?.status==='loading'||payload?.build_status==='queued'||payload?.build_status==='running'){
-        await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));continue;
+        await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));if(!stillCurrent())return;continue;
       }
       fsfflLeagueStructureState.valueLenses=payload;fsfflLeagueStructureState.valueStatus=payload?.status||'ready';fsfflLeagueStructureState.valueError=null;renderLeagueComparison();return;
     }catch(error){
+      if(!stillCurrent())return;
       fsfflLeagueStructureState.valueLenses=null;fsfflLeagueStructureState.valueStatus='unavailable';fsfflLeagueStructureState.valueError=error.message||String(error);renderLeagueComparison();return;
     }
   }
-  fsfflLeagueStructureState.valueStatus='unavailable';fsfflLeagueStructureState.valueError='Governed value-lens preparation did not complete within the bounded polling window.';renderLeagueComparison();
+  if(stillCurrent()){fsfflLeagueStructureState.valueStatus='unavailable';fsfflLeagueStructureState.valueError='Governed value-lens preparation did not complete within the bounded polling window.';renderLeagueComparison()}
 }
 async function laLoadDynastyRooms(){
   const requestedStateId=fsfflLeagueStructureState.atlas?.league_state_id||null;
@@ -361,11 +367,26 @@ function laAtlasPayloadsAligned(atlasPayload,teamViewsPayload,requestedStateId,e
   if(atlasGeneration!==teamViewsGeneration)return false;
   return !expectedGeneration||(atlasGeneration===expectedGeneration&&teamViewsGeneration===expectedGeneration);
 }
+function laValueLensResponseMatches(requestId,currentRequestId,requestedStateId,currentStateId,requestedGeneration,currentGeneration,payloadGeneration){
+  if(requestId!==currentRequestId||requestedStateId!==currentStateId||requestedGeneration!==currentGeneration)return false;
+  return payloadGeneration===requestedGeneration;
+}
+function laAtlasContextTarget(context,force=false,requestedGeneration=null){
+  const readiness=context?.capability_readiness||{},served=readiness.served_last_good||{};
+  const usingLastGood=!force&&readiness.overall_status==='rebuilding'&&served.available===true&&served.league_state_id&&served.publication_generation_id;
+  return {
+    canonicalStateId:context?.state_id||null,
+    stateId:usingLastGood?served.league_state_id:(context?.state_id||null),
+    generationId:requestedGeneration||(usingLastGood?served.publication_generation_id:(readiness.publication?.generation_id||context?.publication_generation_id||null)),
+  };
+}
+let fsfflLeagueValueLensRequestId=0;
 async function loadFsfflLeagueComparison(options={}){
-  const force=options?.force===true,expectedGeneration=options?.expectedGeneration||null;
+  const force=options?.force===true,target=laAtlasContextTarget(state?.context,force,options?.expectedGeneration||null);
+  const expectedGeneration=target.generationId,expectedStateId=target.stateId;
   if(fsfflLeagueComparisonLoadPromise){
     await fsfflLeagueComparisonLoadPromise;
-    if(!force||!expectedGeneration||fsfflLeagueStructureState.atlas?.publication_generation_id===expectedGeneration)return;
+    if(fsfflLeagueStructureState.atlas?.publication_generation_id===expectedGeneration&&fsfflLeagueStructureState.atlas?.league_state_id===expectedStateId)return;
   }
   const request=fetchFsfflLeagueComparison({force,expectedGeneration});
   fsfflLeagueComparisonLoadPromise=request;
@@ -375,10 +396,13 @@ async function loadFsfflLeagueComparison(options={}){
 async function fetchFsfflLeagueComparison({force=false,expectedGeneration=null}={}){
   const panel=leagueComparisonPanel();if(!panel)return;
   if(!state?.context?.league_id){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>Connect a league first.</h2><p class="lead">Load a league from Home to see its competitive landscape.</p>';return}
-  const stateId=state?.context?.state_id||null,started=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
-  const contextGeneration=state?.context?.capability_readiness?.publication?.generation_id||state?.context?.publication_generation_id||null;
+  const context=state?.context||{},contextStateId=context.state_id||null;
+  const target=laAtlasContextTarget(context,force,expectedGeneration);
+  const stateId=target.stateId;
+  const started=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+  expectedGeneration=target.generationId;
   const atlasGeneration=fsfflLeagueStructureState.atlas?.publication_generation_id||null;
-  const publicationMatches=contextGeneration===atlasGeneration;
+  const publicationMatches=expectedGeneration===atlasGeneration;
   if(!force&&publicationMatches&&fsfflLeagueStructureState.atlas&&stateId&&fsfflLeagueStructureState.atlas.league_state_id===stateId&&fsfflLeagueStructureState.views.length){
     const ended=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();fsfflLeagueStructureState.warmMs=Math.max(0,ended-started);renderLeagueComparison();if(!fsfflLeagueStructureState.valueLenses&&fsfflLeagueStructureState.valueStatus!=='loading')void loadLeagueValueLenses();return;
   }
@@ -390,7 +414,8 @@ async function fetchFsfflLeagueComparison({force=false,expectedGeneration=null}=
       if(laAtlasPayloadsAligned(results[0],results[1],stateId,expectedGeneration)){atlasPayload=results[0];teamViewsPayload=results[1];break}
       if(attempt<2)await new Promise(resolve=>setTimeout(resolve,150));
     }
-    if(!atlasPayload||!teamViewsPayload||atlasPayload.league_state_id!==stateId||state?.context?.state_id!==stateId)throw new Error('League State changed while the Atlas and roster views were loading. Reload to align the evidence.');
+    const latestContext=state?.context||{},latestTarget=laAtlasContextTarget(latestContext,force,null);
+    if(!atlasPayload||!teamViewsPayload||atlasPayload.league_state_id!==stateId||latestContext.state_id!==contextStateId||latestTarget.stateId!==stateId||latestTarget.generationId!==expectedGeneration)throw new Error('League State changed while the Atlas and roster views were loading. Reload to align the evidence.');
     if(expectedGeneration&&atlasPayload.publication_generation_id!==expectedGeneration){
       throw new Error('League Atlas is waiting for the matching published intelligence generation.');
     }
