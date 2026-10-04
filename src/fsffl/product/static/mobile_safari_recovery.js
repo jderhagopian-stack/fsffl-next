@@ -10,6 +10,8 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   let restoreInFlight=false;
   let activeLeagueId=null;
   let activeConnectPromise=null;
+  let activeConnectOperation=null;
+  let activeConnectAttachOnly=false;
 
   const now=()=>window.performance?.now?.()??Date.now();
   const recordLatency=(operation,started,outcome='success',detail=null)=>{
@@ -150,14 +152,25 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     // The server already treats a same-user/same-league connect or refresh as one
     // single-flight job. Mirror that contract in the browser so startup recovery,
     // manual connect and stale-while-revalidate cannot create competing poll loops.
-    if(activeConnectPromise&&activeLeagueId===leagueId)return activeConnectPromise;
+    if(activeConnectPromise&&activeLeagueId===leagueId){
+      if(activeConnectOperation===operation&&activeConnectAttachOnly===attachOnly)return activeConnectPromise;
+      const existing=activeConnectPromise;
+      return existing.then(
+        ()=>waitForBackgroundImport(leagueId,onProgress,operation,attachOnly),
+        ()=>waitForBackgroundImport(leagueId,onProgress,operation,attachOnly),
+      );
+    }
     const run=performBackgroundImport(leagueId,onProgress,operation,attachOnly);
     activeLeagueId=leagueId;
     activeConnectPromise=run;
+    activeConnectOperation=operation;
+    activeConnectAttachOnly=attachOnly;
     run.finally(()=>{
       if(activeConnectPromise===run){
         activeConnectPromise=null;
         activeLeagueId=null;
+        activeConnectOperation=null;
+        activeConnectAttachOnly=false;
       }
     }).catch(()=>{});
     return run;

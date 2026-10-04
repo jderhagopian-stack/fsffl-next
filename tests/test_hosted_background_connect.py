@@ -118,6 +118,8 @@ def test_mobile_connect_has_one_poll_owner_and_uses_state_before_terminal_connec
     assert "let activeConnectPromise=null" in source
     assert "let activeLeagueId=null" in source
     assert "activeConnectPromise&&activeLeagueId===leagueId" in source
+    assert "activeConnectOperation===operation&&activeConnectAttachOnly===attachOnly" in source
+    assert "existing.then(" in source and "waitForBackgroundImport(leagueId,onProgress,operation,attachOnly)" in source
     assert "const existing=await recoverCurrentJob(leagueId,operation)" in source
     assert "['queued','running'].includes(existing.status)" in source
     assert "current.status==='completed'&&current.operation===operation" in source
