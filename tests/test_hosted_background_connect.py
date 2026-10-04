@@ -1127,19 +1127,19 @@ def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() 
 def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due() -> None:
     script = r"""
       const fs=require('fs'),vm=require('vm'),assert=require('assert');
-      const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',completedBeforeCheck=condition==='completed-before-check',attachCompleted=condition==='attach-completed',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
-      let currentReads=0,contextReads=0;
+      const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',completedBeforeCheck=condition==='completed-before-check',attachCompleted=condition==='attach-completed',attachFailed=condition==='attach-failed',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
+      let currentReads=0,contextReads=0;const syncStates=[];
       global.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,String(value)),removeItem:key=>storage.delete(key)};
       global.document={visibilityState:'visible',querySelector:()=>null,createElement:tag=>({tagName:tag,dataset:{}}),head:{appendChild(){}},addEventListener(){}};
       global.CustomEvent=class{constructor(type,init){this.type=type;this.detail=init?.detail}};
-      global.window={performance:{now:()=>1},addEventListener(){},dispatchEvent(){},fsfflEnsureIntelligenceAfterTeamSelection(){},fsfflSyncState:{set(){}}};
+      global.window={performance:{now:()=>1},addEventListener(){},dispatchEvent(){},fsfflEnsureIntelligenceAfterTeamSelection(){},fsfflSyncState:{set(status){syncStates.push(status)}}};
       global.state={context:null,teamView:null,valueCatalog:null,intelligence:null,route:'league'};
       global.applyContext=()=>{};global.fetch=()=>Promise.resolve({ok:true});
       global.api=async(path,options={})=>{
         calls.push([path,options.method||'GET']);
         if(path==='/api/product-context'){contextReads+=1;const advanced=completedBeforeCheck?contextReads>1:inProgress?contextReads>1:attachCompleted?contextReads>1:false;return{league_id:'sleeper:123',state_id:advanced?'state-2':'state-1',teams:[],team_id:null};}
-        if(path.startsWith('/api/connect/sleeper/background/freshness?'))return{refresh_due:due,refresh_in_progress:inProgress,reason:due?'full_refresh_due':inProgress?'refresh_in_progress':'provider_current'};
-        if(path==='/api/connect/sleeper/background/current')return inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'}):attachCompleted?{league_external_id:'123',status:'completed',operation:'refresh'}:{};
+        if(path.startsWith('/api/connect/sleeper/background/freshness?'))return{refresh_due:due,refresh_in_progress:inProgress||attachCompleted||attachFailed,reason:due?'full_refresh_due':(inProgress||attachCompleted||attachFailed)?'refresh_in_progress':'provider_current'};
+        if(path==='/api/connect/sleeper/background/current')return inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'} ):attachCompleted?{league_external_id:'123',status:'completed',operation:'refresh'}:attachFailed?{league_external_id:'123',status:'failed',operation:'refresh',error:'provider refresh failed'}:{};
         if(path==='/api/connect/sleeper/background/refresh'&&options.method==='POST')return{status:'completed',operation:'refresh',league_external_id:'123'};
         throw new Error('unexpected API '+path);
       };
@@ -1153,9 +1153,10 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
         assert.strictEqual(calls.filter(([path])=>path==='/api/product-context').length>=2,true,'one bounded post-freshness context read reconciles racing completion');
         if(inProgress||attachCompleted)assert.strictEqual(state.context.state_id,'state-2','restored session attaches to active or just-completed refresh and adopts the new context');
         if(completedBeforeCheck)assert.strictEqual(state.context.state_id,'state-2','restored session reconciles an already-completed refresh without reposting');
+        if(attachFailed)assert.strictEqual(syncStates.includes('stale'),true,'failed attached refresh remains visible as stale');
       })().catch(error=>{console.error(error);process.exitCode=1});
     """
-    for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed"):
+    for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed", "attach-failed"):
         completed = subprocess.run(
             ["node", "-e", script, condition],
             check=False,

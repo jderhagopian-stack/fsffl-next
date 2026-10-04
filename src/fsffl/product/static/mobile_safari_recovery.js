@@ -59,7 +59,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       const current=await resilientApi('/api/connect/sleeper/background/current',{},2);
       if(current?.league_external_id!==leagueId)return null;
       if(['queued','running'].includes(current.status))return current;
-      if(current.status==='completed'&&current.operation===operation)return current;
+      if(['completed','failed'].includes(current.status)&&current.operation===operation)return current;
     }catch(error){
       if(!isTransportError(error))throw error;
     }
@@ -68,7 +68,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
 
   async function startBackgroundImport(leagueId,operation='connect',attachOnly=false){
     const existing=await recoverCurrentJob(leagueId,operation);
-    if(existing&&(['queued','running'].includes(existing.status)||(attachOnly&&existing.status==='completed')))return existing;
+    if(existing&&(['queued','running'].includes(existing.status)||(attachOnly&&['completed','failed'].includes(existing.status))))return existing;
     if(attachOnly)return null;
     const endpoint=operation==='refresh'
       ?'/api/connect/sleeper/background/refresh'
