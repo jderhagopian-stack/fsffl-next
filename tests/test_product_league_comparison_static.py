@@ -113,6 +113,9 @@ def test_current_publication_forces_one_state_safe_atlas_promotion_without_reset
     assert "if(!force&&publicationMatches&&fsfflLeagueStructureState.atlas" in atlas
     assert "laAtlasPayloadsAligned(results[0],results[1],stateId,expectedGeneration)" in atlas
     assert "laValueLensResponseMatches(requestId,fsfflLeagueValueLensRequestId" in atlas
+    assert "laAtlasEvidenceRequestMatches(requestId,currentRequestId,requestedStateId,currentStateId,requestedGeneration,currentGeneration)" in atlas
+    assert "fsfflLeagueDynastyRoomsRequestId+=1;fsfflLeagueLongTermRequestId+=1" in atlas
+    assert "requestedGeneration=fsfflLeagueStructureState.atlas?.publication_generation_id||null" in atlas
     assert "laAtlasContextTarget(context,force=false,requestedGeneration=null)" in atlas
     assert "latestTarget.stateId!==stateId" in atlas
     assert "latestTarget.generationId!==expectedGeneration" in atlas
@@ -297,3 +300,26 @@ def test_position_lens_controls_and_dynasty_loading_are_mobile_readable() -> Non
         "/* #374: group both lens controls above one readable, full-width status line. */",
         1,
     )[1]
+
+
+def test_dynasty_evidence_response_fences_include_publication_generation():
+    import subprocess
+    import textwrap
+
+    script = textwrap.dedent(
+        r"""
+        const fs=require('fs'),vm=require('vm'),assert=require('assert');
+        const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+        const start=source.indexOf('function laAtlasEvidenceRequestMatches(');
+        const end=source.indexOf('async function loadFsfflLeagueComparison',start);
+        assert(start>=0&&end>start,'production Dynasty request generation fence must exist');
+        const sandbox={};
+        vm.runInNewContext(source.slice(start,end)+`\nthis.matches=laAtlasEvidenceRequestMatches;`,sandbox);
+        assert.strictEqual(sandbox.matches(2,2,'state-2','state-2','g2','g2'),true);
+        assert.strictEqual(sandbox.matches(1,2,'state-1','state-2','g1','g2'),false);
+        assert.strictEqual(sandbox.matches(2,2,'state-2','state-2','g1','g2'),false);
+        assert.strictEqual(sandbox.matches(2,2,'state-2','state-2','g2','g1'),false);
+        """
+    )
+    completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
+    assert completed.returncode == 0, completed.stderr
