@@ -10,6 +10,8 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   let restoreInFlight=false;
   let activeLeagueId=null;
   let activeConnectPromise=null;
+  let activeConnectOperation=null;
+  let activeConnectAttachOnly=false;
 
   const now=()=>window.performance?.now?.()??Date.now();
   const recordLatency=(operation,started,outcome='success',detail=null)=>{
@@ -60,15 +62,28 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       if(current?.league_external_id!==leagueId)return null;
       if(['queued','running'].includes(current.status))return current;
       if(current.status==='completed'&&current.operation===operation)return current;
+      if(current.status==='failed'&&current.operation===operation)return current;
+      if(current.status==='completed')return current;
     }catch(error){
       if(!isTransportError(error))throw error;
     }
     return null;
   }
 
-  async function startBackgroundImport(leagueId,operation='connect'){
+  async function startBackgroundImport(leagueId,operation='connect',attachOnly=false){
     const existing=await recoverCurrentJob(leagueId,operation);
-    if(existing&&['queued','running'].includes(existing.status))return existing;
+    if(existing?.operation===operation&&(['queued','running'].includes(existing.status)||(attachOnly&&['completed','failed'].includes(existing.status))))return existing;
+    if(attachOnly)return null;
+    if(operation==='refresh'&&existing?.operation==='connect'&&['queued','running','completed'].includes(existing.status)){
+      if(['queued','running'].includes(existing.status)){
+        try{await performBackgroundImport(leagueId,null,'connect',true)}
+        catch(error){console.info('FSFFL competing connect ended before due refresh; rechecking freshness',error)}
+      }
+      const freshness=await resilientApi('/api/connect/sleeper/background/freshness?league_external_id='+encodeURIComponent(leagueId),{},2);
+      if(freshness?.connect_in_progress===true)return{status:'completed',operation:'refresh',league_external_id:leagueId};
+      if(freshness?.refresh_in_progress===true)return await startBackgroundImport(leagueId,'refresh',true);
+      if(freshness?.refresh_due!==true)return{status:'completed',operation:'refresh',league_external_id:leagueId};
+    }
     const endpoint=operation==='refresh'
       ?'/api/connect/sleeper/background/refresh'
       :'/api/connect/sleeper/background';
@@ -80,7 +95,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }catch(error){
       if(!isTransportError(error))throw error;
       const recovered=await recoverCurrentJob(leagueId,operation);
-      if(recovered)return recovered;
+      if(recovered?.operation===operation)return recovered;
       throw error;
     }
   }
@@ -95,8 +110,13 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }
   }
 
-  async function performBackgroundImport(leagueId,onProgress,operation='connect'){
-    let job=await startBackgroundImport(leagueId,operation);
+  async function performBackgroundImport(leagueId,onProgress,operation='connect',attachOnly=false){
+    let job=await startBackgroundImport(leagueId,operation,attachOnly);
+    if(!job&&attachOnly){
+      const current=await usableConnectedContext(leagueId);
+      if(current)return current;
+      throw new Error('The in-progress league refresh is no longer available.');
+    }
     const deadline=Date.now()+120000;
     let consecutiveTransportFailures=0;
     let pollDelay=700;
@@ -108,7 +128,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       // server may still be checkpointing that State or starting enrichment, but
       // neither durable persistence nor intelligence publication belongs on the
       // first-load navigation barrier.
-      if(operation==='connect'&&Date.now()>=nextContextProbeAt){
+      if(operation==='connect'&&!attachOnly&&Date.now()>=nextContextProbeAt){
         nextContextProbeAt=Date.now()+500;
         const usable=await usableConnectedContext(leagueId);
         if(usable)return usable;
@@ -139,18 +159,29 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     throw new Error('League import is taking longer than expected. Please try again in a moment.');
   }
 
-  function waitForBackgroundImport(leagueId,onProgress,operation='connect'){
+  function waitForBackgroundImport(leagueId,onProgress,operation='connect',attachOnly=false){
     // The server already treats a same-user/same-league connect or refresh as one
     // single-flight job. Mirror that contract in the browser so startup recovery,
     // manual connect and stale-while-revalidate cannot create competing poll loops.
-    if(activeConnectPromise&&activeLeagueId===leagueId)return activeConnectPromise;
-    const run=performBackgroundImport(leagueId,onProgress,operation);
+    if(activeConnectPromise&&activeLeagueId===leagueId){
+      if(activeConnectOperation===operation&&activeConnectAttachOnly===attachOnly)return activeConnectPromise;
+      const existing=activeConnectPromise;
+      return existing.then(
+        ()=>waitForBackgroundImport(leagueId,onProgress,operation,attachOnly),
+        ()=>waitForBackgroundImport(leagueId,onProgress,operation,attachOnly),
+      );
+    }
+    const run=performBackgroundImport(leagueId,onProgress,operation,attachOnly);
     activeLeagueId=leagueId;
     activeConnectPromise=run;
+    activeConnectOperation=operation;
+    activeConnectAttachOnly=attachOnly;
     run.finally(()=>{
       if(activeConnectPromise===run){
         activeConnectPromise=null;
         activeLeagueId=null;
+        activeConnectOperation=null;
+        activeConnectAttachOnly=false;
       }
     }).catch(()=>{});
     return run;
@@ -179,10 +210,10 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     return context;
   }
 
-  async function refreshStoredLeague(leagueId,baselineStateId){
+  async function refreshStoredLeague(leagueId,baselineStateId,attachOnly=false,operation='refresh'){
     publishSyncState('checking');
     try{
-      const refreshed=await waitForBackgroundImport(leagueId,null,'refresh');
+      const refreshed=attachOnly?await waitForBackgroundImport(leagueId,null,operation,true):await waitForBackgroundImport(leagueId,null,'refresh');
       if(refreshed?.state_id&&refreshed.state_id!==baselineStateId){
         const selected=await restoreSelectedTeam(refreshed);
         applyConnectedContext(selected);
@@ -196,6 +227,45 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }
   }
 
+  async function refreshStoredLeagueIfDue(leagueId,baselineStateId,afterConnect=false){
+    // Session restore is read-first. The endpoint uses the existing persisted
+    // Sleeper sync cursor + cheap provider probe and never starts provider work.
+    // If freshness cannot be established, leave the published State untouched;
+    // explicit refresh and missing-State connect recovery remain available.
+    try{
+      const freshness=await resilientApi(
+        '/api/connect/sleeper/background/freshness?league_external_id='+encodeURIComponent(leagueId),
+        {},
+        2,
+      );
+      if(freshness?.connect_in_progress===true){
+        await refreshStoredLeague(leagueId,baselineStateId,true,'connect');
+        if(!afterConnect)await refreshStoredLeagueIfDue(leagueId,state?.context?.state_id||baselineStateId,true);
+        return;
+      }
+      if(freshness?.refresh_in_progress===true){
+        await refreshStoredLeague(leagueId,baselineStateId,true);
+        return;
+      }
+      let latestStateId=baselineStateId;
+      try{
+        const latest=await resilientApi('/api/product-context',{},2);
+        if(contextMatchesLeague(latest,leagueId)&&latest?.state_id){
+          latestStateId=latest.state_id;
+          if(latestStateId!==baselineStateId){
+            const selected=await restoreSelectedTeam(latest);
+            applyConnectedContext(selected);
+          }
+        }
+      }catch(error){
+        console.info('FSFFL post-freshness context check unavailable; preserving current State',error);
+      }
+      if(freshness?.refresh_due===true)void refreshStoredLeague(leagueId,latestStateId);
+    }catch(error){
+      console.info('FSFFL saved-session freshness check unavailable; preserving current State',error);
+    }
+  }
+
   async function restoreSavedSession(){
     if(restoreInFlight)return false;
     const leagueId=localStorage.getItem(LEAGUE_KEY);
@@ -203,8 +273,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     const started=now();
     restoreInFlight=true;
     try{
-      // Stale-while-revalidate: let the durable runtime restore itself and render
-      // immediately before any provider acquisition begins.
+      // Stale-while-revalidate is now read-first: restore durable State first. A
+      // lightweight governed freshness read may schedule a provider refresh,
+      // but ordinary restore itself is not a provider refresh.
       let context=await resilientApi('/api/product-context',{},3);
       if(contextMatchesLeague(context,leagueId)&&context.state_id){
         context=await restoreSelectedTeam(context);
@@ -212,7 +283,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         window.fsfflEnsureIntelligenceAfterTeamSelection?.();
         if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
         recordLatency('restore_ready',started,'success','durable_restore');
-        void refreshStoredLeague(leagueId,context.state_id);
+        void refreshStoredLeagueIfDue(leagueId,context.state_id);
         return true;
       }
 

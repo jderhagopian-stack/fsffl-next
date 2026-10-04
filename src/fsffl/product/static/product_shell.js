@@ -25,7 +25,7 @@ const fsfflProductSurfaceCopy={
 };
 
 const fsfflStaticVersion='20260927-dualstate1';
-const leagueAtlasStaticVersion='20261004-position-controls374';
+const leagueAtlasStaticVersion='20261004-publication-handoff378';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
 const homeNorthStarStaticVersion='20261001-continuity2';
 const franchiseNorthStarStaticVersion='20261001-continuity2';
@@ -43,6 +43,48 @@ function injectMobileTouchFix(){if(document.querySelector('link[data-fsffl-touch
 function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseSetter,version=null){if(typeof window[existingName]==='function')return Promise.resolve();const existing=promiseGetter();if(existing)return existing;const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`${path}?v=${fsfflStaticVersion}`;if(version)script.src=`${path}?v=${version}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error(errorMessage));document.head.appendChild(script)});promiseSetter(promise);return promise}
 const fsfflProductSurfaceHealth={league_comparison:'unknown'};
 function fsfflSetSurfaceHealth(route,status){fsfflProductSurfaceHealth[route]=status;window.fsfflRenderSharedReadiness?.()}
+let fsfflAtlasPromotionGeneration=null;
+let fsfflAtlasPromotionInFlight=false;
+let fsfflAtlasPendingPromotionContext=null;
+function fsfflAtlasPublicationPromotionTarget(route,context,atlasStateId,atlasGeneration,handledKey){
+  const readiness=context?.capability_readiness||{},publication=readiness.publication||{};
+  const generation=publication.generation_id||context?.publication_generation_id||null;
+  const stateId=context?.state_id||null,key=stateId&&generation?stateId+'|'+generation:null;
+  if(route!=='league_comparison'||!stateId||!generation||readiness.overall_status!=='full'||publication.working_generation_active)return null;
+  if((generation===atlasGeneration&&stateId===atlasStateId)||key===handledKey)return null;
+  return generation;
+}
+async function fsfflPromoteVisibleAtlas(context){
+  if(state?.route!=='league_comparison')return;
+  if(fsfflAtlasPromotionInFlight){fsfflAtlasPendingPromotionContext=context;return}
+  const atlas=window.fsfflLeagueAtlasDiagnostics?.()||{};
+  const generation=fsfflAtlasPublicationPromotionTarget(state.route,context,atlas.league_state_id||null,atlas.publication_generation_id||null,fsfflAtlasPromotionGeneration);
+  if(!generation)return;
+  fsfflAtlasPromotionInFlight=true;
+  const promotionKey=context.state_id+'|'+generation;
+  fsfflAtlasPromotionGeneration=promotionKey;
+  try{
+    await ensureLeagueComparisonScript();
+    if(state?.route!=='league_comparison'){fsfflAtlasPromotionGeneration=null;return}
+    await window.renderFsfflLeagueComparison?.({force:true,expectedGeneration:generation});
+    const afterFirst=window.fsfflLeagueAtlasDiagnostics?.()||{};
+    if(afterFirst.publication_generation_id!==generation||afterFirst.league_state_id!==context.state_id){
+      // One bounded retry covers a publication/read race without polling or loops.
+      await new Promise(resolve=>setTimeout(resolve,250));
+      if(state?.route==='league_comparison')await window.renderFsfflLeagueComparison?.({force:true,expectedGeneration:generation});
+    }
+    const promoted=window.fsfflLeagueAtlasDiagnostics?.()||{};
+    if(promoted.publication_generation_id!==generation||promoted.league_state_id!==context.state_id)fsfflAtlasPromotionGeneration=null;
+  }catch(error){
+    fsfflAtlasPromotionGeneration=null;
+    console.warn('League Atlas publication promotion will retry on the next context update',error);
+  }finally{
+    fsfflAtlasPromotionInFlight=false;
+    const pending=fsfflAtlasPendingPromotionContext;
+    fsfflAtlasPendingPromotionContext=null;
+    if(pending)setTimeout(()=>void fsfflPromoteVisibleAtlas(pending),0);
+  }
+}
 function ensureLeagueComparisonScript(){
   if(typeof window.renderFsfflLeagueComparison==='function'){fsfflSetSurfaceHealth('league_comparison','ready');return Promise.resolve()}
   if(leagueComparisonScriptPromise)return leagueComparisonScriptPromise;
@@ -333,9 +375,10 @@ window.addEventListener('fsffl:intelligence-status-updated',event=>{
   fsfflRenderSharedReadiness();
   fsfflStartSharedReadinessPolling();
 });
-window.addEventListener('fsffl:product-context-updated',()=>{
+window.addEventListener('fsffl:product-context-updated',event=>{
   fsfflStopSharedReadinessPolling();
   setTimeout(()=>fsfflStartSharedReadinessPolling(),0);
+  void fsfflPromoteVisibleAtlas(event.detail||state?.context);
 });
 window.addEventListener('fsffl:sync-state',()=>setTimeout(()=>fsfflRenderSharedReadiness(),0));
 injectMobileTouchFix();window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();fsfflStartSharedReadinessPolling();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});window.addEventListener('fsffl:product-context-updated',()=>{rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness()});setTimeout(()=>{rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness()},0);

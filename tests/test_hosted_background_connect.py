@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import textwrap
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from threading import Event
 from time import monotonic, sleep
 from types import SimpleNamespace
@@ -17,6 +17,8 @@ from fsffl.product.hosted_connect import (
 )
 from fsffl.product.persistent_webapp import app
 from fsffl.product.runtime import PrivateBetaRuntimeStore
+from fsffl.persistence import SyncCursorRecord
+from fsffl.providers.sleeper_live import SleeperSyncProbe
 from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
 
@@ -116,14 +118,17 @@ def test_mobile_connect_has_one_poll_owner_and_uses_state_before_terminal_connec
     assert "let activeConnectPromise=null" in source
     assert "let activeLeagueId=null" in source
     assert "activeConnectPromise&&activeLeagueId===leagueId" in source
+    assert "activeConnectOperation===operation&&activeConnectAttachOnly===attachOnly" in source
+    assert "existing.then(" in source and "waitForBackgroundImport(leagueId,onProgress,operation,attachOnly)" in source
     assert "const existing=await recoverCurrentJob(leagueId,operation)" in source
     assert "['queued','running'].includes(existing.status)" in source
     assert "current.status==='completed'&&current.operation===operation" in source
+    assert "current.status==='failed'&&current.operation===operation" in source
     perform = source.split("async function performBackgroundImport", 1)[1].split(
         "function waitForBackgroundImport", 1
     )[0]
     assert "let nextContextProbeAt=0" in perform
-    assert "operation==='connect'&&Date.now()>=nextContextProbeAt" in perform
+    assert "operation==='connect'&&!attachOnly&&Date.now()>=nextContextProbeAt" in perform
     assert "const usable=await usableConnectedContext(leagueId)" in perform
     assert "if(usable)return usable" in perform
     assert perform.index("if(usable)return usable") < perform.index("job?.status==='completed'")
@@ -975,3 +980,216 @@ def test_repeated_cross_league_connect_reclaims_before_next_heavy_handoff(
     )
     assert first_reclaim < first_behavior
     assert second_reclaim < second_behavior
+
+
+def test_session_restore_freshness_read_reuses_governed_cursor_before_refresh(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    league_id = "sleeper:restore-freshness"
+    external_id = "restore-freshness"
+    league_state = LeagueState(
+        league=League(
+            league_id=league_id,
+            name="Freshness league",
+            season=2026,
+            rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
+        ),
+        as_of=datetime(2026, 10, 4, tzinfo=UTC),
+        teams=(
+            Team(team_id=f"{league_id}:team:1", league_id=league_id, display_name="Alpha"),
+            Team(team_id=f"{league_id}:team:2", league_id=league_id, display_name="Beta"),
+        ),
+        team_states=(
+            TeamState(team_id=f"{league_id}:team:1", roster=()),
+            TeamState(team_id=f"{league_id}:team:2", roster=()),
+        ),
+        players=(),
+        player_states=(),
+    )
+    now = datetime.now(UTC)
+
+    class Persistence:
+        def __init__(self, cursor):
+            self.cursor = cursor
+
+        def get_sync_cursor(self, **_kwargs):
+            return self.cursor
+
+    def make_cursor(last_full_refresh_at, fingerprint="fingerprint-current"):
+        return SyncCursorRecord(
+            provider="sleeper",
+            scope_kind="league_refresh",
+            scope_id=external_id,
+            cursor_payload={
+                "probe_fingerprint": fingerprint,
+                "season": 2026,
+                "week": 5,
+                "last_full_refresh_at": last_full_refresh_at.isoformat(),
+            },
+            synced_at=last_full_refresh_at,
+        )
+
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", league_state)
+    store.select_team("local-beta-user", f"{league_id}:team:1")
+    probe_calls = []
+
+    def probe(_league):
+        probe_calls.append(True)
+        return SleeperSyncProbe(
+            league_external_id=external_id,
+            captured_at=now,
+            season=2026,
+            week=5,
+            fingerprint="fingerprint-current",
+        )
+
+    def client_for(cursor, probe_loader=probe, coordinator=None):
+        application = FastAPI()
+        install_hosted_connect_routes(
+            application,
+            runtime_store=store,
+            state_loader=lambda _league: league_state,
+            behavioral_coordinator=SimpleNamespace(start=lambda **_kwargs: None),
+            coordinator=coordinator,
+            persistence_store=Persistence(cursor),  # type: ignore[arg-type]
+            sync_probe_loader=probe_loader,
+            full_refresh_seconds=3600,
+        )
+        return TestClient(application)
+
+    current = client_for(make_cursor(now)).get(
+        "/api/connect/sleeper/background/freshness",
+        params={"league_external_id": external_id},
+    )
+    assert current.status_code == 200
+    assert current.json() == {"refresh_due": False, "reason": "provider_current"}
+    assert len(probe_calls) == 1
+
+    in_progress = client_for(
+        make_cursor(now),
+        coordinator=SimpleNamespace(
+            current=lambda _user: SimpleNamespace(
+                league_external_id=external_id,
+                operation="refresh",
+                status=LeagueConnectStatus.RUNNING,
+            )
+        ),
+    ).get(
+        "/api/connect/sleeper/background/freshness",
+        params={"league_external_id": external_id},
+    )
+    assert in_progress.status_code == 200
+    assert in_progress.json() == {
+        "refresh_due": False,
+        "refresh_in_progress": True,
+        "reason": "refresh_in_progress",
+    }
+
+    connect_in_progress = client_for(
+        make_cursor(now),
+        coordinator=SimpleNamespace(
+            current=lambda _user: SimpleNamespace(
+                league_external_id=external_id,
+                operation="connect",
+                status=LeagueConnectStatus.RUNNING,
+            )
+        ),
+    ).get(
+        "/api/connect/sleeper/background/freshness",
+        params={"league_external_id": external_id},
+    )
+    assert connect_in_progress.status_code == 200
+    assert connect_in_progress.json() == {
+        "refresh_due": False,
+        "connect_in_progress": True,
+        "reason": "connect_in_progress",
+    }
+    assert len(probe_calls) == 1
+
+    changed_probe = client_for(make_cursor(now), lambda _league: SleeperSyncProbe(
+        league_external_id=external_id,
+        captured_at=now,
+        season=2026,
+        week=5,
+        fingerprint="provider-changed",
+    )).get(
+        "/api/connect/sleeper/background/freshness",
+        params={"league_external_id": external_id},
+    )
+    assert changed_probe.json() == {"refresh_due": True, "reason": "provider_probe_changed"}
+    # A cheap probe/cursor error is unknown, not a license to start the expensive path.
+    unknown = client_for(make_cursor(now), lambda _league: (_ for _ in ()).throw(OSError("offline"))).get(
+        "/api/connect/sleeper/background/freshness",
+        params={"league_external_id": external_id},
+    )
+    assert unknown.json() == {"refresh_due": False, "reason": "freshness_unavailable"}
+
+    due = client_for(make_cursor(now - timedelta(hours=2))).get(
+        "/api/connect/sleeper/background/freshness",
+        params={"league_external_id": external_id},
+    )
+    assert due.status_code == 200
+    assert due.json() == {"refresh_due": True, "reason": "full_refresh_due"}
+
+
+def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() -> None:
+    source = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js", encoding="utf-8"
+    ).read()
+    restore = source.split("async function restoreSavedSession()", 1)[1].split(
+        "async function interactiveConnect()", 1
+    )[0]
+    assert "refreshStoredLeagueIfDue(leagueId,context.state_id)" in restore
+    assert "waitForBackgroundImport(leagueId,null,'connect')" in restore
+    assert "if(freshness?.refresh_in_progress===true)" in source
+    assert "if(freshness?.refresh_due===true)void refreshStoredLeague(leagueId,latestStateId)" in source
+    assert "waitForBackgroundImport(leagueId,null,'refresh')" in source
+    assert "function refreshStoredLeagueIfDue" in source
+
+
+def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due() -> None:
+    script = r"""
+      const fs=require('fs'),vm=require('vm'),assert=require('assert');
+      const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',completedBeforeCheck=condition==='completed-before-check',attachCompleted=condition==='attach-completed',attachFailed=condition==='attach-failed',connectThenDue=condition==='connect-in-progress-then-due',dueConnectActive=condition==='due-connect-active',dueConnectFailed=condition==='due-connect-failed',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
+      let currentReads=0,contextReads=0,freshnessReads=0;const syncStates=[];
+      global.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,String(value)),removeItem:key=>storage.delete(key)};
+      global.document={visibilityState:'visible',querySelector:()=>null,createElement:tag=>({tagName:tag,dataset:{}}),head:{appendChild(){}},addEventListener(){}};
+      global.CustomEvent=class{constructor(type,init){this.type=type;this.detail=init?.detail}};
+      global.window={performance:{now:()=>1},addEventListener(){},dispatchEvent(){},fsfflEnsureIntelligenceAfterTeamSelection(){},fsfflSyncState:{set(status){syncStates.push(status)}}};
+      global.state={context:null,teamView:null,valueCatalog:null,intelligence:null,route:'league'};
+      global.applyContext=()=>{};global.fetch=()=>Promise.resolve({ok:true});
+      global.api=async(path,options={})=>{
+        calls.push([path,options.method||'GET']);
+        if(path==='/api/product-context'){contextReads+=1;if(dueConnectFailed&&contextReads>1)throw new Error('connect state unavailable');const advanced=completedBeforeCheck?contextReads>1:inProgress?contextReads>1:attachCompleted?contextReads>1:connectThenDue?contextReads>1:dueConnectActive?contextReads>2:false;return{league_id:'sleeper:123',state_id:advanced?'state-2':'state-1',teams:[],team_id:null};}
+        if(path.startsWith('/api/connect/sleeper/background/freshness?')){freshnessReads+=1;if(connectThenDue)return freshnessReads===1?{refresh_due:false,connect_in_progress:true,reason:'connect_in_progress'}:{refresh_due:true,reason:'full_refresh_due'};if(dueConnectActive||dueConnectFailed)return{refresh_due:true,reason:'full_refresh_due'};return{refresh_due:due,refresh_in_progress:inProgress||attachCompleted||attachFailed,reason:due?'full_refresh_due':(inProgress||attachCompleted||attachFailed)?'refresh_in_progress':'provider_current'};}
+        if(path==='/api/connect/sleeper/background/current')return dueConnectFailed?(++currentReads<=2?{league_external_id:'123',status:'running',operation:'connect'}:{league_external_id:'123',status:'failed',operation:'connect',error:'connect failed'}):dueConnectActive?(++currentReads<=2?{league_external_id:'123',status:'running',operation:'connect'}:{league_external_id:'123',status:'completed',operation:'connect'}):connectThenDue?(++currentReads===1?{league_external_id:'123',status:'running',operation:'connect'}:{league_external_id:'123',status:'completed',operation:'connect'}):inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'} ):attachCompleted?{league_external_id:'123',status:'completed',operation:'refresh'}:attachFailed?{league_external_id:'123',status:'failed',operation:'refresh',error:'provider refresh failed'}:{};
+        if(path==='/api/connect/sleeper/background/refresh'&&options.method==='POST')return{status:'completed',operation:'refresh',league_external_id:'123'};
+        throw new Error('unexpected API '+path);
+      };
+      vm.runInThisContext(fs.readFileSync('src/fsffl/product/static/mobile_safari_recovery.js','utf8'));
+      (async()=>{
+        assert.strictEqual(await window.fsfflRestoreSession(),true);
+        await new Promise(resolve=>setTimeout(resolve,inProgress||connectThenDue||dueConnectActive||dueConnectFailed?1000:20));
+        const refreshPosts=calls.filter(([path,method])=>path==='/api/connect/sleeper/background/refresh'&&method==='POST');
+        assert.strictEqual(refreshPosts.length,due||connectThenDue||dueConnectActive||dueConnectFailed?1:0,'only governed due freshness may launch a new provider POST');
+        assert.strictEqual(calls.some(([path])=>path==='/api/connect/sleeper/background/freshness?league_external_id=123'),true);
+        if(!attachFailed)assert.strictEqual(calls.filter(([path])=>path==='/api/product-context').length>=2,true,'a bounded post-freshness or job-completion context read reconciles State');
+        if(inProgress||attachCompleted||connectThenDue)assert.strictEqual(state.context.state_id,'state-2','restored session attaches to active or just-completed work and adopts the new context');
+        if(connectThenDue){assert.strictEqual(freshnessReads,3,'connect completion receives bounded due checks before provider handoff');assert.strictEqual(currentReads>=2,true,'attach-only connect waits for terminal job status before rechecking freshness');}
+        if(dueConnectActive){assert.strictEqual(freshnessReads,2,'due provider refresh is rechecked after competing connect completion');assert.strictEqual(currentReads>=3,true,'due refresh waits for competing connect terminal status');assert.strictEqual(state.context.state_id,'state-2');}
+        if(completedBeforeCheck)assert.strictEqual(state.context.state_id,'state-2','restored session reconciles an already-completed refresh without reposting');
+        if(attachFailed)assert.strictEqual(syncStates.includes('stale'),true,'failed attached refresh remains visible as stale');
+        if(dueConnectFailed){assert.strictEqual(refreshPosts.length,1,'a failed competing connect does not suppress an independently due provider refresh');assert.strictEqual(freshnessReads,2,'failed connect receives one bounded freshness recheck');}
+      })().catch(error=>{console.error(error);process.exitCode=1});
+    """
+    for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed", "attach-failed", "connect-in-progress-then-due", "due-connect-active", "due-connect-failed"):
+        completed = subprocess.run(
+            ["node", "-e", script, condition],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        assert completed.returncode == 0, completed.stderr
