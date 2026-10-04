@@ -1181,9 +1181,8 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
         if(dueConnectActive){assert.strictEqual(freshnessReads,2,'due provider refresh is rechecked after competing connect completion');assert.strictEqual(currentReads>=3,true,'due refresh waits for competing connect terminal status');assert.strictEqual(state.context.state_id,'state-2');}
         if(completedBeforeCheck)assert.strictEqual(state.context.state_id,'state-2','restored session reconciles an already-completed refresh without reposting');
         if(attachFailed)assert.strictEqual(syncStates.includes('stale'),true,'failed attached refresh remains visible as stale');
+        if(dueConnectFailed){assert.strictEqual(refreshPosts.length,1,'a failed competing connect does not suppress an independently due provider refresh');assert.strictEqual(freshnessReads,2,'failed connect receives one bounded freshness recheck');}
       })().catch(error=>{console.error(error);process.exitCode=1});
-    """
-    if(dueConnectFailed){assert.strictEqual(refreshPosts.length,1,'a failed competing connect does not suppress an independently due provider refresh');assert.strictEqual(freshnessReads,2,'failed connect receives one bounded freshness recheck');}
     """
     for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed", "attach-failed", "connect-in-progress-then-due", "due-connect-active", "due-connect-failed"):
         completed = subprocess.run(
