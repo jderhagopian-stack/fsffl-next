@@ -59,9 +59,10 @@ def test_cooperative_yield_has_a_strict_budget_under_sustained_pressure() -> Non
         yield_window_seconds=1.0,
     )
     now = [0.0]
+    pressure._yield_window_started = now[0]
     pressure.begin_request()
 
-    def advance(seconds: float) -> None:
+    def advance(seconds: float) -> None
         now[0] += seconds
 
     with patch("fsffl.product.foreground_pressure.monotonic", side_effect=lambda: now[0]):

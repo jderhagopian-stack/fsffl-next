@@ -234,7 +234,7 @@ def test_home_accepts_only_verified_same_league_team_last_good_generation() -> N
     import subprocess
 
     helper = HOME.split("function homePayloadMatchesContext(", 1)[1].split(
-        "\\nfunction ", 1
+        "\nfunction ", 1
     )[0]
     javascript = "function homePayloadMatchesContext(" + helper
     javascript += r"""
