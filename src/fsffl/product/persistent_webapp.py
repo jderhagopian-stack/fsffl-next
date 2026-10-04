@@ -25,6 +25,7 @@ from . import webapp as _webapp
 from .annual_preseason_scheduler_routes import install_annual_preseason_scheduler_route
 from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
 from .focused_opportunity_routes import install_focused_opportunity_routes
+from .acceptance_startup import production_acceptance_startup_enabled
 from .foreground_pressure import install_foreground_pressure
 from .forecast_resilience import (
     make_preseason_baseline_authority_loader,
@@ -1316,14 +1317,7 @@ def _clone_acceptance_presentation_snapshot(
 
 
 def _maybe_start_state_first_production_acceptance() -> None:
-    enabled = any(
-        os.getenv(name, "0").strip().lower() in {"1", "true", "yes", "on"}
-        for name in (
-            "FSFFL_RUN_RUNTIME_AVAILABILITY_ACCEPTANCE",
-            "FSFFL_RUN_STATE_FIRST_ACCEPTANCE",
-        )
-    )
-    if not enabled:
+    if not production_acceptance_startup_enabled(os.environ):
         return
     if _persistence_store is None:
         _runtime_availability_acceptance_state.update(

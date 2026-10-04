@@ -228,3 +228,49 @@ def test_home_explicitly_labels_stale_last_good_during_target_rebuild() -> None:
     assert "home-last-good-status" in HOME
     assert "Derived fields as of " in HOME
     assert "Replacement intelligence is rebuilding." not in HOME
+
+
+def test_home_accepts_only_verified_same_league_team_last_good_generation() -> None:
+    import subprocess
+
+    helper = HOME.split("function homePayloadMatchesContext(", 1)[1].split(
+        "\nfunction ", 1
+    )[0]
+    javascript = "function homePayloadMatchesContext(" + helper
+    javascript += r"""
+const assert = require('node:assert/strict');
+const context = {leagueId: 'league-a', teamId: 'team-a', stateId: 'target-state'};
+const current = {
+  league_id: 'league-a', league_state_id: 'target-state', managed_team_id: 'team-a',
+  team_view: {team_id: 'team-a'}, intelligence_freshness: {status: 'current', target_state_id: 'target-state'}
+};
+assert.equal(homePayloadMatchesContext(current, context), true);
+const stale = {
+  league_id: 'league-a', league_state_id: 'served-state', managed_team_id: 'team-a',
+  team_view: {team_id: 'team-a'}, publication_generation_id: 'generation-a',
+  intelligence_freshness: {
+    status: 'stale_last_good', stale: true, target_state_id: 'target-state',
+    target_league_id: 'league-a', served_state_id: 'served-state',
+    served_league_id: 'league-a', publication_generation_id: 'generation-a'
+  },
+  presentation_continuity: {
+    mode: 'stale_last_good', target_league_id: 'league-a', served_league_id: 'league-a',
+    target_league_state_id: 'target-state', served_league_state_id: 'served-state',
+    promotion_id: 'generation-a', publication_generation_id: 'generation-a'
+  }
+};
+assert.equal(homePayloadMatchesContext(stale, context), true);
+assert.equal(homePayloadMatchesContext({...stale, managed_team_id: 'team-b'}, context), false);
+assert.equal(homePayloadMatchesContext({...stale, team_view: {team_id: 'team-b'}}, context), false);
+assert.equal(homePayloadMatchesContext({...stale, presentation_continuity: {...stale.presentation_continuity, served_league_id: 'league-b'}}, context), false);
+assert.equal(homePayloadMatchesContext({...stale, intelligence_freshness: {status: 'stale_last_good', stale: true}}, context), false);
+assert.equal(homePayloadMatchesContext({...stale, presentation_continuity: {...stale.presentation_continuity, promotion_id: 'generation-b'}}, context), false);
+assert.equal(homePayloadMatchesContext({...stale, intelligence_freshness: {...stale.intelligence_freshness, target_state_id: 'other-target'}}, context), false);
+"""
+    result = subprocess.run(
+        ["node", "-e", javascript],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr

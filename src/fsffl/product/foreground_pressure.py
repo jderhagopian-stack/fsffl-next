@@ -31,6 +31,8 @@ class ForegroundPressure:
         slow_request_seconds: float = 0.75,
         recovery_seconds: float = 0.75,
         yield_seconds: float = 0.005,
+        yield_budget_seconds: float = 0.05,
+        yield_window_seconds: float = 1.0,
     ) -> None:
         self._lock = RLock()
         self._active_requests = 0
@@ -39,6 +41,10 @@ class ForegroundPressure:
         self._slow_request_seconds = max(0.0, slow_request_seconds)
         self._recovery_seconds = max(0.0, recovery_seconds)
         self._yield_seconds = max(0.0, yield_seconds)
+        self._yield_budget_seconds = max(0.0, yield_budget_seconds)
+        self._yield_window_seconds = max(0.001, yield_window_seconds)
+        self._yield_window_started = monotonic()
+        self._yielded_in_window = 0.0
 
     def begin_request(self) -> None:
         with self._lock:
@@ -69,12 +75,32 @@ class ForegroundPressure:
         return snapshot.active_requests > 0 or monotonic() < snapshot.recent_slow_until
 
     def cooperative_yield(self) -> bool:
+        """Yield briefly under load, with a strict wall-time budget per window.
+
+        Interactive requests retain priority, but no sustained request/polling load
+        can consume more than the configured background-yield budget in each window.
+        """
         if not self.should_yield():
             return False
-        if self._yield_seconds > 0:
-            sleep(self._yield_seconds)
-        else:
-            sleep(0)
+        now = monotonic()
+        with self._lock:
+            if now - self._yield_window_started >= self._yield_window_seconds:
+                self._yield_window_started = now
+                self._yielded_in_window = 0.0
+            remaining = self._yield_budget_seconds - self._yielded_in_window
+            if remaining <= 0.0:
+                return False
+            requested = min(self._yield_seconds, remaining)
+            if requested <= 0.0:
+                return False
+            self._yielded_in_window += requested
+            window_started = self._yield_window_started
+        sleep_started = monotonic()
+        sleep(requested)
+        actual = max(requested, monotonic() - sleep_started)
+        with self._lock:
+            if self._yield_window_started == window_started:
+                self._yielded_in_window += actual - requested
         return True
 
 
@@ -87,9 +113,13 @@ def install_foreground_pressure(app) -> None:
     @app.middleware("http")
     async def _track_foreground_pressure(request, call_next):
         path = request.url.path
-        # Starting/polling the intelligence job is orchestration, not foreground
-        # product browsing. All other HTTP work counts as foreground demand.
-        interactive = not path.startswith("/api/intelligence/jobs")
+        # Starting/polling jobs and reading lightweight readiness are orchestration,
+        # not interactive product demand. Exclude them so status polling cannot pace
+        # Simulation; a bounded yield budget also protects progress under real reads.
+        interactive = not (
+            path.startswith("/api/intelligence/jobs")
+            or path == "/api/intelligence/status"
+        )
         started = monotonic()
         if interactive:
             foreground_pressure.begin_request()

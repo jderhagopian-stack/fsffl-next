@@ -50,6 +50,48 @@ def test_cooperative_yield_is_inactive_without_foreground_pressure() -> None:
         sleeper.assert_not_called()
 
 
+def test_cooperative_yield_has_a_strict_budget_under_sustained_pressure() -> None:
+    pressure = ForegroundPressure(
+        slow_request_seconds=10.0,
+        recovery_seconds=0.0,
+        yield_seconds=0.005,
+        yield_budget_seconds=0.01,
+        yield_window_seconds=1.0,
+    )
+    now = [0.0]
+    pressure._yield_window_started = now[0]
+    pressure.begin_request()
+
+    def advance(seconds: float) -> None:
+        now[0] += seconds
+
+    with patch("fsffl.product.foreground_pressure.monotonic", side_effect=lambda: now[0]):
+        with patch("fsffl.product.foreground_pressure.sleep", side_effect=advance) as sleeper:
+            assert pressure.cooperative_yield()
+            assert pressure.cooperative_yield()
+            assert not pressure.cooperative_yield()
+            assert sleeper.call_count == 2
+            now[0] += 1.0
+            assert pressure.cooperative_yield()
+            assert sleeper.call_count == 3
+
+
+def test_readiness_status_is_excluded_from_foreground_pressure() -> None:
+    app = FastAPI()
+    install_foreground_pressure(app)
+
+    @app.get("/api/intelligence/status")
+    def status():
+        return {"status": "running"}
+
+    client = TestClient(app)
+    baseline = foreground_pressure.snapshot().active_requests
+    with patch.object(foreground_pressure, "begin_request") as begin:
+        assert client.get("/api/intelligence/status").status_code == 200
+        begin.assert_not_called()
+    assert foreground_pressure.snapshot().active_requests == baseline
+
+
 def test_hosted_middleware_balances_success_and_failure_requests() -> None:
     app = FastAPI()
     install_foreground_pressure(app)
