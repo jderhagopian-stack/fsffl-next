@@ -353,6 +353,14 @@ async function laLoadLongTermEvidence(){
     fsfflLeagueStructureState.longTermStatus='ready';renderLeagueComparison();
   }catch(_error){if(requestedStateId!==fsfflLeagueStructureState.atlas?.league_state_id)return;fsfflLeagueStructureState.longTermEvidence=null;fsfflLeagueStructureState.longTermStatus='unavailable';renderLeagueComparison()}
 }
+function laAtlasPayloadsAligned(atlasPayload,teamViewsPayload,requestedStateId,expectedGeneration=null){
+  if(!atlasPayload?.league_state_id||atlasPayload.league_state_id!==teamViewsPayload?.league_state_id)return false;
+  if(requestedStateId&&atlasPayload.league_state_id!==requestedStateId)return false;
+  const atlasGeneration=atlasPayload.publication_generation_id||null;
+  const teamViewsGeneration=teamViewsPayload.publication_generation_id||null;
+  if(atlasGeneration!==teamViewsGeneration)return false;
+  return !expectedGeneration||(atlasGeneration===expectedGeneration&&teamViewsGeneration===expectedGeneration);
+}
 async function loadFsfflLeagueComparison(options={}){
   const force=options?.force===true,expectedGeneration=options?.expectedGeneration||null;
   if(fsfflLeagueComparisonLoadPromise){
@@ -379,7 +387,7 @@ async function fetchFsfflLeagueComparison({force=false,expectedGeneration=null}=
     let atlasPayload=null,teamViewsPayload=null;
     for(let attempt=0;attempt<3;attempt+=1){
       const results=await Promise.all([api('/api/league/atlas'),api('/api/league/team-views')]);
-      if(results[0]?.league_state_id&&results[0].league_state_id===results[1]?.league_state_id){atlasPayload=results[0];teamViewsPayload=results[1];break}
+      if(laAtlasPayloadsAligned(results[0],results[1],stateId,expectedGeneration)){atlasPayload=results[0];teamViewsPayload=results[1];break}
       if(attempt<2)await new Promise(resolve=>setTimeout(resolve,150));
     }
     if(!atlasPayload||!teamViewsPayload||atlasPayload.league_state_id!==stateId||state?.context?.state_id!==stateId)throw new Error('League State changed while the Atlas and roster views were loading. Reload to align the evidence.');

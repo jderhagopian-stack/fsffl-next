@@ -16,7 +16,7 @@ def test_league_comparison_consumes_authoritative_atlas_analytics_and_value_cont
         assert evidence in source
     assert "api('/api/league/atlas')" in source
     assert "api('/api/league/team-views')" in source
-    assert "results[0].league_state_id===results[1]?.league_state_id" in source
+    assert "function laAtlasPayloadsAligned(atlasPayload,teamViewsPayload,requestedStateId,expectedGeneration=null)" in source
     assert "League State changed while the Atlas and roster views were loading" in source
     assert "api('/api/league/value-lenses')" in source
     assert "api('/api/values')" not in source
@@ -111,6 +111,7 @@ def test_current_publication_forces_one_state_safe_atlas_promotion_without_reset
     assert "fetchFsfflLeagueComparison({force,expectedGeneration})" in atlas
     assert "const publicationMatches=contextGeneration===atlasGeneration" in atlas
     assert "if(!force&&publicationMatches&&fsfflLeagueStructureState.atlas" in atlas
+    assert "laAtlasPayloadsAligned(results[0],results[1],stateId,expectedGeneration)" in atlas
     assert "atlasPayload.publication_generation_id!==expectedGeneration" in atlas
     assert "positionLens:fsfflLeagueStructureState.positionLens" in atlas
     assert "fsfflLeagueStructureState.positionLens=retainedViewState?.positionLens||'current'" in atlas
@@ -138,6 +139,33 @@ def test_atlas_publication_promotion_gate_is_generation_and_route_bound():
         assert.strictEqual(sandbox.pick('league',ready,'state-1','g1',null),null);
         assert.strictEqual(sandbox.pick('league_comparison',{...ready,capability_readiness:{...ready.capability_readiness,overall_status:'rebuilding'}},'state-1','g1',null),null);
         assert.strictEqual(sandbox.pick('league_comparison',{...ready,capability_readiness:{overall_status:'full',publication:{generation_id:'g2',working_generation_active:true}}},'state-1','g1',null),null);
+        """
+    )
+    completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_atlas_load_rejects_cross_generation_payload_pairs():
+    import subprocess
+    import textwrap
+
+    script = textwrap.dedent(
+        r"""
+        const fs=require('fs'),vm=require('vm'),assert=require('assert');
+        const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+        const start=source.indexOf('function laAtlasPayloadsAligned(');
+        const end=source.indexOf('async function loadFsfflLeagueComparison',start);
+        assert(start>=0&&end>start,'production payload alignment guard must exist');
+        const sandbox={};
+        vm.runInNewContext(source.slice(start,end)+`\nthis.aligned=laAtlasPayloadsAligned;`,sandbox);
+        const atlas={league_state_id:'state-2',publication_generation_id:'g2'};
+        const views={league_state_id:'state-2',publication_generation_id:'g2'};
+        assert.strictEqual(sandbox.aligned(atlas,views,'state-2','g2'),true);
+        assert.strictEqual(sandbox.aligned(atlas,{...views,publication_generation_id:'g1'},'state-2','g2'),false);
+        assert.strictEqual(sandbox.aligned(atlas,{...views,publication_generation_id:null},'state-2','g2'),false);
+        assert.strictEqual(sandbox.aligned(atlas,views,'state-1','g2'),false);
+        assert.strictEqual(sandbox.aligned(atlas,{league_state_id:'state-2'},'state-2',null),false);
+        assert.strictEqual(sandbox.aligned({league_state_id:'state-2'},{league_state_id:'state-2'},'state-2',null),true);
         """
     )
     completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
