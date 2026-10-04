@@ -648,6 +648,7 @@ def install_hosted_connect_routes(
         if (
             active is not None
             and active.league_external_id == league_external_id
+            and active.operation == "refresh"
             and active.status in {LeagueConnectStatus.QUEUED, LeagueConnectStatus.RUNNING}
         ):
             return {

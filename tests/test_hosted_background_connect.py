@@ -1070,6 +1070,7 @@ def test_session_restore_freshness_read_reuses_governed_cursor_before_refresh(
         coordinator=SimpleNamespace(
             current=lambda _user: SimpleNamespace(
                 league_external_id=external_id,
+                operation="refresh",
                 status=LeagueConnectStatus.RUNNING,
             )
         ),
@@ -1083,6 +1084,26 @@ def test_session_restore_freshness_read_reuses_governed_cursor_before_refresh(
         "refresh_in_progress": True,
         "reason": "refresh_in_progress",
     }
+
+    connect_in_progress = client_for(
+        make_cursor(now),
+        coordinator=SimpleNamespace(
+            current=lambda _user: SimpleNamespace(
+                league_external_id=external_id,
+                operation="connect",
+                status=LeagueConnectStatus.RUNNING,
+            )
+        ),
+    ).get(
+        "/api/connect/sleeper/background/freshness",
+        params={"league_external_id": external_id},
+    )
+    assert connect_in_progress.status_code == 200
+    assert connect_in_progress.json() == {
+        "refresh_due": False,
+        "reason": "provider_current",
+    }
+    assert len(probe_calls) == 2
 
     changed_probe = client_for(make_cursor(now), lambda _league: SleeperSyncProbe(
         league_external_id=external_id,
