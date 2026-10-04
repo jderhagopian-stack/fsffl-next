@@ -886,3 +886,56 @@
     z-index:6!important;
   }
 }
+
+
+/* #374: group both lens controls above one readable, full-width status line. */
+.league-atlas-north-star .league-position-lens-wrap{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  justify-items:stretch!important;
+  align-items:start!important;
+  gap:6px!important;
+}
+.league-atlas-north-star .league-position-lens-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  min-width:0;
+}
+.league-atlas-north-star .league-position-lens-note{
+  display:block;
+  width:100%;
+  max-width:none!important;
+  min-width:0;
+  margin:0;
+  color:var(--atlas-muted);
+  font-size:8.5px!important;
+  line-height:1.3!important;
+  text-align:left!important;
+}
+@media(max-width:720px){
+  .league-atlas-north-star .league-position-lens-wrap{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    justify-items:stretch!important;
+    gap:6px!important;
+  }
+  .league-atlas-north-star .league-position-lens-row{
+    width:100%;
+    gap:4px;
+  }
+  .league-atlas-north-star .league-position-lens{
+    flex:0 1 auto;
+    min-width:0;
+  }
+  .league-atlas-north-star .league-position-lens button{
+    min-height:38px!important;
+    padding:6px 7px!important;
+    font-size:8px!important;
+  }
+  .league-atlas-north-star .league-position-lens-note{
+    font-size:8px!important;
+    line-height:1.35!important;
+  }
+}
