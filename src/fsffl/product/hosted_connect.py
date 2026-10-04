@@ -630,6 +630,59 @@ def install_hosted_connect_routes(
             )
         )
 
+    @application.get("/api/connect/sleeper/background/freshness")
+    def background_refresh_freshness(
+        league_external_id: str,
+        user_id: str = Depends(require_beta_user),
+    ) -> dict[str, object]:
+        """Read the governed Sleeper cursor before session restore considers refresh."""
+
+        league_external_id = league_external_id.strip()
+        if not league_external_id:
+            raise HTTPException(status_code=422, detail="Sleeper league id cannot be blank")
+        runtime = runtime_store.get(user_id)
+        if not _matches_sleeper_league(runtime.league_state, league_external_id):
+            raise HTTPException(status_code=409, detail="Requested league is not loaded")
+
+        active = jobs.current(user_id)
+        if (
+            active is not None
+            and active.league_external_id == league_external_id
+            and active.status in {LeagueConnectStatus.QUEUED, LeagueConnectStatus.RUNNING}
+        ):
+            return {"refresh_due": False, "reason": "refresh_in_progress"}
+
+        if persistence_store is None or sync_probe_loader is None:
+            # Missing freshness instrumentation is not permission for an implicit
+            # provider fetch. Missing/corrupt canonical State uses the connect path.
+            return {"refresh_due": False, "reason": "freshness_unavailable"}
+
+        now = datetime.now(UTC)
+        try:
+            cursor = persistence_store.get_sync_cursor(
+                provider="sleeper",
+                scope_kind=_SYNC_SCOPE_KIND,
+                scope_id=league_external_id,
+            )
+            if _full_refresh_due(
+                cursor,
+                now=now,
+                full_refresh_seconds=full_refresh_seconds,
+            ):
+                return {"refresh_due": True, "reason": "full_refresh_due"}
+            probe = sync_probe_loader(league_external_id)
+        except Exception as exc:
+            _logger.info(
+                "FSFFL Sleeper freshness check unavailable league=%s error=%s",
+                league_external_id,
+                exc,
+            )
+            return {"refresh_due": False, "reason": "freshness_unavailable"}
+
+        if not _probe_matches_cursor(cursor, probe):
+            return {"refresh_due": True, "reason": "provider_probe_changed"}
+        return {"refresh_due": False, "reason": "provider_current"}
+
     @application.get("/api/connect/sleeper/background/current")
     def current_background_connect(
         user_id: str = Depends(require_beta_user),

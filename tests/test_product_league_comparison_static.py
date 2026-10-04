@@ -98,6 +98,50 @@ def test_league_atlas_explicitly_labels_stale_last_good_during_target_rebuild() 
     assert "Replacement league intelligence is rebuilding." not in source
 
 
+def test_current_publication_forces_one_state_safe_atlas_promotion_without_resetting_dynasty():
+    shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
+    atlas = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "fsfflAtlasPromotionInFlight" in shell
+    assert "fsfflAtlasPublicationPromotionTarget(state.route,context,atlas.league_state_id||null,atlas.publication_generation_id||null,fsfflAtlasPromotionGeneration)" in shell
+    assert "readiness.overall_status!=='full'" in shell
+    assert "publication.working_generation_active" in shell
+    assert "window.renderFsfflLeagueComparison?.({force:true,expectedGeneration:generation})" in shell
+    assert "One bounded retry covers a publication/read race without polling or loops." in shell
+    assert "publication_generation_id:fsfflLeagueStructureState.atlas?.publication_generation_id||null" in atlas
+    assert "fetchFsfflLeagueComparison({force,expectedGeneration})" in atlas
+    assert "atlasPayload.publication_generation_id!==expectedGeneration" in atlas
+    assert "positionLens:fsfflLeagueStructureState.positionLens" in atlas
+    assert "fsfflLeagueStructureState.positionLens=retainedViewState?.positionLens||'current'" in atlas
+    assert "if(fsfflLeagueStructureState.positionLens==='dynasty')void laLoadDynastyRooms()" in atlas
+
+
+def test_atlas_publication_promotion_gate_is_generation_and_route_bound():
+    import subprocess
+    import textwrap
+
+    script = textwrap.dedent(
+        r"""
+        const fs=require('fs'),vm=require('vm'),assert=require('assert');
+        const source=fs.readFileSync('src/fsffl/product/static/product_shell.js','utf8');
+        const start=source.indexOf('function fsfflAtlasPublicationPromotionTarget(');
+        const end=source.indexOf('async function fsfflPromoteVisibleAtlas',start);
+        assert(start>=0&&end>start,'production promotion gate must be present');
+        const sandbox={};
+        vm.runInNewContext(source.slice(start,end)+`\nthis.pick=fsfflAtlasPublicationPromotionTarget;`,sandbox);
+        const ready={state_id:'state-1',publication_generation_id:'g2',capability_readiness:{overall_status:'full',publication:{generation_id:'g2',working_generation_active:false}}};
+        assert.strictEqual(sandbox.pick('league_comparison',ready,'state-1','g1',null),'g2');
+        assert.strictEqual(sandbox.pick('league_comparison',ready,'state-1','g2',null),null);
+        assert.strictEqual(sandbox.pick('league_comparison',ready,'state-1','g1','state-1|g2'),null);
+        assert.strictEqual(sandbox.pick('league_comparison',ready,'state-2','g2',null),'g2');
+        assert.strictEqual(sandbox.pick('league',ready,'state-1','g1',null),null);
+        assert.strictEqual(sandbox.pick('league_comparison',{...ready,capability_readiness:{...ready.capability_readiness,overall_status:'rebuilding'}},'state-1','g1',null),null);
+        assert.strictEqual(sandbox.pick('league_comparison',{...ready,capability_readiness:{overall_status:'full',publication:{generation_id:'g2',working_generation_active:true}}},'state-1','g1',null),null);
+        """
+    )
+    completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
+    assert completed.returncode == 0, completed.stderr
+
+
 def test_league_atlas_rollout_surfaces_simulation_futures_and_origin_aware_pick_intelligence() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "Season scenarios" in source
@@ -138,10 +182,10 @@ def test_league_atlas_pick_drawer_groups_owned_assets_before_traded_history() ->
     assert "row.fsffl_intrinsic_pick_value" in drawer
     assert "row.owner_team_name" in drawer
     assert "row.original_team_name" in drawer
-    assert "20261004-position-controls374" in Path(
+    assert "20261004-publication-handoff378" in Path(
         "src/fsffl/product/static/product_shell.js"
     ).read_text(encoding="utf-8")
-    assert "20261004-position-controls374" in source
+    assert "20261004-publication-handoff378" in source
 
 
 def test_position_lens_controls_and_dynasty_loading_are_mobile_readable() -> None:

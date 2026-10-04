@@ -196,6 +196,23 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }
   }
 
+  async function refreshStoredLeagueIfDue(leagueId,baselineStateId){
+    // Session restore is read-first. The endpoint uses the existing persisted
+    // Sleeper sync cursor + cheap provider probe and never starts provider work.
+    // If freshness cannot be established, leave the published State untouched;
+    // explicit refresh and missing-State connect recovery remain available.
+    try{
+      const freshness=await resilientApi(
+        '/api/connect/sleeper/background/freshness?league_external_id='+encodeURIComponent(leagueId),
+        {},
+        2,
+      );
+      if(freshness?.refresh_due===true)void refreshStoredLeague(leagueId,baselineStateId);
+    }catch(error){
+      console.info('FSFFL saved-session freshness check unavailable; preserving current State',error);
+    }
+  }
+
   async function restoreSavedSession(){
     if(restoreInFlight)return false;
     const leagueId=localStorage.getItem(LEAGUE_KEY);
@@ -203,8 +220,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     const started=now();
     restoreInFlight=true;
     try{
-      // Stale-while-revalidate: let the durable runtime restore itself and render
-      // immediately before any provider acquisition begins.
+      // Stale-while-revalidate is now read-first: restore durable State first. A
+      // lightweight governed freshness read may schedule a provider refresh,
+      // but ordinary restore itself is not a provider refresh.
       let context=await resilientApi('/api/product-context',{},3);
       if(contextMatchesLeague(context,leagueId)&&context.state_id){
         context=await restoreSelectedTeam(context);
@@ -212,7 +230,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         window.fsfflEnsureIntelligenceAfterTeamSelection?.();
         if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
         recordLatency('restore_ready',started,'success','durable_restore');
-        void refreshStoredLeague(leagueId,context.state_id);
+        void refreshStoredLeagueIfDue(leagueId,context.state_id);
         return true;
       }
 
