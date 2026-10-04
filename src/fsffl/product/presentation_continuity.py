@@ -554,20 +554,25 @@ class PresentationContinuityStore:
                 return None
 
             payload = _json_round_trip(raw)
+            payload["league_id"] = served_league_id
             payload["publication_generation_id"] = promotion_id
             if mode == "published":
                 payload["intelligence_freshness"] = {
                     "status": "current",
                     "stale": False,
                     "target_state_id": current.state_id,
+                    "target_league_id": current.league.league_id,
                     "target_as_of": current.as_of.isoformat(),
                     "served_state_id": served_state_id,
+                    "served_league_id": served_league_id,
                     "served_as_of": served_as_of.isoformat(),
                     "publication_generation_id": promotion_id,
                     "presentation_contract": PRESENTATION_MODEL_VERSION,
                 }
                 payload["presentation_continuity"] = {
                     "mode": "published",
+                    "target_league_id": current.league.league_id,
+                    "served_league_id": served_league_id,
                     "target_league_state_id": current.state_id,
                     "served_league_state_id": served_state_id,
                     "served_as_of": served_as_of.isoformat(),
@@ -580,8 +585,10 @@ class PresentationContinuityStore:
                 "status": "stale_last_good",
                 "stale": True,
                 "target_state_id": current.state_id,
+                "target_league_id": current.league.league_id,
                 "target_as_of": current.as_of.isoformat(),
                 "served_state_id": served_state_id,
+                "served_league_id": served_league_id,
                 "served_as_of": served_as_of.isoformat(),
                 "publication_generation_id": promotion_id,
                 "message": (
@@ -592,6 +599,8 @@ class PresentationContinuityStore:
             }
             payload["presentation_continuity"] = {
                 "mode": "stale_last_good",
+                "target_league_id": current.league.league_id,
+                "served_league_id": served_league_id,
                 "target_league_state_id": current.state_id,
                 "served_league_state_id": served_state_id,
                 "served_as_of": served_as_of.isoformat(),

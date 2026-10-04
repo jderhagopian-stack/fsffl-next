@@ -156,6 +156,44 @@ function renderFsfflHomeNorthStar(){
   </section>`;
   homeWireActions(container);
 }
+function homePayloadMatchesContext(payload,context){
+  const leagueId=context?.leagueId,teamId=context?.teamId,stateId=context?.stateId;
+  if(!payload||!leagueId||!teamId||!stateId)return false;
+  if(payload.league_id!==leagueId||payload.managed_team_id!==teamId||payload.team_view?.team_id!==teamId)return false;
+  const freshness=payload.intelligence_freshness||{},continuity=payload.presentation_continuity||{};
+  if(payload.league_state_id===stateId){
+    if(freshness.target_state_id&&freshness.target_state_id!==stateId)return false;
+    if(freshness.served_state_id&&freshness.served_state_id!==stateId)return false;
+    if(freshness.target_league_id&&freshness.target_league_id!==leagueId)return false;
+    if(freshness.served_league_id&&freshness.served_league_id!==leagueId)return false;
+    if(continuity.mode&&continuity.mode!=='published')return false;
+    if(continuity.target_league_id&&continuity.target_league_id!==leagueId)return false;
+    if(continuity.served_league_id&&continuity.served_league_id!==leagueId)return false;
+    if(continuity.target_league_state_id&&continuity.target_league_state_id!==stateId)return false;
+    if(continuity.served_league_state_id&&continuity.served_league_state_id!==stateId)return false;
+    const generation=payload.publication_generation_id;
+    if(generation&&freshness.publication_generation_id&&generation!==freshness.publication_generation_id)return false;
+    if(generation&&continuity.publication_generation_id&&generation!==continuity.publication_generation_id)return false;
+    if(generation&&continuity.promotion_id&&generation!==continuity.promotion_id)return false;
+    return true;
+  }
+  const generation=payload.publication_generation_id;
+  return freshness.status==='stale_last_good'
+    &&freshness.stale===true
+    &&freshness.target_state_id===stateId
+    &&freshness.target_league_id===leagueId
+    &&freshness.served_state_id===payload.league_state_id
+    &&freshness.served_league_id===leagueId
+    &&continuity.mode==='stale_last_good'
+    &&continuity.target_league_id===leagueId
+    &&continuity.served_league_id===leagueId
+    &&continuity.target_league_state_id===stateId
+    &&continuity.served_league_state_id===payload.league_state_id
+    &&typeof generation==='string'&&generation.length>0
+    &&generation===freshness.publication_generation_id
+    &&generation===continuity.publication_generation_id
+    &&generation===continuity.promotion_id;
+}
 async function loadFsfflHomeNorthStar({force=false}={}){
   const leagueId=state?.context?.league_id,teamId=state?.context?.team_id,stateId=state?.context?.state_id;
   if(!leagueId||!teamId){fsfflHomeNorthStarState.payload=null;fsfflHomeNorthStarState.error=null;fsfflHomeNorthStarState.requestKey=null;renderFsfflHomeNorthStar();return}
@@ -166,7 +204,7 @@ async function loadFsfflHomeNorthStar({force=false}={}){
   try{
     const payload=await api('/api/home');
     if(fsfflHomeNorthStarState.requestKey!==key)return;
-    if(payload?.league_state_id!==state?.context?.state_id||payload?.managed_team_id!==state?.context?.team_id)throw new Error('Home evidence does not match the current managed-team State.');
+    if(!homePayloadMatchesContext(payload,{leagueId,teamId,stateId}))throw new Error('Home evidence does not match the current managed-team State.');
     fsfflHomeNorthStarState.payload=payload;
   }catch(error){
     if(fsfflHomeNorthStarState.requestKey===key){fsfflHomeNorthStarState.payload=null;fsfflHomeNorthStarState.error=error?.message||String(error)}

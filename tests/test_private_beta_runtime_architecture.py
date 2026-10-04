@@ -156,14 +156,21 @@ def test_hosted_startup_is_restore_first_and_does_not_auto_launch_heavy_work() -
         'app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)'
         in source
     )
-    assert "FSFFL_RUN_RUNTIME_AVAILABILITY_ACCEPTANCE" in source
+    assert "production_acceptance_startup_enabled(os.environ)" in source
+    acceptance_startup = Path("src/fsffl/product/acceptance_startup.py").read_text(
+        encoding="utf-8"
+    )
+    assert "FSFFL_ENABLE_PRODUCTION_ACCEPTANCE_STARTUP" in acceptance_startup
+    assert "FSFFL_RUN_RUNTIME_AVAILABILITY_ACCEPTANCE" in acceptance_startup
     acceptance = source.split(
         "def _maybe_start_state_first_production_acceptance()", 1
     )[1].split(
         '@app.get("/health/product-acceptance")', 1
     )[0]
-    assert "if not enabled:" in acceptance
-    assert "return" in acceptance.split("if not enabled:", 1)[1].split(
+    assert "if not production_acceptance_startup_enabled(os.environ):" in acceptance
+    assert "return" in acceptance.split(
+        "if not production_acceptance_startup_enabled(os.environ):", 1
+    )[1].split(
         "if _persistence_store is None:", 1
     )[0]
     assert "FSFFL_RUNTIME_ACCEPTANCE_DELAY_SECONDS" in acceptance

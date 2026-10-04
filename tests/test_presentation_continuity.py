@@ -74,8 +74,7 @@ class MemoryPersistence:
         return max(rows, key=lambda row: row.computed_at) if rows else None
 
 
-def _state(as_of: datetime) -> LeagueState:
-    league_id = "sleeper:123"
+def _state(as_of: datetime, *, league_id: str = "sleeper:123") -> LeagueState:
     return LeagueState(
         league=League(
             league_id=league_id,
@@ -175,14 +174,32 @@ def test_manifest_last_promotion_and_stale_read_are_truthful() -> None:
     assert payload is not None
     assert payload["surface"] == HOME_SURFACE
     assert payload["intelligence_freshness"]["status"] == "stale_last_good"
+    assert payload["league_id"] == old.league.league_id
     assert payload["intelligence_freshness"]["target_state_id"] == current.state_id
     assert payload["intelligence_freshness"]["served_state_id"] == old.state_id
+    assert payload["intelligence_freshness"]["target_league_id"] == current.league.league_id
+    assert payload["intelligence_freshness"]["served_league_id"] == old.league.league_id
     continuity_meta = payload["presentation_continuity"]
     assert continuity_meta["mode"] == "stale_last_good"
+    assert continuity_meta["target_league_id"] == current.league.league_id
+    assert continuity_meta["served_league_id"] == old.league.league_id
     assert continuity_meta["target_league_state_id"] == current.state_id
     assert continuity_meta["served_league_state_id"] == old.state_id
     assert continuity_meta["served_as_of"] == old.as_of.isoformat()
     assert continuity_meta["promotion_id"]
+    franchise = continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=_runtime(
+            current,
+            served=old,
+            served_generation_id=result.publication_generation_id,
+        ),
+        surface=FRANCHISE_SURFACE,
+    )
+    assert franchise is not None
+    assert franchise["intelligence_freshness"]["status"] == "stale_last_good"
+    assert franchise["publication_generation_id"] == payload["publication_generation_id"]
+    assert franchise["presentation_continuity"]["served_league_state_id"] == old.state_id
 
 
 def test_published_surface_reads_validate_only_requested_payload_after_promotion() -> None:

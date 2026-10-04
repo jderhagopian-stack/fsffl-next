@@ -2325,6 +2325,7 @@ def create_app(
         return tag_publication_generation(runtime, {
             "status": "ready",
             "contract_version": "home-north-star-v1",
+            "league_id": runtime.league_state.league_id,
             "league_state_id": runtime.league_state.state_id,
             "managed_team_id": runtime.selected_team_id,
             "intelligence_freshness": freshness,
