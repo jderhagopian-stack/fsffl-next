@@ -2648,3 +2648,20 @@ Accepted evidence:
 
 **ACTIVE: Product Integration / Capability Rollout.** First slice is League Atlas consumption of already-published accepted capability contracts: replayable Simulation representative futures and origin-aware future-pick outlook/value. Preserve authority labels and progressive disclosure; do not create new economics, probability mass, composite scores or recommendations. Holistic Long-Term Intrinsic exposure follows through the governed Value/Player Intelligence product path.
 
+## 2026-10-03 — #369 Current | Dynasty position lens
+
+Contract discovery:
+- Existing NEXT-4 league-relative position strength is only optimized current-season starter production and remains the exact Current lens authority.
+- Team Analytics has player age, roster slot and player-level Market/Current Intrinsic evidence, but no governed team-by-position long-term metric.
+- Foundation 4 holistic Long-Term Intrinsic is a shadow contract with product-ranking authority false; it cannot supply the Dynasty room rank.
+
+Bounded diagnostic: analytics-dynasty-position-room-breadth-v1 counts each canonical rostered player once at their actual QB/RB/WR/TE position. It includes starters, bench, IR and taxi because Dynasty room inventory includes rostered depth and developmental assets. It excludes unrostered players and draft picks. No player values, percentiles, ages or forecasts enter this diagnostic. Teams rank by count descending, with team ID as deterministic tie-break. If any team lacks complete roster/player-position evidence, relative ranks are unavailable. This measures room breadth, not quality.
+
+League Atlas exposes Current | Dynasty as separate views. Current still reads the same position_strengths rows, rank and optimized-starter Strength Index. Dynasty uses the Analytics room-breadth rows. Drilldown shows starter/bench/IR/taxi counts, individual roster slots and ages, Market and Current Intrinsic indices/percentiles, plus per-player holistic Long-Term Intrinsic shadow references loaded on demand. None of these values are aggregated into the room rank. Foundation 4 economics and ranking authority remain unchanged.
+
+Validation scope is the new Analytics diagnostic and League Atlas composition/presentation, the existing Current rank regression, static asset cache contract and full CI. Hosted acceptance must verify both lenses, an actual managed-team drawer, Long-Term shadow evidence, and unchanged #368 Season Scenarios/pick sections before physical iPhone/Safari review. Simulation 2.0 and Foundation 4 do not require re-acceptance.
+## 2026-10-03 — #370 Management formula disposition
+
+This section supersedes the initial #369 roster-breadth-only contract above. Management approved the downstream Analytics / Team Utility room metric `ROOM_RAW(T,P) = Σ raw_career_forward_reference(player)` for each canonically rostered player whose actual QB/RB/WR/TE position is P. Count each player once, including starters, bench, IR and taxi. No age or slot weighting, Market, display-index arithmetic, or cross-horizon extra aggregation. Roster count is secondary Breadth/Depth evidence.
+
+Only emit a rank when every team has complete, same-State, identity- and position-matched career-forward evidence for that position. Ties share rank; team ID is display order only. Emit `100 × ROOM_RAW / league_average_ROOM_RAW` only if that mean is positive. Missing evidence is withheld, never imputed as zero. The Foundation 4 coordinator record supplies the State identity; its accepted economics remain unchanged. Current continues to use the exact optimized-starter position-strength rows. Required gates: proportionate focused coverage, full CI, fresh exact-head Codex review, then hosted and physical iPhone/Safari acceptance.

@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
+from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
 from .foundation4_career_forward_runtime import Foundation4CareerForwardShadowLoader
 from .intrinsic_background import IntrinsicBuildStatus, ShapleyIntrinsicBackgroundCoordinator
 from .runtime import PrivateBetaRuntimeStore
@@ -60,7 +61,45 @@ def install_foundation4_shadow_routes(
                 status_code=503,
                 detail="Foundation 4 lifecycle completed without a holistic contract",
             )
-        return record.contract.model_dump(mode="json")
+        payload = record.contract.model_dump(mode="json")
+        payload["league_state_id"] = record.league_state_id
+        return payload
+
+    @app.get("/api/league/dynasty-position-rooms")
+    def dynasty_position_rooms(user_id: str = Depends(require_beta_user)):
+        """Return Analytics-owned positional-room allocations for the exact State."""
+
+        context, record = _record(user_id)
+        state = context.league_state
+        if state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
+            return _building_payload(record)
+        if record.status == IntrinsicBuildStatus.FAILED or record.contract is None:
+            return {
+                "status": "unavailable",
+                "shadow": True,
+                "league_state_id": state.state_id,
+                "reason": record.error or "Holistic career-forward evidence is unavailable",
+            }
+        if record.league_state_id != state.state_id:
+            return {
+                "status": "unavailable",
+                "league_state_id": state.state_id,
+                "reason": "Career-forward evidence does not match the current league State",
+            }
+        rooms = build_dynasty_position_rooms(
+            state,
+            career_forward=record.contract,
+            evidence_state_id=record.league_state_id,
+        )
+        return {
+            "status": "ready",
+            "league_state_id": state.state_id,
+            "input_fingerprint": record.intrinsic_input_fingerprint,
+            "model_version": rooms[0].model_version if rooms else None,
+            "rooms": [row.model_dump(mode="json") for row in rooms],
+        }
 
     @app.get(FOUNDATION4_Y4_Y7_ENDPOINT)
     def y4_y7_shadow(user_id: str = Depends(require_beta_user)):
