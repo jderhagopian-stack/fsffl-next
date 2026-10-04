@@ -648,14 +648,20 @@ def install_hosted_connect_routes(
         if (
             active is not None
             and active.league_external_id == league_external_id
-            and active.operation == "refresh"
             and active.status in {LeagueConnectStatus.QUEUED, LeagueConnectStatus.RUNNING}
         ):
-            return {
-                "refresh_due": False,
-                "refresh_in_progress": True,
-                "reason": "refresh_in_progress",
-            }
+            if active.operation == "refresh":
+                return {
+                    "refresh_due": False,
+                    "refresh_in_progress": True,
+                    "reason": "refresh_in_progress",
+                }
+            if active.operation == "connect":
+                return {
+                    "refresh_due": False,
+                    "connect_in_progress": True,
+                    "reason": "connect_in_progress",
+                }
 
         if persistence_store is None or sync_probe_loader is None:
             # Missing freshness instrumentation is not permission for an implicit

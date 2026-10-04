@@ -186,10 +186,10 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     return context;
   }
 
-  async function refreshStoredLeague(leagueId,baselineStateId,attachOnly=false){
+  async function refreshStoredLeague(leagueId,baselineStateId,attachOnly=false,operation='refresh'){
     publishSyncState('checking');
     try{
-      const refreshed=attachOnly?await waitForBackgroundImport(leagueId,null,'refresh',true):await waitForBackgroundImport(leagueId,null,'refresh');
+      const refreshed=attachOnly?await waitForBackgroundImport(leagueId,null,operation,true):await waitForBackgroundImport(leagueId,null,'refresh');
       if(refreshed?.state_id&&refreshed.state_id!==baselineStateId){
         const selected=await restoreSelectedTeam(refreshed);
         applyConnectedContext(selected);
@@ -203,7 +203,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }
   }
 
-  async function refreshStoredLeagueIfDue(leagueId,baselineStateId){
+  async function refreshStoredLeagueIfDue(leagueId,baselineStateId,afterConnect=false){
     // Session restore is read-first. The endpoint uses the existing persisted
     // Sleeper sync cursor + cheap provider probe and never starts provider work.
     // If freshness cannot be established, leave the published State untouched;
@@ -214,6 +214,11 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         {},
         2,
       );
+      if(freshness?.connect_in_progress===true){
+        await refreshStoredLeague(leagueId,baselineStateId,true,'connect');
+        if(!afterConnect)await refreshStoredLeagueIfDue(leagueId,state?.context?.state_id||baselineStateId,true);
+        return;
+      }
       if(freshness?.refresh_in_progress===true){
         await refreshStoredLeague(leagueId,baselineStateId,true);
         return;

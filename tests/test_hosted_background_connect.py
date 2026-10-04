@@ -1101,9 +1101,10 @@ def test_session_restore_freshness_read_reuses_governed_cursor_before_refresh(
     assert connect_in_progress.status_code == 200
     assert connect_in_progress.json() == {
         "refresh_due": False,
-        "reason": "provider_current",
+        "connect_in_progress": True,
+        "reason": "connect_in_progress",
     }
-    assert len(probe_calls) == 2
+    assert len(probe_calls) == 1
 
     changed_probe = client_for(make_cursor(now), lambda _league: SleeperSyncProbe(
         league_external_id=external_id,
@@ -1149,8 +1150,8 @@ def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() 
 def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due() -> None:
     script = r"""
       const fs=require('fs'),vm=require('vm'),assert=require('assert');
-      const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',completedBeforeCheck=condition==='completed-before-check',attachCompleted=condition==='attach-completed',attachFailed=condition==='attach-failed',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
-      let currentReads=0,contextReads=0;const syncStates=[];
+      const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',completedBeforeCheck=condition==='completed-before-check',attachCompleted=condition==='attach-completed',attachFailed=condition==='attach-failed',connectThenDue=condition==='connect-in-progress-then-due',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
+      let currentReads=0,contextReads=0,freshnessReads=0;const syncStates=[];
       global.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,String(value)),removeItem:key=>storage.delete(key)};
       global.document={visibilityState:'visible',querySelector:()=>null,createElement:tag=>({tagName:tag,dataset:{}}),head:{appendChild(){}},addEventListener(){}};
       global.CustomEvent=class{constructor(type,init){this.type=type;this.detail=init?.detail}};
@@ -1159,26 +1160,27 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
       global.applyContext=()=>{};global.fetch=()=>Promise.resolve({ok:true});
       global.api=async(path,options={})=>{
         calls.push([path,options.method||'GET']);
-        if(path==='/api/product-context'){contextReads+=1;const advanced=completedBeforeCheck?contextReads>1:inProgress?contextReads>1:attachCompleted?contextReads>1:false;return{league_id:'sleeper:123',state_id:advanced?'state-2':'state-1',teams:[],team_id:null};}
-        if(path.startsWith('/api/connect/sleeper/background/freshness?'))return{refresh_due:due,refresh_in_progress:inProgress||attachCompleted||attachFailed,reason:due?'full_refresh_due':(inProgress||attachCompleted||attachFailed)?'refresh_in_progress':'provider_current'};
-        if(path==='/api/connect/sleeper/background/current')return inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'} ):attachCompleted?{league_external_id:'123',status:'completed',operation:'refresh'}:attachFailed?{league_external_id:'123',status:'failed',operation:'refresh',error:'provider refresh failed'}:{};
+        if(path==='/api/product-context'){contextReads+=1;const advanced=completedBeforeCheck?contextReads>1:inProgress?contextReads>1:attachCompleted?contextReads>1:connectThenDue?contextReads>1:false;return{league_id:'sleeper:123',state_id:advanced?'state-2':'state-1',teams:[],team_id:null};}
+        if(path.startsWith('/api/connect/sleeper/background/freshness?')){freshnessReads+=1;if(connectThenDue)return freshnessReads===1?{refresh_due:false,connect_in_progress:true,reason:'connect_in_progress'}:{refresh_due:true,reason:'full_refresh_due'};return{refresh_due:due,refresh_in_progress:inProgress||attachCompleted||attachFailed,reason:due?'full_refresh_due':(inProgress||attachCompleted||attachFailed)?'refresh_in_progress':'provider_current'};}
+        if(path==='/api/connect/sleeper/background/current')return connectThenDue?(++currentReads===1?{league_external_id:'123',status:'running',operation:'connect'}:{league_external_id:'123',status:'completed',operation:'connect'}):inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'} ):attachCompleted?{league_external_id:'123',status:'completed',operation:'refresh'}:attachFailed?{league_external_id:'123',status:'failed',operation:'refresh',error:'provider refresh failed'}:{};
         if(path==='/api/connect/sleeper/background/refresh'&&options.method==='POST')return{status:'completed',operation:'refresh',league_external_id:'123'};
         throw new Error('unexpected API '+path);
       };
       vm.runInThisContext(fs.readFileSync('src/fsffl/product/static/mobile_safari_recovery.js','utf8'));
       (async()=>{
         assert.strictEqual(await window.fsfflRestoreSession(),true);
-        await new Promise(resolve=>setTimeout(resolve,inProgress?900:20));
+        await new Promise(resolve=>setTimeout(resolve,inProgress||connectThenDue?900:20));
         const refreshPosts=calls.filter(([path,method])=>path==='/api/connect/sleeper/background/refresh'&&method==='POST');
-        assert.strictEqual(refreshPosts.length,due?1:0,'only governed due freshness may launch a new provider POST');
+        assert.strictEqual(refreshPosts.length,due||connectThenDue?1:0,'only governed due freshness may launch a new provider POST');
         assert.strictEqual(calls.some(([path])=>path==='/api/connect/sleeper/background/freshness?league_external_id=123'),true);
         if(!attachFailed)assert.strictEqual(calls.filter(([path])=>path==='/api/product-context').length>=2,true,'a bounded post-freshness or job-completion context read reconciles State');
-        if(inProgress||attachCompleted)assert.strictEqual(state.context.state_id,'state-2','restored session attaches to active or just-completed refresh and adopts the new context');
+        if(inProgress||attachCompleted||connectThenDue)assert.strictEqual(state.context.state_id,'state-2','restored session attaches to active or just-completed work and adopts the new context');
+        if(connectThenDue)assert.strictEqual(freshnessReads,2,'connect completion is followed by one bounded freshness recheck');
         if(completedBeforeCheck)assert.strictEqual(state.context.state_id,'state-2','restored session reconciles an already-completed refresh without reposting');
         if(attachFailed)assert.strictEqual(syncStates.includes('stale'),true,'failed attached refresh remains visible as stale');
       })().catch(error=>{console.error(error);process.exitCode=1});
     """
-    for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed", "attach-failed"):
+    for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed", "attach-failed", "connect-in-progress-then-due"):
         completed = subprocess.run(
             ["node", "-e", script, condition],
             check=False,
