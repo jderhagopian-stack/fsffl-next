@@ -1175,7 +1175,7 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
         assert.strictEqual(calls.some(([path])=>path==='/api/connect/sleeper/background/freshness?league_external_id=123'),true);
         if(!attachFailed)assert.strictEqual(calls.filter(([path])=>path==='/api/product-context').length>=2,true,'a bounded post-freshness or job-completion context read reconciles State');
         if(inProgress||attachCompleted||connectThenDue)assert.strictEqual(state.context.state_id,'state-2','restored session attaches to active or just-completed work and adopts the new context');
-        if(connectThenDue)assert.strictEqual(freshnessReads,2,'connect completion is followed by one bounded freshness recheck');
+        if(connectThenDue){assert.strictEqual(freshnessReads,2,'connect completion is followed by one bounded freshness recheck');assert.strictEqual(currentReads>=2,true,'attach-only connect waits for terminal job status before rechecking freshness');}
         if(completedBeforeCheck)assert.strictEqual(state.context.state_id,'state-2','restored session reconciles an already-completed refresh without reposting');
         if(attachFailed)assert.strictEqual(syncStates.includes('stale'),true,'failed attached refresh remains visible as stale');
       })().catch(error=>{console.error(error);process.exitCode=1});

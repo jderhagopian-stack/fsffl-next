@@ -115,7 +115,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       // server may still be checkpointing that State or starting enrichment, but
       // neither durable persistence nor intelligence publication belongs on the
       // first-load navigation barrier.
-      if(operation==='connect'&&Date.now()>=nextContextProbeAt){
+      if(operation==='connect'&&!attachOnly&&Date.now()>=nextContextProbeAt){
         nextContextProbeAt=Date.now()+500;
         const usable=await usableConnectedContext(leagueId);
         if(usable)return usable;
