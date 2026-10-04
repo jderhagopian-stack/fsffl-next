@@ -368,7 +368,10 @@ async function fetchFsfflLeagueComparison({force=false,expectedGeneration=null}=
   const panel=leagueComparisonPanel();if(!panel)return;
   if(!state?.context?.league_id){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>Connect a league first.</h2><p class="lead">Load a league from Home to see its competitive landscape.</p>';return}
   const stateId=state?.context?.state_id||null,started=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
-  if(!force&&fsfflLeagueStructureState.atlas&&stateId&&fsfflLeagueStructureState.atlas.league_state_id===stateId&&fsfflLeagueStructureState.views.length){
+  const contextGeneration=state?.context?.capability_readiness?.publication?.generation_id||state?.context?.publication_generation_id||null;
+  const atlasGeneration=fsfflLeagueStructureState.atlas?.publication_generation_id||null;
+  const publicationMatches=contextGeneration===atlasGeneration;
+  if(!force&&publicationMatches&&fsfflLeagueStructureState.atlas&&stateId&&fsfflLeagueStructureState.atlas.league_state_id===stateId&&fsfflLeagueStructureState.views.length){
     const ended=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();fsfflLeagueStructureState.warmMs=Math.max(0,ended-started);renderLeagueComparison();if(!fsfflLeagueStructureState.valueLenses&&fsfflLeagueStructureState.valueStatus!=='loading')void loadLeagueValueLenses();return;
   }
   panel.innerHTML='<div class="atlas-loading"><i></i><strong>League Atlas</strong><span>Loading State, Simulation and league structure independently of Intrinsic.</span></div>';

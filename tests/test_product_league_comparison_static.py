@@ -109,6 +109,8 @@ def test_current_publication_forces_one_state_safe_atlas_promotion_without_reset
     assert "One bounded retry covers a publication/read race without polling or loops." in shell
     assert "publication_generation_id:fsfflLeagueStructureState.atlas?.publication_generation_id||null" in atlas
     assert "fetchFsfflLeagueComparison({force,expectedGeneration})" in atlas
+    assert "const publicationMatches=contextGeneration===atlasGeneration" in atlas
+    assert "if(!force&&publicationMatches&&fsfflLeagueStructureState.atlas" in atlas
     assert "atlasPayload.publication_generation_id!==expectedGeneration" in atlas
     assert "positionLens:fsfflLeagueStructureState.positionLens" in atlas
     assert "fsfflLeagueStructureState.positionLens=retainedViewState?.positionLens||'current'" in atlas
