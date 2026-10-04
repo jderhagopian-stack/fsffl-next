@@ -1118,7 +1118,8 @@ def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() 
     )[0]
     assert "refreshStoredLeagueIfDue(leagueId,context.state_id)" in restore
     assert "waitForBackgroundImport(leagueId,null,'connect')" in restore
-    assert "freshness?.refresh_due===true||freshness?.refresh_in_progress===true" in source
+    assert "if(freshness?.refresh_in_progress===true)" in source
+    assert "if(freshness?.refresh_due===true)void refreshStoredLeague(leagueId,latestStateId)" in source
     assert "waitForBackgroundImport(leagueId,null,'refresh')" in source
     assert "function refreshStoredLeagueIfDue" in source
 
@@ -1136,7 +1137,7 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
       global.applyContext=()=>{};global.fetch=()=>Promise.resolve({ok:true});
       global.api=async(path,options={})=>{
         calls.push([path,options.method||'GET']);
-        if(path==='/api/product-context'){contextReads+=1;const advanced=completedBeforeCheck?contextReads>1:inProgress?contextReads>2:attachCompleted?contextReads>1:false;return{league_id:'sleeper:123',state_id:advanced?'state-2':'state-1',teams:[],team_id:null};}
+        if(path==='/api/product-context'){contextReads+=1;const advanced=completedBeforeCheck?contextReads>1:inProgress?contextReads>1:attachCompleted?contextReads>1:false;return{league_id:'sleeper:123',state_id:advanced?'state-2':'state-1',teams:[],team_id:null};}
         if(path.startsWith('/api/connect/sleeper/background/freshness?'))return{refresh_due:due,refresh_in_progress:inProgress,reason:due?'full_refresh_due':inProgress?'refresh_in_progress':'provider_current'};
         if(path==='/api/connect/sleeper/background/current')return inProgress?(++currentReads===1?{league_external_id:'123',status:'running',operation:'refresh'}:{league_external_id:'123',status:'completed',operation:'refresh'}):attachCompleted?{league_external_id:'123',status:'completed',operation:'refresh'}:{};
         if(path==='/api/connect/sleeper/background/refresh'&&options.method==='POST')return{status:'completed',operation:'refresh',league_external_id:'123'};

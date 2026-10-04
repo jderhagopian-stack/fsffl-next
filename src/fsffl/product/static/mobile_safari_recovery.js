@@ -188,7 +188,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   async function refreshStoredLeague(leagueId,baselineStateId,attachOnly=false){
     publishSyncState('checking');
     try{
-      const refreshed=await waitForBackgroundImport(leagueId,null,'refresh',attachOnly);
+      const refreshed=attachOnly?await waitForBackgroundImport(leagueId,null,'refresh',true):await waitForBackgroundImport(leagueId,null,'refresh');
       if(refreshed?.state_id&&refreshed.state_id!==baselineStateId){
         const selected=await restoreSelectedTeam(refreshed);
         applyConnectedContext(selected);
