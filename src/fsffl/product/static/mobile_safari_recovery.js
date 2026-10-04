@@ -63,6 +63,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       if(['queued','running'].includes(current.status))return current;
       if(current.status==='completed'&&current.operation===operation)return current;
       if(current.status==='failed'&&current.operation===operation)return current;
+      if(current.status==='completed')return current;
     }catch(error){
       if(!isTransportError(error))throw error;
     }
@@ -71,8 +72,14 @@ window.fsfflMobileSafariRecoveryDisabled=true;
 
   async function startBackgroundImport(leagueId,operation='connect',attachOnly=false){
     const existing=await recoverCurrentJob(leagueId,operation);
-    if(existing&&(['queued','running'].includes(existing.status)||(attachOnly&&['completed','failed'].includes(existing.status))))return existing;
+    if(existing?.operation===operation&&(['queued','running'].includes(existing.status)||(attachOnly&&['completed','failed'].includes(existing.status))))return existing;
     if(attachOnly)return null;
+    if(operation==='refresh'&&existing?.operation==='connect'&&['queued','running','completed'].includes(existing.status)){
+      if(['queued','running'].includes(existing.status))await performBackgroundImport(leagueId,null,'connect',true);
+      const freshness=await resilientApi('/api/connect/sleeper/background/freshness?league_external_id='+encodeURIComponent(leagueId),{},2);
+      if(freshness?.refresh_in_progress===true)return await startBackgroundImport(leagueId,'refresh',true);
+      if(freshness?.refresh_due!==true)return{status:'completed',operation:'refresh',league_external_id:leagueId};
+    }
     const endpoint=operation==='refresh'
       ?'/api/connect/sleeper/background/refresh'
       :'/api/connect/sleeper/background';
@@ -84,7 +91,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }catch(error){
       if(!isTransportError(error))throw error;
       const recovered=await recoverCurrentJob(leagueId,operation);
-      if(recovered)return recovered;
+      if(recovered?.operation===operation)return recovered;
       throw error;
     }
   }
