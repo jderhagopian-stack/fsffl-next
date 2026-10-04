@@ -1975,3 +1975,12 @@ Accepted evidence:
 Product Integration remains **ACTIVE**. #367 is accepted for payload plumbing and live, but its physical iPhone/Safari treatment is not accepted. The management comments require compact progressive disclosure for representative worlds, accurate league-wide category/rarity framing, and currently owned picks above a separated traded-away section.
 
 PR #368 is merged at `225c0a5982879da534832b8430c8349efb24c35b`. Product Integration continues with issue #369, Current | Dynasty Position Map. Management approved the narrow holistic Dynasty room allocation from `raw_career_forward_reference`, summed over canonical rostered players at actual position, subject to complete same-State evidence across the league. Roster count is secondary Breadth/Depth evidence only. Current optimized-starter ranking remains exactly as published. Do not reopen Simulation 2.0 math/replay or Foundation 4 economics; this is downstream Analytics aggregation only. Carry #370 through exact-head validation/review, then hosted and physical iPhone/Safari acceptance.
+
+
+## 2026-10-04 — PR #379 promoted; #369 physical acceptance gate
+
+PR #379 (Fix Safari restore and Atlas publication handoff) passed all six required workflows and fresh exact-head Codex review at `63d94f72c3a94ec2cf69a5d955a45451ce201903` with no major issues. It was squash-merged to main as `8240f2f17834c8350019c34bcaa157a733a8ddc6` and deployed explicitly to `fsffl-next-private-beta` as Render deployment `dep-db1e7hvavr4c73bgb5a0`. The deploy is live; build succeeded and application startup completed cleanly.
+
+#379 preserves read-first ordinary iPhone/Safari saved-session restore when recently published intelligence is current, refreshes only on explicit action or governed staleness/missing-State conditions, attaches correctly to in-flight connect/refresh work, and makes visible League Atlas promote to the matching newly current publication generation without navigation/reload. No #370 Dynasty semantic, #373 runtime/fairness, #374 mobile-presentation, Simulation 2.0, or Foundation 4 economics change is authorized or reopened.
+
+**ACTIVE GATE:** Management physical iPhone/Safari acceptance of #369 on the live #379 baseline. Verify saved-session restore does not silently launch an unnecessary provider refresh, Current and Dynasty remain usable, and an Atlas left visible during a legitimate publication transition promotes to the matching current generation automatically. Do not start #375 (3-Year Intrinsic / Career Intrinsic) until #369 is physically accepted.
