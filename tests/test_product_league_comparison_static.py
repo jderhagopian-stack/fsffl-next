@@ -26,8 +26,8 @@ def test_league_comparison_consumes_authoritative_atlas_analytics_and_value_cont
 
 def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authority() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
-    assert "How strong is this position for winning now?" in source
-    assert "How strong is this position as a long-term asset room?" in source
+    assert "Current ranks optimized-starter production for winning now" in source
+    assert "Career-forward room rank; roster counts are breadth only." in source
     assert "data-position-view=\"current\"" in source
     assert "data-position-view=\"dynasty\"" in source
     assert "dynasty?laDynastyRoom(view.team_id,position):laStrength(view,position)" in source
@@ -138,7 +138,31 @@ def test_league_atlas_pick_drawer_groups_owned_assets_before_traded_history() ->
     assert "row.fsffl_intrinsic_pick_value" in drawer
     assert "row.owner_team_name" in drawer
     assert "row.original_team_name" in drawer
-    assert "20261003-position-lens1" in Path(
+    assert "20261004-position-controls374" in Path(
         "src/fsffl/product/static/product_shell.js"
     ).read_text(encoding="utf-8")
-    assert "20261003-position-lens1" in source
+    assert "20261004-position-controls374" in source
+
+
+def test_position_lens_controls_and_dynasty_loading_are_mobile_readable() -> None:
+    from pathlib import Path
+
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(
+        encoding="utf-8"
+    )
+    styles = Path("src/fsffl/product/static/league_atlas.css").read_text(
+        encoding="utf-8"
+    )
+
+    assert "league-position-lens-row" in source
+    assert 'class="league-position-lens-note" role="status" aria-live="polite"' in source
+    assert "Loading Dynasty room values… roster counts are breadth only." in source
+    assert "Long-Term evidence is building… roster counts are breadth only." in source
+    assert ".league-position-lens-row{" in styles
+    assert "grid-template-columns:minmax(0,1fr)!important" in styles
+    assert "width:100%;" in styles
+    assert "min-height:38px!important" in styles
+    assert "justify-content:space-between!important;" not in styles.split(
+        "/* #374: group both lens controls above one readable, full-width status line. */",
+        1,
+    )[1]
