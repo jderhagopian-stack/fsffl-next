@@ -69,7 +69,7 @@ def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell
     shell = _shell()
     assert "/static/forecast_refresh.js?v=20261004-safari-restore380" in index
     assert (
-        f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{_git_blob_prefix(Path("src/fsffl/product/static/product_shell.js"))}"
+        f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{_git_blob_prefix(Path('src/fsffl/product/static/product_shell.js'))}"
         in index
     )
     assert "/static/home_dashboard.js?v=20261004-safari-restore380&c=20261001-continuity2" in index
@@ -78,7 +78,7 @@ def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell
     assert "As of " in shell
     assert "const fsfflStaticVersion='20260927-dualstate1';" in shell
     assert (
-        f"const leagueAtlasStaticVersion='20261005-atlas-{_git_blob_prefix(Path("src/fsffl/product/static/league_comparison.js"))}';"
+        f"const leagueAtlasStaticVersion='20261005-atlas-{_git_blob_prefix(Path('src/fsffl/product/static/league_comparison.js'))}';"
         in shell
     )
     assert "const homeNorthStarStaticVersion='20261001-continuity2';" in shell
@@ -258,7 +258,7 @@ def test_continuity_release_busts_recovery_presentation_assets() -> None:
     assert "/static/session_recovery.js?v=20261004-safari-restore380" in index
     assert "/static/home_dashboard.js?v=20261004-safari-restore380&c=20261001-continuity2" in index
     assert (
-        f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{_git_blob_prefix(Path("src/fsffl/product/static/product_shell.js"))}"
+        f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{_git_blob_prefix(Path('src/fsffl/product/static/product_shell.js'))}"
         in index
     )
 
