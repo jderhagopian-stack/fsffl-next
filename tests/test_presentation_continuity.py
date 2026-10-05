@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fsffl.product.presentation_continuity import (
     PRESENTATION_MANIFEST_ARTIFACT_KIND,
     PRESENTATION_MODEL_VERSION,
+    LEGACY_PRESENTATION_MODEL_VERSION,
     REQUIRED_PRESENTATION_SURFACES,
     HOME_SURFACE,
     FRANCHISE_SURFACE,
@@ -723,3 +724,8 @@ def test_fast_snapshot_hint_is_warmed_only_after_strict_validation() -> None:
 
 def test_dynasty_position_rooms_are_required_in_atomic_presentation_publication() -> None:
     assert LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE in REQUIRED_PRESENTATION_SURFACES
+
+
+def test_dynasty_publication_bumps_cache_version_and_keeps_legacy_migration_contract() -> None:
+    assert PRESENTATION_MODEL_VERSION == "runtime-presentation-continuity-v2"
+    assert LEGACY_PRESENTATION_MODEL_VERSION == "runtime-presentation-continuity-v1"
