@@ -277,7 +277,7 @@ def test_league_atlas_pick_drawer_groups_owned_assets_before_traded_history() ->
     shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
     atlas_blob = Path("src/fsffl/product/static/league_comparison.js").read_bytes()
     atlas_git_sha = hashlib.sha1(
-        f"blob {len(atlas_blob)}\\0".encode() + atlas_blob
+        b"blob " + str(len(atlas_blob)).encode() + bytes([0]) + atlas_blob
     ).hexdigest()[:12]
     assert f"const leagueAtlasStaticVersion='20261005-atlas-{atlas_git_sha}';" in shell
 
@@ -369,7 +369,7 @@ def test_league_atlas_modified_bundle_requires_new_inner_and_outer_cache_keys() 
 
     atlas_blob = atlas_path.read_bytes()
     atlas_git_sha = hashlib.sha1(
-        f"blob {len(atlas_blob)}\\0".encode() + atlas_blob
+        b"blob " + str(len(atlas_blob)).encode() + bytes([0]) + atlas_blob
     ).hexdigest()[:12]
     shell = shell_path.read_text(encoding="utf-8")
     match = re.search(r"const leagueAtlasStaticVersion='([^']+)';", shell)
@@ -379,7 +379,7 @@ def test_league_atlas_modified_bundle_requires_new_inner_and_outer_cache_keys() 
 
     shell_blob = shell_path.read_bytes()
     shell_git_sha = hashlib.sha1(
-        f"blob {len(shell_blob)}\\0".encode() + shell_blob
+        b"blob " + str(len(shell_blob)).encode() + bytes([0]) + shell_blob
     ).hexdigest()[:12]
     assert (
         f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{shell_git_sha}"
