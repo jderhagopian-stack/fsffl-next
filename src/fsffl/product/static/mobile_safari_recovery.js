@@ -276,8 +276,15 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       // Stale-while-revalidate is now read-first: restore durable State first. A
       // lightweight governed freshness read may schedule a provider refresh,
       // but ordinary restore itself is not a provider refresh.
-      let context=await resilientApi('/api/product-context',{},3);
-      if(contextMatchesLeague(context,leagueId)&&context.state_id){
+      let context=null;
+      const restoreDeadline=Date.now()+90000;
+      while(Date.now()<restoreDeadline){
+        try{context=await resilientApi('/api/product-context',{},1)}
+        catch(error){if(!isTransportError(error)&&error?.message!=='No league is loaded')throw error}
+        if(contextMatchesLeague(context,leagueId)&&context?.state_id)break;
+        await sleep(document.visibilityState==='hidden'?1500:750);
+      }
+      if(contextMatchesLeague(context,leagueId)&&context?.state_id){
         context=await restoreSelectedTeam(context);
         applyConnectedContext(context);
         window.fsfflEnsureIntelligenceAfterTeamSelection?.();
