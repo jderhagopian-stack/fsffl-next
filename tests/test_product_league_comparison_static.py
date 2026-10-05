@@ -340,3 +340,19 @@ def test_open_atlas_reloads_when_publication_generation_advances() -> None:
     assert "function laHandlePublishedIntelligence()" in source
     assert "target.generationId!==currentGeneration||target.stateId!==currentStateId" in source
     assert "loadFsfflLeagueComparison({force:true,expectedGeneration:target.generationId})" in source
+
+
+def test_superseded_dynasty_request_resets_loading_and_restarts_for_new_generation() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    loader = source[source.index("async function laLoadDynastyRooms()"):source.index("async function laLoadLongTermEvidence()")]
+    value_loader = source[source.index("async function loadLeagueValueLenses()"):source.index("async function laLoadDynastyRooms()")]
+    long_term_loader = source[source.index("async function laLoadLongTermEvidence()"):source.index("function laAtlasPayloadsAligned(")]
+    assert "const abandonSuperseded=()" in loader
+    assert "fsfflLeagueDynastyRoomsLoadingRequestId!==requestId" in loader
+    assert "fsfflLeagueDynastyRoomsLoadingRequestId=requestId" in loader
+    assert "dynastyRoomStatus='idle'" in loader
+    assert "atlasGeneration!==requestedGeneration" in loader
+    assert "void laLoadDynastyRooms()" in loader
+    assert "if(!stillCurrent()){abandonSuperseded();return;}" in loader
+    assert "abandonSuperseded" not in value_loader
+    assert "abandonSuperseded" not in long_term_loader

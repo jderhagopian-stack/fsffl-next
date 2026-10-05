@@ -323,25 +323,26 @@ async function laLoadDynastyRooms(){
   if(fsfflLeagueStructureState.dynastyRoomStatus==='ready'&&fsfflLeagueStructureState.dynastyRooms?.league_state_id===requestedStateId)return;
   const requestId=++fsfflLeagueDynastyRoomsRequestId;
   const stillCurrent=()=>laAtlasEvidenceRequestMatches(requestId,fsfflLeagueDynastyRoomsRequestId,requestedStateId,fsfflLeagueStructureState.atlas?.league_state_id||null,requestedGeneration,fsfflLeagueStructureState.atlas?.publication_generation_id||null);
-  fsfflLeagueStructureState.dynastyRoomStatus='loading';renderLeagueComparison();
+  const abandonSuperseded=()=>{if(requestId===fsfflLeagueDynastyRoomsRequestId||fsfflLeagueDynastyRoomsLoadingRequestId!==requestId)return;fsfflLeagueDynastyRoomsLoadingRequestId=0;if(fsfflLeagueStructureState.dynastyRoomStatus==='loading')fsfflLeagueStructureState.dynastyRoomStatus='idle';const atlasGeneration=fsfflLeagueStructureState.atlas?.publication_generation_id||null;if(fsfflLeagueStructureState.positionLens==='dynasty'&&atlasGeneration!==requestedGeneration){renderLeagueComparison();void laLoadDynastyRooms()}return};
+  fsfflLeagueDynastyRoomsLoadingRequestId=requestId;fsfflLeagueStructureState.dynastyRoomStatus='loading';renderLeagueComparison();
   for(let attempt=0;attempt<20;attempt+=1){
     try{
       const payload=await api('/api/league/dynasty-position-rooms');
-      if(!stillCurrent())return;
+      if(!stillCurrent()){abandonSuperseded();return;}
       if(payload?.league_state_id&&payload.league_state_id!==requestedStateId)throw new Error('Career-forward room evidence belongs to a different league State');
       if(requestedGeneration&&payload?.publication_generation_id!==requestedGeneration)throw new Error('Career-forward room evidence belongs to a different publication generation');
       if(payload?.status==='preparing'||payload?.status==='building'||payload?.build_status==='queued'||payload?.build_status==='running'){
         fsfflLeagueStructureState.dynastyRoomStatus='building';renderLeagueComparison();
-        await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));if(!stillCurrent())return;continue;
+        await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));if(!stillCurrent()){abandonSuperseded();return;}continue;
       }
       if(payload?.status!=='ready'||!Array.isArray(payload?.rooms))throw new Error(payload?.reason||'Holistic career-forward room evidence is unavailable');
       fsfflLeagueStructureState.dynastyRooms=payload;fsfflLeagueStructureState.dynastyRoomStatus=(payload?.dynasty_evidence_status==='last_good'||payload?.intelligence_freshness?.stale)?'last-good':'ready';renderLeagueComparison();return;
     }catch(error){
-      if(!stillCurrent())return;
+      if(!stillCurrent()){abandonSuperseded();return;}
       fsfflLeagueStructureState.dynastyRooms=null;fsfflLeagueStructureState.dynastyRoomStatus='unavailable';renderLeagueComparison();return;
     }
   }
-  if(!stillCurrent())return;
+  if(!stillCurrent()){abandonSuperseded();return;}
   fsfflLeagueStructureState.dynastyRoomStatus='building';renderLeagueComparison();
 }
 async function laLoadLongTermEvidence(){
@@ -388,6 +389,7 @@ function laAtlasContextTarget(context,force=false,requestedGeneration=null){
 }
 let fsfflLeagueValueLensRequestId=0;
 let fsfflLeagueDynastyRoomsRequestId=0;
+let fsfflLeagueDynastyRoomsLoadingRequestId=0;
 let fsfflLeagueLongTermRequestId=0;
 function laAtlasEvidenceRequestMatches(requestId,currentRequestId,requestedStateId,currentStateId,requestedGeneration,currentGeneration){
   return requestId===currentRequestId&&requestedStateId===currentStateId&&requestedGeneration===currentGeneration;
