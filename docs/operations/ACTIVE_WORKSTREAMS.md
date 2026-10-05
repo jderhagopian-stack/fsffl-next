@@ -1,6 +1,16 @@
 # FSFFL NEXT — Active Workstreams
 
-Updated: 2026-10-03
+Updated: 2026-10-05
+
+## P0 — Architecture Simplification / Development Recovery
+**State:** ACTIVE — URGENT MANAGEMENT GATE
+
+Governing directive: `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md`.
+
+A read-only whole-system audit is authorized immediately. It must reconcile runtime lifecycle, persistence/publication, Supabase egress, resource ownership, frontend delivery, test/review strategy, and operating-doc drift against the Project Charter and North Star. The deliverable is a KEEP / SIMPLIFY / REMOVE / INVESTIGATE disposition and a bounded P0/P1/P2 corrective backlog.
+
+No new feature program starts while this gate is active. Current Implementation may finish only the narrow live Dynasty Position & Depth physical blocker. The audit may run in parallel because it is read-only; it must not become a second implementation writer.
+
 
 ## Management
 **State:** ACTIVE  
