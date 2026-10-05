@@ -32,9 +32,9 @@ from .forecast_resilience import (
     make_resilient_forecast_loader,
 )
 from .foundation4_career_forward_runtime import (
-    Foundation4CareerForwardShadowLoader,
+    CareerIntrinsicLoader,
 )
-from .foundation4_shadow_routes import install_foundation4_shadow_routes
+from .foundation4_shadow_routes import install_career_intrinsic_routes
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
 from .intrinsic_background import (
@@ -237,21 +237,21 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     heavy_work_coordinator=_heavy_work_coordinator,
     ownership_validator=_execution_state_scope_owned,
 )
-_foundation4_shadow_loader = Foundation4CareerForwardShadowLoader(
+_career_intrinsic_loader = CareerIntrinsicLoader(
     current_intrinsic_loader=_shapley_intrinsic_loader,
     current_intrinsic_fingerprint_resolver=(
         _shapley_intrinsic_loader.intrinsic_input_fingerprint
     ),
     persistence_store=_persistence_store,
 )
-_foundation4_shadow_coordinator = ShapleyIntrinsicBackgroundCoordinator(
-    _foundation4_shadow_loader,
+_career_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
+    _career_intrinsic_loader,
     max_workers=1,
     forecast_coordinate_resolver=(
-        lambda _context: _foundation4_shadow_loader.forecast_model_version
+        lambda _context: _career_intrinsic_loader.forecast_model_version
     ),
     intrinsic_input_fingerprint_resolver=(
-        _foundation4_shadow_loader.intrinsic_input_fingerprint
+        _career_intrinsic_loader.intrinsic_input_fingerprint
     ),
     heavy_work_coordinator=_heavy_work_coordinator,
     ownership_validator=_execution_state_scope_owned,
@@ -453,6 +453,33 @@ def _reconcile_hosted_intrinsic(context) -> dict[str, object]:
     except IntrinsicBuildSuperseded as exc:
         raise _webapp.IntelligenceJobInterrupted("lifecycle_switch") from exc
     readiness = _intrinsic_readiness_from_record(record)
+    # Career Intrinsic is a production capability downstream of ready Current
+    # Intrinsic. Always attach/reuse its exact-State lifecycle here so a startup
+    # miss cannot remain stranded after Current Intrinsic later becomes ready.
+    if readiness.get("status") == "full":
+        try:
+            career_record = _career_intrinsic_coordinator.current(context)
+            if career_record is None or career_record.status == IntrinsicBuildStatus.FAILED:
+                restored_career = _career_intrinsic_coordinator.restore_compatible_staged(context)
+                career_record = restored_career or _career_intrinsic_coordinator.request(context)
+            _logger.info(
+                "FSFFL Career Intrinsic production lifecycle state=%s status=%s estimates=%s",
+                context.league_state.state_id,
+                career_record.status.value if career_record is not None else "unavailable",
+                len(career_record.contract.estimates)
+                if career_record is not None and career_record.contract is not None
+                else 0,
+            )
+        except IntrinsicBuildSuperseded:
+            raise
+        except Exception as exc:
+            # Career Intrinsic is downstream product intelligence; core publication
+            # remains usable while this bounded production capability prepares.
+            _logger.warning(
+                "FSFFL Career Intrinsic production attach unavailable state=%s error=%s",
+                context.league_state.state_id,
+                exc,
+            )
     _logger.info(
         "FSFFL hosted Intrinsic reconciliation state=%s status=%s build=%s forecast=%s estimates=%s",
         context.league_state.state_id,
@@ -524,10 +551,10 @@ def _clear_intrinsic_execution(transition: ResourceTransition) -> dict[str, int]
         "loader_cache": _shapley_intrinsic_loader.clear_user_cache(
             transition.user_id
         ),
-        "foundation4_coordinator": _foundation4_shadow_coordinator.clear_user(
+        "career_intrinsic_coordinator": _career_intrinsic_coordinator.clear_user(
             transition.user_id
         ),
-        "foundation4_loader_cache": _foundation4_shadow_loader.clear_user_cache(
+        "career_intrinsic_loader_cache": _career_intrinsic_loader.clear_user_cache(
             transition.user_id
         ),
     }
@@ -856,14 +883,14 @@ def _run_foundation4_shadow_acceptance() -> None:
 
         if mode == "restore":
             foundation4_record = (
-                _foundation4_shadow_coordinator.restore_compatible_staged(context)
+                _career_intrinsic_coordinator.restore_compatible_staged(context)
             )
             if foundation4_record is None:
                 raise RuntimeError(
                     "No compatible persisted Foundation 4 shadow was restored"
                 )
         else:
-            foundation4_record = _foundation4_shadow_coordinator.wait_for_terminal(
+            foundation4_record = _career_intrinsic_coordinator.wait_for_terminal(
                 context,
                 timeout_seconds=240.0,
             )
@@ -874,7 +901,7 @@ def _run_foundation4_shadow_acceptance() -> None:
         ):
             raise RuntimeError("Foundation 4 shadow did not reach completed state")
         contract = foundation4_record.contract
-        component = _foundation4_shadow_loader.current_component(context)
+        component = _career_intrinsic_loader.current_component(context)
         if contract.player_count != 335 or len(contract.estimates) != 335:
             raise RuntimeError("Foundation 4 holistic cohort is not the governed 335 players")
         if component is None or len(component.estimates) != 335:
@@ -1540,11 +1567,11 @@ install_shapley_intrinsic_routes(
     contract_loader=_shapley_intrinsic_loader,
     background_coordinator=_shapley_intrinsic_coordinator,
 )
-install_foundation4_shadow_routes(
+install_career_intrinsic_routes(
     app,
     runtime_store=_runtime_store,
-    loader=_foundation4_shadow_loader,
-    coordinator=_foundation4_shadow_coordinator,
+    loader=_career_intrinsic_loader,
+    coordinator=_career_intrinsic_coordinator,
     presentation_payload_loader=_presentation_payload_loader,
 )
 install_intrinsic_market_discovery_routes(
@@ -1616,7 +1643,7 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
     """Kick Dynasty preparation without putting it on the core publication path."""
     if context.league_state is None:
         return
-    record = _foundation4_shadow_coordinator.request(context)
+    record = _career_intrinsic_coordinator.request(context)
     if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
         key = (
             user_id,
@@ -1652,7 +1679,7 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
                     context.league_state.state_id,
                 )
 
-        _foundation4_shadow_coordinator.add_terminal_callback(context, completed)
+        _career_intrinsic_coordinator.add_terminal_callback(context, completed)
 
 def _promote_presentation_for_user(user_id: str, context) -> object | None:
     if not _presentation_continuity.enabled or context.league_state is None:
@@ -1679,7 +1706,7 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
     # Snapshot exactly the existing governed presentation contracts. Builders run
     # sequentially and each payload is persisted before the next is composed.
     dynasty_last_good = None
-    dynasty_record = _foundation4_shadow_coordinator.current(context)
+    dynasty_record = _career_intrinsic_coordinator.current(context)
     if (
         dynasty_record is None
         or dynasty_record.status != IntrinsicBuildStatus.COMPLETED
@@ -1752,7 +1779,7 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
         endpoint = _presentation_route_endpoint(path)
         if surface == LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE:
             def build_dynasty_rooms(endpoint=endpoint, kwargs=kwargs):
-                record = _foundation4_shadow_coordinator.current(context)
+                record = _career_intrinsic_coordinator.current(context)
                 if (
                     record is None
                     or record.status != IntrinsicBuildStatus.COMPLETED
@@ -1817,7 +1844,7 @@ def _publish_dynasty_presentation_followup(
                 or context.league_state.state_id != expected_state_id
             ):
                 return
-            record = _foundation4_shadow_coordinator.current(context)
+            record = _career_intrinsic_coordinator.current(context)
             if (
                 record is None
                 or record.status != IntrinsicBuildStatus.COMPLETED
@@ -1869,12 +1896,12 @@ def _run_lightweight_startup_restore() -> None:
                         exc,
                     )
                 try:
-                    restored_f4 = _foundation4_shadow_coordinator.restore_compatible_staged(
+                    restored_f4 = _career_intrinsic_coordinator.restore_compatible_staged(
                         context
                     )
                     if restored_f4 is not None:
                         _logger.info(
-                            "FSFFL Foundation4 restored compatible shadow user=%s state=%s estimates=%s",
+                            "FSFFL Career Intrinsic restored compatible production artifact user=%s state=%s estimates=%s",
                             _beta_restore_user,
                             context.league_state.state_id,
                             len(restored_f4.contract.estimates)
@@ -1883,7 +1910,7 @@ def _run_lightweight_startup_restore() -> None:
                         )
                 except Exception as exc:
                     _logger.warning(
-                        "FSFFL Foundation4 compatible-restore unavailable user=%s error=%s",
+                        "FSFFL Career Intrinsic compatible-restore unavailable user=%s error=%s",
                         _beta_restore_user,
                         exc,
                     )
