@@ -23,7 +23,8 @@ _logger = logging.getLogger("fsffl.product.persistence")
 PRESENTATION_SURFACE_ARTIFACT_KIND = "runtime_presentation_surface"
 PRESENTATION_MANIFEST_ARTIFACT_KIND = "runtime_presentation_manifest"
 PRESENTATION_SCOPE_KIND = "user_league_presentation"
-PRESENTATION_MODEL_VERSION = "runtime-presentation-continuity-v1"
+PRESENTATION_MODEL_VERSION = "runtime-presentation-continuity-v2"
+LEGACY_PRESENTATION_MODEL_VERSION = "runtime-presentation-continuity-v1"
 
 HOME_SURFACE = "home"
 FRANCHISE_SURFACE = "franchise"
@@ -76,13 +77,14 @@ def _manifest_key(
     user_id: str,
     league_id: str,
     league_state_id: str,
+    model_version: str = PRESENTATION_MODEL_VERSION,
 ) -> ArtifactKey:
     return ArtifactKey(
         artifact_kind=PRESENTATION_MANIFEST_ARTIFACT_KIND,
         scope_kind=PRESENTATION_SCOPE_KIND,
         scope_id=_scope_id(user_id, league_id),
         input_fingerprint=league_state_id,
-        model_version=PRESENTATION_MODEL_VERSION,
+        model_version=model_version,
     )
 
 
@@ -92,13 +94,14 @@ def _surface_key(
     league_id: str,
     promotion_id: str,
     surface: str,
+    model_version: str = PRESENTATION_MODEL_VERSION,
 ) -> ArtifactKey:
     return ArtifactKey(
         artifact_kind=PRESENTATION_SURFACE_ARTIFACT_KIND,
         scope_kind=PRESENTATION_SCOPE_KIND,
         scope_id=_surface_scope_id(user_id, league_id, surface),
         input_fingerprint=promotion_id,
-        model_version=PRESENTATION_MODEL_VERSION,
+        model_version=model_version,
     )
 
 
