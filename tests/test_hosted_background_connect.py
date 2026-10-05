@@ -606,7 +606,7 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_physical_connect_busts_hosted_release_cache_coherently() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    release = "20260929-physical-connect1"
+    release = "20261004-safari-restore380"
     for asset in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
         assert f"/static/{asset}?v={release}" in source
     versions = {
