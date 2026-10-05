@@ -331,3 +331,11 @@ def test_dynasty_loader_accepts_only_matching_persisted_publication_generation()
     assert "if(fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale)" not in loader
     assert "payload?.publication_generation_id!==requestedGeneration" in loader
     assert "payload?.intelligence_freshness?.stale?'last-good':'ready'" in loader
+
+
+def test_open_atlas_reloads_when_publication_generation_advances() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "fsffl:intelligence-status-updated" in source
+    assert "function laHandlePublishedIntelligence()" in source
+    assert "target.generationId!==currentGeneration||target.stateId!==currentStateId" in source
+    assert "loadFsfflLeagueComparison({force:true,expectedGeneration:target.generationId})" in source
