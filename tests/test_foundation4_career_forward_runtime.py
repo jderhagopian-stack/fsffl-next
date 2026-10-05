@@ -313,7 +313,7 @@ def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "shadow_ready"
+    assert payload["status"] == "ready"
     assert payload["player_count"] == 335
     assert payload["current_intrinsic_replaced"] is False
     assert payload["display_scaling_applied"] is False
