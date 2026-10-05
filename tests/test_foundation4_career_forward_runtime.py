@@ -389,6 +389,7 @@ def test_canonical_career_intrinsic_endpoint_is_primary_and_not_shadow_labeled(m
     payload = response.json()
     assert payload["capability"] == "career_intrinsic"
     assert payload["value_label"] == "Career Intrinsic"
+    assert payload["status"] == "ready"
     assert "shadow" not in payload
 
 
@@ -418,3 +419,33 @@ def test_dynasty_rooms_prefer_ready_canonical_career_intrinsic_over_stale_unavai
     assert payload["status"] == "ready"
     assert payload["capability"] == "career_intrinsic"
     assert len(payload["rooms"]) == 0  # synthetic unit State has no teams
+
+
+def test_accepted_legacy_y4_y7_component_migrates_scope_without_rebuild(materialized) -> None:
+    persistence, _calls, first_loader, context, _built = materialized
+    canonical = next(
+        row for row in persistence.artifacts
+        if row.key.artifact_kind == FOUNDATION4_Y4_Y7_ARTIFACT_KIND
+    )
+    legacy = ReusableArtifactRecord(
+        key=ArtifactKey(
+            artifact_kind=canonical.key.artifact_kind,
+            scope_kind=LEGACY_FOUNDATION4_SCOPE_KIND,
+            scope_id=canonical.key.scope_id,
+            input_fingerprint=canonical.key.input_fingerprint,
+            model_version=canonical.key.model_version,
+        ),
+        payload=canonical.payload,
+        computed_at=canonical.computed_at,
+    )
+    legacy_only = MemoryPersistence()
+    legacy_only.put_artifact(legacy)
+    loader = _loader(legacy_only, [])
+    restored = loader.restore_component(context)
+    assert restored is not None
+    migrated = [
+        row for row in legacy_only.artifacts
+        if row.key.artifact_kind == FOUNDATION4_Y4_Y7_ARTIFACT_KIND
+        and row.key.scope_kind == CAREER_INTRINSIC_SCOPE_KIND
+    ]
+    assert len(migrated) == 1
