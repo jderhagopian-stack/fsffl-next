@@ -6,7 +6,7 @@ PERSISTENT = ROOT / "persistent_webapp.py"
 QUICK_ROUTE = ROOT / "quick_frontier_routes.py"
 QUICK_JS = ROOT / "static/quick_counter_frontier.js"
 INDEX = ROOT / "static/index.html"
-RELEASE = "20260929-physical-connect1"
+RELEASE = "20261004-safari-restore380"
 
 
 def _read(path: Path) -> str:
