@@ -323,7 +323,7 @@ async function laLoadDynastyRooms(){
   if(fsfflLeagueStructureState.dynastyRoomStatus==='ready'&&fsfflLeagueStructureState.dynastyRooms?.league_state_id===requestedStateId)return;
   const requestId=++fsfflLeagueDynastyRoomsRequestId;
   const stillCurrent=()=>laAtlasEvidenceRequestMatches(requestId,fsfflLeagueDynastyRoomsRequestId,requestedStateId,fsfflLeagueStructureState.atlas?.league_state_id||null,requestedGeneration,fsfflLeagueStructureState.atlas?.publication_generation_id||null);
-  const abandonSuperseded=()=>{if(requestId!==fsfflLeagueDynastyRoomsRequestId&&fsfflLeagueStructureState.dynastyRoomStatus==='loading'){fsfflLeagueStructureState.dynastyRoomStatus='idle';renderLeagueComparison()}return};
+  const abandonSuperseded=()=>{if(requestId===fsfflLeagueDynastyRoomsRequestId)return;if(fsfflLeagueStructureState.dynastyRoomStatus==='loading')fsfflLeagueStructureState.dynastyRoomStatus='idle';const atlasGeneration=fsfflLeagueStructureState.atlas?.publication_generation_id||null;if(fsfflLeagueStructureState.positionLens==='dynasty'&&atlasGeneration!==requestedGeneration&&fsfflLeagueStructureState.dynastyRoomStatus!=='loading'){renderLeagueComparison();void laLoadDynastyRooms()}return};
   fsfflLeagueStructureState.dynastyRoomStatus='loading';renderLeagueComparison();
   for(let attempt=0;attempt<20;attempt+=1){
     try{
