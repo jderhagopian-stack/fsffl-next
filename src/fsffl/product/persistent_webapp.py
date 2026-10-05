@@ -56,6 +56,7 @@ from .presentation_continuity import (
     HOME_SURFACE,
     LEAGUE_ATLAS_SURFACE,
     LEAGUE_TEAM_VIEWS_SURFACE,
+    LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
     MARKET_VALUE_LENSES_ALL_SURFACE,
     MARKET_VALUE_LENSES_ROSTERED_SURFACE,
     MARKET_WORKSPACE_SURFACE,
@@ -1544,6 +1545,7 @@ install_foundation4_shadow_routes(
     runtime_store=_runtime_store,
     loader=_foundation4_shadow_loader,
     coordinator=_foundation4_shadow_coordinator,
+    presentation_payload_loader=_presentation_payload_loader,
 )
 install_intrinsic_market_discovery_routes(
     app,
@@ -1635,6 +1637,7 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
         (FRANCHISE_SURFACE, "/api/my-team", {}),
         (LEAGUE_ATLAS_SURFACE, "/api/league/atlas", {}),
         (LEAGUE_TEAM_VIEWS_SURFACE, "/api/league/team-views", {}),
+        (LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE, "/api/league/dynasty-position-rooms", {}),
         (
             MARKET_WORKSPACE_SURFACE,
             None,
