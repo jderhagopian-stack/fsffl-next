@@ -1627,6 +1627,10 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
             context.league_state.state_id,
             record.status.value,
         )
+        if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
+            raise RuntimeError(
+                "Dynasty position-room evidence is still preparing; defer presentation promotion"
+            )
 
 
 def _promote_presentation_for_user(user_id: str, context) -> object | None:
