@@ -737,7 +737,7 @@ def test_dynasty_preparation_is_decoupled_from_core_publication() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
     prepare = source[source.index("def _prepare_presentation_for_user"):source.index("def _promote_presentation_for_user")]
     assert "wait_for_terminal" not in prepare
-    assert "_foundation4_shadow_coordinator.request(context)" in prepare
+    assert "_career_intrinsic_coordinator.request(context)" in prepare
     assert "add_terminal_callback" in prepare
     assert "_publish_dynasty_presentation_followup" in source
     assert "bind_publication_generation_id" in source
