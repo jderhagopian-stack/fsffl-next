@@ -531,6 +531,31 @@ class ShapleyIntrinsicBackgroundCoordinator:
         with self._lock:
             return self._records.get(key)
 
+    def add_terminal_callback(
+        self,
+        context: UserRuntimeContext,
+        callback,
+    ) -> None:
+        """Run callback after the owned background build actually finishes.
+
+        This observes the worker Future rather than the response/hard-watchdog
+        polling budget, so a late successful worker completion can still drive a
+        lightweight presentation follow-up without restarting heavyweight work.
+        """
+
+        record = self.request(context)
+        key = self._key(context)
+        with self._lock:
+            future = self._futures.get(key)
+        if future is None or future.done():
+            callback(self.current(context) or record)
+            return
+
+        def finished(_future) -> None:
+            callback(self.current(context) or record)
+
+        future.add_done_callback(finished)
+
 
 def intrinsic_loading_payload(
     record: IntrinsicBuildRecord,
