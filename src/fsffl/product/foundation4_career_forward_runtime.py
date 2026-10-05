@@ -231,15 +231,25 @@ class CareerIntrinsicLoader:
             forecast,
             rules=context.league_state.league.rules,
         )
-        record = self._persistence_store.get_reusable_artifact(
-            ArtifactKey(
+        canonical_key = ArtifactKey(
+            artifact_kind=FOUNDATION4_Y4_Y7_ARTIFACT_KIND,
+            scope_kind=CAREER_INTRINSIC_SCOPE_KIND,
+            scope_id=context.league_state.league.league_id,
+            input_fingerprint=expected_input,
+            model_version=LONG_TERM_INTRINSIC_MODEL_VERSION,
+        )
+        record = self._persistence_store.get_reusable_artifact(canonical_key)
+        migrated_legacy = False
+        if record is None:
+            legacy_key = ArtifactKey(
                 artifact_kind=FOUNDATION4_Y4_Y7_ARTIFACT_KIND,
-                scope_kind=FOUNDATION4_SCOPE_KIND,
+                scope_kind=LEGACY_FOUNDATION4_SCOPE_KIND,
                 scope_id=context.league_state.league.league_id,
                 input_fingerprint=expected_input,
                 model_version=LONG_TERM_INTRINSIC_MODEL_VERSION,
             )
-        )
+            record = self._persistence_store.get_reusable_artifact(legacy_key)
+            migrated_legacy = record is not None
         if record is None:
             return None
         try:
@@ -248,6 +258,14 @@ class CareerIntrinsicLoader:
             )
         except (TypeError, ValueError):
             return None
+        if migrated_legacy:
+            self._persistence_store.put_artifact(
+                ReusableArtifactRecord(
+                    key=canonical_key,
+                    payload=contract.model_dump(mode="json"),
+                    computed_at=utc_now(),
+                )
+            )
         return contract
 
     def _persist(
