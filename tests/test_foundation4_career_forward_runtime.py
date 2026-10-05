@@ -449,3 +449,12 @@ def test_accepted_legacy_y4_y7_component_migrates_scope_without_rebuild(material
         and row.key.scope_kind == CAREER_INTRINSIC_SCOPE_KIND
     ]
     assert len(migrated) == 1
+
+
+def test_dynasty_route_does_not_deserialize_career_artifact_on_foreground_request() -> None:
+    source = __import__("pathlib").Path("src/fsffl/product/foundation4_shadow_routes.py").read_text(encoding="utf-8")
+    route = source.split('@app.get("/api/league/dynasty-position-rooms")', 1)[1].split("@app.get(FOUNDATION4_Y4_Y7_ENDPOINT)", 1)[0]
+    assert "restore_compatible(" not in route
+    assert "coordinator.current(context)" in route
+    assert "presentation_payload_loader" in route
+    assert "coordinator.request(context)" in route
