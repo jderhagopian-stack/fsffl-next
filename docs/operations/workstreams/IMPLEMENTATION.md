@@ -2738,3 +2738,33 @@ Risk-proportionate validation:
 - exact-head GitHub-hosted workflows for #389 remained queued due runner availability at promotion; no unvalidated model/runtime semantics were introduced.
 
 **MANAGEMENT GATE — IMPLEMENTATION:** hosted delivery is live. Physical iPhone/Safari acceptance must now confirm the browser requests the new outer Product Shell key and then `/static/league_comparison.js?v=20261005-atlas-f5b644895763` rather than the stale `dynasty-handoff383a` URL, and that Dynasty room values resolve instead of remaining indefinitely in Loading. Do not reopen model/runtime architecture unless that new-key client still fails.
+
+
+## 2026-10-05 — #391 live: Dynasty publication-generation response contract
+
+Physical Safari acceptance of live #389 proved static delivery was corrected: Safari received the #389 League Atlas bundle and `/api/league/dynasty-position-rooms` returned HTTP 200. The remaining failure was a narrow server/client contract mismatch. The Atlas client already required exact `payload.publication_generation_id === requestedGeneration`, but canonical live Dynasty responses from `foundation4_shadow_routes.py` omitted `publication_generation_id` and were therefore correctly rejected by the existing generation fence.
+
+Scope remained contract-only. No Dynasty formula/model change, Career Intrinsic redesign, provider refresh work, publication-architecture expansion, cache-delivery runtime change, Codex review, or #375 work was performed.
+
+PR #391 exact implementation:
+- final reviewed head: `6e5d561d42ac0f93611b6e52d35c8b6d81d25a71`;
+- squash merge/runtime commit: `583f48dca0c6b763b7d249e420b82964a15291d2`;
+- Render deploy: `dep-db229jvlot8c73dieqtg`, live 2026-10-05T22:31:02Z;
+- application startup completed cleanly at 2026-10-05T22:30:59Z.
+
+Generation contract:
+- canonical current-State Dynasty `ready`, `preparing`, and `unavailable` responses now carry the published runtime `publication_generation_id`;
+- verified persisted `last_good` payloads retain the publication generation assigned by presentation continuity and are not relabeled as the current runtime generation;
+- a persisted ready/last-good payload without a proven `publication_generation_id` is not guessed or promoted; it is rejected as fallback and the route proceeds through the governed current lifecycle;
+- the Atlas client exact-generation inequality fence is unchanged and remains ahead of preparing/ready status consumption.
+
+Focused regression coverage proves canonical ready and non-ready response generations, verified last-good generation preservation, fail-closed handling of unversioned last-good, and preservation/order of the client generation fence. Merge-gate cleanup also replaced stale pre-#389 cache-key assertions in static tests with the already-governed Git-blob fingerprint contract; those test-only corrections did not alter runtime delivery.
+
+Exact final-head validation:
+- League Atlas North Star focused validation `37382380613`: success;
+- PR164 focused corrective regression `37382380506`: success;
+- Live Forecast corrective trace `37382380518`: success;
+- final full CI `37382380514`: success, 2167 passed / 1 unrelated Starlette TestClient deprecation warning;
+- bounded manual exact-head review recorded on PR #391; no Codex used.
+
+**MANAGEMENT GATE — IMPLEMENTATION:** hosted runtime/startup is accepted; behavioral acceptance remains physical. On authenticated iPhone/Safari League Atlas → Position & Depth → Dynasty, the served Atlas generation and `/api/league/dynasty-position-rooms` `publication_generation_id` must match exactly and the UI must leave `Loading Dynasty room values…` and display Dynasty room ranks/values. Do not reopen model semantics, Career Intrinsic, provider refresh, publication architecture, or advance #375 until this physical check passes.
