@@ -272,10 +272,10 @@ def test_league_atlas_pick_drawer_groups_owned_assets_before_traded_history() ->
     assert "row.fsffl_intrinsic_pick_value" in drawer
     assert "row.owner_team_name" in drawer
     assert "row.original_team_name" in drawer
-    assert "20261004-publication-handoff378" in Path(
+    assert "20261005-dynasty-handoff383a" in Path(
         "src/fsffl/product/static/product_shell.js"
     ).read_text(encoding="utf-8")
-    assert "20261004-publication-handoff378" in source
+    assert "20261005-dynasty-handoff383a" in source
 
 
 def test_position_lens_controls_and_dynasty_loading_are_mobile_readable() -> None:
@@ -330,7 +330,8 @@ def test_dynasty_loader_accepts_only_matching_persisted_publication_generation()
     loader = source[source.index("async function laLoadDynastyRooms()"):source.index("async function laLoadLongTermEvidence()")]
     assert "if(fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale)" not in loader
     assert "payload?.publication_generation_id!==requestedGeneration" in loader
-    assert "payload?.intelligence_freshness?.stale?'last-good':'ready'" in loader
+    assert "payload?.status==='preparing'" in loader
+    assert "payload?.dynasty_evidence_status==='last_good'" in loader
 
 
 def test_open_atlas_reloads_when_publication_generation_advances() -> None:
