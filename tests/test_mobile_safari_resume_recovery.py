@@ -68,3 +68,8 @@ def test_saved_session_restore_retries_only_transient_cold_start_failures():
     assert "context=await resilientApi('/api/product-context',{},1);\n          break;" in restore
     assert "if(!isTransportError(error)&&error?.message!=='No league is loaded')throw error" not in restore
     assert restore.count("window.fsfflFinishBoot?.();") == 2
+    index = (STATIC / "index.html").read_text()
+    assert (
+        "/static/mobile_safari_recovery.js?v=20261004-safari-restore380"
+        "&c=20261005-cold-start-restore387"
+    ) in index
