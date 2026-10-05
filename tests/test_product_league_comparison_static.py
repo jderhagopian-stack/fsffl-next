@@ -338,6 +338,20 @@ def test_dynasty_loader_accepts_only_matching_persisted_publication_generation()
     assert "payload?.dynasty_evidence_status==='last_good'" in loader
 
 
+def test_dynasty_client_generation_fence_precedes_status_consumption() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    loader = source[
+        source.index("async function laLoadDynastyRooms()"):
+        source.index("async function laLoadLongTermEvidence()")
+    ]
+    fence = "if(requestedGeneration&&payload?.publication_generation_id!==requestedGeneration)"
+    preparing = "if(payload?.status==='preparing'"
+    ready = "if(payload?.status!=='ready'||!Array.isArray(payload?.rooms))"
+    assert fence in loader
+    assert loader.index(fence) < loader.index(preparing) < loader.index(ready)
+    assert "payload?.publication_generation_id==requestedGeneration" not in loader
+
+
 def test_open_atlas_reloads_when_publication_generation_advances() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "fsffl:intelligence-status-updated" in source
