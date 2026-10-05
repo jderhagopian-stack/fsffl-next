@@ -1697,6 +1697,19 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
         if candidate is not None and candidate.get("status") == "ready":
             dynasty_last_good = dict(candidate)
             dynasty_last_good["dynasty_evidence_status"] = "last_good"
+            dynasty_last_good["dynasty_evidence_state_id"] = candidate.get(
+                "league_state_id"
+            )
+            dynasty_last_good["dynasty_evidence_publication_generation_id"] = (
+                candidate.get("publication_generation_id")
+            )
+            # The copied evidence is now a governed value inside the new State's
+            # atomic presentation publication. Keep its source coordinates above
+            # instead of making the surface look like it belongs to the old State.
+            dynasty_last_good["league_state_id"] = context.league_state.state_id
+            dynasty_last_good.pop("publication_generation_id", None)
+            dynasty_last_good.pop("intelligence_freshness", None)
+            dynasty_last_good.pop("presentation_continuity", None)
 
     specs = (
         (HOME_SURFACE, "/api/home", {}),
