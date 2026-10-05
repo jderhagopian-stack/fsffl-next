@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from time import monotonic, sleep
+from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
@@ -399,8 +400,11 @@ def test_dynasty_rooms_prefer_ready_canonical_career_intrinsic_over_stale_unavai
     loader = _loader(persistence, [])
     store = PrivateBetaRuntimeStore()
     store.set_league_state("local-beta-user", context.league_state)
+    store.bind_publication_generation_id(
+        "local-beta-user", "dynasty-generation-ready"
+    )
     coordinator = ShapleyIntrinsicBackgroundCoordinator(loader, max_workers=1)
-    record = coordinator.wait_for_terminal(context, timeout_seconds=10.0)
+    record = coordinator.wait_for_terminal(store.get("local-beta-user"), timeout_seconds=10.0)
     assert record.status == IntrinsicBuildStatus.COMPLETED
     app = FastAPI()
     install_foundation4_shadow_routes(
@@ -418,6 +422,7 @@ def test_dynasty_rooms_prefer_ready_canonical_career_intrinsic_over_stale_unavai
     payload = response.json()
     assert payload["status"] == "ready"
     assert payload["capability"] == "career_intrinsic"
+    assert payload["publication_generation_id"] == "dynasty-generation-ready"
     assert len(payload["rooms"]) == 0  # synthetic unit State has no teams
 
 
@@ -458,3 +463,139 @@ def test_dynasty_route_does_not_deserialize_career_artifact_on_foreground_reques
     assert "coordinator.current(context)" in route
     assert "presentation_payload_loader" in route
     assert "coordinator.request(context)" in route
+
+
+@pytest.mark.parametrize(
+    ("status", "expected_status"),
+    (
+        (IntrinsicBuildStatus.RUNNING, "preparing"),
+        (IntrinsicBuildStatus.FAILED, "unavailable"),
+    ),
+)
+def test_dynasty_nonready_responses_keep_published_generation(
+    monkeypatch,
+    status,
+    expected_status,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    context = _context()
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", context.league_state)
+    store.bind_publication_generation_id(
+        "local-beta-user", "dynasty-generation-nonready"
+    )
+    record = SimpleNamespace(
+        status=status,
+        league_state_id=context.league_state.state_id,
+        intrinsic_input_fingerprint="career-fp",
+        contract=None,
+        error="career evidence failed" if status == IntrinsicBuildStatus.FAILED else None,
+    )
+
+    class Coordinator:
+        def current(self, _context):
+            return None
+
+        def request(self, _context):
+            return record
+
+    app = FastAPI()
+    install_foundation4_shadow_routes(
+        app,
+        runtime_store=store,
+        loader=SimpleNamespace(),
+        coordinator=Coordinator(),
+    )
+    response = TestClient(app).get("/api/league/dynasty-position-rooms")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == expected_status
+    assert payload["publication_generation_id"] == "dynasty-generation-nonready"
+
+
+def test_dynasty_last_good_keeps_verified_presentation_generation(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    context = _context()
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", context.league_state)
+    store.bind_publication_generation_id(
+        "local-beta-user", "replacement-runtime-generation"
+    )
+    pending = SimpleNamespace(
+        status=IntrinsicBuildStatus.RUNNING,
+        league_state_id=context.league_state.state_id,
+        intrinsic_input_fingerprint="career-fp",
+        contract=None,
+        error=None,
+    )
+
+    class Coordinator:
+        def current(self, _context):
+            return pending
+
+        def request(self, _context):
+            raise AssertionError("verified last-good must be served before requesting rebuild")
+
+    last_good = {
+        "status": "ready",
+        "capability": "career_intrinsic",
+        "league_state_id": context.league_state.state_id,
+        "publication_generation_id": "served-last-good-generation",
+        "dynasty_evidence_status": "last_good",
+        "rooms": [],
+    }
+    app = FastAPI()
+    install_foundation4_shadow_routes(
+        app,
+        runtime_store=store,
+        loader=SimpleNamespace(),
+        coordinator=Coordinator(),
+        presentation_payload_loader=lambda *_args: dict(last_good),
+    )
+    payload = TestClient(app).get("/api/league/dynasty-position-rooms").json()
+    assert payload["status"] == "ready"
+    assert payload["dynasty_evidence_status"] == "last_good"
+    assert payload["publication_generation_id"] == "served-last-good-generation"
+
+
+def test_dynasty_rejects_unversioned_last_good_instead_of_guessing_generation(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    context = _context()
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", context.league_state)
+    store.bind_publication_generation_id(
+        "local-beta-user", "current-runtime-generation"
+    )
+    failed = SimpleNamespace(
+        status=IntrinsicBuildStatus.FAILED,
+        league_state_id=context.league_state.state_id,
+        intrinsic_input_fingerprint="career-fp",
+        contract=None,
+        error="current Career evidence unavailable",
+    )
+
+    class Coordinator:
+        def current(self, _context):
+            return failed
+
+        def request(self, _context):
+            return failed
+
+    app = FastAPI()
+    install_foundation4_shadow_routes(
+        app,
+        runtime_store=store,
+        loader=SimpleNamespace(),
+        coordinator=Coordinator(),
+        presentation_payload_loader=lambda *_args: {
+            "status": "ready",
+            "dynasty_evidence_status": "last_good",
+            "league_state_id": context.league_state.state_id,
+            "rooms": [],
+        },
+    )
+    payload = TestClient(app).get("/api/league/dynasty-position-rooms").json()
+    assert payload["status"] == "unavailable"
+    assert payload["publication_generation_id"] == "current-runtime-generation"
