@@ -60,13 +60,13 @@ def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell
     index = _index()
     shell = _shell()
     assert "/static/forecast_refresh.js?v=20261004-safari-restore380" in index
-    assert "/static/product_shell.js?v=20261004-safari-restore380&c=20261004-publication-handoff378" in index
+    assert "/static/product_shell.js?v=20261004-safari-restore380&c=20261005-dynasty-handoff383a" in index
     assert "/static/home_dashboard.js?v=20261004-safari-restore380&c=20261001-continuity2" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
     assert "As of " in shell
     assert "const fsfflStaticVersion='20260927-dualstate1';" in shell
-    assert "const leagueAtlasStaticVersion='20261004-publication-handoff378';" in shell
+    assert "const leagueAtlasStaticVersion='20261005-dynasty-handoff383a';" in shell
     assert "const homeNorthStarStaticVersion='20261001-continuity2';" in shell
     assert "const franchiseNorthStarStaticVersion='20261001-continuity2';" in shell
 
@@ -243,7 +243,7 @@ def test_continuity_release_busts_recovery_presentation_assets() -> None:
         assert f"/static/{script}?v=20261004-safari-restore380" in index
     assert "/static/session_recovery.js?v=20261004-safari-restore380" in index
     assert "/static/home_dashboard.js?v=20261004-safari-restore380&c=20261001-continuity2" in index
-    assert "/static/product_shell.js?v=20261004-safari-restore380&c=20261004-publication-handoff378" in index
+    assert "/static/product_shell.js?v=20261004-safari-restore380&c=20261005-dynasty-handoff383a" in index
 
 
 def test_last_good_recovery_is_compact_and_never_uses_blocking_takeover_copy() -> None:
