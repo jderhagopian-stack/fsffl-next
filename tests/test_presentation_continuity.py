@@ -761,3 +761,11 @@ def test_dynasty_followup_is_presentation_only_and_generation_fenced() -> None:
     assert "start_intelligence_reconciliation" not in followup
     assert "state_loader" not in followup
     assert "simulation" not in followup.lower()
+
+
+def test_last_good_dynasty_is_rebased_with_explicit_source_provenance() -> None:
+    source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
+    assert 'dynasty_last_good["dynasty_evidence_state_id"]' in source
+    assert 'dynasty_last_good["dynasty_evidence_publication_generation_id"]' in source
+    assert 'dynasty_last_good["league_state_id"] = context.league_state.state_id' in source
+    assert 'dynasty_last_good.pop("publication_generation_id", None)' in source
