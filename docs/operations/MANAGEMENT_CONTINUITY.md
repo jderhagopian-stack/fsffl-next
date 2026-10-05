@@ -1,11 +1,17 @@
 # FSFFL NEXT — Management Continuity
 
 ## Updated
-2026-10-03
+2026-10-05
 
-## Management objective
-First make the hosted product reliably usable. Then return immediately to the upstream foundation program that will make Market / Trade / Intelligence materially stronger.
+## Immediate Management objective — restore nimble development
 
+The immediate priority is no longer another isolated feature corrective. FSFFL NEXT is under an urgent architecture-simplification and development-efficiency gate governed by `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md`.
+
+Management's goal is to restore the chartered NEXT development model: fast, modular, auditable, computationally efficient, safe to change, and easy to extend. The analytical authority chain remains frozen unless the audit proves a direct contradiction. The urgent review is focused on runtime/application plumbing, persistence/publication, resource/egress behavior, frontend delivery, testing/review overhead, and stale operating state.
+
+Current Implementation may finish the narrow Dynasty physical blocker. New #375 / PIT-history / Owner Intelligence breadth remains HOLD until the read-only audit is accepted and the P0 simplification path is sequenced.
+
+## Prior Management objective
 Do not trade reliability for new capability. Do not restart completed Research. Preserve the authority chain:
 
 Data -> Point-in-Time State -> Forecast -> Simulation -> Value -> Decision -> Search/Optimization -> Analytics/API -> Presentation
