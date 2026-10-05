@@ -1615,6 +1615,16 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
         context,
         timeout_seconds=240.0,
     )
+    if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
+        # The first wait is only the normal presentation budget. Do not turn a
+        # healthy long-running Foundation 4 build into a failed core publication.
+        # Continue waiting in this background reconciliation until the coordinator's
+        # own hard watchdog makes the build terminal; publication then resumes
+        # automatically without another browser/provider action.
+        record = _foundation4_shadow_coordinator.wait_for_terminal(
+            context,
+            timeout_seconds=400.0,
+        )
     # Dynasty is presentation-only. Unsupported Foundation 4 coordinates must
     # never block otherwise-ready core intelligence publication.
     if (
@@ -1795,8 +1805,11 @@ def _run_lightweight_startup_restore() -> None:
                             league_state_id=context.league_state.state_id,
                             selected_team_id=context.selected_team_id,
                         )
-                        if legacy_migration:
-                            _prepare_presentation_for_user(_beta_restore_user, context)
+                        # Any terminal restored core generation that needs a
+                        # v2 presentation backfill must prepare Dynasty, not only a
+                        # legacy-v1 migration. request()/wait_for_terminal() reuses
+                        # compatible persisted Foundation 4 evidence when present.
+                        _prepare_presentation_for_user(_beta_restore_user, context)
                         promotion = _promote_presentation_for_user(
                             _beta_restore_user,
                             context,
