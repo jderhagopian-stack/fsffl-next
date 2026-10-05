@@ -390,3 +390,31 @@ def test_canonical_career_intrinsic_endpoint_is_primary_and_not_shadow_labeled(m
     assert payload["capability"] == "career_intrinsic"
     assert payload["value_label"] == "Career Intrinsic"
     assert "shadow" not in payload
+
+
+def test_dynasty_rooms_prefer_ready_canonical_career_intrinsic_over_stale_unavailable_presentation(monkeypatch, materialized) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    persistence, _calls, _first_loader, context, _built = materialized
+    loader = _loader(persistence, [])
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", context.league_state)
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(loader, max_workers=1)
+    record = coordinator.wait_for_terminal(context, timeout_seconds=10.0)
+    assert record.status == IntrinsicBuildStatus.COMPLETED
+    app = FastAPI()
+    install_foundation4_shadow_routes(
+        app,
+        runtime_store=store,
+        loader=loader,
+        coordinator=coordinator,
+        presentation_payload_loader=lambda *_args: {
+            "status": "unavailable",
+            "reason": "stale presentation placeholder",
+        },
+    )
+    response = TestClient(app).get("/api/league/dynasty-position-rooms")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ready"
+    assert payload["capability"] == "career_intrinsic"
+    assert len(payload["rooms"]) == 0  # synthetic unit State has no teams
