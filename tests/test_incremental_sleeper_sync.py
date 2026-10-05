@@ -93,13 +93,15 @@ def test_matching_probe_can_reuse_recent_full_refresh() -> None:
     assert not _full_refresh_due(cursor, now=NOW, full_refresh_seconds=3600)
 
 
-def test_changed_probe_or_aged_cursor_forces_full_refresh() -> None:
+def test_changed_probe_differs_but_aged_cursor_is_only_probe_cadence() -> None:
     probe = _source(_payloads()).fetch_sync_probe(league_external_id="123")
     changed = _source(_payloads(roster_player="p9")).fetch_sync_probe(league_external_id="123")
     fresh_cursor = _cursor(probe, full_refresh_at=NOW - timedelta(minutes=5))
     old_cursor = _cursor(probe, full_refresh_at=NOW - timedelta(hours=2))
 
     assert not _probe_matches_cursor(fresh_cursor, changed)
+    # This helper describes age only; hosted freshness no longer treats it as
+    # authorization for heavyweight work without a changed provider probe.
     assert _full_refresh_due(old_cursor, now=NOW, full_refresh_seconds=3600)
 
 

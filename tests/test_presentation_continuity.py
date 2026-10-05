@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -10,10 +12,12 @@ from fastapi import FastAPI
 from fsffl.product.presentation_continuity import (
     PRESENTATION_MANIFEST_ARTIFACT_KIND,
     PRESENTATION_MODEL_VERSION,
+    LEGACY_PRESENTATION_MODEL_VERSION,
     REQUIRED_PRESENTATION_SURFACES,
     HOME_SURFACE,
     FRANCHISE_SURFACE,
     LEAGUE_ATLAS_SURFACE,
+    LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
     MARKET_VALUE_LENSES_ALL_SURFACE,
     MARKET_VALUE_LENSES_ROSTERED_SURFACE,
     PresentationContinuityStore,
@@ -718,3 +722,50 @@ def test_fast_snapshot_hint_is_warmed_only_after_strict_validation() -> None:
         league_state_id=state.state_id,
         selected_team_id="a",
     )
+
+
+def test_dynasty_position_rooms_are_required_in_atomic_presentation_publication() -> None:
+    assert LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE in REQUIRED_PRESENTATION_SURFACES
+
+
+def test_dynasty_publication_bumps_cache_version_and_keeps_legacy_migration_contract() -> None:
+    assert PRESENTATION_MODEL_VERSION == "runtime-presentation-continuity-v2"
+    assert LEGACY_PRESENTATION_MODEL_VERSION == "runtime-presentation-continuity-v1"
+
+
+def test_dynasty_preparation_is_decoupled_from_core_publication() -> None:
+    source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
+    prepare = source[source.index("def _prepare_presentation_for_user"):source.index("def _promote_presentation_for_user")]
+    assert "wait_for_terminal" not in prepare
+    assert "_foundation4_shadow_coordinator.request(context)" in prepare
+    assert "add_terminal_callback" in prepare
+    assert "_publish_dynasty_presentation_followup" in source
+    assert "bind_publication_generation_id" in source
+    assert "dynasty_last_good" in source
+    assert '"status": "preparing" if preparing else "unavailable"' in source
+    assert (
+        "_prepare_presentation_for_user(_beta_restore_user, context)\n"
+        "                        promotion = _promote_presentation_for_user"
+    ) in source
+
+
+def test_dynasty_followup_is_presentation_only_and_generation_fenced() -> None:
+    source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
+    followup = source[
+        source.index("def _publish_dynasty_presentation_followup"):
+        source.index("app.state.presentation_preparer")
+    ]
+    assert "_runtime_store.publication_sequence(user_id)" in followup
+    assert "context.league_state.state_id != expected_state_id" in followup
+    assert "_promote_presentation_for_user(user_id, context)" in followup
+    assert "start_intelligence_reconciliation" not in followup
+    assert "state_loader" not in followup
+    assert "simulation" not in followup.lower()
+
+
+def test_last_good_dynasty_is_rebased_with_explicit_source_provenance() -> None:
+    source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
+    assert 'dynasty_last_good["dynasty_evidence_state_id"]' in source
+    assert 'dynasty_last_good["dynasty_evidence_publication_generation_id"]' in source
+    assert 'dynasty_last_good["league_state_id"] = context.league_state.state_id' in source
+    assert 'dynasty_last_good.pop("publication_generation_id", None)' in source

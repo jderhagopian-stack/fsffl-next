@@ -56,6 +56,7 @@ from .presentation_continuity import (
     HOME_SURFACE,
     LEAGUE_ATLAS_SURFACE,
     LEAGUE_TEAM_VIEWS_SURFACE,
+    LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
     MARKET_VALUE_LENSES_ALL_SURFACE,
     MARKET_VALUE_LENSES_ROSTERED_SURFACE,
     MARKET_WORKSPACE_SURFACE,
@@ -1544,6 +1545,7 @@ install_foundation4_shadow_routes(
     runtime_store=_runtime_store,
     loader=_foundation4_shadow_loader,
     coordinator=_foundation4_shadow_coordinator,
+    presentation_payload_loader=_presentation_payload_loader,
 )
 install_intrinsic_market_discovery_routes(
     app,
@@ -1606,6 +1608,52 @@ def _presentation_route_endpoint(path: str):
     raise RuntimeError(f"presentation continuity route is unavailable: {path}")
 
 
+_dynasty_followup_lock = RLock()
+_dynasty_followups: set[tuple[str, str, str]] = set()
+
+
+def _prepare_presentation_for_user(user_id: str, context) -> None:
+    """Kick Dynasty preparation without putting it on the core publication path."""
+    if context.league_state is None:
+        return
+    record = _foundation4_shadow_coordinator.request(context)
+    if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
+        key = (
+            user_id,
+            context.league_state.state_id,
+            record.intrinsic_input_fingerprint,
+        )
+        with _dynasty_followup_lock:
+            if key in _dynasty_followups:
+                return
+            _dynasty_followups.add(key)
+
+        def completed(terminal_record) -> None:
+            try:
+                if (
+                    terminal_record.status == IntrinsicBuildStatus.COMPLETED
+                    and terminal_record.contract is not None
+                ):
+                    Thread(
+                        target=_publish_dynasty_presentation_followup,
+                        args=(user_id, context.league_state.state_id, key),
+                        daemon=True,
+                        name="fsffl-dynasty-presentation-followup",
+                    ).start()
+                else:
+                    with _dynasty_followup_lock:
+                        _dynasty_followups.discard(key)
+            except Exception:
+                with _dynasty_followup_lock:
+                    _dynasty_followups.discard(key)
+                _logger.exception(
+                    "FSFFL Dynasty completion callback failed user=%s state=%s",
+                    user_id,
+                    context.league_state.state_id,
+                )
+
+        _foundation4_shadow_coordinator.add_terminal_callback(context, completed)
+
 def _promote_presentation_for_user(user_id: str, context) -> object | None:
     if not _presentation_continuity.enabled or context.league_state is None:
         return None
@@ -1630,11 +1678,45 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
             )
     # Snapshot exactly the existing governed presentation contracts. Builders run
     # sequentially and each payload is persisted before the next is composed.
+    dynasty_last_good = None
+    dynasty_record = _foundation4_shadow_coordinator.current(context)
+    if (
+        dynasty_record is None
+        or dynasty_record.status != IntrinsicBuildStatus.COMPLETED
+        or dynasty_record.contract is None
+        or dynasty_record.league_state_id != context.league_state.state_id
+    ):
+        # Capture verified last-good Dynasty before promote() enters its recursive
+        # read fence. The payload is copied into the new atomic generation rather
+        # than referencing/mixing an older generation in place.
+        candidate = _presentation_continuity.load_for_runtime(
+            user_id=user_id,
+            runtime=context,
+            surface=LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
+        )
+        if candidate is not None and candidate.get("status") == "ready":
+            dynasty_last_good = dict(candidate)
+            dynasty_last_good["dynasty_evidence_status"] = "last_good"
+            dynasty_last_good["dynasty_evidence_state_id"] = candidate.get(
+                "league_state_id"
+            )
+            dynasty_last_good["dynasty_evidence_publication_generation_id"] = (
+                candidate.get("publication_generation_id")
+            )
+            # The copied evidence is now a governed value inside the new State's
+            # atomic presentation publication. Keep its source coordinates above
+            # instead of making the surface look like it belongs to the old State.
+            dynasty_last_good["league_state_id"] = context.league_state.state_id
+            dynasty_last_good.pop("publication_generation_id", None)
+            dynasty_last_good.pop("intelligence_freshness", None)
+            dynasty_last_good.pop("presentation_continuity", None)
+
     specs = (
         (HOME_SURFACE, "/api/home", {}),
         (FRANCHISE_SURFACE, "/api/my-team", {}),
         (LEAGUE_ATLAS_SURFACE, "/api/league/atlas", {}),
         (LEAGUE_TEAM_VIEWS_SURFACE, "/api/league/team-views", {}),
+        (LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE, "/api/league/dynasty-position-rooms", {}),
         (
             MARKET_WORKSPACE_SURFACE,
             None,
@@ -1668,6 +1750,43 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
             )
             continue
         endpoint = _presentation_route_endpoint(path)
+        if surface == LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE:
+            def build_dynasty_rooms(endpoint=endpoint, kwargs=kwargs):
+                record = _foundation4_shadow_coordinator.current(context)
+                if (
+                    record is None
+                    or record.status != IntrinsicBuildStatus.COMPLETED
+                    or record.contract is None
+                    or record.league_state_id != context.league_state.state_id
+                ):
+                    if dynasty_last_good is not None:
+                        return dict(dynasty_last_good)
+                    preparing = bool(
+                        record is not None
+                        and record.status in {
+                            IntrinsicBuildStatus.QUEUED,
+                            IntrinsicBuildStatus.RUNNING,
+                        }
+                    )
+                    return {
+                        "status": "preparing" if preparing else "unavailable",
+                        "league_state_id": context.league_state.state_id,
+                        "reason": (
+                            "Dynasty position-room evidence is preparing in the background"
+                            if preparing
+                            else "Dynasty position-room evidence is unsupported or unavailable for this State"
+                        ),
+                    }
+                payload = endpoint(user_id=user_id, **kwargs)
+                if payload.get("status") != "ready":
+                    return {
+                        "status": "unavailable",
+                        "league_state_id": context.league_state.state_id,
+                        "reason": payload.get("reason") or "Dynasty position-room evidence is unavailable",
+                    }
+                return payload
+            builders.append((surface, build_dynasty_rooms))
+            continue
         builders.append(
             (
                 surface,
@@ -1684,6 +1803,53 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
     )
 
 
+def _publish_dynasty_presentation_followup(
+    user_id: str,
+    expected_state_id: str,
+    key: tuple[str, str, str],
+) -> None:
+    """Atomically republish presentation only after late Dynasty completion."""
+    try:
+        with _runtime_store.publication_sequence(user_id):
+            context = _runtime_store.get(user_id)
+            if (
+                context.league_state is None
+                or context.league_state.state_id != expected_state_id
+            ):
+                return
+            record = _foundation4_shadow_coordinator.current(context)
+            if (
+                record is None
+                or record.status != IntrinsicBuildStatus.COMPLETED
+                or record.contract is None
+                or record.league_state_id != expected_state_id
+            ):
+                return
+            promotion = _promote_presentation_for_user(user_id, context)
+            if promotion is None:
+                return
+            _runtime_store.bind_publication_generation_id(
+                user_id,
+                promotion.publication_generation_id,
+            )
+            _logger.info(
+                "FSFFL Dynasty presentation-only follow-up promoted user=%s state=%s generation=%s",
+                user_id,
+                expected_state_id,
+                promotion.publication_generation_id,
+            )
+    except Exception:
+        _logger.exception(
+            "FSFFL Dynasty presentation-only follow-up failed user=%s state=%s",
+            user_id,
+            expected_state_id,
+        )
+    finally:
+        with _dynasty_followup_lock:
+            _dynasty_followups.discard(key)
+
+
+app.state.presentation_preparer = _prepare_presentation_for_user
 app.state.presentation_promoter = _promote_presentation_for_user
 
 
@@ -1732,6 +1898,20 @@ def _run_lightweight_startup_restore() -> None:
                 )
                 if terminal:
                     try:
+                        # A pre-#382 v1 snapshot remains valid evidence for migration,
+                        # but it is never served as a v2 snapshot. Prepare Dynasty
+                        # opportunistically, then republish the already-restored core
+                        # runtime into the new manifest version without provider work.
+                        legacy_migration = _presentation_continuity.legacy_snapshot_available(
+                            user_id=_beta_restore_user,
+                            league_id=context.league_state.league.league_id,
+                            league_state_id=context.league_state.state_id,
+                            selected_team_id=context.selected_team_id,
+                        )
+                        # Startup never waits for Dynasty. Reuse/restore exact
+                        # evidence when available; otherwise start it in the background
+                        # and publish core/presentation continuity immediately.
+                        _prepare_presentation_for_user(_beta_restore_user, context)
                         promotion = _promote_presentation_for_user(
                             _beta_restore_user,
                             context,

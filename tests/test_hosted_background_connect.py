@@ -606,7 +606,7 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_physical_connect_busts_hosted_release_cache_coherently() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    release = "20260929-physical-connect1"
+    release = "20261004-safari-restore380"
     for asset in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
         assert f"/static/{asset}?v={release}" in source
     versions = {
@@ -1126,12 +1126,12 @@ def test_session_restore_freshness_read_reuses_governed_cursor_before_refresh(
     )
     assert unknown.json() == {"refresh_due": False, "reason": "freshness_unavailable"}
 
-    due = client_for(make_cursor(now - timedelta(hours=2))).get(
+    aged_unchanged = client_for(make_cursor(now - timedelta(hours=2))).get(
         "/api/connect/sleeper/background/freshness",
         params={"league_external_id": external_id},
     )
-    assert due.status_code == 200
-    assert due.json() == {"refresh_due": True, "reason": "full_refresh_due"}
+    assert aged_unchanged.status_code == 200
+    assert aged_unchanged.json() == {"refresh_due": False, "reason": "provider_current"}
 
 
 def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() -> None:

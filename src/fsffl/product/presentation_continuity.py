@@ -23,12 +23,14 @@ _logger = logging.getLogger("fsffl.product.persistence")
 PRESENTATION_SURFACE_ARTIFACT_KIND = "runtime_presentation_surface"
 PRESENTATION_MANIFEST_ARTIFACT_KIND = "runtime_presentation_manifest"
 PRESENTATION_SCOPE_KIND = "user_league_presentation"
-PRESENTATION_MODEL_VERSION = "runtime-presentation-continuity-v1"
+PRESENTATION_MODEL_VERSION = "runtime-presentation-continuity-v2"
+LEGACY_PRESENTATION_MODEL_VERSION = "runtime-presentation-continuity-v1"
 
 HOME_SURFACE = "home"
 FRANCHISE_SURFACE = "franchise"
 LEAGUE_ATLAS_SURFACE = "league_atlas"
 LEAGUE_TEAM_VIEWS_SURFACE = "league_team_views"
+LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE = "league_dynasty_position_rooms"
 MARKET_WORKSPACE_SURFACE = "market_workspace"
 MARKET_VALUE_LENSES_ROSTERED_SURFACE = "market_value_lenses_rostered"
 MARKET_VALUE_LENSES_ALL_SURFACE = "market_value_lenses_all"
@@ -38,6 +40,7 @@ REQUIRED_PRESENTATION_SURFACES = (
     FRANCHISE_SURFACE,
     LEAGUE_ATLAS_SURFACE,
     LEAGUE_TEAM_VIEWS_SURFACE,
+    LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
     MARKET_WORKSPACE_SURFACE,
     MARKET_VALUE_LENSES_ROSTERED_SURFACE,
     MARKET_VALUE_LENSES_ALL_SURFACE,
@@ -74,13 +77,14 @@ def _manifest_key(
     user_id: str,
     league_id: str,
     league_state_id: str,
+    model_version: str = PRESENTATION_MODEL_VERSION,
 ) -> ArtifactKey:
     return ArtifactKey(
         artifact_kind=PRESENTATION_MANIFEST_ARTIFACT_KIND,
         scope_kind=PRESENTATION_SCOPE_KIND,
         scope_id=_scope_id(user_id, league_id),
         input_fingerprint=league_state_id,
-        model_version=PRESENTATION_MODEL_VERSION,
+        model_version=model_version,
     )
 
 
@@ -90,13 +94,14 @@ def _surface_key(
     league_id: str,
     promotion_id: str,
     surface: str,
+    model_version: str = PRESENTATION_MODEL_VERSION,
 ) -> ArtifactKey:
     return ArtifactKey(
         artifact_kind=PRESENTATION_SURFACE_ARTIFACT_KIND,
         scope_kind=PRESENTATION_SCOPE_KIND,
         scope_id=_surface_scope_id(user_id, league_id, surface),
         input_fingerprint=promotion_id,
-        model_version=PRESENTATION_MODEL_VERSION,
+        model_version=model_version,
     )
 
 
@@ -315,6 +320,70 @@ class PresentationContinuityStore:
         )
         with self._validation_lock:
             return key in self._validated_snapshots
+
+    def legacy_snapshot_available(
+        self,
+        *,
+        user_id: str,
+        league_id: str,
+        league_state_id: str,
+        selected_team_id: str | None = None,
+    ) -> bool:
+        """Validate the pre-Dynasty publication so startup can migrate it safely."""
+        if self._persistence is None:
+            return False
+        manifest = self._persistence.get_reusable_artifact(
+            _manifest_key(
+                user_id=user_id,
+                league_id=league_id,
+                league_state_id=league_state_id,
+                model_version=LEGACY_PRESENTATION_MODEL_VERSION,
+            )
+        )
+        if manifest is None or manifest.payload.get("selected_team_id") != selected_team_id:
+            return False
+        legacy_surfaces = tuple(
+            surface
+            for surface in REQUIRED_PRESENTATION_SURFACES
+            if surface != LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE
+        )
+        available = set(manifest.payload.get("surfaces") or ())
+        if not set(legacy_surfaces).issubset(available):
+            return False
+        promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
+        expected_hashes = {
+            str(item.get("surface")): item
+            for item in (manifest.payload.get("surface_hashes") or ())
+            if isinstance(item, Mapping)
+        }
+        if not promotion_id:
+            return False
+        for surface in legacy_surfaces:
+            record = self._persistence.get_reusable_artifact(
+                _surface_key(
+                    user_id=user_id,
+                    league_id=league_id,
+                    promotion_id=promotion_id,
+                    surface=surface,
+                    model_version=LEGACY_PRESENTATION_MODEL_VERSION,
+                )
+            )
+            expected = expected_hashes.get(surface)
+            if record is None or expected is None:
+                return False
+            wrapper = record.payload
+            raw = wrapper.get("payload")
+            if (
+                wrapper.get("promotion_id") != promotion_id
+                or wrapper.get("league_state_id") != league_state_id
+                or wrapper.get("surface") != surface
+                or wrapper.get("selected_team_id") != selected_team_id
+                or not isinstance(raw, Mapping)
+                or wrapper.get("payload_hash") != expected.get("payload_hash")
+                or canonical_fingerprint(_json_round_trip(raw)) != expected.get("payload_hash")
+            ):
+                return False
+        return True
 
     def has_snapshot(
         self,

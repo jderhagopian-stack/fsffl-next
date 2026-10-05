@@ -46,7 +46,7 @@ def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authorit
     assert "longTermStatus==='stale'?'Long-Term Intrinsic is not loaded for this last-good State.'" in source
     assert "longTermStatus==='unavailable'?'Long-Term Intrinsic request is temporarily unavailable; reopen this detail to retry." in source
     assert "!['idle','building','unavailable'].includes(fsfflLeagueStructureState.longTermStatus)" in source
-    assert source.count("fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale") == 4
+    assert source.count("fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale") == 2
     assert "Current Intrinsic · " in source
     assert "Market · " in source
 
@@ -139,7 +139,7 @@ def test_atlas_publication_promotion_gate_is_generation_and_route_bound():
         const start=source.indexOf('function fsfflAtlasPublicationPromotionTarget(');
         const end=source.indexOf('async function fsfflPromoteVisibleAtlas',start);
         assert(start>=0&&end>start,'production promotion gate must be present');
-        const sandbox={};
+        const sandbox={window:{addEventListener:()=>{}}};
         vm.runInNewContext(source.slice(start,end)+`\nthis.pick=fsfflAtlasPublicationPromotionTarget;`,sandbox);
         const ready={state_id:'state-1',publication_generation_id:'g2',capability_readiness:{overall_status:'full',publication:{generation_id:'g2',working_generation_active:false}}};
         assert.strictEqual(sandbox.pick('league_comparison',ready,'state-1','g1',null),'g2');
@@ -166,7 +166,7 @@ def test_atlas_load_rejects_cross_generation_payload_pairs():
         const start=source.indexOf('function laAtlasPayloadsAligned(');
         const end=source.indexOf('async function loadFsfflLeagueComparison',start);
         assert(start>=0&&end>start,'production payload alignment guard must exist');
-        const sandbox={};
+        const sandbox={window:{addEventListener:()=>{}}};
         vm.runInNewContext(source.slice(start,end)+`\nthis.aligned=laAtlasPayloadsAligned;`,sandbox);
         const atlas={league_state_id:'state-2',publication_generation_id:'g2'};
         const views={league_state_id:'state-2',publication_generation_id:'g2'};
@@ -193,7 +193,7 @@ def test_atlas_reentry_uses_verified_last_good_identity_during_rebuild_only():
         const start=source.indexOf('function laAtlasContextTarget(');
         const end=source.indexOf('let fsfflLeagueValueLensRequestId',start);
         assert(start>=0&&end>start,'production served-publication target helper must exist');
-        const sandbox={};
+        const sandbox={window:{addEventListener:()=>{}}};
         vm.runInNewContext(source.slice(start,end)+`\nthis.target=laAtlasContextTarget;`,sandbox);
         const rebuilding={state_id:'target-state',publication_generation_id:'target-generation',capability_readiness:{overall_status:'rebuilding',publication:{generation_id:'target-generation'},served_last_good:{available:true,league_state_id:'served-state',publication_generation_id:'served-generation'}}};
         assert.deepStrictEqual(JSON.parse(JSON.stringify(sandbox.target(rebuilding))),{canonicalStateId:'target-state',stateId:'served-state',generationId:'served-generation'});
@@ -219,7 +219,7 @@ def test_atlas_value_lens_response_cannot_overwrite_a_newer_publication():
         const start=source.indexOf('function laValueLensResponseMatches(');
         const end=source.indexOf('let fsfflLeagueValueLensRequestId',start);
         assert(start>=0&&end>start,'production value-lens generation fence must exist');
-        const sandbox={};
+        const sandbox={window:{addEventListener:()=>{}}};
         vm.runInNewContext(source.slice(start,end)+`\nthis.matches=laValueLensResponseMatches;`,sandbox);
         assert.strictEqual(sandbox.matches(2,2,'state-2','state-2','g2','g2','g2'),true);
         assert.strictEqual(sandbox.matches(1,2,'state-1','state-2','g1','g2','g1'),false);
@@ -313,7 +313,7 @@ def test_dynasty_evidence_response_fences_include_publication_generation():
         const start=source.indexOf('function laAtlasEvidenceRequestMatches(');
         const end=source.indexOf('async function loadFsfflLeagueComparison',start);
         assert(start>=0&&end>start,'production Dynasty request generation fence must exist');
-        const sandbox={};
+        const sandbox={window:{addEventListener:()=>{}}};
         vm.runInNewContext(source.slice(start,end)+`\nthis.matches=laAtlasEvidenceRequestMatches;`,sandbox);
         assert.strictEqual(sandbox.matches(2,2,'state-2','state-2','g2','g2'),true);
         assert.strictEqual(sandbox.matches(1,2,'state-1','state-2','g1','g2'),false);
@@ -323,3 +323,19 @@ def test_dynasty_evidence_response_fences_include_publication_generation():
     )
     completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
     assert completed.returncode == 0, completed.stderr
+
+
+def test_dynasty_loader_accepts_only_matching_persisted_publication_generation():
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    loader = source[source.index("async function laLoadDynastyRooms()"):source.index("async function laLoadLongTermEvidence()")]
+    assert "if(fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale)" not in loader
+    assert "payload?.publication_generation_id!==requestedGeneration" in loader
+    assert "payload?.intelligence_freshness?.stale?'last-good':'ready'" in loader
+
+
+def test_open_atlas_reloads_when_publication_generation_advances() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "fsffl:intelligence-status-updated" in source
+    assert "function laHandlePublishedIntelligence()" in source
+    assert "target.generationId!==currentGeneration||target.stateId!==currentStateId" in source
+    assert "loadFsfflLeagueComparison({force:true,expectedGeneration:target.generationId})" in source

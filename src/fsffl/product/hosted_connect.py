@@ -675,12 +675,9 @@ def install_hosted_connect_routes(
                 scope_kind=_SYNC_SCOPE_KIND,
                 scope_id=league_external_id,
             )
-            if _full_refresh_due(
-                cursor,
-                now=now,
-                full_refresh_seconds=full_refresh_seconds,
-            ):
-                return {"refresh_due": True, "reason": "full_refresh_due"}
+            # Elapsed age governs when we perform this cheap probe; it is never
+            # permission by itself to launch the heavyweight provider/materialization
+            # path. A full refresh is due only when provider facts actually changed.
             probe = sync_probe_loader(league_external_id)
         except Exception as exc:
             _logger.info(
