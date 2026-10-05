@@ -1,6 +1,15 @@
 # FSFFL NEXT — Current State
 
-Updated: 2026-10-03
+Updated: 2026-10-05
+
+## P0 Management gate — architecture simplification and development recovery
+
+Management has frozen new product expansion while a bounded whole-system runtime/application audit is performed under `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md`.
+
+Triggering evidence includes the #383-#391 Dynasty Position & Depth corrective chain, repeated physical failures despite broad green automated coverage, stale operating-state documents, and excessive Supabase egress from repeated persisted-artifact reads. The analytical authority chain remains presumed sound; the urgent concern is runtime/application complexity, persistence/resource behavior, browser delivery, test strategy, and development process.
+
+Current Implementation may finish only the narrow live Dynasty physical blocker. #375, PIT/history expansion, Owner Intelligence implementation, and other new product breadth remain HOLD until Management accepts the simplification audit and P0 corrective sequence.
+
 
 ## Product state
 FSFFL NEXT is in private beta. The canonical authority chain remains:
