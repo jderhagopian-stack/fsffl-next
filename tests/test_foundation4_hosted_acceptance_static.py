@@ -28,6 +28,6 @@ def test_foundation4_hosted_acceptance_is_explicit_bounded_and_non_sensitive() -
 def test_foundation4_restore_mode_requires_persisted_compatible_shadow() -> None:
     assert "_career_intrinsic_coordinator.restore_compatible_staged(context)" in SOURCE
     assert "No compatible persisted Foundation 4 shadow was restored" in SOURCE
-    assert "_foundation4_shadow_coordinator.wait_for_terminal(" in SOURCE
+    assert "_career_intrinsic_coordinator.wait_for_terminal(" in SOURCE
     assert "Foundation 4 Y1-Y3 raw Shapley semantics drifted" in SOURCE
     assert "Foundation 4 career-forward economics do not reconcile" in SOURCE
