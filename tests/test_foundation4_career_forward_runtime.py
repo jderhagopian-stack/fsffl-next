@@ -7,9 +7,15 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
 from fsffl.product.foundation4_career_forward_runtime import (
+    CAREER_INTRINSIC_ARTIFACT_KIND,
+    CAREER_INTRINSIC_SCOPE_KIND,
+    LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
+    LEGACY_FOUNDATION4_SCOPE_KIND,
     FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
     FOUNDATION4_Y4_Y7_ARTIFACT_KIND,
+    CareerIntrinsicLoader,
     Foundation4CareerForwardShadowLoader,
 )
 from fsffl.product.foundation4_shadow_inputs import (
@@ -322,3 +328,65 @@ def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(
         IntrinsicBuildStatus.COMPLETED
     )
     assert api_calls == []
+
+
+def test_accepted_legacy_shadow_artifact_migrates_to_canonical_career_intrinsic_without_rebuild(materialized) -> None:
+    persistence, _calls, first_loader, context, built = materialized
+    fingerprint = first_loader.intrinsic_input_fingerprint(context)
+    canonical = next(
+        row for row in persistence.artifacts
+        if row.key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND
+    )
+    legacy = ReusableArtifactRecord(
+        key=ArtifactKey(
+            artifact_kind=LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
+            scope_kind=LEGACY_FOUNDATION4_SCOPE_KIND,
+            scope_id=canonical.key.scope_id,
+            input_fingerprint=canonical.key.input_fingerprint,
+            model_version=canonical.key.model_version,
+        ),
+        payload=canonical.payload,
+        computed_at=canonical.computed_at,
+    )
+    legacy_only = MemoryPersistence()
+    legacy_only.put_artifact(legacy)
+    calls = []
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _context: calls.append("rebuild"),
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        persistence_store=legacy_only,
+    )
+
+    restored = loader.restore_compatible(context)
+
+    assert restored == built
+    assert calls == []
+    migrated = [
+        row for row in legacy_only.artifacts
+        if row.key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND
+        and row.key.scope_kind == CAREER_INTRINSIC_SCOPE_KIND
+        and row.key.input_fingerprint == fingerprint
+    ]
+    assert len(migrated) == 1
+
+
+def test_canonical_career_intrinsic_endpoint_is_primary_and_not_shadow_labeled(monkeypatch, materialized) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    persistence, _calls, _first_loader, context, _built = materialized
+    loader = _loader(persistence, [])
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", context.league_state)
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(loader, max_workers=1)
+    app = FastAPI()
+    install_foundation4_shadow_routes(app, runtime_store=store, loader=loader, coordinator=coordinator)
+    client = TestClient(app)
+    deadline = monotonic() + 10.0
+    response = client.get("/api/value/career-intrinsic-v1")
+    while response.status_code == 202 and monotonic() < deadline:
+        sleep(0.02)
+        response = client.get("/api/value/career-intrinsic-v1")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["capability"] == "career_intrinsic"
+    assert payload["value_label"] == "Career Intrinsic"
+    assert "shadow" not in payload
