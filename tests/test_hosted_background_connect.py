@@ -1126,12 +1126,12 @@ def test_session_restore_freshness_read_reuses_governed_cursor_before_refresh(
     )
     assert unknown.json() == {"refresh_due": False, "reason": "freshness_unavailable"}
 
-    due = client_for(make_cursor(now - timedelta(hours=2))).get(
+    aged_unchanged = client_for(make_cursor(now - timedelta(hours=2))).get(
         "/api/connect/sleeper/background/freshness",
         params={"league_external_id": external_id},
     )
-    assert due.status_code == 200
-    assert due.json() == {"refresh_due": True, "reason": "full_refresh_due"}
+    assert aged_unchanged.status_code == 200
+    assert aged_unchanged.json() == {"refresh_due": False, "reason": "provider_current"}
 
 
 def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() -> None:
