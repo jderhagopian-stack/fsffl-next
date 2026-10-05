@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
@@ -47,7 +47,7 @@ def install_career_intrinsic_routes(
 
     @app.get(LEGACY_FOUNDATION4_CAREER_FORWARD_ENDPOINT)
     @app.get(CAREER_INTRINSIC_ENDPOINT)
-    def career_forward_shadow(user_id: str = Depends(require_beta_user)):
+    def career_forward_shadow(request: Request, user_id: str = Depends(require_beta_user)):
         _context, record = _record(user_id)
         if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
             return JSONResponse(status_code=202, content=_building_payload(record))
@@ -70,6 +70,10 @@ def install_career_intrinsic_routes(
         payload["league_state_id"] = record.league_state_id
         payload["capability"] = "career_intrinsic"
         payload["value_label"] = "Career Intrinsic"
+        if request.url.path == CAREER_INTRINSIC_ENDPOINT:
+            # Canonical production consumers must not inherit the accepted
+            # Foundation 4 contract's historical shadow lifecycle label.
+            payload["status"] = "ready"
         return payload
 
     @app.get("/api/league/dynasty-position-rooms")
@@ -85,11 +89,6 @@ def install_career_intrinsic_routes(
         # snapshot is only last-good fallback while the exact-State production
         # artifact is preparing; it must never mask newly ready Career evidence.
         record = coordinator.current(context)
-        if record is None:
-            try:
-                record = coordinator.restore_compatible(context)
-            except Exception:
-                record = None
         if (
             record is not None
             and record.status == IntrinsicBuildStatus.COMPLETED
