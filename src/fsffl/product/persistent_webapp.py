@@ -459,7 +459,13 @@ def _reconcile_hosted_intrinsic(context) -> dict[str, object]:
     if readiness.get("status") == "full":
         try:
             career_record = _career_intrinsic_coordinator.current(context)
-            if career_record is None or career_record.status == IntrinsicBuildStatus.FAILED:
+            if career_record is not None and career_record.status == IntrinsicBuildStatus.FAILED:
+                # A startup attempt can legitimately fail while Current Intrinsic is
+                # still restoring. Once Current is ready, discard only that stale
+                # execution record and retry the same governed Career coordinate.
+                _career_intrinsic_coordinator.clear_user(context.user_id)
+                career_record = None
+            if career_record is None:
                 restored_career = _career_intrinsic_coordinator.restore_compatible_staged(context)
                 career_record = restored_career or _career_intrinsic_coordinator.request(context)
             _logger.info(
