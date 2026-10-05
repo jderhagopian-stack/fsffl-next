@@ -330,12 +330,12 @@ async function laLoadDynastyRooms(){
       if(!stillCurrent())return;
       if(payload?.league_state_id&&payload.league_state_id!==requestedStateId)throw new Error('Career-forward room evidence belongs to a different league State');
       if(requestedGeneration&&payload?.publication_generation_id!==requestedGeneration)throw new Error('Career-forward room evidence belongs to a different publication generation');
-      if(payload?.status==='building'||payload?.build_status==='queued'||payload?.build_status==='running'){
+      if(payload?.status==='preparing'||payload?.status==='building'||payload?.build_status==='queued'||payload?.build_status==='running'){
         fsfflLeagueStructureState.dynastyRoomStatus='building';renderLeagueComparison();
         await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));if(!stillCurrent())return;continue;
       }
       if(payload?.status!=='ready'||!Array.isArray(payload?.rooms))throw new Error(payload?.reason||'Holistic career-forward room evidence is unavailable');
-      fsfflLeagueStructureState.dynastyRooms=payload;fsfflLeagueStructureState.dynastyRoomStatus=payload?.intelligence_freshness?.stale?'last-good':'ready';renderLeagueComparison();return;
+      fsfflLeagueStructureState.dynastyRooms=payload;fsfflLeagueStructureState.dynastyRoomStatus=(payload?.dynasty_evidence_status==='last_good'||payload?.intelligence_freshness?.stale)?'last-good':'ready';renderLeagueComparison();return;
     }catch(error){
       if(!stillCurrent())return;
       fsfflLeagueStructureState.dynastyRooms=null;fsfflLeagueStructureState.dynastyRoomStatus='unavailable';renderLeagueComparison();return;
