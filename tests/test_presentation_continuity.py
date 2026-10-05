@@ -1,3 +1,4 @@
+from pathlib import Path
 from __future__ import annotations
 
 from dataclasses import replace
@@ -729,3 +730,14 @@ def test_dynasty_position_rooms_are_required_in_atomic_presentation_publication(
 def test_dynasty_publication_bumps_cache_version_and_keeps_legacy_migration_contract() -> None:
     assert PRESENTATION_MODEL_VERSION == "runtime-presentation-continuity-v2"
     assert LEGACY_PRESENTATION_MODEL_VERSION == "runtime-presentation-continuity-v1"
+
+
+def test_dynasty_preparation_waits_through_coordinator_watchdog_and_startup_backfills() -> None:
+    source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
+    assert "timeout_seconds=240.0" in source
+    assert "timeout_seconds=400.0" in source
+    assert "if legacy_migration:\n                            _prepare_presentation_for_user" not in source
+    assert (
+        "_prepare_presentation_for_user(_beta_restore_user, context)\n"
+        "                        promotion = _promote_presentation_for_user"
+    ) in source
