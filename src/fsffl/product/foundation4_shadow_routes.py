@@ -4,21 +4,23 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
-from .foundation4_career_forward_runtime import Foundation4CareerForwardShadowLoader
+from .foundation4_career_forward_runtime import CareerIntrinsicLoader
 from .intrinsic_background import IntrinsicBuildStatus, ShapleyIntrinsicBackgroundCoordinator
 from .presentation_continuity import LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE
 from .runtime import PrivateBetaRuntimeStore
 from .webapp import require_beta_user
 
 
-FOUNDATION4_CAREER_FORWARD_ENDPOINT = "/api/value/long-term-intrinsic-shadow-v1"
+CAREER_INTRINSIC_ENDPOINT = "/api/value/career-intrinsic-v1"
+LEGACY_FOUNDATION4_CAREER_FORWARD_ENDPOINT = "/api/value/long-term-intrinsic-shadow-v1"
+FOUNDATION4_CAREER_FORWARD_ENDPOINT = CAREER_INTRINSIC_ENDPOINT
 FOUNDATION4_Y4_Y7_ENDPOINT = "/api/value/long-horizon-y4-y7-shadow-v1"
 
 
 def _building_payload(record) -> dict[str, object]:
     return {
         "status": "building",
-        "shadow": True,
+        "capability": "career_intrinsic",
         "build_status": record.status.value,
         "league_state_id": record.league_state_id,
         "input_fingerprint": record.intrinsic_input_fingerprint,
@@ -26,11 +28,11 @@ def _building_payload(record) -> dict[str, object]:
     }
 
 
-def install_foundation4_shadow_routes(
+def install_career_intrinsic_routes(
     app: FastAPI,
     *,
     runtime_store: PrivateBetaRuntimeStore,
-    loader: Foundation4CareerForwardShadowLoader,
+    loader: CareerIntrinsicLoader,
     coordinator: ShapleyIntrinsicBackgroundCoordinator,
     presentation_payload_loader=None,
 ) -> None:
@@ -43,7 +45,8 @@ def install_foundation4_shadow_routes(
             )
         return context, coordinator.request(context)
 
-    @app.get(FOUNDATION4_CAREER_FORWARD_ENDPOINT)
+    @app.get(LEGACY_FOUNDATION4_CAREER_FORWARD_ENDPOINT)
+    @app.get(CAREER_INTRINSIC_ENDPOINT)
     def career_forward_shadow(user_id: str = Depends(require_beta_user)):
         _context, record = _record(user_id)
         if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
@@ -53,18 +56,20 @@ def install_foundation4_shadow_routes(
                 status_code=503,
                 content={
                     "status": "unavailable",
-                    "shadow": True,
-                    "reason": record.error or "Foundation 4 shadow build failed",
+                    "capability": "career_intrinsic",
+                    "reason": record.error or "Career Intrinsic build failed",
                     "current_intrinsic_replaced": False,
                 },
             )
         if record.contract is None:
             raise HTTPException(
                 status_code=503,
-                detail="Foundation 4 lifecycle completed without a holistic contract",
+                detail="Career Intrinsic lifecycle completed without a governed contract",
             )
         payload = record.contract.model_dump(mode="json")
         payload["league_state_id"] = record.league_state_id
+        payload["capability"] = "career_intrinsic"
+        payload["value_label"] = "Career Intrinsic"
         return payload
 
     @app.get("/api/league/dynasty-position-rooms")
@@ -94,7 +99,7 @@ def install_foundation4_shadow_routes(
         if record.status == IntrinsicBuildStatus.FAILED or record.contract is None:
             return {
                 "status": "unavailable",
-                "shadow": True,
+                "capability": "career_intrinsic",
                 "league_state_id": state.state_id,
                 "reason": record.error or "Holistic career-forward evidence is unavailable",
             }
@@ -139,3 +144,8 @@ def install_foundation4_shadow_routes(
                 detail="Foundation 4 Y4-Y7 shadow component is not available",
             )
         return component.model_dump(mode="json")
+
+
+# Compatibility installer retained while callers/tests migrate from the accepted
+# Foundation 4 shadow name. It installs the canonical production routes above.
+install_foundation4_shadow_routes = install_career_intrinsic_routes
