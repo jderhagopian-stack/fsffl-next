@@ -1615,14 +1615,17 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
         context,
         timeout_seconds=240.0,
     )
+    # Dynasty is presentation-only. Unsupported Foundation 4 coordinates must
+    # never block otherwise-ready core intelligence publication.
     if (
         record.status != IntrinsicBuildStatus.COMPLETED
         or record.contract is None
         or record.league_state_id != context.league_state.state_id
     ):
-        raise RuntimeError(
-            "Dynasty position-room evidence did not become ready for the exact "
-            "working State before presentation publication"
+        _logger.info(
+            "FSFFL Dynasty rooms unavailable for presentation state=%s status=%s",
+            context.league_state.state_id,
+            record.status.value,
         )
 
 
@@ -1698,14 +1701,18 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
                     or record.contract is None
                     or record.league_state_id != context.league_state.state_id
                 ):
-                    raise RuntimeError(
-                        "Dynasty position-room evidence is not ready for atomic publication"
-                    )
+                    return {
+                        "status": "unavailable",
+                        "league_state_id": context.league_state.state_id,
+                        "reason": "Dynasty position-room evidence is unsupported or unavailable for this State",
+                    }
                 payload = endpoint(user_id=user_id, **kwargs)
                 if payload.get("status") != "ready":
-                    raise RuntimeError(
-                        "Dynasty position-room presentation is not ready for publication"
-                    )
+                    return {
+                        "status": "unavailable",
+                        "league_state_id": context.league_state.state_id,
+                        "reason": payload.get("reason") or "Dynasty position-room evidence is unavailable",
+                    }
                 return payload
             builders.append((surface, build_dynasty_rooms))
             continue
