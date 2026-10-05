@@ -2711,3 +2711,30 @@ Validation:
 - exact-head implementation review found no additional code-level issue after disposition of the original P1/P2 review findings.
 
 **MANAGEMENT GATE — IMPLEMENTATION:** hosted deployment/runtime startup is accepted, but the behavioral directive is not yet physically complete. Final acceptance requires an authenticated saved-session iPhone/Safari cold wake to prove that a slow Render restore no longer strands the user on “We could not restore the league yet,” that the shell promotes automatically once durable context becomes available, that a current durable session still does not cause an unnecessary provider refresh, and that a genuinely missing durable snapshot reaches the existing provider fallback without the new 90-second delay. Do not reopen #386 or advance #375 on the strength of code/hosted evidence alone.
+
+
+## 2026-10-05 — #389 live: #386 League Atlas static delivery corrective
+
+Physical Safari acceptance after #387 proved the #386 Dynasty-generation client corrective had not been reliably delivered. At ~16:25 ET Safari requested `/static/league_comparison.js?v=20261005-dynasty-handoff383a`, received HTTP 304, and remained on `Loading Dynasty room values…` while backend evidence was healthy: Intrinsic reconciliation/publication completed, Atlas loaded, and `/api/league/dynasty-position-rooms` returned 200.
+
+Scope was therefore delivery-only. No Career Intrinsic, refresh/provider, publication architecture, Dynasty semantics, or #375 work was reopened.
+
+PR #389 exact implementation:
+- reviewed head: `e02217c6d48f5b69ef678055f4117d425ddae1de`;
+- squash merge/runtime commit: `0ee50ba1e8ce3090c4f4d60249452feb3c663a16`;
+- Render deploy: `dep-db20kq8m7kps73d1n3q0`, live 2026-10-05T20:38:33Z;
+- clean application startup completed at 2026-10-05T20:38:32Z.
+
+Delivery contract:
+- `league_comparison.js` remained byte-identical to the already-validated #386 bundle, Git blob `f5b6448957630a79cabfb8038d4819507109b98d`;
+- `product_shell.js` now loads it with `leagueAtlasStaticVersion='20261005-atlas-f5b644895763'`;
+- the eager outer shell URL now uses the current shell blob key `c=git-d7b87afca8cc`, ensuring Safari receives the new inner Atlas key;
+- the prior `dynasty-handoff383a` inner loader key and outer shell delivery key are absent;
+- focused regression coverage ties both delivery keys to the actual shipped Git blobs, so modifying either client layer without updating its cache key fails the delivery contract.
+
+Risk-proportionate validation:
+- #386 exact PR head `e782bd48d66eefaa51260546c9aac46fea83c1cf` had already passed League Atlas North Star focused validation, full CI, Home focused validation, PR164 focused regression and Live Forecast trace;
+- #389 independently verified the Atlas blob is byte-identical to #386 and directly verified both new cache keys against current Git blob identities plus absence of the stale keys;
+- exact-head GitHub-hosted workflows for #389 remained queued due runner availability at promotion; no unvalidated model/runtime semantics were introduced.
+
+**MANAGEMENT GATE — IMPLEMENTATION:** hosted delivery is live. Physical iPhone/Safari acceptance must now confirm the browser requests the new outer Product Shell key and then `/static/league_comparison.js?v=20261005-atlas-f5b644895763` rather than the stale `dynasty-handoff383a` URL, and that Dynasty room values resolve instead of remaining indefinitely in Loading. Do not reopen model/runtime architecture unless that new-key client still fails.
