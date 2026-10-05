@@ -43,8 +43,13 @@ from .runtime import UserRuntimeContext
 
 
 FOUNDATION4_Y4_Y7_ARTIFACT_KIND = "foundation4_long_horizon_y4_y7_shadow"
-FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = "foundation4_career_forward_intrinsic_shadow"
-FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
+CAREER_INTRINSIC_ARTIFACT_KIND = "career_intrinsic_v1"
+CAREER_INTRINSIC_SCOPE_KIND = "league_intrinsic"
+# Read-only migration aliases for the accepted Foundation 4 persisted authority.
+LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = "foundation4_career_forward_intrinsic_shadow"
+LEGACY_FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
+FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = CAREER_INTRINSIC_ARTIFACT_KIND
+FOUNDATION4_SCOPE_KIND = CAREER_INTRINSIC_SCOPE_KIND
 FOUNDATION4_RUNTIME_VERSION = (
     "foundation4-career-forward-runtime-v3:"
     "fsffl-material-scoring-with-rare-residual-omission"
@@ -72,8 +77,8 @@ def _rules_payload(context: UserRuntimeContext) -> dict[str, object]:
     }
 
 
-class Foundation4CareerForwardShadowLoader:
-    """Build/persist the holistic shadow without mutating Current Intrinsic."""
+class CareerIntrinsicLoader:
+    """Build, restore, and persist canonical production Career Intrinsic authority."""
 
     forecast_model_version = "foundation4:fsffl-scored-y4-y7-plus-y8-terminal-v2"
 
@@ -134,8 +139,8 @@ class Foundation4CareerForwardShadowLoader:
     ) -> ArtifactKey:
         assert context.league_state is not None
         return ArtifactKey(
-            artifact_kind=FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
-            scope_kind=FOUNDATION4_SCOPE_KIND,
+            artifact_kind=CAREER_INTRINSIC_ARTIFACT_KIND,
+            scope_kind=CAREER_INTRINSIC_SCOPE_KIND,
             scope_id=context.league_state.league.league_id,
             input_fingerprint=fingerprint,
             model_version=(
@@ -168,6 +173,24 @@ class Foundation4CareerForwardShadowLoader:
         record = self._persistence_store.get_reusable_artifact(
             self._career_key(context, fingerprint)
         )
+        migrated_legacy = False
+        if record is None:
+            # Foundation 4 was accepted with a shadow-named persistence key. Reuse
+            # that exact governed artifact once, then migrate it to the canonical
+            # production Career Intrinsic key without recomputation.
+            assert context.league_state is not None
+            legacy_key = ArtifactKey(
+                artifact_kind=LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
+                scope_kind=LEGACY_FOUNDATION4_SCOPE_KIND,
+                scope_id=context.league_state.league.league_id,
+                input_fingerprint=fingerprint,
+                model_version=(
+                    f"{CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION}"
+                    f"|{CAREER_FORWARD_INTRINSIC_MODEL_VERSION}"
+                ),
+            )
+            record = self._persistence_store.get_reusable_artifact(legacy_key)
+            migrated_legacy = record is not None
         if record is None:
             return None
         payload = dict(record.payload)
@@ -178,6 +201,16 @@ class Foundation4CareerForwardShadowLoader:
             contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
         except (TypeError, ValueError):
             return None
+        if migrated_legacy:
+            migrated_payload = contract.model_dump(mode="json")
+            migrated_payload["_foundation4_dependency_fingerprint"] = fingerprint
+            self._persistence_store.put_artifact(
+                ReusableArtifactRecord(
+                    key=self._career_key(context, fingerprint),
+                    payload=migrated_payload,
+                    computed_at=utc_now(),
+                )
+            )
         with self._lock:
             self._cached_user_id = context.user_id
             self._cached_fingerprint = fingerprint
@@ -347,3 +380,8 @@ class Foundation4CareerForwardShadowLoader:
             if self._cached_user_id == context.user_id and self._cached_component is not None:
                 return self._cached_component
         return self.restore_component(context)
+
+
+# Compatibility import for bounded migration; new production composition uses
+# CareerIntrinsicLoader directly.
+Foundation4CareerForwardShadowLoader = CareerIntrinsicLoader
