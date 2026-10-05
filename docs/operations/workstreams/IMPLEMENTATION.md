@@ -2683,3 +2683,31 @@ Foundation 4's accepted 335-player holistic career-forward model is now canonica
 Dynasty Position & Depth consumes canonical Career Intrinsic directly. Its Rank/Strength authority remains the raw holistic career-forward room total across every canonically rostered QB/RB/WR/TE at actual position; displayed 0–10,000 player indices are never summed or averaged for room strength. Broad Market, 3-Year Intrinsic (Y1–Y3), and Career Intrinsic are distinct canonical player-value languages. Draft picks remain governed by their separate origin-aware model.
 
 Live #384 (22740932ecbbe5ca6febe9613a88614d4ec7f4ee) physically failed on iPhone/Safari despite corrected assets and HTTP 200 from the Dynasty endpoint. Live evidence showed Career Intrinsic did not log a compatible restore, while startup could report Current Intrinsic unavailable before later reconciliation. Corrective work is source/lifecycle-only; no additional Safari/cache machinery is authorized absent new evidence. #375 remains blocked until Dynasty/Career Intrinsic is physically accepted; after acceptance #375 is the next bounded Product Integration step to distinguish 3-Year Intrinsic from Career Intrinsic across appropriate existing player/value surfaces.
+
+
+## 2026-10-05 — #387 merged/deployed; cold-start saved-session physical gate
+
+PR #387 closed the bounded saved-session cold-start restore race observed on iPhone/Safari after live #386. The corrective does not reopen Dynasty semantics, Career Intrinsic economics, provider freshness policy, or #375.
+
+Exact implementation/promotion identity:
+- reviewed PR head: `c7dae22eb8193854eeff79687e0e4e047127647a`;
+- squash merge/main runtime commit: `776b1bc0f9a6902862624ec72a70a932bc6a4aaf`;
+- Render deploy: `dep-db1vn4jtqb8s73bh9e40` on `fsffl-next-private-beta`, live 2026-10-05T19:35:09Z;
+- startup completed cleanly at 2026-10-05T19:35:03Z.
+
+Corrective contract:
+- ordinary saved-session restore remains read-first and never launches provider work merely because Safari is restoring;
+- transient transport failures and the shared boot-read `AbortError` remain retryable inside the bounded 90-second cold-start window;
+- a successful product-context response ends the cold-start wait immediately; if durable State is definitively absent/mismatched, control falls through to the pre-existing governed missing-State provider recovery instead of waiting 90 seconds;
+- successful durable restore or governed provider fallback clears the temporary boot-failure shell automatically;
+- only the changed `mobile_safari_recovery.js` delivery URL received a new Safari cache-buster, so the corrected script reaches the physical device without revving unrelated assets.
+
+Validation:
+- exact-head CI run `37363563797`: success;
+- exact-head focused corrective regression run `37363563791`: success;
+- exact-head Live Forecast corrective trace `37363563819`: success;
+- the Home North Star workflow was triggered only by the `index.html` cache-buster and remained runner-queued at merge; its JavaScript checks target untouched files and its pytest subset is already contained in the green full CI, so OPERATING_PROTOCOL risk-proportionate validation did not treat queue availability as a promotion blocker;
+- earlier same-logic full-CI output recorded 2,161 passing tests with one existing warning; exact-head CI subsequently completed successfully;
+- exact-head implementation review found no additional code-level issue after disposition of the original P1/P2 review findings.
+
+**MANAGEMENT GATE — IMPLEMENTATION:** hosted deployment/runtime startup is accepted, but the behavioral directive is not yet physically complete. Final acceptance requires an authenticated saved-session iPhone/Safari cold wake to prove that a slow Render restore no longer strands the user on “We could not restore the league yet,” that the shell promotes automatically once durable context becomes available, that a current durable session still does not cause an unnecessary provider refresh, and that a genuinely missing durable snapshot reaches the existing provider fallback without the new 90-second delay. Do not reopen #386 or advance #375 on the strength of code/hosted evidence alone.
