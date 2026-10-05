@@ -1608,6 +1608,24 @@ def _presentation_route_endpoint(path: str):
     raise RuntimeError(f"presentation continuity route is unavailable: {path}")
 
 
+def _prepare_presentation_for_user(user_id: str, context) -> None:
+    if context.league_state is None:
+        return
+    record = _foundation4_shadow_coordinator.wait_for_terminal(
+        context,
+        timeout_seconds=240.0,
+    )
+    if (
+        record.status != IntrinsicBuildStatus.COMPLETED
+        or record.contract is None
+        or record.league_state_id != context.league_state.state_id
+    ):
+        raise RuntimeError(
+            "Dynasty position-room evidence did not become ready for the exact "
+            "working State before presentation publication"
+        )
+
+
 def _promote_presentation_for_user(user_id: str, context) -> object | None:
     if not _presentation_continuity.enabled or context.league_state is None:
         return None
@@ -1673,17 +1691,15 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
         endpoint = _presentation_route_endpoint(path)
         if surface == LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE:
             def build_dynasty_rooms(endpoint=endpoint, kwargs=kwargs):
-                record = _foundation4_shadow_coordinator.wait_for_terminal(
-                    context,
-                    timeout_seconds=240.0,
-                )
+                record = _foundation4_shadow_coordinator.current(context)
                 if (
-                    record.status != IntrinsicBuildStatus.COMPLETED
+                    record is None
+                    or record.status != IntrinsicBuildStatus.COMPLETED
                     or record.contract is None
+                    or record.league_state_id != context.league_state.state_id
                 ):
                     raise RuntimeError(
-                        "Dynasty position-room evidence did not reach a terminal "
-                        "ready contract before atomic presentation promotion"
+                        "Dynasty position-room evidence is not ready for atomic publication"
                     )
                 payload = endpoint(user_id=user_id, **kwargs)
                 if payload.get("status") != "ready":
@@ -1709,6 +1725,7 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
     )
 
 
+app.state.presentation_preparer = _prepare_presentation_for_user
 app.state.presentation_promoter = _promote_presentation_for_user
 
 
