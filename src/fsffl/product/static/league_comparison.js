@@ -392,6 +392,16 @@ let fsfflLeagueLongTermRequestId=0;
 function laAtlasEvidenceRequestMatches(requestId,currentRequestId,requestedStateId,currentStateId,requestedGeneration,currentGeneration){
   return requestId===currentRequestId&&requestedStateId===currentStateId&&requestedGeneration===currentGeneration;
 }
+function laHandlePublishedIntelligence(){
+  if(state?.route!=='league'||!fsfflLeagueStructureState.atlas)return;
+  const target=laAtlasContextTarget(state?.context||{},false,null);
+  const currentGeneration=fsfflLeagueStructureState.atlas?.publication_generation_id||null;
+  const currentStateId=fsfflLeagueStructureState.atlas?.league_state_id||null;
+  if(target.generationId&&target.stateId&&(target.generationId!==currentGeneration||target.stateId!==currentStateId)){
+    void loadFsfflLeagueComparison({force:true,expectedGeneration:target.generationId});
+  }
+}
+window.addEventListener('fsffl:intelligence-status-updated',laHandlePublishedIntelligence);
 async function loadFsfflLeagueComparison(options={}){
   const force=options?.force===true,target=laAtlasContextTarget(state?.context,force,options?.expectedGeneration||null);
   const expectedGeneration=target.generationId,expectedStateId=target.stateId;
