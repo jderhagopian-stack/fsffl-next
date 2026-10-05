@@ -321,6 +321,70 @@ class PresentationContinuityStore:
         with self._validation_lock:
             return key in self._validated_snapshots
 
+    def legacy_snapshot_available(
+        self,
+        *,
+        user_id: str,
+        league_id: str,
+        league_state_id: str,
+        selected_team_id: str | None = None,
+    ) -> bool:
+        """Validate the pre-Dynasty publication so startup can migrate it safely."""
+        if self._persistence is None:
+            return False
+        manifest = self._persistence.get_reusable_artifact(
+            _manifest_key(
+                user_id=user_id,
+                league_id=league_id,
+                league_state_id=league_state_id,
+                model_version=LEGACY_PRESENTATION_MODEL_VERSION,
+            )
+        )
+        if manifest is None or manifest.payload.get("selected_team_id") != selected_team_id:
+            return False
+        legacy_surfaces = tuple(
+            surface
+            for surface in REQUIRED_PRESENTATION_SURFACES
+            if surface != LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE
+        )
+        available = set(manifest.payload.get("surfaces") or ())
+        if not set(legacy_surfaces).issubset(available):
+            return False
+        promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
+        expected_hashes = {
+            str(item.get("surface")): item
+            for item in (manifest.payload.get("surface_hashes") or ())
+            if isinstance(item, Mapping)
+        }
+        if not promotion_id:
+            return False
+        for surface in legacy_surfaces:
+            record = self._persistence.get_reusable_artifact(
+                _surface_key(
+                    user_id=user_id,
+                    league_id=league_id,
+                    promotion_id=promotion_id,
+                    surface=surface,
+                    model_version=LEGACY_PRESENTATION_MODEL_VERSION,
+                )
+            )
+            expected = expected_hashes.get(surface)
+            if record is None or expected is None:
+                return False
+            wrapper = record.payload
+            raw = wrapper.get("payload")
+            if (
+                wrapper.get("promotion_id") != promotion_id
+                or wrapper.get("league_state_id") != league_state_id
+                or wrapper.get("surface") != surface
+                or wrapper.get("selected_team_id") != selected_team_id
+                or not isinstance(raw, Mapping)
+                or wrapper.get("payload_hash") != expected.get("payload_hash")
+                or canonical_fingerprint(_json_round_trip(raw)) != expected.get("payload_hash")
+            ):
+                return False
+        return True
+
     def has_snapshot(
         self,
         *,
