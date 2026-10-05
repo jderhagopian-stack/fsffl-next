@@ -94,7 +94,7 @@ function laPositionMatrix(){
 
 
   const displayModes='<button type="button" data-position-lens="rank" class="'+(mode==='rank'?'active':'')+'">Rank</button><button type="button" data-position-lens="strength" class="'+(mode==='strength'?'active':'')+'">Strength Index</button>';
-  const roomStatus=dynasty?(fsfflLeagueStructureState.dynastyRoomStatus==='loading'?'Loading Dynasty room values… roster counts are breadth only.':fsfflLeagueStructureState.dynastyRoomStatus==='building'?'Long-Term evidence is building… roster counts are breadth only.':fsfflLeagueStructureState.dynastyRoomStatus==='unavailable'?'Dynasty room ranking is unavailable for this State; roster counts are breadth only.':fsfflLeagueStructureState.dynastyRoomStatus==='stale'?'Dynasty room values are not loaded for this last-good State; roster counts are breadth only.':'Career-forward room rank; roster counts are breadth only.'):mode==='strength'?'Current uses optimized-starter production; 100 = league average.':'Current ranks optimized-starter production for winning now, #1 through #'+views.length+'.';
+  const roomStatus=dynasty?(fsfflLeagueStructureState.dynastyRoomStatus==='loading'?'Loading Dynasty room values… roster counts are breadth only.':fsfflLeagueStructureState.dynastyRoomStatus==='building'?'Long-Term evidence is building… roster counts are breadth only.':fsfflLeagueStructureState.dynastyRoomStatus==='unavailable'?'Dynasty room ranking is unavailable for this State; roster counts are breadth only.':fsfflLeagueStructureState.dynastyRoomStatus==='stale'?'Dynasty room values are not loaded for this last-good State; roster counts are breadth only.':fsfflLeagueStructureState.dynastyRoomStatus==='last-good'?'Last-good Dynasty room rank while current intelligence rebuilds; roster counts are breadth only.':'Career-forward room rank; roster counts are breadth only.'):mode==='strength'?'Current uses optimized-starter production; 100 = league average.':'Current ranks optimized-starter production for winning now, #1 through #'+views.length+'.';
   const controls='<div class="league-position-lens-wrap"><div class="league-position-lens-row"><div class="league-position-lens" role="group" aria-label="Position outlook"><button type="button" data-position-view="current" class="'+(!dynasty?'active':'')+'">Current</button><button type="button" data-position-view="dynasty" class="'+(dynasty?'active':'')+'">Dynasty</button></div><div class="league-position-lens" role="group" aria-label="Position map display">'+displayModes+'</div></div><small class="league-position-lens-note" role="status" aria-live="polite">'+roomStatus+'</small></div>';
   return '<section class="league-section league-position-section"><div class="league-section-heading league-map-heading"><div><p class="eyebrow">League Map</p><h3>See positional control at a glance</h3></div>'+controls+'</div><div class="league-edge-matrix league-edge-map">'+header+rows+'</div><p class="atlas-foot league-map-foot">Team order does not change between lenses. Dynasty ranks holistic career-forward raw room totals; the roster count shown beneath is secondary breadth evidence. Tap any position to see the players and evidence behind its rank.</p></section>';
 }
@@ -319,7 +319,6 @@ async function loadLeagueValueLenses(){
 async function laLoadDynastyRooms(){
   const requestedStateId=fsfflLeagueStructureState.atlas?.league_state_id||null;
   const requestedGeneration=fsfflLeagueStructureState.atlas?.publication_generation_id||null;
-  if(fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale){fsfflLeagueStructureState.dynastyRooms=null;fsfflLeagueStructureState.dynastyRoomStatus='stale';renderLeagueComparison();return}
   if(fsfflLeagueStructureState.dynastyRoomStatus==='loading')return;
   if(fsfflLeagueStructureState.dynastyRoomStatus==='ready'&&fsfflLeagueStructureState.dynastyRooms?.league_state_id===requestedStateId)return;
   const requestId=++fsfflLeagueDynastyRoomsRequestId;
@@ -329,14 +328,14 @@ async function laLoadDynastyRooms(){
     try{
       const payload=await api('/api/league/dynasty-position-rooms');
       if(!stillCurrent())return;
-      if(fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale){fsfflLeagueStructureState.dynastyRooms=null;fsfflLeagueStructureState.dynastyRoomStatus='stale';renderLeagueComparison();return}
       if(payload?.league_state_id&&payload.league_state_id!==requestedStateId)throw new Error('Career-forward room evidence belongs to a different league State');
+      if(requestedGeneration&&payload?.publication_generation_id!==requestedGeneration)throw new Error('Career-forward room evidence belongs to a different publication generation');
       if(payload?.status==='building'||payload?.build_status==='queued'||payload?.build_status==='running'){
         fsfflLeagueStructureState.dynastyRoomStatus='building';renderLeagueComparison();
         await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));if(!stillCurrent())return;continue;
       }
       if(payload?.status!=='ready'||!Array.isArray(payload?.rooms))throw new Error(payload?.reason||'Holistic career-forward room evidence is unavailable');
-      fsfflLeagueStructureState.dynastyRooms=payload;fsfflLeagueStructureState.dynastyRoomStatus='ready';renderLeagueComparison();return;
+      fsfflLeagueStructureState.dynastyRooms=payload;fsfflLeagueStructureState.dynastyRoomStatus=payload?.intelligence_freshness?.stale?'last-good':'ready';renderLeagueComparison();return;
     }catch(error){
       if(!stillCurrent())return;
       fsfflLeagueStructureState.dynastyRooms=null;fsfflLeagueStructureState.dynastyRoomStatus='unavailable';renderLeagueComparison();return;
