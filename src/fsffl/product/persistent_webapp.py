@@ -1671,6 +1671,28 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
             )
             continue
         endpoint = _presentation_route_endpoint(path)
+        if surface == LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE:
+            def build_dynasty_rooms(endpoint=endpoint, kwargs=kwargs):
+                record = _foundation4_shadow_coordinator.wait_for_terminal(
+                    context,
+                    timeout_seconds=240.0,
+                )
+                if (
+                    record.status != IntrinsicBuildStatus.COMPLETED
+                    or record.contract is None
+                ):
+                    raise RuntimeError(
+                        "Dynasty position-room evidence did not reach a terminal "
+                        "ready contract before atomic presentation promotion"
+                    )
+                payload = endpoint(user_id=user_id, **kwargs)
+                if payload.get("status") != "ready":
+                    raise RuntimeError(
+                        "Dynasty position-room presentation is not ready for publication"
+                    )
+                return payload
+            builders.append((surface, build_dynasty_rooms))
+            continue
         builders.append(
             (
                 surface,
