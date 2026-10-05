@@ -50,5 +50,5 @@ def test_base_boot_shell_has_bounded_idempotent_safari_resume_rehydrate():
     assert "document.addEventListener('visibilitychange'" in app
     assert "if(fsfflContextRehydratePromise)return fsfflContextRehydratePromise" in app
     assert "document.querySelector('.fsffl-critical-boot')" in app
-    assert "data.fsfflBootRetry='true'" in app
+    assert "retry.dataset.fsfflBootRetry='true'" in app
     assert "Your last-good intelligence has not been replaced." in app
