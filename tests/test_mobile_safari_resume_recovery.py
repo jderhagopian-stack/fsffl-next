@@ -46,6 +46,9 @@ def test_base_boot_shell_has_bounded_idempotent_safari_resume_rehydrate():
 
     assert "fsfflContextRehydratePromise" in app
     assert "FSFFL_BOOT_REHYDRATE_TIMEOUT_MS=12000" in app
+    assert "new AbortController()" in app
+    assert "controller.abort()" in app
+    assert "fsfflReadGeneration+=1" in app
     assert "window.addEventListener('pageshow',fsfflRecoverBootOnResume)" in app
     assert "document.addEventListener('visibilitychange'" in app
     assert "if(fsfflContextRehydratePromise)return fsfflContextRehydratePromise" in app
