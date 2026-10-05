@@ -323,3 +323,11 @@ def test_dynasty_evidence_response_fences_include_publication_generation():
     )
     completed = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
     assert completed.returncode == 0, completed.stderr
+
+
+def test_dynasty_loader_accepts_only_matching_persisted_publication_generation():
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    loader = source[source.index("async function laLoadDynastyRooms()"):source.index("async function laLoadLongTermEvidence()")]
+    assert "if(fsfflLeagueStructureState.atlas?.intelligence_freshness?.stale)" not in loader
+    assert "payload?.publication_generation_id!==requestedGeneration" in loader
+    assert "payload?.intelligence_freshness?.stale?'last-good':'ready'" in loader
