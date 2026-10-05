@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
 from .foundation4_career_forward_runtime import Foundation4CareerForwardShadowLoader
 from .intrinsic_background import IntrinsicBuildStatus, ShapleyIntrinsicBackgroundCoordinator
+from .presentation_continuity import LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE
 from .runtime import PrivateBetaRuntimeStore
 from .webapp import require_beta_user
 
@@ -31,6 +32,7 @@ def install_foundation4_shadow_routes(
     runtime_store: PrivateBetaRuntimeStore,
     loader: Foundation4CareerForwardShadowLoader,
     coordinator: ShapleyIntrinsicBackgroundCoordinator,
+    presentation_payload_loader=None,
 ) -> None:
     def _record(user_id: str):
         context = runtime_store.get(user_id)
@@ -67,8 +69,22 @@ def install_foundation4_shadow_routes(
 
     @app.get("/api/league/dynasty-position-rooms")
     def dynasty_position_rooms(user_id: str = Depends(require_beta_user)):
-        """Return Analytics-owned positional-room allocations for the exact State."""
+        """Return governed positional rooms, preferring the matching published surface."""
 
+        context = runtime_store.get(user_id)
+        if context.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if presentation_payload_loader is not None:
+            persisted = presentation_payload_loader(
+                user_id,
+                context,
+                LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
+            )
+            if persisted is not None:
+                return persisted
+
+        # Only compose from live Foundation 4 evidence when no verified publication
+        # surface can serve this runtime. A last-good read never starts a new build.
         context, record = _record(user_id)
         state = context.league_state
         if state is None:
