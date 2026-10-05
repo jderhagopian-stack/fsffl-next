@@ -55,3 +55,21 @@ def test_base_boot_shell_has_bounded_idempotent_safari_resume_rehydrate():
     assert "document.querySelector('.fsffl-critical-boot')" in app
     assert "retry.dataset.fsfflBootRetry='true'" in app
     assert "Your last-good intelligence has not been replaced." in app
+
+
+def test_saved_session_restore_retries_only_transient_cold_start_failures():
+    source = (STATIC / "mobile_safari_recovery.js").read_text()
+    restore = source.split("async function restoreSavedSession()", 1)[1].split(
+        "async function interactiveConnect()", 1
+    )[0]
+
+    assert "error?.name!=='AbortError'" in restore
+    assert "if(error?.message==='No league is loaded')break" in restore
+    assert "context=await resilientApi('/api/product-context',{},1);\n          break;" in restore
+    assert "if(!isTransportError(error)&&error?.message!=='No league is loaded')throw error" not in restore
+    assert restore.count("window.fsfflFinishBoot?.();") == 2
+    index = (STATIC / "index.html").read_text()
+    assert (
+        "/static/mobile_safari_recovery.js?v=20261004-safari-restore380"
+        "&c=20261005-cold-start-restore387"
+    ) in index
