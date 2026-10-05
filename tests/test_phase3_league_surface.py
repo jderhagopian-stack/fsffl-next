@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 
 
@@ -88,11 +89,22 @@ def test_league_atlas_mobile_css_is_deliberate_and_safe_area_aware() -> None:
 def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
+    league_blob = LEAGUE.read_bytes()
+    league_sha = hashlib.sha1(
+        b"blob " + str(len(league_blob)).encode() + bytes([0]) + league_blob
+    ).hexdigest()[:12]
+    shell_blob = PRODUCT_SHELL.read_bytes()
+    shell_sha = hashlib.sha1(
+        b"blob " + str(len(shell_blob)).encode() + bytes([0]) + shell_blob
+    ).hexdigest()[:12]
 
     assert "/static/league_atlas.css?v=20261005-dynasty-handoff383a" in league
-    assert "const leagueAtlasStaticVersion='20261005-dynasty-handoff383a';" in shell
+    assert f"const leagueAtlasStaticVersion='20261005-atlas-{league_sha}';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
-    assert "product_shell.js?v=20261004-safari-restore380&c=20261005-dynasty-handoff383a" in _source(INDEX)
+    assert (
+        f"product_shell.js?v=20261004-safari-restore380&c=git-{shell_sha}"
+        in _source(INDEX)
+    )
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
 

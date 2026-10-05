@@ -28,6 +28,16 @@ def _building_payload(record) -> dict[str, object]:
     }
 
 
+def _dynasty_publication_payload(
+    context,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    """Bind a live Dynasty response to the published runtime generation."""
+
+    payload["publication_generation_id"] = context.publication_generation_id
+    return payload
+
+
 def install_career_intrinsic_routes(
     app: FastAPI,
     *,
@@ -100,14 +110,17 @@ def install_career_intrinsic_routes(
                 career_forward=record.contract,
                 evidence_state_id=record.league_state_id,
             )
-            return {
-                "status": "ready",
-                "capability": "career_intrinsic",
-                "league_state_id": state.state_id,
-                "input_fingerprint": record.intrinsic_input_fingerprint,
-                "model_version": rooms[0].model_version if rooms else None,
-                "rooms": [row.model_dump(mode="json") for row in rooms],
-            }
+            return _dynasty_publication_payload(
+                context,
+                {
+                    "status": "ready",
+                    "capability": "career_intrinsic",
+                    "league_state_id": state.state_id,
+                    "input_fingerprint": record.intrinsic_input_fingerprint,
+                    "model_version": rooms[0].model_version if rooms else None,
+                    "rooms": [row.model_dump(mode="json") for row in rooms],
+                },
+            )
 
         persisted = None
         if presentation_payload_loader is not None:
@@ -116,7 +129,11 @@ def install_career_intrinsic_routes(
                 context,
                 LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
             )
-            if persisted is not None and persisted.get("status") == "ready":
+            if (
+                persisted is not None
+                and persisted.get("status") == "ready"
+                and persisted.get("publication_generation_id")
+            ):
                 return persisted
 
         # No canonical or verified last-good evidence is available. Request the
@@ -126,34 +143,43 @@ def install_career_intrinsic_routes(
         if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
             payload = _building_payload(record)
             payload["status"] = "preparing"
-            return payload
+            return _dynasty_publication_payload(context, payload)
         if record.status == IntrinsicBuildStatus.FAILED or record.contract is None:
-            return {
-                "status": "unavailable",
-                "capability": "career_intrinsic",
-                "league_state_id": state.state_id,
-                "reason": record.error or "Career Intrinsic evidence is unavailable",
-            }
+            return _dynasty_publication_payload(
+                context,
+                {
+                    "status": "unavailable",
+                    "capability": "career_intrinsic",
+                    "league_state_id": state.state_id,
+                    "reason": record.error or "Career Intrinsic evidence is unavailable",
+                },
+            )
         if record.league_state_id != state.state_id:
-            return {
-                "status": "unavailable",
-                "capability": "career_intrinsic",
-                "league_state_id": state.state_id,
-                "reason": "Career Intrinsic evidence does not match the current league State",
-            }
+            return _dynasty_publication_payload(
+                context,
+                {
+                    "status": "unavailable",
+                    "capability": "career_intrinsic",
+                    "league_state_id": state.state_id,
+                    "reason": "Career Intrinsic evidence does not match the current league State",
+                },
+            )
         rooms = build_dynasty_position_rooms(
             state,
             career_forward=record.contract,
             evidence_state_id=record.league_state_id,
         )
-        return {
-            "status": "ready",
-            "capability": "career_intrinsic",
-            "league_state_id": state.state_id,
-            "input_fingerprint": record.intrinsic_input_fingerprint,
-            "model_version": rooms[0].model_version if rooms else None,
-            "rooms": [row.model_dump(mode="json") for row in rooms],
-        }
+        return _dynasty_publication_payload(
+            context,
+            {
+                "status": "ready",
+                "capability": "career_intrinsic",
+                "league_state_id": state.state_id,
+                "input_fingerprint": record.intrinsic_input_fingerprint,
+                "model_version": rooms[0].model_version if rooms else None,
+                "rooms": [row.model_dump(mode="json") for row in rooms],
+            },
+        )
 
     @app.get(FOUNDATION4_Y4_Y7_ENDPOINT)
     def y4_y7_shadow(user_id: str = Depends(require_beta_user)):
