@@ -14,6 +14,7 @@ from fsffl.product.presentation_continuity import (
     HOME_SURFACE,
     FRANCHISE_SURFACE,
     LEAGUE_ATLAS_SURFACE,
+    LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
     MARKET_VALUE_LENSES_ALL_SURFACE,
     MARKET_VALUE_LENSES_ROSTERED_SURFACE,
     PresentationContinuityStore,
@@ -718,3 +719,7 @@ def test_fast_snapshot_hint_is_warmed_only_after_strict_validation() -> None:
         league_state_id=state.state_id,
         selected_team_id="a",
     )
+
+
+def test_dynasty_position_rooms_are_required_in_atomic_presentation_publication() -> None:
+    assert LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE in REQUIRED_PRESENTATION_SURFACES
