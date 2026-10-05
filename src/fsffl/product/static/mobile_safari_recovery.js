@@ -279,14 +279,19 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       let context=null;
       const restoreDeadline=Date.now()+90000;
       while(Date.now()<restoreDeadline){
-        try{context=await resilientApi('/api/product-context',{},1)}
-        catch(error){if(!isTransportError(error)&&error?.message!=='No league is loaded')throw error}
-        if(contextMatchesLeague(context,leagueId)&&context?.state_id)break;
+        try{
+          context=await resilientApi('/api/product-context',{},1);
+          break;
+        }catch(error){
+          if(error?.message==='No league is loaded')break;
+          if(!isTransportError(error)&&error?.name!=='AbortError')throw error;
+        }
         await sleep(document.visibilityState==='hidden'?1500:750);
       }
       if(contextMatchesLeague(context,leagueId)&&context?.state_id){
         context=await restoreSelectedTeam(context);
         applyConnectedContext(context);
+        window.fsfflFinishBoot?.();
         window.fsfflEnsureIntelligenceAfterTeamSelection?.();
         if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
         recordLatency('restore_ready',started,'success','durable_restore');
@@ -299,6 +304,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       context=await waitForBackgroundImport(leagueId,null,'connect');
       context=await restoreSelectedTeam(context);
       applyConnectedContext(context);
+      window.fsfflFinishBoot?.();
       window.fsfflEnsureIntelligenceAfterTeamSelection?.();
       if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
       publishSyncState('current');
