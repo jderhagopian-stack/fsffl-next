@@ -439,14 +439,39 @@ class PresentationContinuityStore:
                 promotion_id=promotion_id,
                 surface=surface,
             )
-            metadata = (
-                metadata_records.get(key)
-                if metadata_records is not None
-                else self._persistence.get_reusable_artifact_metadata(key)
-            )
+            if metadata_records is not None:
+                metadata = metadata_records.get(key)
+            else:
+                metadata_reader = getattr(
+                    self._persistence, "get_reusable_artifact_metadata", None
+                )
+                if callable(metadata_reader):
+                    metadata = metadata_reader(key)
+                else:
+                    # Compatibility for lightweight legacy/test adapters only.
+                    # Production persistence uses the coherent metadata bundle above.
+                    legacy_record = self._persistence.get_reusable_artifact(key)
+                    metadata = (
+                        ReusableArtifactMetadataRecord(
+                            key=legacy_record.key,
+                            payload_hash=str(
+                                legacy_record.payload.get("payload_hash") or ""
+                            ),
+                            payload_size_bytes=int(
+                                legacy_record.payload.get("payload_size_bytes") or -1
+                            ),
+                            reusable=legacy_record.reusable,
+                        )
+                        if legacy_record is not None
+                        else None
+                    )
             expected = expected_hashes.get(surface)
             if (
                 metadata is None
+                or not metadata.reusable
+                or metadata.key != key
+                or metadata.payload_hash != expected.get("payload_hash")
+                or metadata.payload_size_bytes != expected.get("payload_size_bytes")
                 or expected is None
                 or not str(expected.get("payload_hash") or "").strip()
                 or int(expected.get("payload_size_bytes") or -1) < 0
