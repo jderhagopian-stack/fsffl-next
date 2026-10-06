@@ -70,6 +70,7 @@ async function fsfflPromoteVisibleAtlas(context){
     const afterFirst=window.fsfflLeagueAtlasDiagnostics?.()||{};
     if(afterFirst.publication_generation_id!==generation||afterFirst.league_state_id!==context.state_id){
       // One bounded retry covers a publication/read race without polling or loops.
+      window.fsfflJourneyEvent?.('atlas_promotion_retry_wait',{attempt:1,retry_wait_ms:250,target_state_id:context.state_id||'',publication_generation_id:generation});
       await new Promise(resolve=>setTimeout(resolve,250));
       if(state?.route==='league_comparison')await window.renderFsfflLeagueComparison?.({force:true,expectedGeneration:generation});
     }
@@ -92,6 +93,7 @@ function ensureLeagueComparisonScript(){
   leagueComparisonScriptPromise=new Promise((resolve,reject)=>{
     const script=document.createElement('script');
     script.src=`/static/league_comparison.js?v=${leagueAtlasStaticVersion}`;
+    window.fsfflJourneyEvent?.('browser_asset_handoff',{browser_event_name:new URL(script.src,location.href).pathname+new URL(script.src,location.href).search});
     script.defer=true;
     script.onload=()=>{
       if(typeof window.renderFsfflLeagueComparison==='function'){fsfflSetSurfaceHealth('league_comparison','ready');resolve();return}
@@ -321,6 +323,8 @@ function fsfflSharedReadinessJobActive(){
 async function fsfflPollSharedReadinessOnce(){
   if(fsfflSharedReadinessState.requestInFlight||!state?.context?.league_id)return;
   fsfflSharedReadinessState.requestInFlight=true;
+  const observedPolls=fsfflSharedReadinessState.observedPolls=(fsfflSharedReadinessState.observedPolls||0)+1;
+  window.fsfflJourneyEvent?.('readiness_poll',{stage:'shared_readiness',attempt:observedPolls,retry_wait_ms:observedPolls===1?0:2500});
   try{
     state.intelligence=await api('/api/intelligence/status');
     fsfflRenderSharedReadiness();
@@ -338,11 +342,10 @@ function fsfflStartSharedReadinessPolling(){
   if(!status.connected||status.lifecycleComplete||status.complete||status.failed){fsfflStopSharedReadinessPolling();return}
   if(fsfflSharedReadinessState.pollTimer)return;
   fsfflSharedReadinessState.pollAttempts=0;
-  window.fsfflJourneyEvent?.('readiness_poll',{stage:'shared_readiness',attempt:1});
+  fsfflSharedReadinessState.observedPolls=0;
   void fsfflPollSharedReadinessOnce();
   fsfflSharedReadinessState.pollTimer=setInterval(()=>{
     fsfflSharedReadinessState.pollAttempts+=1;
-    window.fsfflJourneyEvent?.('readiness_poll',{stage:'shared_readiness',attempt:fsfflSharedReadinessState.pollAttempts+1});
     if(fsfflSharedReadinessState.pollAttempts>=36&&!fsfflSharedReadinessJobActive()){fsfflStopSharedReadinessPolling();return}
     void fsfflPollSharedReadinessOnce();
   },2500);
