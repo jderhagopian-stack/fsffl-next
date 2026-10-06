@@ -9,7 +9,7 @@ The immediate priority is the **accepted P0 Architecture Simplification and Deve
 
 The read-only audit is complete. Management accepts the conclusion that the analytical authority chain remains sound while runtime/application plumbing, persistence/publication reads, resource/egress behavior, browser delivery, testing/review overhead and stale operating state have become materially too complex.
 
-Implementation is the sole writer for corrective execution. Work may be used for independent read-only checks but must not create a competing implementation stream. The first approved sequence is: measure the real customer read path; metadata-first persistence/egress correction; automatic asset fingerprints; simpler published-reader contract; lifecycle/resource consolidation; development/operations simplification.
+Work is the sole writer for corrective execution. The separate Implementation stream is paused for this program so ownership is not split across two agents. The first approved sequence is: measure the real customer read path; metadata-first persistence/egress correction; automatic asset fingerprints; simpler published-reader contract; lifecycle/resource consolidation; development/operations simplification.
 
 Preserve future architecture explicitly: one current publication does not erase immutable PIT/history; scenario/counterfactual jobs stay derivative from the baseline; Owner Intelligence/League Market/history products consume shared historical evidence; artifact storage remains replaceable behind stable identity/metadata/payload interfaces.
 
