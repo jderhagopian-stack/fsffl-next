@@ -409,8 +409,9 @@ def _runtime_context_payload(
     user_id: str,
     *,
     capability_reader: CapabilityReadinessReader = _runtime_capability_readiness,
+    runtime_context: UserRuntimeContext | None = None,
 ) -> dict[str, object]:
-    runtime = store.get(user_id)
+    runtime = runtime_context or store.get(user_id)
     league_state = runtime.league_state
     evidence = runtime.forecast_evidence
     simulation = runtime.simulation_analytics
@@ -915,10 +916,32 @@ def create_app(
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
     base_read_capabilities = capability_readiness_reader or _runtime_capability_readiness
 
-    def read_capabilities(runtime) -> dict[str, object]:
+    def read_capabilities(
+        runtime,
+        *,
+        presentation_payload=None,
+        presentation_resolved: bool = False,
+    ) -> dict[str, object]:
         """Bind readiness to the immutable published generation, never working state."""
 
-        payload = dict(base_read_capabilities(runtime))
+        if presentation_resolved:
+            # The hosted reader supplies the result from the same exact manifest
+            # resolution that loaded this surface. Generic app compositions retain
+            # their one-argument readiness callback contract.
+            try:
+                payload = dict(
+                    base_read_capabilities(
+                        runtime,
+                        presentation_payload=presentation_payload,
+                        presentation_resolved=True,
+                    )
+                )
+            except TypeError as exc:
+                if "unexpected keyword argument" not in str(exc):
+                    raise
+                payload = dict(base_read_capabilities(runtime))
+        else:
+            payload = dict(base_read_capabilities(runtime))
         working_active = store.working_generation_active(runtime.user_id)
         target_state_id = store.working_target_state_id(runtime.user_id)
         target_generation_id = getattr(
@@ -1129,12 +1152,35 @@ def create_app(
                 return None
             return current
 
-    def runtime_context_payload(user_id: str) -> dict[str, object]:
-        return _runtime_context_payload(
+    def runtime_context_payload(
+        user_id: str,
+        *,
+        presentation_surface: str | None = None,
+    ) -> dict[str, object]:
+        runtime = store.get(user_id)
+        presentation_resolved = bool(
+            presentation_surface and presentation_payload_loader is not None
+        )
+        presentation = (
+            presentation_payload_loader(user_id, runtime, presentation_surface)
+            if presentation_resolved
+            else None
+        )
+        payload = _runtime_context_payload(
             store,
             user_id,
-            capability_reader=read_capabilities,
+            capability_reader=lambda context: read_capabilities(
+                context,
+                presentation_payload=presentation,
+                presentation_resolved=presentation_resolved,
+            ),
+            runtime_context=runtime,
         )
+        if presentation_surface:
+            # This response is consumed once by the active surface during boot or
+            # rehydration. No mutable manifest is retained between HTTP requests.
+            payload["presentation_payload"] = presentation
+        return payload
 
     def tag_publication_generation(
         runtime: UserRuntimeContext,
@@ -1246,8 +1292,14 @@ def create_app(
         return FileResponse(_STATIC_DIR / "index.html")
 
     @application.get("/api/product-context")
-    def product_context(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
-        runtime_payload = runtime_context_payload(user_id)
+    def product_context(
+        presentation_surface: str | None = None,
+        user_id: str = Depends(require_beta_user),
+    ) -> dict[str, object]:
+        runtime_payload = runtime_context_payload(
+            user_id,
+            presentation_surface=presentation_surface,
+        )
         if runtime_payload["league_id"] is not None:
             return runtime_payload
         view = league_view_provider() if league_view_provider is not None else None
