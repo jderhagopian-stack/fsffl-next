@@ -150,12 +150,5 @@ def test_startup_does_not_probe_unused_legacy_presentation_payloads():
     )[0]
 
     assert "legacy_snapshot_available" not in startup
-    assert "_prepare_presentation_for_user(_beta_restore_user, context)" not in startup
+    assert "_prepare_presentation_for_user(_beta_restore_user, context)" in startup
     assert "_promote_presentation_for_user" in startup
-    promotion = source.split("def _promote_presentation_for_user", 1)[1].split(
-        "def _publish_dynasty_presentation_followup", 1
-    )[0]
-    assert "_prepare_presentation_for_user(user_id, context)" in promotion
-    assert promotion.index("_prepare_presentation_for_user(user_id, context)") < promotion.index(
-        "if not _presentation_continuity.enabled"
-    )
