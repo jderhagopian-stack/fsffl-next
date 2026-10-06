@@ -124,7 +124,7 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** STOPPED AT P0.1 IMPLEMENTATION-READY HANDOFF — accepted baseline retained; no runtime instrumentation was started because this environment cannot safely edit/test code or observe the saved-session journey.  
+**State:** P0.1 INSTRUMENTATION SLICE IN PROGRESS — Management authorizes GitHub API edits and focused GitHub Actions validation; physical Safari observation remains deferred to Management.  
 **Owner:** Work (per latest Issue #393 Management comment)  
 **Active branch:** `work/p0-1-baseline-20261006`. Previous checkpoint head: `092225cf92144ec919f3bfcc74a213d2e6143deb`; fetch branch HEAD before resuming.  
 **PR:** none. **Application code changes:** none. **Live deployment:** unchanged at #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`, Render deploy `dep-db229jvlot8c73dieqtg`.
@@ -213,3 +213,14 @@ Then record the first execution checkpoint below.
   Capture one real authenticated saved-session journey in the permitted engineering-controlled browser/iPhone path. If that journey cannot be observed, stop P0.1 with the instrumentation/test evidence and an explicit physical-acceptance gap; do not promote or claim completion. Only after P0.1 is complete and checkpointed may Management authorize the next slice.
 - **Frozen safeguards / excluded work:** exact State/team/generation fences, atomic publication, verified same-league/team last-good, tenant isolation; Simulation 2.0/50k/RNG/replay, Foundation 4 economics, approved #370 Dynasty formula; no #375, PIT/history expansion, Owner Intelligence, provider refresh, model changes, architecture refactor, schema migration, or distributed infrastructure.
 - **Handoff status:** P0.1 is not complete. Resume from this branch after validating its current head in a code-capable environment. Do not repeat the accepted audit or baseline collection; do not start P0.2.
+
+
+### 2026-10-06 — P0.1 authorized implementation start (pre-code checkpoint)
+
+- **Main:** 0ef839ef9edeae7dad85fb6e52984c2998699e2a; latest main remains docs-only relative to live #391.
+- **Active branch / head:** work/p0-1-baseline-20261006, exact pre-code head 6da7fa6ae515c48724d4e97635c4624ca0c4bdad. No PR yet.
+- **Live deploy:** #391 commit 583f48dca0c6b763b7d249e420b82964a15291d2, deploy dep-db229jvlot8c73dieqtg; unchanged.
+- **Accepted baseline:** see prior 01:25Z entry; do not repeat broad audit or baseline gathering. Remaining measurement gaps are journey-correlated restore/read/byte timings, visible generation/first useful render, foreground API timings, and actual browser retry/poll/handoff counts. Physical saved-session Safari remains unobserved.
+- **Change scope authorized now:** P0.1 instrumentation-only using the exact source files/functions and event/test design in the prior implementation-ready checkpoint. Preserve the unresolved #391 Dynasty mismatch as a deterministic regression case. No architecture refactor, P0.2, or production deployment in this slice.
+- **Before-code tree:** this commit updates only this handoff to record slice start. Next action is implement telemetry on the named code paths, then focused tests and the league-atlas-north-star.yml PR validation. The repository ci.yml runs the full suite; reserve that for the stable merge gate.
+- **Frozen safeguards:** unchanged as enumerated above.
