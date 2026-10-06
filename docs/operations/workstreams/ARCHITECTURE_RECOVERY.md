@@ -165,6 +165,15 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — focused Atlas failures corrected; final-head validation pending
+
+- **PR / branch / exact code head:** PR #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code head before this note `df42c1a7bdaeee47db1bfb994d0210d38e6ecc89`. Documentation update advances it again; refetch before review.
+- **First focused result:** League Atlas North Star run `37413856028` failed 5 of 85 tests. Four failures were stale asset fingerprints after changing the Atlas/app bundles (including affected sha-derived assertion values); one static assertion still required the old unparameterized Dynasty URL. This did not identify a route logic failure. Full CI for the then-head was not complete and is not sufficient.
+- **Correction:** updated the static contract assertion; updated Atlas cache token to the modified bundle identity and the app/shell cache tokens in `index.html`. Changed assets are now reachable on physical Safari after deployment. The superseded trace fields remain explicitly named; no State B evidence is represented as served under A.
+- **Current CI queued:** run `37413969476` CI; League Atlas focused `37413969517`; Home `37413969498`; Franchise `37413969491`; PR164 `37413969485`; forecast trace `37413969541`. Runs refer to code head `df42c1a7bdaeee47db1bfb994d0210d38e6ecc89`, before this doc note.
+- **Next:** wait for exact-head reruns after this checkpoint, inspect any failures; when green, fresh exact-head Codex review, merge expected head, deploy resulting main to Render and verify exact live identity. Then stop for final physical Safari acceptance.
+- **Safeguards:** the superseded branch returns no rooms and exits before Career coordinator or presentation reads. Existing browser evidence fences remain active. No P0.2, #370 formula, Current, Simulation, or Foundation 4 economics changes.
+
 ### 2026-10-06 — telemetry identity refinement; checks rerunning
 
 - **PR / branch:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this note `a648bbaa20426c0490f6aeca27fcb32d5d4637df`. This note advances the head; fetch exact head again.
