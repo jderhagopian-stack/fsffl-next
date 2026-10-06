@@ -17,7 +17,7 @@ _SAFE_FIELDS = {
     "attempt", "retry_wait_ms", "target_state_id", "served_state_id",
     "publication_generation_id", "artifact_kind", "read_kind", "cache_result",
     "call_count", "row_count", "payload_json_bytes", "first_useful_render_ms",
-    "visible", "memory_supported", "memory_heap_bytes", "browser_event_name",
+    "visible", "memory_supported", "memory_heap_bytes", "memory_rss_bytes", "memory_peak_rss_bytes", "browser_event_name",
     "request_count", "handoff_from_generation", "handoff_to_generation",
 }
 _SAFE_ID = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
