@@ -124,11 +124,11 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** P0.1 instrumentation and one authenticated physical iPhone/Safari journey are captured and checkpointed. The physical result is a customer-facing failure: Current ranks appeared, but Dynasty Position & Depth did not show ranks. Stop at P0.1; do not begin P0.2 until Management dispositions the captured failure and P0.1 checkpoint.
+**State:** P0.1 measurement is complete; the captured Dynasty State mismatch corrective is merged and live. The next required gate is one physical iPhone/Safari saved-session acceptance of visible current-generation Dynasty ranks. P0.1 remains open until that journey is accepted and checkpointed. Do not begin P0.2 yet.
 **Owner:** Work is the sole writer under Issue #393.
-**Application merge commit:** PR #394 merged as `5b243b00179deeeeda26c6a06b72bd4abfd38506`; PR source head `34bc4f267283e8c35dac9f5457e6ec4713b96475).
-**Current main:** this handoff update follows app merge `5b243b00179deeeeda26c6a06b72bd4abfd38506`. It changes documentation only; fetch GitHub `main` for the exact post-checkpoint doc commit.
-**Live Render:** `fsffl-next-private-beta` service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db266fe7bikc73cjl5jg`, status `live`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506`.
+**P0.1 application commits:** PR #394 instrumentation merged as `5b243b00179deeeeda26c6a06b72bd4abfd38506`; corrective PR #395 merged from validated head `3baeecb292ea969c46315ff382b01c518f040b949` as `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
+**Current main before this documentation-only checkpoint:** `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`; fetch GitHub `main` for the exact resulting documentation commit.
+**Live Render:** `fsffl-next-private-beta` service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db26ufh7lnhs73drheqg`, status `live`, exact app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
 **Validation:** exact pre-merge PR head `34bc4f267283e8c35dac9f5457e6ec4713b96475` passed CI #4694, League Atlas #1049, Home #949, Franchise #506, PR164 #1358, private-beta diagnostics #798, and forecast trace #1373. Full suite passed at the validated application head. No application code changed afterward.
 **Physical run evidence:** seven screenshots IMG_0175–IMG_0181 show phone times from 11:01 to 11:13 and the FSFFL Dynasty league. Correlated Render logs run 2026-10-06 03:00:55–03:13:28Z (consistent with about 11:01–11:13 p.m. EDT on Oct 5; exact seconds/timezone were not provided by the tester). Browser journey ID: `a4e54323-b003-45ef-84ac-6cd50dea55c9`.
 **Visible outcome:** IMG_0176 shows Current ranks populated. IMG_0177 and IMG_0181 show Dynasty selected, but the table still shows roster counts and “Loading Dynasty room values… roster counts are breadth only”; no Dynasty ranks appear in the submitted captures. IMG_0181 simultaneously shows global “Intelligence current.” IMG_0178–IMG_0180 show a rebuild/last-good period; IMG_0180 shows 6/7 build with Forecast, Simulation and Current Value unavailable and Intrinsic Full.
@@ -144,13 +144,27 @@ Until Management changes the gate:
 
 ### Exact next action
 
-Management has supplied the physical screenshots; P0.1 measurement is now checkpointed with the real failure. Management should disposition whether the next bounded corrective is to root-cause/fix the current Dynasty State mismatch and rank presentation before P0.2. Do not start P0.2 until that disposition and P0.1 checkpoint are acknowledged.
+Run one saved-session acceptance on physical iPhone/Safari against the live service. Keep the existing authenticated league session; open FSFFL Dynasty → League Atlas → Dynasty Position & Depth, allow any exact-State Career rebuild to finish, and capture the visible table plus local time/timezone. Confirm Current ranks remain unchanged; Dynasty positional ranks visibly populate; browser target/served State IDs and publication generation match; no State-mismatch event occurs; and global current does not coexist with stale Dynasty evidence. Share the capture/time with Work so the journey ID can be correlated in Render logs. Stop here. P0.1 closes only after this hosted physical journey succeeds and its telemetry/checkpoint are recorded. Begin P0.2 only afterward.
 
 ### Safe handoff
 
-Read the governing P0 directive, this checkpoint and its physical-run entry, Issue #393, and merged PR #394. Use journey ID `a4e54323-b003-45ef-84ac-6cd50dea55c9` to retrieve Render log evidence for 03:00:55–03:13:28Z on 2026-10-06. Do not repeat the broad audit or baseline, reopen frozen semantics, assume an HTTP 200 means the response matched the requested State/generation, or start P0.2 without Management disposition.
+Read the governing P0 directive, this current checkpoint, the P0.1 exact-State corrective and physical-run entries, Issue #393, and merged PRs #394/#395. Main’s corrective app commit is `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`; live Render deployment is `dep-db26ufh7lnhs73drheqg` on the same commit. Do not redo the baseline, reopen frozen semantics, treat deployment/startup as physical acceptance, or begin P0.2 before the saved-session acceptance is captured and checkpointed.
 
 ## Execution log
+
+### 2026-10-06 — PR #395 merged/deployed; physical acceptance gate
+
+- **Merge:** PR #395 merged from exact validated PR head `3baeecb292ea969c46315ff382b01c518f040b949` as main application commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`. Main was verified at this SHA before deploy.
+- **Render:** private-beta service `srv-dae6k7vqj5pc73af7bt0`; manual deploy `dep-db26ufh7lnhs73drheqg`; exact deployed commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`; status `live`, finished 2026-10-06 03:48:39Z.
+- **Hosted verification:** Render logs show server start and “Application startup complete.” No error-level logs in the sampled startup window. Unauthenticated HEAD / returned 405 and GET / returned 401; these are not physical saved-session acceptance. Startup emitted ordinary customer-journey restore events.
+- **Validation:** PR #395 head checks green: full suite 2,175 passed / 1 warning; focused workflow 123 passed; trace workflow passed. The initial unrelated RSS ceiling failure did not reproduce on the full rerun. No application code changed after validated code head; later commit only updates this handoff.
+- **Change:** only the Dynasty presentation fallback handoff now enforces active league, State and publication generation; exact team and payload validation remain in the continuity loader. A ready stale last-good from old State is no longer returned as current Dynasty evidence; canonical Career lifecycle supplies current-State preparing/ready response.
+- **Measurements:** previous failed physical baseline remains the only customer journey. No new physical requests, latency, RSS or journey telemetry after the corrective deploy yet.
+- **Unresolved / stop:** visible current-generation Dynasty ranks have not yet been confirmed on iPhone/Safari. P0.1 remains open. Do not start P0.2.
+- **Frozen safeguards:** exact State/team/publication-generation identity, last-good’s truthful stale identity, Current rank semantics, approved #370 formula, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, atomic publication and tenant isolation. The measured 67 MB serialized application reads remain deferred to P0.2.
+- **Exact next action:** conduct the saved-session physical acceptance described in Current checkpoint, capture result/local time/timezone, then correlate telemetry by browser journey ID and update this file with pass/fail and exact IDs.
+- **Safe handoff:** resume from live main after this documentation-only checkpoint. Do not repeat baseline capture or treat Render live/startup as product acceptance. If acceptance succeeds, checkpoint P0.1 closed before considering P0.2; if it fails, investigate only the newly captured State/team/generation evidence.
+
 
 ### 2026-10-06 — PR #395 exact-head validation complete; merge gate
 
