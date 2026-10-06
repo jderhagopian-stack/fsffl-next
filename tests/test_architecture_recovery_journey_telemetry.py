@@ -110,3 +110,20 @@ def test_dynasty_failure_remains_a_failure_and_success_requires_exact_visible_ge
     assert "memory_supported" in atlas
     assert "X-FSFFL-Journey-ID" in browser
     assert "X-FSFFL-Restore-ID" in browser
+
+
+
+def test_api_paths_with_identifiers_are_redacted(caplog):
+    token, _ = telemetry.set_journey_id(None)
+    try:
+        telemetry.emit_journey_event(
+            "request_complete",
+            api_path="/api/player-intelligence/private-user-id",
+            outcome="success",
+        )
+    finally:
+        telemetry.reset_journey_id(token)
+
+    record = _records(caplog)[0]
+    assert record["api_path"] == "/api/other"
+    assert "private-user-id" not in record["api_path"]
