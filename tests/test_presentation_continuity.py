@@ -9,7 +9,10 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI
 
-from fsffl.persistence.contracts import ReusableArtifactMetadataRecord
+from fsffl.persistence.contracts import (
+    ReusableArtifactMetadataRecord,
+    ReusableArtifactReadBundle,
+)
 from fsffl.product.presentation_continuity import (
     PRESENTATION_MANIFEST_ARTIFACT_KIND,
     PRESENTATION_MODEL_VERSION,
@@ -47,6 +50,7 @@ class MemoryPersistence:
         self.payload_read_count = 0
         self.metadata_read_count = 0
         self.manifest_read_count = 0
+        self.bundle_read_count = 0
 
     def put_artifact(self, record) -> None:
         self.artifacts.append(record)
@@ -63,6 +67,47 @@ class MemoryPersistence:
                 if row.key == key and row.reusable
             ),
             None,
+        )
+
+    def get_reusable_artifact_read_bundle(
+        self,
+        *,
+        manifest_key,
+        metadata_keys,
+        payload_key,
+    ):
+        self.read_count += 1
+        self.payload_read_count += 2
+        self.manifest_read_count += 1
+        self.metadata_read_count += 1
+
+        def reusable(key):
+            return next(
+                (
+                    row
+                    for row in reversed(self.artifacts)
+                    if row.key == key and row.reusable
+                ),
+                None,
+            )
+
+        manifest = reusable(manifest_key)
+        requested_payload = reusable(payload_key)
+        metadata = {}
+        for key in dict.fromkeys((manifest_key, *metadata_keys, payload_key)):
+            row = reusable(key)
+            if row is not None:
+                metadata[key] = ReusableArtifactMetadataRecord(
+                    key=row.key,
+                    computed_at=row.computed_at,
+                    invalidated_at=row.invalidated_at,
+                    invalidation_reason=row.invalidation_reason,
+                )
+        self.bundle_read_count += 1
+        return ReusableArtifactReadBundle(
+            manifest=manifest,
+            requested_payload=requested_payload,
+            metadata=metadata,
         )
 
     def get_reusable_artifact_metadata(self, key):
@@ -200,7 +245,7 @@ def test_cold_surface_read_reuses_manifest_during_snapshot_validation() -> None:
     assert payload is not None
     assert payload["publication_generation_id"] == result.publication_generation_id
     assert persistence.manifest_read_count - before_manifest_reads == 1
-    assert persistence.metadata_read_count == len(REQUIRED_PRESENTATION_SURFACES)
+    assert persistence.metadata_read_count == 1
 
 
 def test_manifest_last_promotion_and_stale_read_are_truthful() -> None:
@@ -291,7 +336,7 @@ def test_published_surface_reads_validate_only_requested_payload_after_promotion
     second_reads = persistence.read_count - before
 
     assert first is not None and second is not None
-    assert first_reads == second_reads == 2  # manifest + requested surface
+    assert first_reads == second_reads == 1  # one coherent bundle read
     assert second["publication_generation_id"] == result.publication_generation_id
 
     surface_record = next(
@@ -948,10 +993,7 @@ def test_reader_rejects_incomplete_required_surface_set_even_with_warm_hint() ->
         runtime=current,
         surface=HOME_SURFACE,
     ) is None
-    assert (
-        persistence.metadata_read_count - before_metadata
-        == len(REQUIRED_PRESENTATION_SURFACES)
-    )
+    assert persistence.metadata_read_count - before_metadata == 1
 
 
 def test_presentation_read_contract_is_tenant_scoped() -> None:
