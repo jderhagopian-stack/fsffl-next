@@ -399,12 +399,6 @@ class PresentationContinuityStore:
         """
         if self._persistence is None:
             return False
-        validation_key = self._snapshot_key(
-            user_id,
-            league_id,
-            league_state_id,
-            selected_team_id,
-        )
         manifest = self._persistence.get_reusable_artifact(
             _manifest_key(
                 user_id=user_id,
