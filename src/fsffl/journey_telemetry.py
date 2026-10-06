@@ -96,8 +96,13 @@ def trace_persistence_read(read_kind: str) -> Callable:
                         payload_bytes = len(json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
                     except (TypeError, ValueError):
                         pass
+                key = kwargs.get("key")
+                if key is None:
+                    key = next((arg for arg in args[1:] if hasattr(arg, "artifact_kind")), None)
+                artifact_kind = kwargs.get("artifact_kind") or getattr(key, "artifact_kind", None) or read_kind
                 emit_journey_event(
                     "persistence_read",
+                    artifact_kind=str(artifact_kind),
                     read_kind=read_kind,
                     outcome=outcome,
                     elapsed_ms=round((monotonic() - started) * 1000, 2),
