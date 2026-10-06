@@ -202,7 +202,7 @@ async function loadFsfflHomeNorthStar({force=false}={}){
   if(fsfflHomeNorthStarState.loading&&fsfflHomeNorthStarState.requestKey===key)return;
   fsfflHomeNorthStarState.loading=true;fsfflHomeNorthStarState.error=null;fsfflHomeNorthStarState.requestKey=key;renderFsfflHomeNorthStar();
   try{
-    const payload=await api('/api/home');
+    const payload=window.fsfflTakeInitialPresentationPayload?.('home')||await api('/api/home');
     if(fsfflHomeNorthStarState.requestKey!==key)return;
     if(!homePayloadMatchesContext(payload,{leagueId,teamId,stateId}))throw new Error('Home evidence does not match the current managed-team State.');
     fsfflHomeNorthStarState.payload=payload;
