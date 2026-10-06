@@ -124,6 +124,19 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
+### P0.3 started — automatic static-asset identity
+
+- **P0.2 status:** implementation, tests, merge, and Render deployment are complete as recorded immediately below. P0.1's missing Dynasty ranks remain unresolved; the exact Safari journey remains a mandatory end-to-end acceptance test through the simplification sequence.
+- **Main base:** 762173840c186dffb2361f310a8c730a7518ba47, containing the P0.2 deployed checkpoint.
+- **Branch / PR / head:** branch work/p0-3-asset-fingerprints-20261006 created from that exact main SHA; no PR yet; branch head is the same SHA before implementation.
+- **Live Render:** service srv-dae6k7vqj5pc73af7bt0, deployment dep-db2dr70ae00c73a085o0, live on commit 3a43ba8b36f60883d51e1924cc286bb9e6ab476e.
+- **P0.3 scope:** replace manual cache-buster maintenance with centrally generated content-derived static-asset fingerprints. Do not change app product behavior, State/publication lifecycle, or broaden asset delivery.
+- **Changes/tests/measurements:** none yet. P0.2 full suite and deploy remain as already recorded; do not repeat them for P0.3.
+- **Frozen safeguards:** exact State/team/publication-generation safety; atomic publication; last-good; tenant isolation; Current, approved Dynasty, Career Intrinsic, Foundation 4 economics, Simulation 2.0/50k/RNG/replay. No #396 patch, P0.4/P0.5 early, #375, PIT/history expansion, Owner Intelligence, or distributed infrastructure.
+- **Exact next action:** inspect main static HTML/CSS/JS references and existing cache-buster conventions, then implement one bounded, centrally generated content hash/fingerprint mechanism with focused tests for changes and stable references. Record exact files and tests before PR.
+- **Safe handoff:** resume from branch work/p0-3-asset-fingerprints-20261006 at base SHA 762173840c186dffb2361f310a8c730a7518ba47. The workspace clone is stale and dirty with unrelated product edits; use connected GitHub tools or a clean branch checkout, do not overwrite existing changes. Do not repeat P0.1 baselines or reopen P0.2.
+
+
 ### P0.2 implementation merged and deployed — hosted read verified
 
 - **P0.1 disposition:** measurement complete; physical Dynasty acceptance still fails. Exact Safari run remains a mandatory end-to-end acceptance journey. No further #396 patch.
