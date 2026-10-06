@@ -165,6 +165,16 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — publication-bound Dynasty request implemented; validation pending
+
+- **Main / live:** base main before pre-implementation checkpoint `c49295a56ce5ac676a271e0e6112af53a7064f36`; checkpoint commit `408431fd4bb0fb96daf800e7ec036616ba79c12c`. Live Render remains service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db26ufh7lnhs73drheqg`, application commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
+- **Branch / PR / head:** `work/p0-1-dynasty-publication-request-fence-20261006`, no PR yet. Code/test head `21b94cffcf10ea560101f311305be0aa43f9ab9c`; this documentation checkpoint will produce the head to open as one PR.
+- **Files:** `foundation4_shadow_routes.py` requires the requested Atlas `state_id` and `publication_generation_id`, compares both with the runtime publication before coordinator/presentation reads, and returns explicit `superseded` with requested and superseding identities and no rooms on mismatch. `league_comparison.js` sends both values; on superseded it clears only its in-flight loading state and calls the existing read-first `loadContext()` hook, whose context update invokes existing Atlas promotion. Added regression uses exact captured A/B State IDs and generation A; it asserts the runtime’s coordinator and presentation loader are not consulted. Added static browser contract assertions.
+- **Validation:** not run yet; GitHub Actions PR validation required. Focused tests: `pytest tests/test_dynasty_presentation_handoff.py`.
+- **Measurements / acceptance:** no new latency, RSS, egress or browser measurements. The 11:54–12:00 ET failed physical journey and #395 telemetry remain the before-change evidence. No claim of hosted acceptance.
+- **Unresolved / exact next action:** checkpoint this record, open one PR, run focused and full CI at stable head, obtain fresh exact-head review, merge and deploy the exact approved main commit. Then stop for final physical iPhone/Safari acceptance. P0.2 remains blocked until it passes.
+- **Frozen safeguards:** current State/team/generation fence, #370 formula, Current ranks, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, atomic publication, tenant isolation. No model change or persistence refactor.
+
 ### 2026-10-06 — #395 physical acceptance failed; request-contract checkpoint
 
 - **Main / live:** main `c49295a56ce5ac676a271e0e6112af53a7064f36`; Render service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db26ufh7lnhs73drheqg`, #395 app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926` live.
