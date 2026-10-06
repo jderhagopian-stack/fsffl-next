@@ -1,4 +1,13 @@
-const state={route:"league",context:null,leagueView:null,teamView:null,intelligence:null,valueCatalog:null};
+const state={route:"league",context:null,leagueView:null,teamView:null,intelligence:null,valueCatalog:null,initialPresentation:null};
+function fsfflPresentationSurfaceForRoute(route){
+  return ({league:'home',my_team:'franchise',league_comparison:'league_atlas'})[route]||null;
+}
+window.fsfflTakeInitialPresentationPayload=function(surface){
+  const pending=state.initialPresentation;
+  if(!pending||pending.surface!==surface)return null;
+  state.initialPresentation=null;
+  return pending.payload;
+};
 
 function qs(selector){return document.querySelector(selector)}
 function qsa(selector){return [...document.querySelectorAll(selector)]}
@@ -17,7 +26,7 @@ let fsfflContextRehydratePromise=null;
 const FSFFL_BOOT_REHYDRATE_TIMEOUT_MS=12000;
 function fsfflFinishBoot(){document.documentElement.classList.remove('fsffl-booting');document.querySelector('.fsffl-critical-boot')?.remove()}
 function fsfflBootError(error){const boot=document.querySelector('.fsffl-critical-boot');if(!boot)return;const copy=boot.querySelector('p');if(copy)copy.textContent='We could not restore the league yet. Your last-good intelligence has not been replaced.';let retry=boot.querySelector('[data-fsffl-boot-retry]');if(!retry){retry=document.createElement('button');retry.type='button';retry.dataset.fsfflBootRetry='true';retry.textContent='Try again';retry.addEventListener('click',()=>void fsfflRehydrateContext());boot.appendChild(retry)}console.error('Unable to load product context',error)}
-async function fsfflContextWithTimeout(){const started=performance.now(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),FSFFL_BOOT_REHYDRATE_TIMEOUT_MS);try{const context=await api('/api/product-context',{signal:controller.signal});fsfflJourneyEvent('restore_stage',{stage:'product_context_restore',outcome:'ready',elapsed_ms:Math.round(performance.now()-started),target_state_id:context?.state_id||''});return context}catch(error){fsfflJourneyEvent('restore_stage',{stage:'product_context_restore',outcome:controller.signal.aborted?'timeout':'failed',elapsed_ms:Math.round(performance.now()-started)});if(controller.signal.aborted){fsfflReadGeneration+=1;throw new Error('Context restore timed out')}throw error}finally{clearTimeout(timer)}}
+async function fsfflContextWithTimeout(){const started=performance.now(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),FSFFL_BOOT_REHYDRATE_TIMEOUT_MS);try{const surface=fsfflPresentationSurfaceForRoute(state.route),query=surface?'?presentation_surface='+encodeURIComponent(surface):'',context=await api('/api/product-context'+query,{signal:controller.signal});state.initialPresentation=context?.presentation_payload?{surface,payload:context.presentation_payload}:null;if(context&&Object.hasOwn(context,'presentation_payload'))delete context.presentation_payload;fsfflJourneyEvent('restore_stage',{stage:'product_context_restore',outcome:'ready',elapsed_ms:Math.round(performance.now()-started),target_state_id:context?.state_id||''});return context}catch(error){state.initialPresentation=null;fsfflJourneyEvent('restore_stage',{stage:'product_context_restore',outcome:controller.signal.aborted?'timeout':'failed',elapsed_ms:Math.round(performance.now()-started)});if(controller.signal.aborted){fsfflReadGeneration+=1;throw new Error('Context restore timed out')}throw error}finally{clearTimeout(timer)}}
 function fsfflRehydrateContext(){if(fsfflContextRehydratePromise)return fsfflContextRehydratePromise;fsfflContextRehydratePromise=(async()=>{try{state.context=await fsfflContextWithTimeout();applyContext();fsfflFinishBoot();return true}catch(error){fsfflBootError(error);return false}finally{fsfflContextRehydratePromise=null}})();return fsfflContextRehydratePromise}
 async function loadContext(){return fsfflRehydrateContext()}
 function fsfflRecoverBootOnResume(){if(!document.querySelector('.fsffl-critical-boot'))return;void fsfflRehydrateContext()}
