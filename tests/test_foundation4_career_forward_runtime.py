@@ -417,7 +417,10 @@ def test_dynasty_rooms_prefer_ready_canonical_career_intrinsic_over_stale_unavai
             "reason": "stale presentation placeholder",
         },
     )
-    response = TestClient(app).get("/api/league/dynasty-position-rooms")
+    response = TestClient(app).get(
+        "/api/league/dynasty-position-rooms",
+        params={"state_id": context.league_state.state_id, "publication_generation_id": "dynasty-generation-ready"},
+    )
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ready"
@@ -506,7 +509,10 @@ def test_dynasty_nonready_responses_keep_published_generation(
         loader=SimpleNamespace(),
         coordinator=Coordinator(),
     )
-    response = TestClient(app).get("/api/league/dynasty-position-rooms")
+    response = TestClient(app).get(
+        "/api/league/dynasty-position-rooms",
+        params={"state_id": context.league_state.state_id, "publication_generation_id": "dynasty-generation-nonready"},
+    )
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == expected_status
@@ -555,7 +561,10 @@ def test_dynasty_last_good_requires_current_publication_generation(monkeypatch) 
         coordinator=Coordinator(),
         presentation_payload_loader=lambda *_args: dict(last_good),
     )
-    payload = TestClient(app).get("/api/league/dynasty-position-rooms").json()
+    payload = TestClient(app).get(
+        "/api/league/dynasty-position-rooms",
+        params={"state_id": context.league_state.state_id, "publication_generation_id": "replacement-runtime-generation"},
+    ).json()
     assert payload["status"] == "preparing"
     assert payload["league_state_id"] == context.league_state.state_id
     assert payload["publication_generation_id"] == "replacement-runtime-generation"
@@ -601,6 +610,9 @@ def test_dynasty_rejects_unversioned_last_good_instead_of_guessing_generation(
             "rooms": [],
         },
     )
-    payload = TestClient(app).get("/api/league/dynasty-position-rooms").json()
+    payload = TestClient(app).get(
+        "/api/league/dynasty-position-rooms",
+        params={"state_id": context.league_state.state_id, "publication_generation_id": "current-runtime-generation"},
+    ).json()
     assert payload["status"] == "unavailable"
     assert payload["publication_generation_id"] == "current-runtime-generation"
