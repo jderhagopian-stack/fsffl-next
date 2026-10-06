@@ -1,0 +1,177 @@
+from __future__ import annotations
+
+import json
+import logging
+import re
+from contextvars import ContextVar
+from functools import wraps
+from time import monotonic
+from typing import Any, Callable
+from uuid import uuid4
+
+_LOGGER = logging.getLogger("uvicorn.error")
+_JOURNEY_ID: ContextVar[str | None] = ContextVar("fsffl_journey_id", default=None)
+_RESTORE_ID: ContextVar[str | None] = ContextVar("fsffl_restore_id", default=None)
+_SAFE_FIELDS = {
+    "stage", "restore_id", "outcome", "api_path", "method", "status_code", "elapsed_ms",
+    "attempt", "retry_wait_ms", "target_state_id", "served_state_id",
+    "publication_generation_id", "artifact_kind", "read_kind", "cache_result",
+    "call_count", "row_count", "payload_json_bytes", "first_useful_render_ms",
+    "visible", "memory_supported", "memory_heap_bytes", "memory_rss_bytes", "memory_peak_rss_bytes", "browser_event_name",
+    "request_count", "handoff_from_generation", "handoff_to_generation",
+}
+_SAFE_ID = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+_JOURNEY_ID_PATTERN = re.compile(r"^[0-9a-fA-F-]{36}$")
+_SAFE_API_PATHS = frozenset({
+    "/api/product-context",
+    "/api/intelligence/status",
+    "/api/league/atlas",
+    "/api/league/team-views",
+    "/api/league/value-lenses",
+    "/api/league/dynasty-position-rooms",
+    "/api/diagnostics/customer-journey",
+})
+
+
+def new_journey_id() -> str:
+    return str(uuid4())
+
+
+def set_journey_id(value: str | None):
+    candidate = value.strip() if isinstance(value, str) else ""
+    if not _JOURNEY_ID_PATTERN.fullmatch(candidate):
+        candidate = new_journey_id()
+    return _JOURNEY_ID.set(candidate), candidate
+
+
+def reset_journey_id(token) -> None:
+    _JOURNEY_ID.reset(token)
+
+
+def current_journey_id() -> str | None:
+    return _JOURNEY_ID.get()
+
+
+def current_restore_id() -> str | None:
+    return _RESTORE_ID.get()
+
+
+def set_restore_id(value: str | None = None):
+    candidate = value.strip() if isinstance(value, str) else ""
+    if not _JOURNEY_ID_PATTERN.fullmatch(candidate):
+        candidate = new_journey_id()
+    return _RESTORE_ID.set(candidate), candidate
+
+
+def reset_restore_id(token) -> None:
+    _RESTORE_ID.reset(token)
+
+
+def emit_journey_event(event: str, **fields: Any) -> None:
+    journey_id = current_journey_id()
+    restore_id = current_restore_id()
+    if journey_id is None and restore_id is None:
+        return
+    record: dict[str, Any] = {"event": str(event)[:48]}
+    if journey_id is not None:
+        record["journey_id"] = journey_id
+    if restore_id is not None:
+        record["restore_id"] = restore_id
+    for key, value in fields.items():
+        if key not in _SAFE_FIELDS:
+            continue
+        if isinstance(value, str):
+            if key == "api_path":
+                route_path = value.split("?", 1)[0]
+                value = route_path if route_path in _SAFE_API_PATHS else "/api/other"
+            if key in {"restore_id", "publication_generation_id"} and not _JOURNEY_ID_PATTERN.fullmatch(value):
+                if key == "restore_id":
+                    continue
+            if key.endswith("_state_id") or key.endswith("_generation") or key == "publication_generation_id":
+                if not _SAFE_ID.fullmatch(value):
+                    continue
+            record[key] = value[:160]
+        elif isinstance(value, (bool, int, float)) and not isinstance(value, complex):
+            record[key] = value
+    _LOGGER.info("FSFFL_CUSTOMER_JOURNEY %s", json.dumps(record, separators=(",", ":"), sort_keys=True))
+
+
+def record_browser_events(events: Any) -> int:
+    if not isinstance(events, list):
+        return 0
+    accepted = 0
+    for item in events[:80]:
+        if not isinstance(item, dict):
+            continue
+        event = item.get("event")
+        if not isinstance(event, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,47}", event):
+            continue
+        fields = {key: value for key, value in item.items() if key in _SAFE_FIELDS}
+        emit_journey_event(event[:48], **fields)
+        accepted += 1
+    return accepted
+
+
+
+def trace_restore_stage(stage: str) -> Callable:
+    """Measure a durable restore stage under one opaque restore-run identity."""
+    def decorate(method: Callable) -> Callable:
+        @wraps(method)
+        def wrapped(*args, **kwargs):
+            token = None
+            if current_restore_id() is None:
+                token, _ = set_restore_id()
+            started = monotonic()
+            outcome = "error"
+            try:
+                result = method(*args, **kwargs)
+                outcome = "ready" if result is not None else "empty"
+                return result
+            finally:
+                emit_journey_event(
+                    "restore_stage",
+                    stage=stage,
+                    outcome=outcome,
+                    elapsed_ms=round((monotonic() - started) * 1000, 2),
+                )
+                if token is not None:
+                    reset_restore_id(token)
+        return wrapped
+    return decorate
+
+def trace_persistence_read(read_kind: str) -> Callable:
+    """Measure adapter reads without logging identifiers, SQL, or payload contents."""
+    def decorate(method: Callable) -> Callable:
+        @wraps(method)
+        def wrapped(*args, **kwargs):
+            started = monotonic()
+            outcome = "error"
+            result = None
+            try:
+                result = method(*args, **kwargs)
+                outcome = "hit" if result is not None else "miss"
+                return result
+            finally:
+                payload = getattr(result, "payload", None) if result is not None else None
+                payload_bytes = None
+                if payload is not None:
+                    try:
+                        payload_bytes = sum(len(chunk.encode("utf-8")) for chunk in json.JSONEncoder(separators=(",", ":"), ensure_ascii=False).iterencode(payload))
+                    except (TypeError, ValueError):
+                        pass
+                key = kwargs.get("key")
+                if key is None:
+                    key = next((arg for arg in args[1:] if hasattr(arg, "artifact_kind")), None)
+                artifact_kind = kwargs.get("artifact_kind") or getattr(key, "artifact_kind", None) or read_kind
+                emit_journey_event(
+                    "persistence_read",
+                    artifact_kind=str(artifact_kind),
+                    read_kind=read_kind,
+                    outcome=outcome,
+                    elapsed_ms=round((monotonic() - started) * 1000, 2),
+                    call_count=1,
+                    row_count=1 if result is not None else 0,
+                    payload_json_bytes=payload_bytes if payload_bytes is not None else 0,
+                )
+        return wrapped
+    return decorate

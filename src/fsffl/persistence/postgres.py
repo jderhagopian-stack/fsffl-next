@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 from typing import Sequence
 
+from fsffl.journey_telemetry import trace_persistence_read
+
 from .contracts import (
     ArtifactKey,
     LeagueSnapshotRecord,
@@ -38,6 +40,7 @@ class PostgresPersistenceStore(PersistenceStore):
             raise RuntimeError("PostgreSQL persistence requires psycopg") from exc
         return psycopg.connect(self._database_url, row_factory=dict_row)
 
+    @trace_persistence_read("get_user_runtime_context")
     def get_user_runtime_context(self, *, user_id: str) -> UserRuntimeContextRecord | None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -76,6 +79,7 @@ class PostgresPersistenceStore(PersistenceStore):
                 ),
             )
 
+    @trace_persistence_read("get_league_snapshot")
     def get_league_snapshot(self, *, provider: str, league_id: str, season: int) -> LeagueSnapshotRecord | None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -118,6 +122,7 @@ class PostgresPersistenceStore(PersistenceStore):
                 ),
             )
 
+    @trace_persistence_read("get_team_snapshot")
     def get_team_snapshot(self, *, provider: str, league_id: str, team_id: str) -> TeamSnapshotRecord | None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -160,6 +165,7 @@ class PostgresPersistenceStore(PersistenceStore):
                 ),
             )
 
+    @trace_persistence_read("get_sync_cursor")
     def get_sync_cursor(self, *, provider: str, scope_kind: str, scope_id: str) -> SyncCursorRecord | None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -208,6 +214,7 @@ class PostgresPersistenceStore(PersistenceStore):
             invalidation_reason=row["invalidation_reason"],
         )
 
+    @trace_persistence_read("get_reusable_artifact")
     def get_reusable_artifact(self, key: ArtifactKey) -> ReusableArtifactRecord | None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -221,6 +228,7 @@ class PostgresPersistenceStore(PersistenceStore):
             row = cursor.fetchone()
         return self._artifact_from_row(row) if row else None
 
+    @trace_persistence_read("get_latest_reusable_artifact")
     def get_latest_reusable_artifact(
         self,
         *,

@@ -7,6 +7,8 @@ from time import monotonic
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from threading import RLock
 
+from fsffl.journey_telemetry import trace_restore_stage
+
 from fsffl.persistence import PersistenceStore, persistence_store_from_env
 from fsffl.persistence.session import (
     migrate_legacy_last_good_identity,
@@ -595,6 +597,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         self._checkpoint_state_history_async(snapshot.league_state)
         return installed
 
+    @trace_restore_stage("durable_context_restore")
     def restore_user(self, user_id: str) -> UserRuntimeContext:
         """Explicitly restore durable continuity without gating fresh foreground reads.
 
@@ -796,6 +799,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self.lifecycle_operation(user_id):
             return self._set_league_state_under_lifecycle(user_id, league_state)
 
+    @trace_restore_stage("state_activation")
     def _set_league_state_under_lifecycle(self, user_id: str, league_state):
         current = super().get(user_id)
         previous_league_id = (
@@ -1156,6 +1160,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             return first_incompatible
         return None, None, None, discovery_rejections
 
+    @trace_restore_stage("exact_state_intelligence_restore")
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
         """Reuse exact-State authority, then replay compatible raw Forecast truth."""
 

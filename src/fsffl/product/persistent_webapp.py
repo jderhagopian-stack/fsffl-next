@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import gc
+import json
 import logging
 import os
 from threading import Event, RLock, Thread
 from time import monotonic, sleep
 
-from fastapi import Depends
+from fastapi import Depends, Request
 
 from fsffl.persistence import (
     ReusableArtifactRecord,
@@ -22,6 +23,7 @@ from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
 from . import market_discovery_runtime as _market_discovery_runtime
 from . import opportunity_workspace as _opportunity_workspace
 from . import webapp as _webapp
+from fsffl import journey_telemetry as _journey_telemetry
 from .annual_preseason_scheduler_routes import install_annual_preseason_scheduler_route
 from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
 from .focused_opportunity_routes import install_focused_opportunity_routes
@@ -663,6 +665,77 @@ async def _gate_restored_session_reads(request, call_next):
 
     await asyncio.to_thread(_startup_restore_complete.wait, 180.0)
     return await call_next(request)
+
+
+@app.middleware("http")
+async def _trace_customer_journey(request: Request, call_next):
+    supplied_journey_id = request.headers.get("x-fsffl-journey-id")
+    if not request.url.path.startswith("/api/") or not supplied_journey_id:
+        return await call_next(request)
+    token, journey_id = _journey_telemetry.set_journey_id(supplied_journey_id)
+    request.state.journey_id = journey_id
+    started = monotonic()
+    _journey_telemetry.emit_journey_event(
+        "request_start",
+        api_path=request.url.path,
+        method=request.method,
+    )
+    try:
+        response = await call_next(request)
+        response.headers["X-FSFFL-Journey-ID"] = journey_id
+        restore_id = _startup_restore_state.get("restore_id")
+        if isinstance(restore_id, str):
+            response.headers["X-FSFFL-Restore-ID"] = restore_id
+        resource_snapshot = _heavy_work_coordinator.snapshot()
+        _journey_telemetry.emit_journey_event(
+            "request_complete",
+            api_path=request.url.path,
+            method=request.method,
+            status_code=response.status_code,
+            elapsed_ms=round((monotonic() - started) * 1000, 2),
+            memory_rss_bytes=resource_snapshot.current_rss_bytes,
+            memory_peak_rss_bytes=resource_snapshot.peak_rss_bytes,
+        )
+        return response
+    except Exception:
+        resource_snapshot = _heavy_work_coordinator.snapshot()
+        _journey_telemetry.emit_journey_event(
+            "request_complete",
+            api_path=request.url.path,
+            method=request.method,
+            outcome="error",
+            elapsed_ms=round((monotonic() - started) * 1000, 2),
+            memory_rss_bytes=resource_snapshot.current_rss_bytes,
+            memory_peak_rss_bytes=resource_snapshot.peak_rss_bytes,
+        )
+        raise
+    finally:
+        _journey_telemetry.reset_journey_id(token)
+
+
+@app.post("/api/diagnostics/customer-journey")
+async def _collect_customer_journey(
+    request: Request,
+    _beta_user: str = Depends(_webapp.require_beta_user),
+):
+    content_length = request.headers.get("content-length", "")
+    if content_length.isdigit() and int(content_length) > 65536:
+        return {"accepted": 0, "reason": "payload_too_large"}
+    body_parts = []
+    body_size = 0
+    async for chunk in request.stream():
+        body_size += len(chunk)
+        if body_size > 65536:
+            return {"accepted": 0, "reason": "payload_too_large"}
+        body_parts.append(chunk)
+    try:
+        payload = json.loads(b"".join(body_parts))
+    except (TypeError, ValueError):
+        return {"accepted": 0, "reason": "invalid_payload"}
+    accepted = _journey_telemetry.record_browser_events(
+        payload.get("events") if isinstance(payload, dict) else None
+    )
+    return {"accepted": accepted}
 
 
 def _log_startup_runtime_readiness() -> None:
@@ -1888,6 +1961,8 @@ app.state.presentation_promoter = _promote_presentation_for_user
 
 def _run_lightweight_startup_restore() -> None:
     _startup_restore_state.clear()
+    restore_token, restore_id = _journey_telemetry.set_restore_id()
+    _startup_restore_state["restore_id"] = restore_id
     _startup_restore_state["status"] = "running"
     try:
         if _beta_restore_user:
@@ -1972,6 +2047,7 @@ def _run_lightweight_startup_restore() -> None:
             "FSFFL lightweight startup restore failed"
         )
     finally:
+        _journey_telemetry.reset_restore_id(restore_token)
         _startup_restore_complete.set()
 
 
