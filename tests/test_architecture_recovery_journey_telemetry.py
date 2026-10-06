@@ -106,7 +106,7 @@ def test_dynasty_failure_remains_a_failure_and_success_requires_exact_visible_ge
     assert "fsfflFlushJourney?.()" in atlas
     assert "rooms.publication_generation_id!==atlas.publication_generation_id" in atlas
     assert "document.visibilityState!=='visible'" in atlas
-    assert "panel.querySelector('[data-position-view=\"dynasty\"].active')" in atlas
+    assert "panel?.querySelector('[data-position-view=\"dynasty\"].active')" in atlas
     assert "memory_supported" in atlas
     assert "X-FSFFL-Journey-ID" in browser
     assert "X-FSFFL-Restore-ID" in browser
