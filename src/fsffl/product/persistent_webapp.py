@@ -686,21 +686,27 @@ async def _trace_customer_journey(request: Request, call_next):
         restore_id = _startup_restore_state.get("restore_id")
         if isinstance(restore_id, str):
             response.headers["X-FSFFL-Restore-ID"] = restore_id
+        resource_snapshot = _heavy_work_coordinator.snapshot()
         _journey_telemetry.emit_journey_event(
             "request_complete",
             api_path=request.url.path,
             method=request.method,
             status_code=response.status_code,
             elapsed_ms=round((monotonic() - started) * 1000, 2),
+            memory_rss_bytes=resource_snapshot.current_rss_bytes,
+            memory_peak_rss_bytes=resource_snapshot.peak_rss_bytes,
         )
         return response
     except Exception:
+        resource_snapshot = _heavy_work_coordinator.snapshot()
         _journey_telemetry.emit_journey_event(
             "request_complete",
             api_path=request.url.path,
             method=request.method,
             outcome="error",
             elapsed_ms=round((monotonic() - started) * 1000, 2),
+            memory_rss_bytes=resource_snapshot.current_rss_bytes,
+            memory_peak_rss_bytes=resource_snapshot.peak_rss_bytes,
         )
         raise
     finally:
