@@ -352,7 +352,7 @@ async function laLoadDynastyRooms(){
       const payload=await api(`/api/league/dynasty-position-rooms?${query}`);lastResponse=payload;
       if(!stillCurrent()){abandonSuperseded();return;}
       if(payload?.status==='superseded'){
-        window.fsfflJourneyEvent?.('dynasty_publication_superseded',{outcome:'superseded',target_state_id:requestedStateId||'',served_state_id:payload.superseding_state_id||'',publication_generation_id:payload.superseding_publication_generation_id||'',handoff_to_generation:payload.superseding_publication_generation_id||''});
+        window.fsfflJourneyEvent?.('dynasty_publication_superseded',{outcome:'superseded',target_state_id:requestedStateId||'',superseding_state_id:payload.superseding_state_id||'',superseding_publication_generation_id:payload.superseding_publication_generation_id||'',handoff_to_generation:payload.superseding_publication_generation_id||''});
         fsfflLeagueDynastyRoomsLoadingRequestId=0;fsfflLeagueStructureState.dynastyRooms=null;fsfflLeagueStructureState.dynastyRoomStatus='idle';renderLeagueComparison();
         if(typeof loadContext!=='function'||!await loadContext())throw new Error('The Atlas publication advanced; refresh Product Context to promote Atlas before retrying Dynasty.');
         return;
