@@ -12,6 +12,7 @@ from .contracts import (
     LeagueSnapshotRecord,
     PersistenceStore,
     ReusableArtifactMetadataRecord,
+    ReusableArtifactReadBundle,
     ReusableArtifactRecord,
     SyncCursorRecord,
     TeamSnapshotRecord,
@@ -246,6 +247,80 @@ class PostgresPersistenceStore(PersistenceStore):
             )
             row = cursor.fetchone()
         return self._artifact_metadata_from_row(row) if row else None
+
+    @trace_persistence_read("get_reusable_artifact_read_bundle")
+    def get_reusable_artifact_read_bundle(
+        self,
+        *,
+        manifest_key: ArtifactKey,
+        metadata_keys: Sequence[ArtifactKey],
+        payload_key: ArtifactKey,
+    ) -> ReusableArtifactReadBundle:
+        """Read publication authority and its consumer from one SQL snapshot.
+
+        Payload JSON is returned only for the small manifest and the one requested
+        surface. Required sibling surfaces contribute identity metadata only.
+        """
+        payload_keys = {manifest_key, payload_key}
+        requested: dict[ArtifactKey, bool] = {
+            key: key in payload_keys
+            for key in (manifest_key, *metadata_keys, payload_key)
+        }
+        values = tuple(
+            value
+            for key, include_payload in requested.items()
+            for value in (
+                key.artifact_kind,
+                key.scope_kind,
+                key.scope_id,
+                key.input_fingerprint,
+                key.model_version,
+                include_payload,
+            )
+        )
+        rows_sql = ",".join(["(%s,%s,%s,%s,%s,%s)"] * len(requested))
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""with requested(artifact_kind, scope_kind, scope_id,
+                                   input_fingerprint, model_version, include_payload)
+                     as (values {rows_sql})
+                     select artifact.artifact_kind, artifact.scope_kind,
+                            artifact.scope_id, artifact.input_fingerprint,
+                            artifact.model_version,
+                            case when requested.include_payload
+                                 then artifact.payload else null end as payload,
+                            artifact.computed_at, artifact.invalidated_at,
+                            artifact.invalidation_reason
+                     from requested
+                     join fsffl.derived_artifact as artifact
+                       using (artifact_kind, scope_kind, scope_id,
+                              input_fingerprint, model_version)
+                     where artifact.invalidated_at is null""",
+                values,
+            )
+            rows = cursor.fetchall()
+
+        manifest = None
+        requested_payload = None
+        metadata = {}
+        for row in rows:
+            key = ArtifactKey(
+                artifact_kind=row["artifact_kind"],
+                scope_kind=row["scope_kind"],
+                scope_id=row["scope_id"],
+                input_fingerprint=row["input_fingerprint"],
+                model_version=row["model_version"],
+            )
+            metadata[key] = self._artifact_metadata_from_row(row)
+            if key == manifest_key:
+                manifest = self._artifact_from_row(row)
+            if key == payload_key:
+                requested_payload = self._artifact_from_row(row)
+        return ReusableArtifactReadBundle(
+            manifest=manifest,
+            requested_payload=requested_payload,
+            metadata=metadata,
+        )
 
     @trace_persistence_read("get_latest_reusable_artifact_metadata")
     def get_latest_reusable_artifact_metadata(

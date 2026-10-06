@@ -10,6 +10,7 @@ from threading import RLock, local
 from fsffl.persistence.contracts import (
     ArtifactKey,
     PersistenceStore,
+    ReusableArtifactMetadataRecord,
     ReusableArtifactRecord,
     canonical_fingerprint,
     utc_now,
@@ -392,6 +393,7 @@ class PresentationContinuityStore:
         required_surfaces: Sequence[str] = REQUIRED_PRESENTATION_SURFACES,
         selected_team_id: str | None = None,
         manifest_record: ReusableArtifactRecord | None = None,
+        metadata_records: Mapping[ArtifactKey, ReusableArtifactMetadataRecord] | None = None,
     ) -> bool:
         """Check manifest identity and required artifact presence without payload reads.
 
@@ -431,18 +433,40 @@ class PresentationContinuityStore:
             if isinstance(item, Mapping)
         }
         for surface in required_surfaces:
-            metadata = self._persistence.get_reusable_artifact_metadata(
-                _surface_key(
-                    user_id=user_id,
-                    league_id=league_id,
-                    promotion_id=promotion_id,
-                    surface=surface,
-                )
+            key = _surface_key(
+                user_id=user_id,
+                league_id=league_id,
+                promotion_id=promotion_id,
+                surface=surface,
             )
+            if metadata_records is not None:
+                metadata = metadata_records.get(key)
+            else:
+                metadata_reader = getattr(
+                    self._persistence, "get_reusable_artifact_metadata", None
+                )
+                if callable(metadata_reader):
+                    metadata = metadata_reader(key)
+                else:
+                    # Compatibility for lightweight legacy/test adapters only.
+                    # Production persistence uses the coherent metadata bundle above.
+                    legacy_record = self._persistence.get_reusable_artifact(key)
+                    metadata = (
+                        ReusableArtifactMetadataRecord(
+                            key=legacy_record.key,
+                            computed_at=legacy_record.computed_at,
+                            invalidated_at=legacy_record.invalidated_at,
+                            invalidation_reason=legacy_record.invalidation_reason,
+                        )
+                        if legacy_record is not None
+                        else None
+                    )
             expected = expected_hashes.get(surface)
             if (
                 metadata is None
                 or expected is None
+                or not metadata.reusable
+                or metadata.key != key
                 or not str(expected.get("payload_hash") or "").strip()
                 or int(expected.get("payload_size_bytes") or -1) < 0
             ):
@@ -525,36 +549,62 @@ class PresentationContinuityStore:
             served_as_of: datetime,
             expected_generation_id: str,
         ) -> dict[str, object] | None:
-            manifest = self._persistence.get_reusable_artifact(
-                _manifest_key(
+            manifest_key = _manifest_key(
+                user_id=user_id,
+                league_id=served_league_id,
+                league_state_id=served_state_id,
+            )
+            payload_key = _surface_key(
+                user_id=user_id,
+                league_id=served_league_id,
+                promotion_id=expected_generation_id,
+                surface=surface,
+            )
+            required_keys = tuple(
+                _surface_key(
                     user_id=user_id,
                     league_id=served_league_id,
-                    league_state_id=served_state_id,
+                    promotion_id=expected_generation_id,
+                    surface=required_surface,
                 )
+                for required_surface in REQUIRED_PRESENTATION_SURFACES
             )
+            bundle_reader = getattr(
+                self._persistence,
+                "get_reusable_artifact_read_bundle",
+                None,
+            )
+            bundle = (
+                bundle_reader(
+                    manifest_key=manifest_key,
+                    metadata_keys=required_keys,
+                    payload_key=payload_key,
+                )
+                if callable(bundle_reader)
+                else None
+            )
+            if bundle is None:
+                manifest = self._persistence.get_reusable_artifact(manifest_key)
+                record = None
+            else:
+                manifest = bundle.manifest
+                record = bundle.requested_payload
             if manifest is None:
                 return None
-            known_key = self._snapshot_key(
-                user_id,
-                served_league_id,
-                served_state_id,
-                runtime.selected_team_id,
-            )
-            with self._validation_lock:
-                known_manifest_fingerprint = self._known_snapshot_manifests.get(known_key)
-            manifest_fingerprint = canonical_fingerprint(manifest.payload)
-            if known_manifest_fingerprint != manifest_fingerprint:
-                if not self.has_snapshot(
-                    user_id=user_id,
-                    league_id=served_league_id,
-                    league_state_id=served_state_id,
-                    selected_team_id=runtime.selected_team_id,
-                    manifest_record=manifest,
-                ):
-                    return None
-                # Validate the manifest already read against required-surface metadata.
-                # The expected publication generation and payload hash are still checked
-                # below before any presentation evidence can be returned.
+
+            # The production bundle is one SQL statement snapshot: manifest
+            # authority, required-surface identities and consumed payload all come
+            # from the same committed view. The fallback supports older test/store
+            # adapters without changing the stricter identity and hash fences.
+            if not self.has_snapshot(
+                user_id=user_id,
+                league_id=served_league_id,
+                league_state_id=served_state_id,
+                selected_team_id=runtime.selected_team_id,
+                manifest_record=manifest,
+                metadata_records=(bundle.metadata if bundle is not None else None),
+            ):
+                return None
 
             promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
             if (
@@ -565,14 +615,8 @@ class PresentationContinuityStore:
             ):
                 return None
 
-            record = self._persistence.get_reusable_artifact(
-                _surface_key(
-                    user_id=user_id,
-                    league_id=served_league_id,
-                    promotion_id=promotion_id,
-                    surface=surface,
-                )
-            )
+            if bundle is None:
+                record = self._persistence.get_reusable_artifact(payload_key)
             if record is None:
                 return None
             wrapper = dict(record.payload)

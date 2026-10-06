@@ -155,6 +155,15 @@ class ReusableArtifactMetadataRecord:
         return self.invalidated_at is None
 
 
+@dataclass(frozen=True)
+class ReusableArtifactReadBundle:
+    """One statement-snapshot of a manifest, requested payload, and sibling identities."""
+
+    manifest: ReusableArtifactRecord | None
+    requested_payload: ReusableArtifactRecord | None
+    metadata: Mapping[ArtifactKey, ReusableArtifactMetadataRecord]
+
+
 class PersistenceStore(Protocol):
     """Server-side persistence boundary.
 
@@ -190,6 +199,14 @@ class PersistenceStore(Protocol):
     def get_reusable_artifact_metadata(
         self, key: ArtifactKey
     ) -> ReusableArtifactMetadataRecord | None: ...
+
+    def get_reusable_artifact_read_bundle(
+        self,
+        *,
+        manifest_key: ArtifactKey,
+        metadata_keys: Sequence[ArtifactKey],
+        payload_key: ArtifactKey,
+    ) -> ReusableArtifactReadBundle: ...
 
     def get_latest_reusable_artifact(
         self,

@@ -331,7 +331,12 @@ def _intrinsic_readiness_from_record(record) -> dict[str, object]:
     }
 
 
-def _hosted_capability_readiness(context) -> dict[str, object]:
+def _hosted_capability_readiness(
+    context,
+    *,
+    presentation_payload: dict[str, object] | None = None,
+    presentation_resolved: bool = False,
+) -> dict[str, object]:
     payload = dict(_webapp._runtime_capability_readiness(context))
     record = None
     if context.league_state is not None:
@@ -382,23 +387,56 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
         presentation_league_id = served.league_id
         presentation_state_id = served.league_state_id
 
-    if presentation_league_id is not None and presentation_state_id is not None:
-        presentation_available = _presentation_continuity.known_snapshot_available(
+    if presentation_resolved:
+        # Product Context with a requested surface receives the proof returned by
+        # that exact reader resolution. It does not rediscover a mutable State-keyed
+        # manifest in a second call or reuse a cross-request availability hint.
+        freshness = (
+            presentation_payload.get("intelligence_freshness", {})
+            if isinstance(presentation_payload, dict)
+            else {}
+        )
+        if (
+            isinstance(freshness, dict)
+            and freshness.get("status") == "current"
+            and context.league_state is not None
+            and freshness.get("target_league_id")
+            == context.league_state.league.league_id
+            and freshness.get("target_state_id") == context.league_state.state_id
+            and freshness.get("publication_generation_id") == publication_id
+            and presentation_payload.get("publication_generation_id")
+            == publication_id
+        ):
+            presentation_available = True
+            presentation_league_id = context.league_state.league.league_id
+            presentation_state_id = context.league_state.state_id
+        elif (
+            isinstance(freshness, dict)
+            and freshness.get("status") == "stale_last_good"
+            and context.league_state is not None
+            and served is not None
+            and freshness.get("target_league_id")
+            == context.league_state.league.league_id
+            and freshness.get("target_state_id") == context.league_state.state_id
+            and freshness.get("served_league_id") == served.league_id
+            and freshness.get("served_state_id") == served.league_state_id
+            and freshness.get("publication_generation_id")
+            == served.publication_generation_id
+            and presentation_payload.get("publication_generation_id")
+            == served.publication_generation_id
+        ):
+            presentation_available = True
+            presentation_league_id = served.league_id
+            presentation_state_id = served.league_state_id
+    elif presentation_league_id is not None and presentation_state_id is not None:
+        # Plain Product Context remains fail-closed against the live mutable head;
+        # it never treats an in-process manifest hint as freshness proof.
+        presentation_available = _presentation_continuity.has_snapshot(
             user_id=context.user_id,
             league_id=presentation_league_id,
             league_state_id=presentation_state_id,
             selected_team_id=context.selected_team_id,
         )
-        if not presentation_available:
-            # Cold/startup validation is strict and warms the process-local hint.
-            # Repeated read-only product-context polling then avoids rereading and
-            # hashing the full seven-surface persisted snapshot.
-            presentation_available = _presentation_continuity.has_snapshot(
-                user_id=context.user_id,
-                league_id=presentation_league_id,
-                league_state_id=presentation_state_id,
-                selected_team_id=context.selected_team_id,
-            )
     served_payload = dict(payload.get("served_last_good") or {})
     served_payload["presentation_available"] = presentation_available
     if not presentation_available:
