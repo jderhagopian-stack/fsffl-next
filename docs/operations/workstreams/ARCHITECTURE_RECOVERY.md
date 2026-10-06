@@ -152,6 +152,18 @@ Read the governing P0 directive, this checkpoint and its physical-run entry, Iss
 
 ## Execution log
 
+### 2026-10-06 — PR 395 validation checkpoint
+
+- Main / branch / PR / head: main da045325bd3916d8b1014f49dcacc24a5bbc1141; PR #395 work/p0-1-dynasty-state-fence-20261006; prior head ed7b193e9c4796d7bd79b1a8673c6d49ec81d245. This checkpoint bundles with the regression-contract correction; fetch the resulting branch head.
+- Validation at prior head: forecast trace passed; focused subset passed 123 tests but did not include the new regression. Full CI ran 2,175 total: 2,173 passed, with failures in test_dynasty_last_good_keeps_verified_presentation_generation and test_resource_boundary_closure::test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layers. The Dynasty assertion encoded the prior route behavior of serving an older last-good generation despite a different active publication generation; this conflicts with the current-State/current-generation Dynasty contract. The resource test observed 540,524,544-byte peak RSS against its 536,870,900-byte ceiling; investigation/rerun is pending and no resource code is in scope.
+- Correction: renamed/revised the old Dynasty test to assert that a stale generation is rejected and canonical current-State evidence is requested. The captured ee05aa91… vs 3d7808d4… route regression remains in place and passed within the prior full suite.
+- Files: route, new captured-mismatch route test, existing Dynasty route test, and this handoff.
+- Measurements: hosted physical baseline unchanged; no deploy/new runtime measurement.
+- Unresolved / exact next action: run both Dynasty route regressions and rerun full CI. If only the resource-boundary RSS test remains failing, check whether the same limit fails on clean repeated runs and record any unrelated baseline issue without expanding this PR. No merge/deploy until required validation is green.
+- Safeguards: all P0.1 frozen boundaries remain; no P0.2 or broader resource changes.
+- Safe takeover: start from the new exact PR head, read this validation note and the failure log for CI run 37409527843; preserve the distinction between outdated Dynasty expectation and observed RSS failure.
+
+
 ### 2026-10-06 — P0.1 narrow route correction implemented; validation pending
 
 - **Main / live:** main remains `da045325bd3916d8b1014f49dcacc24a5bbc1141`; Render remains deploy `dep-db266fe7bikc73cjl5jg`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506` (live).
