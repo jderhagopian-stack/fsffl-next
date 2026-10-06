@@ -1,5 +1,16 @@
 # FSFFL NEXT — Architecture Recovery Workstream
 
+# CURRENT PROGRAM CHECKPOINT — 2026-10-06
+
+P0.1–P0.4 are closed. P0.5 lifecycle simplification is architecturally complete. The saved-session iPhone/Safari acceptance found a separate Career Intrinsic coverage blocker: the exact State/publication Dynasty surface was valid, but accepted #370 logic withheld ranks because rostered players are absent from the 335-estimate artifact. Exact State, generation, room and player evidence is in the latest root-cause entry below. Do not change #370, impute values, refresh/rebuild, or reopen P0.1–P0.5 plumbing.
+
+Management authorized the truthful Dynasty rank-readiness correction, a separate coverage follow-up, and P0.6. Preserve global core readiness and all State/team/generation/publication/hash/tenant fences. Issue #405 is outside this workstream. Management reports 22 missing players; the preserved player IDs enumerate 25 distinct people. Reconcile before deciding whether the Career artifact is intentionally bounded or must cover all State-rostered players.
+
+P0.6 is active. `docs/operations/CURRENT_OPERATIONS.md` is the sole current cross-workstream status source; this remains the detailed architecture decision/evidence log. Old operations status files are archived under `docs/operations/archive/`. P0.6 acceptance comprises stale-status archival, focused regressions plus one stable-head full suite, merge/deploy checkpoint, and the five E2E journeys in Current Operations. The saved-session iPhone/Safari journey remains the final physical acceptance.
+
+---
+
+
 Updated: 2026-10-06
 
 ## Purpose

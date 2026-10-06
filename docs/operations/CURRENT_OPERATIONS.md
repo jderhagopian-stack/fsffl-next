@@ -1,0 +1,38 @@
+# Current Operations
+
+Updated: 2026-10-06  
+Authority: sole current cross-workstream status. Historical snapshots are under `docs/operations/archive/`. Detailed P0 decisions and evidence remain in [Architecture Recovery](workstreams/ARCHITECTURE_RECOVERY.md).
+
+## Current program
+
+- **P0.1–P0.4:** complete; do not reopen.
+- **P0.5:** lifecycle simplification architecturally complete. Final saved-session iPhone/Safari acceptance found a separate Career Intrinsic coverage blocker: the exact State/publication Dynasty surface was served correctly, while accepted #370 logic withheld ranks because rostered players were absent from the 335-estimate artifact.
+- **Dynasty truth correction:** this tranche reports explicit rank readiness and incomplete Career coverage. Global core-intelligence readiness is unchanged. No imputation and no #370 change.
+- **Career coverage follow-up:** [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405), outside Architecture Recovery. Management reports 22 missing players; preserved evidence enumerates 25 distinct IDs. Reconcile the count, then decide whether the artifact is intentionally bounded or must cover all target-State rostered players. Do not refresh/rebuild to mask the question.
+- **P0.6:** current-operations consolidation, stale-status archival, simplified merge/test/deploy, and authoritative E2E journeys. No new product breadth.
+
+## Operational source
+
+Read this page for current cross-workstream status and Architecture Recovery for P0 decisions, exact evidence and tranche history. Former CURRENT_STATE, ACTIVE_WORKSTREAMS, ACCEPTANCE_GATES, MANAGEMENT_CONTINUITY, MANAGEMENT_HANDOFF and workstreams/IMPLEMENTATION contents are archived under `archive/`; old status is historical.
+
+GitHub main at tranche start: `65fbf0b272f1f856df1424116050d6c7f4e44f6d`. Record merge SHA and exact live Render commit/deployment ID separately.
+
+## Test, merge, deploy
+
+- Focused tests during development.
+- At stable PR head, affected focused regressions then **one full suite** as merge gate. No intermediate full-suite repeats.
+- Pull-request CI is the gate; no redundant full suite on merge push.
+- Render auto-deploy is disabled. Trigger deploy after merge, verify the exact merged commit is live, record deploy ID/completion/startup evidence.
+- Documentation-only post-deploy updates need no second full suite.
+
+## Authoritative E2E journeys
+
+Keep the set small and rerun the journey whose boundary changed:
+
+1. **Clean first run and managed-team prerequisite:** new tenant connects/selects league and team, sees explicit prerequisites, reaches first useful publication without cross-tenant data.
+2. **Saved-session restore and restart:** existing tenant returns after restart; exact State/team/generation and same-league last-good survive without unnecessary heavy rebuild.
+3. **Publication freshness and league switching:** same-State republish refreshes visible generation; FSFFL → Hodor → FSFFL never renders another league's artifact or stale generation.
+4. **Hosted tenant isolation:** repeat league switches under hosted sessions and verify tenant-scoped manifests, surfaces and last-good.
+5. **Final physical iPhone/Safari acceptance:** after simplification completes/deploys, replay saved-session Position & Depth → Dynasty → Rank; confirm valid ranks when complete and explicit incomplete-coverage messaging when fail-closed. Preserve Current, approved Dynasty, Career Intrinsic, Foundation 4 economics and Simulation 2.0 semantics.
+
+The saved-session physical journey remains pending; exact evidence is in Architecture Recovery. Other workstreams remain governed by their named checkpoint and Management gate.

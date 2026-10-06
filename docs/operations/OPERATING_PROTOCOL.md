@@ -47,14 +47,12 @@ All workstreams inherit:
 - Presentation communicates governed truth; it does not invent it.
 
 ## Worker startup
-A new worker should read, at minimum:
-1. `docs/operations/CURRENT_STATE.md`
-2. `docs/operations/ACTIVE_WORKSTREAMS.md`
-3. `docs/operations/ACCEPTANCE_GATES.md`
-4. its workstream file under `docs/operations/workstreams/`
-5. relevant authoritative model/product documents named there.
+A new worker should read:
+1. `docs/operations/CURRENT_OPERATIONS.md` — sole current cross-workstream status;
+2. the named active checkpoint under `docs/operations/workstreams/`;
+3. applicable model/product authority documents referenced there.
 
-Do not reconstruct completed history unless required by evidence.
+Files under `docs/operations/archive/` are historical snapshots, not current status.
 
 
 ## Management-to-worker directive protocol
@@ -172,3 +170,12 @@ Required communication behavior:
 - For status updates, prefer concise plain-English summaries with exact technical evidence available underneath when useful.
 
 The user should be able to understand the issue well enough to give informed product/management feedback without needing to understand the underlying code.
+
+
+## Test, merge, and deploy convention
+
+- Run focused tests while implementing a bounded change.
+- At the stable PR head, run the affected focused regressions and exactly one full suite as the merge gate.
+- Do not repeat full suites at intermediate commits or on the merge push.
+- Merge only the reviewed, passing stable head. Record merge SHA and live deploy SHA separately.
+- Render auto-deploy is disabled. Trigger deployment after merge, verify the exact merged commit is live, and record deployment evidence.
