@@ -140,6 +140,20 @@ Until Management changes the gate:
 - **Next action:** complete deploy/startup verification, then continue P0.5 tracing the next actually redundant lifecycle owner. The saved-session iPhone/Safari journey remains the final P0.5 end-to-end gate; do not spend that acceptance between intermediate tranches.
 - **Safe handoff:** begin from latest main `a484477c7fda1cec1148b13603d349f615b08922` plus this checkpoint and the directive/Issue #393. Do not redo PR #399 or any P0.4 work; do not start P0.6.
 
+### P0.5 — active tranche 2: suspend the idle readiness timer during jobs
+
+- **Timestamp / phase:** 2026-10-06 UTC; P0.5 lifecycle/resource ownership consolidation; bounded slice 2, validation pending.
+- **Base main / branch:** base main `dcf6de7ea8dd3097d0b1e694f46b1deb0c1a237b`; branch `work/p05-polling-owner-20261006`.
+- **Prior tranche / live app:** PR #403 is merged and Render deploy `dep-db2kmk8m7kps73a2f0r0` is live on `a484477c7fda1cec1148b13603d349f615b08922`. Startup restore `58bf4c1b-6908-4494-acd2-d3acb43fa09d` completed in 8,796.92 ms. No authenticated browser session was used.
+- **Trace:** after PR #403, active job polling is the source of current readiness and the shared readiness callback correctly makes no status GET while a job is active. However, the shared 2.5-second interval remained installed and repeatedly woke/rendered/returned; terminal current-job status is the safe handoff point for optional freshness polling.
+- **Change under validation:** stop the shared readiness interval when active job status is accepted or polling is started; resume it only after a terminal job response, subject to the existing completeness/terminal guards. The current-job endpoint remains the active lifecycle owner; the readiness endpoint remains the freshness owner when needed.
+- **Read behavior before/after:** before, each active-job interval still caused an idle readiness timer callback plus the current-job poll, though the readiness callback issued no second GET. After, the idle timer is absent during active jobs; one current-job poll remains per existing interval. On terminal response, status polling restarts if the readiness snapshot still requires it. This is callback/timer behavior inferred from code, not measured hosted traffic.
+- **Files:** `src/fsffl/product/static/product_shell.js`, matching `src/fsffl/product/static/index.html` content-derived asset reference, `tests/test_readiness_progress_truth_static.py`, this checkpoint.
+- **Focused validation:** pending on exact PR head. Full suite is reserved for the stable merge gate. Final saved-session iPhone/Safari journey remains after P0.5 simplification completes.
+- **Frozen safeguards:** exact State/team/publication-generation identity; manifest-last atomicity; required-surface completeness; payload-hash validation; same-league last-good; tenant isolation; Current; approved Dynasty; Career Intrinsic; Foundation 4 economics; Simulation 2.0. No #396 change, no P0.1–P0.4 reopening, and no P0.6 work.
+- **Exact next action:** open PR, run focused checks on the exact head, run one full suite at the stable merge gate, merge/deploy, then continue P0.5 lifecycle trace. Do not infer traffic reduction from removing an interval that previously returned without a request.
+- **Safe handoff:** read governing directive, Issue #393, and the latest P0.5 checkpoints. Base next work on the current main after merge; do not repeat P0.4 or PR #399.
+
 ### P0.4 — published-reader simplification complete
 
 - **P0.3 closeout:** PR #398 and its Render deployment remain complete. PR #399 remains complete on app commit `d13817b57d51fa8533eb3117a5dc1d227d5733af`; it reused the manifest already fetched during cold surface validation.
