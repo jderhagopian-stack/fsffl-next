@@ -123,7 +123,18 @@ def test_dynasty_browser_sends_atlas_identity_and_promotes_on_superseded() -> No
         / "src/fsffl/product/static/league_comparison.js"
     ).read_text(encoding="utf-8")
 
-    assert "new URLSearchParams({state_id:requestedStateId||'',publication_generation_id:requestedGeneration||''})" in source
+    assert (
+        "new URLSearchParams({state_id:requestedStateId||'',"
+        "publication_generation_id:requestedGeneration||''})"
+    ) in source
     assert "`/api/league/dynasty-position-rooms?${query}`" in source
     assert "if(payload?.status==='superseded')" in source
+    assert "superseding_state_id:payload.superseding_state_id||''" in source
+    assert "superseding_publication_generation_id:payload.superseding_publication_generation_id||''" in source
     assert "await loadContext()" in source
+
+    app_source = (
+        Path(__file__).parents[1]
+        / "src/fsffl/product/static/app.js"
+    ).read_text(encoding="utf-8")
+    assert "'superseding_state_id','superseding_publication_generation_id'" in app_source
