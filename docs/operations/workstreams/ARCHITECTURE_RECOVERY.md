@@ -124,10 +124,10 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** P0.1 PR #394 — focused Actions exposed one exact-head cache-key correction and test-harness capture issues; both are corrected, final-head validation pending.  \
+**State:** P0.1 PR #394 — focused Actions exposed asset-key and test-harness issues; route redaction is also hardened, final-head validation pending.  \
 **Owner:** Work per latest Issue #393 Management ownership correction.  \
 **Current main:** `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.  \
-**Branch:** `work/p0-1-baseline-20261006`. Exact code/test correction head before this handoff commit: `b7f5fe7f0e275e70e60da8ca5647c6cfa51a0bf1`; fetch the resulting PR head before takeover.  \
+**Branch:** `work/p0-1-baseline-20261006`. Exact instrumentation/test/privacy head before this handoff commit: `f2c7898b0d057c408735835831b916da0e4376a5`; fetch the resulting PR head before takeover.  \
 **PR:** #394 — https://github.com/jderhagopian-stack/fsffl-next/pull/394.  \
 **Live deploy:** Render `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`; unchanged.
 
@@ -156,8 +156,8 @@ Safari `performance.memory` may be unavailable and will be reported as unsupport
 
 - Pre-change baselines remain those in the 01:25Z entry: restore-ready success p50 10.89s/p95 127.48s/max 223.04s; failure p50 11.98s/max 96.76s; accepted previous egress 12.69 GB; Render high-water about 524.4 MB; no correlated browser/API stage measurements.
 - On PR head `c6f95217d621614c48a8eac75b976178a6e921c0`, the focused JS syntax step passed; the Atlas and Home suites exposed stale inner/outer cache keys after the modified shipped asset. Those keys were recalculated from the Git blob identities.
-- On subsequent PR head `1da8a14eeb111d4143c837bea5584134b1650482`, Home focused validation passed. Atlas JS syntax passed but its focused suite found the new telemetry tests were not capturing INFO logs and lacked a `Path` import. Corrected in test head `b7f5fe7f0e275e70e60da8ca5647c6cfa51a0bf1`; no runtime code change for this harness issue.
-- Full CI was started on earlier heads and had not completed at this checkpoint. Current code/test head’s checks must be fetched after this checkpoint commit; use only exact-head results for disposition. The stable final full suite remains required.
+- On PR head `1da8a14eeb111d4143c837bea5584134b1650482`, Home passed; Atlas syntax passed but telemetry tests needed INFO capture and a `Path` import. Head `b7f5fe7f0e275e70e60da8ca5647c6cfa51a0bf1` fixed those, and exact guarded-selector assertion alignment landed in `621c24c0e500e4cd3af6e7d093ed63fa766a3f49`. Atlas focused validation, including composition sanity and final-acceptance authority audit, then passed on `621c24c…`. A final privacy review restricted logged route names and added an identifier-redaction regression at `f2c7898b0d057c408735835831b916da0e4376a5`; final-head checks are pending.
+- Full CI was started on earlier heads and had not completed at this checkpoint. Full CI on `621c24c…` was still in progress before the final path-redaction change; exact final-head checks must be fetched after this checkpoint commit and used for disposition. The stable final full suite remains required.
 - No local checkout or local tests were attempted; cloud-browser/Git-transport recovery was not retried. No Codex review requested per P0.1 gate.
 - Physical iPhone/Safari acceptance and production post-change measurements remain pending deployment. The unresolved Dynasty failure remains preserved; actual live failing stage is unknown.
 
@@ -289,3 +289,14 @@ Approved #370 Dynasty metric, Current ranking semantics, Simulation 2.0/50k/RNG/
 - **Changes:** no new runtime change in test harness correction; cache keys are aligned with modified source asset blob hashes. P0.1 instrumentation remains the sole scope.
 - **Next action:** fetch exact PR head after checkpoint and inspect Actions; proceed only on precise results.
 - **Safe handoff:** continue #394 P0.1 on its exact branch; do not retry cloud transport/browser setup, deploy without green exact-head checks, weaken Dynasty generation fence, or start P0.2.
+
+
+### 2026-10-06 — P0.1 final instrumentation/privacy checkpoint before final Actions
+
+- **Main / branch / PR:** main `0ef839ef9edeae7dad85fb6e52984c2998699e2a`; PR #394; branch `work/p0-1-baseline-20261006`.
+- **Exact code/test/privacy head before this checkpoint:** `f2c7898b0d057c408735835831b916da0e4376a5`. This handoff commit advances PR head; fetch exact branch head and associated Actions.
+- **Checks:** focused Atlas workflow passed on preceding head `621c24c0e500e4cd3af6e7d093ed63fa766a3f49` including syntax, telemetry regression tests, League Atlas tests, composition sanity and final-acceptance provider authority audit. Home focused checks also passed on the same head. Full CI was still in progress on that preceding head. Route redaction adds one small Python regression and is pending exact-head validation.
+- **Final privacy change:** browser and server logs now preserve only the known Product Context, readiness, Atlas, team views, value lenses, Dynasty rooms and diagnostics API route names; any other API route is recorded as `/api/other`. This prevents dynamic endpoint segments from carrying identifiers into diagnostics.
+- **Measurements:** production baseline remains pre-change and is unchanged; implementation has not been deployed. Application payload JSON byte counts are not exact wire egress. Physical Safari/browser memory remains unobserved until Management’s acceptance run.
+- **Next action:** fetch latest PR head/runs; require final focused + full CI success, then report the ready PR for hosted deployment and physical iPhone/Safari measurement. Do not merge/deploy without explicit hosted acceptance direction; do not start P0.2.
+- **Safe takeover:** continue PR #394 at current exact branch head. Do not repeat pre-change audit or baseline, reopen #370/model/runtime semantics, or begin later P0 slices.
