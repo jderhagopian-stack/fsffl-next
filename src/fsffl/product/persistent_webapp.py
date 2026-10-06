@@ -1805,12 +1805,15 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
         _career_intrinsic_coordinator.add_terminal_callback(context, completed)
 
 def _promote_presentation_for_user(user_id: str, context) -> object | None:
-    if not _presentation_continuity.enabled or context.league_state is None:
+    if context.league_state is None:
         return None
-    # One publication owner requests optional Dynasty preparation and publishes
-    # the resulting complete presentation. Core promotion stays non-blocking; a
-    # terminal Intrinsic build schedules a generation-fenced presentation follow-up.
+    # Keep preparation active when durable presentation persistence is disabled;
+    # the publication owner also owns this optional in-process lifecycle.
     _prepare_presentation_for_user(user_id, context)
+    if not _presentation_continuity.enabled:
+        return None
+    # Core promotion stays non-blocking; a terminal Intrinsic build schedules a
+    # generation-fenced presentation follow-up.
     # Prime the bounded Future Forecast cache while the exact authoritative
     # Forecast is attached. A later same-league State reconciliation may then keep
     # Y2/Y3 visible as explicitly stale-last-good without rebuilding Forecast on a
