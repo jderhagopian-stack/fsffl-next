@@ -152,6 +152,20 @@ Read the governing P0 directive, this checkpoint and its physical-run entry, Iss
 
 ## Execution log
 
+### 2026-10-06 — P0.1 narrow route correction implemented; validation pending
+
+- **Main / live:** main remains `da045325bd3916d8b1014f49dcacc24a5bbc1141`; Render remains deploy `dep-db266fe7bikc73cjl5jg`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506` (live).
+- **Branch / PR / head:** `work/p0-1-dynasty-state-fence-20261006`; no PR yet. Application and regression-test head before this documentation checkpoint: `acb180c3c7dfb0f8abcc62475ff760c6e8029cce`; this update is docs-only, fetch branch for exact resulting head.
+- **Finding / change:** confirmed the route’s persisted fallback passed any ready response with a generation ID, even when its State was the verified older last-good State. It now returns that fallback only when league ID, State ID and publication generation exactly equal the active runtime publication. Existing continuity loader continues to enforce selected team and promotion/payload integrity. On mismatch the route falls through to canonical Career evidence and returns preparing/current State rather than serving stale rooms. Browser fences and last-good labeling remain unchanged.
+- **Files:** `src/fsffl/product/foundation4_shadow_routes.py`; new `tests/test_dynasty_presentation_handoff.py` with the captured State pair and target generation.
+- **Focused regression:** constructed a ready stale fallback from captured State `3d7808d4…` while active context targets `ee05aa91…`; asserts the stale rooms are rejected and response is preparing under the active State/current generation. **Not yet run.**
+- **Measurements:** unchanged baseline as recorded in physical-run entry; no new hosted measurement.
+- **Unresolved / gate:** code and regression are committed but need focused test/CI, fresh review, merge/deploy, hosted verification, and one physical iPhone/Safari saved-session acceptance. P0.1 is not closed; do not begin P0.2.
+- **Safeguards:** exact State/team/publication-generation fences; approved #370 metric; Current semantics; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; atomic publication and verified last-good remain frozen.
+- **Exact next action:** open PR from this branch, run focused regression and required CI; inspect exact head/review before merge.
+- **Safe takeover:** fetch the branch’s current SHA, read this entry and the physical journey evidence above. Do not modify P0.2 persistence reads or weaken last-good/freshness identity.
+
+
 ### 2026-10-06 — P0.1 exact-State handoff corrective started
 
 - **Current main:** `da045325bd3916d8b1014f49dcacc24a5bbc1141`. **Live Render:** service `srv-dae6k7vqj5pc73af7bt0`, deploy `dep-db266fe7bikc73cjl5jg`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506` (live).
