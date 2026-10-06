@@ -915,7 +915,7 @@ def test_same_state_republish_is_fresh_and_rejects_prior_generation(
     )
     assert current is not None
     assert current["publication_generation_id"] == second.publication_generation_id
-    assert current["rows"][0]["id"] == "republished-state"
+    assert current["league_state_id"] == "republished-state"
 
 
 def test_reader_rejects_incomplete_required_surface_set_even_with_warm_hint() -> None:
