@@ -127,10 +127,10 @@ Until Management changes the gate:
 **State:** P0.1 instrumentation implementation and automated validation are complete at a stable PR head. Hosted production measurement and physical saved-session iPhone/Safari acceptance remain pending. Do not start P0.2.
 **Owner:** Work is the sole writer for this corrective under Issue #393.
 **Current main:** `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.
-**Branch / PR / exact current head:** `work/p0-1-baseline-20261006`, PR #394 (open, unmerged), `05c38ebdb743d4eac653488938e421323113d256`.
+**Branch / PR / exact head before this handoff-only commit:** `work/p0-1-baseline-20261006`, PR #394 (open, unmerged), `929f98e7ae063c9137076bd8da335663d5656377`. This update changes this document only; read the PR head SHA from GitHub for the resulting ref.
 **Exact validated application/test head:** `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`. The only subsequent changes are handoff-document updates; no application/test code changed after the validated code head.
 **Live Render:** service `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`; unchanged and does not contain this PR.
-**Latest exact-head Actions:** on `05c38ebdb743d4eac653488938e421323113d256`, CI #4692, League Atlas #1047, Home #947, Franchise #504, PR164 #1356, private-beta diagnostics #796, and forecast corrective trace #1371 all completed successfully. Full CI passed 2,174 tests on validated code head `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`; latest docs-only head CI is also green.
+**Latest exact-head Actions before this handoff-only commit:** on `929f98e7ae063c9137076bd8da335663d5656377`, CI #4693, League Atlas #1048, Home #948, Franchise #505, PR164 #1357, private-beta diagnostics #797, and forecast corrective trace #1372 all completed successfully. Full CI passed 2,174 tests on validated code head `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`; CI #4693 also passed on the handoff-only head.
 
 ### P0.1 changes
 
