@@ -345,7 +345,7 @@ async function fsfflPollSharedReadinessOnce(){
 function fsfflStartSharedReadinessPolling(){
   fsfflRenderSharedReadiness();
   const status=fsfflSharedReadinessSnapshot();
-  if(!status.connected||status.lifecycleComplete||status.complete||status.failed){fsfflStopSharedReadinessPolling();return}
+  if(!status.connected||status.lifecycleComplete||status.complete||status.failed||fsfflSharedReadinessJobActive()){fsfflStopSharedReadinessPolling();return}
   if(fsfflSharedReadinessState.pollTimer)return;
   fsfflSharedReadinessState.pollAttempts=0;
   fsfflSharedReadinessState.observedPolls=0;
@@ -387,6 +387,8 @@ function fsfflAcceptJobStatus(payload){
     },
   };
   fsfflRenderSharedReadiness();
+  if(fsfflSharedReadinessJobActive())fsfflStopSharedReadinessPolling();
+  else fsfflStartSharedReadinessPolling();
 }
 window.fsfflSharedReadiness={
   snapshot:fsfflSharedReadinessSnapshot,
