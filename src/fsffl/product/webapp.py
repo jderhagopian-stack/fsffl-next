@@ -1213,13 +1213,6 @@ def create_app(
     ) -> UserRuntimeContext:
         """Durably compose one owned working generation, then expose it in one swap."""
 
-        # Prepare any presentation-only dependency before taking the publication
-        # sequence lock. A slow shadow restore/build must never block team/league
-        # lifecycle changes; ownership is revalidated under the lock below.
-        preparer = getattr(application.state, "presentation_preparer", None)
-        if callable(preparer):
-            preparer(user_id, store.working_context(user_id))
-
         # Team/league identity changes serialize against the final atomic sequence.
         # Revalidate the worker's ownership *inside* that serialization boundary so
         # an older job can never checkpoint/promote/publish a newer job's generation.
