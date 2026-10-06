@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI
 
+from fsffl.persistence.contracts import ReusableArtifactMetadataRecord
 from fsffl.product.presentation_continuity import (
     PRESENTATION_MANIFEST_ARTIFACT_KIND,
     PRESENTATION_MODEL_VERSION,
@@ -43,12 +44,15 @@ class MemoryPersistence:
     def __init__(self) -> None:
         self.artifacts = []
         self.read_count = 0
+        self.payload_read_count = 0
+        self.metadata_read_count = 0
 
     def put_artifact(self, record) -> None:
         self.artifacts.append(record)
 
     def get_reusable_artifact(self, key):
         self.read_count += 1
+        self.payload_read_count += 1
         return next(
             (
                 row
@@ -56,6 +60,25 @@ class MemoryPersistence:
                 if row.key == key and row.reusable
             ),
             None,
+        )
+
+    def get_reusable_artifact_metadata(self, key):
+        self.metadata_read_count += 1
+        row = next(
+            (
+                item
+                for item in reversed(self.artifacts)
+                if item.key == key and item.reusable
+            ),
+            None,
+        )
+        if row is None:
+            return None
+        return ReusableArtifactMetadataRecord(
+            key=row.key,
+            computed_at=row.computed_at,
+            invalidated_at=row.invalidated_at,
+            invalidation_reason=row.invalidation_reason,
         )
 
     def get_latest_reusable_artifact(
@@ -659,28 +682,63 @@ def test_failed_repromotion_of_same_state_keeps_prior_generation_atomic() -> Non
     assert payload["surface"] == HOME_SURFACE
 
 
-def test_snapshot_integrity_rejects_payload_mutation() -> None:
+def test_snapshot_integrity_rejects_payload_mutation_when_surface_is_consumed() -> None:
     persistence = MemoryPersistence()
     continuity = PresentationContinuityStore(persistence)
     old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
-    continuity.promote(
+    promoted = continuity.promote(
         user_id="jimmy",
         runtime=_runtime(old),
         builders=_builders("old"),
     )
+    assert promoted is not None
     surface_record = next(
         row
         for row in persistence.artifacts
         if row.key.artifact_kind == "runtime_presentation_surface"
+        and row.payload["surface"] == HOME_SURFACE
     )
     surface_record.payload["payload"]["surface"] = "tampered"
 
-    assert not continuity.has_snapshot(
+    # Metadata proves the manifest and artifact rows exist; it does not claim
+    # payload integrity. The exact surface is rejected before it can be served.
+    assert continuity.has_snapshot(
         user_id="jimmy",
         league_id=old.league.league_id,
         league_state_id=old.state_id,
         selected_team_id="a",
     )
+    published = replace(
+        _runtime(old),
+        publication_generation_id=promoted.publication_generation_id,
+    )
+    assert continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=published,
+        surface=HOME_SURFACE,
+    ) is None
+
+
+def test_cold_snapshot_presence_checks_surface_metadata_without_payload_reads() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    state = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    result = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(state),
+        builders=_builders("current"),
+    )
+    assert result is not None
+
+    cold = PresentationContinuityStore(persistence)
+    assert cold.has_snapshot(
+        user_id="jimmy",
+        league_id=state.league.league_id,
+        league_state_id=state.state_id,
+        selected_team_id="a",
+    )
+    assert persistence.payload_read_count == 1  # the small manifest only
+    assert persistence.metadata_read_count == len(REQUIRED_PRESENTATION_SURFACES)
 
 
 
@@ -702,7 +760,8 @@ def test_fast_snapshot_hint_is_warmed_only_after_strict_validation() -> None:
     )
 
     # A fresh process/store object has no in-memory hint until the durable
-    # manifest/surfaces pass the unchanged strict integrity validation.
+    # manifest and required artifact identities are found. Payload integrity is
+    # verified only when a surface is consumed.
     cold = PresentationContinuityStore(persistence)
     assert not cold.known_snapshot_available(
         user_id="jimmy",

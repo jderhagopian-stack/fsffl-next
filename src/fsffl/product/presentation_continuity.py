@@ -132,7 +132,7 @@ class PresentationContinuityStore:
         self._persistence = persistence_store
         self._local = local()
         self._validation_lock = RLock()
-        self._validated_snapshots: dict[
+        self._known_snapshot_manifests: dict[
             tuple[str, str, str, str | None], str
         ] = {}
 
@@ -236,7 +236,7 @@ class PresentationContinuityStore:
                 computed_at=now,
             )
         )
-        self._remember_validated_snapshot(
+        self._remember_snapshot_manifest(
             user_id=user_id,
             league_id=state.league.league_id,
             league_state_id=state.state_id,
@@ -264,9 +264,9 @@ class PresentationContinuityStore:
         """Drop process-local validation hints; durable presentation stays intact."""
 
         with self._validation_lock:
-            stale = [item for item in self._validated_snapshots if item[0] == user_id]
+            stale = [item for item in self._known_snapshot_manifests if item[0] == user_id]
             for item in stale:
-                self._validated_snapshots.pop(item, None)
+                self._known_snapshot_manifests.pop(item, None)
             return len(stale)
 
     @staticmethod
@@ -278,7 +278,7 @@ class PresentationContinuityStore:
     ) -> tuple[str, str, str, str | None]:
         return user_id, league_id, league_state_id, selected_team_id
 
-    def _remember_validated_snapshot(
+    def _remember_snapshot_manifest(
         self,
         *,
         user_id: str,
@@ -294,7 +294,7 @@ class PresentationContinuityStore:
             selected_team_id,
         )
         with self._validation_lock:
-            self._validated_snapshots[key] = canonical_fingerprint(manifest_payload)
+            self._known_snapshot_manifests[key] = canonical_fingerprint(manifest_payload)
 
     def known_snapshot_available(
         self,
@@ -304,12 +304,10 @@ class PresentationContinuityStore:
         league_state_id: str,
         selected_team_id: str | None = None,
     ) -> bool:
-        """Fast read hint for a manifest validated or written in this process.
+        """Fast process-local hint that this manifest was seen or written.
 
-        A cold manifest still gets a strict all-surface integrity check. Once that
-        check succeeds (or this process has just completed the manifest-last write),
-        each read still hashes its requested surface against the known manifest but
-        does not reread and rehash the other six payloads.
+        This hint is not payload-integrity proof. Each surface is hash-checked when
+        its payload is actually consumed.
         """
 
         key = self._snapshot_key(
@@ -319,7 +317,7 @@ class PresentationContinuityStore:
             selected_team_id,
         )
         with self._validation_lock:
-            return key in self._validated_snapshots
+            return key in self._known_snapshot_manifests
 
     def legacy_snapshot_available(
         self,
@@ -394,14 +392,13 @@ class PresentationContinuityStore:
         required_surfaces: Sequence[str] = REQUIRED_PRESENTATION_SURFACES,
         selected_team_id: str | None = None,
     ) -> bool:
+        """Check manifest identity and required artifact presence without payload reads.
+
+        Integrity of the requested surface is verified against the manifest hash by
+        load_for_runtime before any surface is returned to a caller.
+        """
         if self._persistence is None:
             return False
-        validation_key = self._snapshot_key(
-            user_id,
-            league_id,
-            league_state_id,
-            selected_team_id,
-        )
         manifest = self._persistence.get_reusable_artifact(
             _manifest_key(
                 user_id=user_id,
@@ -428,7 +425,7 @@ class PresentationContinuityStore:
             if isinstance(item, Mapping)
         }
         for surface in required_surfaces:
-            record = self._persistence.get_reusable_artifact(
+            metadata = self._persistence.get_reusable_artifact_metadata(
                 _surface_key(
                     user_id=user_id,
                     league_id=league_id,
@@ -436,29 +433,15 @@ class PresentationContinuityStore:
                     surface=surface,
                 )
             )
-            if record is None:
-                return False
-            wrapper = record.payload
             expected = expected_hashes.get(surface)
-            raw = wrapper.get("payload")
             if (
-                wrapper.get("promotion_id") != promotion_id
-                or wrapper.get("league_state_id") != league_state_id
-                or wrapper.get("surface") != surface
-                or (
-                    selected_team_id is not None
-                    and wrapper.get("selected_team_id") != selected_team_id
-                )
+                metadata is None
                 or expected is None
-                or not isinstance(raw, Mapping)
-                or wrapper.get("payload_hash") != expected.get("payload_hash")
-                or int(wrapper.get("payload_size_bytes") or -1)
-                != int(expected.get("payload_size_bytes") or -2)
-                or canonical_fingerprint(_json_round_trip(raw))
-                != wrapper.get("payload_hash")
+                or not str(expected.get("payload_hash") or "").strip()
+                or int(expected.get("payload_size_bytes") or -1) < 0
             ):
                 return False
-        self._remember_validated_snapshot(
+        self._remember_snapshot_manifest(
             user_id=user_id,
             league_id=league_id,
             league_state_id=league_state_id,
@@ -552,7 +535,7 @@ class PresentationContinuityStore:
                 runtime.selected_team_id,
             )
             with self._validation_lock:
-                known_manifest_fingerprint = self._validated_snapshots.get(known_key)
+                known_manifest_fingerprint = self._known_snapshot_manifests.get(known_key)
             manifest_fingerprint = canonical_fingerprint(manifest.payload)
             if known_manifest_fingerprint != manifest_fingerprint:
                 if not self.has_snapshot(

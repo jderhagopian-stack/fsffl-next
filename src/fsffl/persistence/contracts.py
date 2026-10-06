@@ -136,6 +136,25 @@ class ReusableArtifactRecord:
         return self.invalidated_at is None
 
 
+@dataclass(frozen=True)
+class ReusableArtifactMetadataRecord:
+    """Identity/freshness for a reusable artifact without transferring its payload."""
+
+    key: ArtifactKey
+    computed_at: datetime
+    invalidated_at: datetime | None = None
+    invalidation_reason: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_aware(self.computed_at, field="computed_at")
+        if self.invalidated_at is not None:
+            _require_aware(self.invalidated_at, field="invalidated_at")
+
+    @property
+    def reusable(self) -> bool:
+        return self.invalidated_at is None
+
+
 class PersistenceStore(Protocol):
     """Server-side persistence boundary.
 
@@ -168,6 +187,10 @@ class PersistenceStore(Protocol):
 
     def get_reusable_artifact(self, key: ArtifactKey) -> ReusableArtifactRecord | None: ...
 
+    def get_reusable_artifact_metadata(
+        self, key: ArtifactKey
+    ) -> ReusableArtifactMetadataRecord | None: ...
+
     def get_latest_reusable_artifact(
         self,
         *,
@@ -176,6 +199,15 @@ class PersistenceStore(Protocol):
         scope_id: str,
         model_version: str,
     ) -> ReusableArtifactRecord | None: ...
+
+    def get_latest_reusable_artifact_metadata(
+        self,
+        *,
+        artifact_kind: str,
+        scope_kind: str,
+        scope_id: str,
+        model_version: str,
+    ) -> ReusableArtifactMetadataRecord | None: ...
 
     def put_artifact(self, record: ReusableArtifactRecord) -> None: ...
 
