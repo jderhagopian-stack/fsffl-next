@@ -463,7 +463,7 @@ async function fetchFsfflLeagueComparison({force=false,expectedGeneration=null}=
     let atlasPayload=null,teamViewsPayload=null;
     for(let attempt=0;attempt<3;attempt+=1){
       window.fsfflJourneyEvent?.('atlas_alignment_attempt',{attempt:attempt+1,target_state_id:stateId||'',publication_generation_id:expectedGeneration||''});
-      const results=await Promise.all([window.fsfflTakeInitialPresentationPayload?.('league_atlas')||api('/api/league/atlas'),api('/api/league/team-views')]);
+      const results=await Promise.all([api('/api/league/atlas'),api('/api/league/team-views')]);
       if(laAtlasPayloadsAligned(results[0],results[1],stateId,expectedGeneration)){atlasPayload=results[0];teamViewsPayload=results[1];break}
       if(attempt<2){window.fsfflJourneyEvent?.('atlas_alignment_retry_wait',{attempt:attempt+1,retry_wait_ms:150,target_state_id:stateId||'',publication_generation_id:expectedGeneration||''});await new Promise(resolve=>setTimeout(resolve,150))}
     }
