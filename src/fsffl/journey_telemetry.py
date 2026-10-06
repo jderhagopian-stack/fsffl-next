@@ -141,7 +141,7 @@ def trace_persistence_read(read_kind: str) -> Callable:
                 payload_bytes = None
                 if payload is not None:
                     try:
-                        payload_bytes = len(json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+                        payload_bytes = sum(len(chunk.encode("utf-8")) for chunk in json.JSONEncoder(separators=(",", ":"), ensure_ascii=False).iterencode(payload))
                     except (TypeError, ValueError):
                         pass
                 key = kwargs.get("key")
