@@ -138,3 +138,17 @@ def test_dynasty_browser_sends_atlas_identity_and_promotes_on_superseded() -> No
         / "src/fsffl/product/static/app.js"
     ).read_text(encoding="utf-8")
     assert "'superseding_state_id','superseding_publication_generation_id'" in app_source
+
+
+def test_dynasty_presentation_builder_passes_captured_publication_identity() -> None:
+    source = (
+        Path(__file__).parents[1]
+        / "src/fsffl/product/persistent_webapp.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "payload = endpoint(\\n"
+        "                    user_id=user_id,\\n"
+        "                    state_id=context.league_state.state_id,\\n"
+        "                    publication_generation_id=context.publication_generation_id,"
+    ) in source
