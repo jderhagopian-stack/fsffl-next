@@ -303,3 +303,18 @@ def test_active_job_poll_is_the_readiness_owner_during_reconciliation() -> None:
     assert "acceptJobStatus:fsfflAcceptJobStatus" in shell
     assert "capability_readiness:readiness" in accept
     assert refresh.count("window.fsfflSharedReadiness?.acceptJobStatus(payload)") == 2
+
+
+def test_shared_readiness_timer_is_suspended_for_active_job_and_resumes_after_terminal_status() -> None:
+    source = _shell()
+    start = source.split("function fsfflStartSharedReadinessPolling()", 1)[1].split(
+        "function installFsfflSharedReadinessStyles", 1
+    )[0]
+    accept = source.split("function fsfflAcceptJobStatus(payload)", 1)[1].split(
+        "window.fsfflSharedReadiness={", 1
+    )[0]
+
+    assert "||fsfflSharedReadinessJobActive())" in start
+    assert "fsfflStopSharedReadinessPolling()" in start
+    assert "if(fsfflSharedReadinessJobActive())fsfflStopSharedReadinessPolling()" in accept
+    assert "else fsfflStartSharedReadinessPolling()" in accept
