@@ -1,7 +1,16 @@
 import json
+import logging
+from pathlib import Path
+
+import pytest
 from dataclasses import dataclass
 
 from fsffl import journey_telemetry as telemetry
+
+
+@pytest.fixture(autouse=True)
+def _capture_journey_logs(caplog):
+    caplog.set_level(logging.INFO, logger="uvicorn.error")
 
 
 def _records(caplog):
