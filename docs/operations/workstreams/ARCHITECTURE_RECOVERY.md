@@ -165,6 +165,15 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — Render deployment blocked pending workspace selection
+
+- **Main:** merged application commit `d42593ed73aed4ca1fe62338273df9fa61947fed`; post-merge handoff commit `030df12cf533074a97f10d7cdacfc2cae1a44ebc`. This note will advance main; use resulting current main for deployment.
+- **PR / validation:** #396 merged from exact head `a88f7c0349f855f49ad0a149ca2b089b5eb95dc4`; all exact-head required tests passed and fresh Codex review found no major issues.
+- **Render:** target is service `srv-dae6k7vqj5pc73af7bt0` (`fsffl-next-private-beta`), currently live on #395 deploy `dep-db26ufh7lnhs73drheqg`. Service config confirms auto-deploy disabled.
+- **Deploy attempt:** manual trigger was rejected before deployment with `no workspace selected`. Connector instructions require Management to select a workspace and explicitly forbid choosing one automatically. Read-only workspace listing returned one option, “My Workspace” `tea-dae6if9t0dsc73918us0`; no deploy has started.
+- **Exact next action:** obtain Management’s explicit selection of the Render workspace; then select that workspace and trigger deployment of the current main commit. Verify live deploy/commit and hosted delivery, then stop for one final physical iPhone/Safari acceptance. Do not begin P0.2.
+- **Unresolved / safeguards:** deployment and physical acceptance remain outstanding. All P0.1 fences and frozen Current/#370/Simulation/Foundation semantics remain unchanged.
+
 ### 2026-10-06 — PR #396 merged; Render deployment pending
 
 - **Main / merge:** PR #396 merged from reviewed/green head `a88f7c0349f855f49ad0a149ca2b089b5eb95dc4`; squash merge commit `d42593ed73aed4ca1fe62338273df9fa61947fed`. Full CI and all focused checks passed on the PR head; Codex review of exact head said no major issues.
