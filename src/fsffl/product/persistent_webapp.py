@@ -683,6 +683,9 @@ async def _trace_customer_journey(request: Request, call_next):
     try:
         response = await call_next(request)
         response.headers["X-FSFFL-Journey-ID"] = journey_id
+        restore_id = _startup_restore_state.get("restore_id")
+        if isinstance(restore_id, str):
+            response.headers["X-FSFFL-Restore-ID"] = restore_id
         _journey_telemetry.emit_journey_event(
             "request_complete",
             api_path=request.url.path,
@@ -1945,6 +1948,8 @@ app.state.presentation_promoter = _promote_presentation_for_user
 
 def _run_lightweight_startup_restore() -> None:
     _startup_restore_state.clear()
+    restore_token, restore_id = _journey_telemetry.set_restore_id()
+    _startup_restore_state["restore_id"] = restore_id
     _startup_restore_state["status"] = "running"
     try:
         if _beta_restore_user:
@@ -2029,6 +2034,7 @@ def _run_lightweight_startup_restore() -> None:
             "FSFFL lightweight startup restore failed"
         )
     finally:
+        _journey_telemetry.reset_restore_id(restore_token)
         _startup_restore_complete.set()
 
 
