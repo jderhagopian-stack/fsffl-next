@@ -874,39 +874,27 @@ def test_dynasty_publication_bumps_cache_version_and_keeps_legacy_migration_cont
     assert LEGACY_PRESENTATION_MODEL_VERSION == "runtime-presentation-continuity-v1"
 
 
-def test_dynasty_preparation_has_one_publication_lifecycle_owner() -> None:
+def test_dynasty_preparation_is_decoupled_from_core_publication() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
-    webapp = Path("src/fsffl/product/webapp.py").read_text(encoding="utf-8")
-    prepare = source[
-        source.index("def _prepare_presentation_for_user"):
-        source.index("def _promote_presentation_for_user")
-    ]
-    promote = source[
-        source.index("def _promote_presentation_for_user"):
-        source.index("def _publish_dynasty_presentation_followup")
-    ]
-    startup = source[
-        source.index("def _run_lightweight_startup_restore"):
-        source.index("def _start_lightweight_startup_restore")
-    ]
+    prepare = source[source.index("def _prepare_presentation_for_user"):source.index("def _promote_presentation_for_user")]
     assert "wait_for_terminal" not in prepare
     assert "_career_intrinsic_coordinator.request(context)" in prepare
     assert "add_terminal_callback" in prepare
-    assert "_prepare_presentation_for_user(user_id, context)" in promote
-    assert "_prepare_presentation_for_user(" not in startup
-    assert "presentation_preparer" not in source
-    assert "presentation_preparer" not in webapp
     assert "_publish_dynasty_presentation_followup" in source
     assert "bind_publication_generation_id" in source
     assert "dynasty_last_good" in source
     assert '"status": "preparing" if preparing else "unavailable"' in source
+    assert (
+        "_prepare_presentation_for_user(_beta_restore_user, context)\n"
+        "                        promotion = _promote_presentation_for_user"
+    ) in source
 
 
 def test_dynasty_followup_is_presentation_only_and_generation_fenced() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
     followup = source[
         source.index("def _publish_dynasty_presentation_followup"):
-        source.index("def _run_lightweight_startup_restore")
+        source.index("app.state.presentation_preparer")
     ]
     assert "_runtime_store.publication_sequence(user_id)" in followup
     assert "context.league_state.state_id != expected_state_id" in followup
