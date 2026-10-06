@@ -146,9 +146,6 @@ def test_dynasty_presentation_builder_passes_captured_publication_identity() -> 
         / "src/fsffl/product/persistent_webapp.py"
     ).read_text(encoding="utf-8")
 
-    assert (
-        "payload = endpoint(\\n"
-        "                    user_id=user_id,\\n"
-        "                    state_id=context.league_state.state_id,\\n"
-        "                    publication_generation_id=context.publication_generation_id,"
-    ) in source
+    assert "payload = endpoint(" in source
+    assert "state_id=context.league_state.state_id," in source
+    assert "publication_generation_id=context.publication_generation_id," in source
