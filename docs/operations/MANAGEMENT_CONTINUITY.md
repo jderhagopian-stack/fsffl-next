@@ -5,11 +5,15 @@
 
 ## Immediate Management objective — restore nimble development
 
-The immediate priority is no longer another isolated feature corrective. FSFFL NEXT is under an urgent architecture-simplification and development-efficiency gate governed by `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md`.
+The immediate priority is the **accepted P0 Architecture Simplification and Development Recovery program** governed by `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md`.
 
-Management's goal is to restore the chartered NEXT development model: fast, modular, auditable, computationally efficient, safe to change, and easy to extend. The analytical authority chain remains frozen unless the audit proves a direct contradiction. The urgent review is focused on runtime/application plumbing, persistence/publication, resource/egress behavior, frontend delivery, testing/review overhead, and stale operating state.
+The read-only audit is complete. Management accepts the conclusion that the analytical authority chain remains sound while runtime/application plumbing, persistence/publication reads, resource/egress behavior, browser delivery, testing/review overhead and stale operating state have become materially too complex.
 
-Current Implementation may finish the narrow Dynasty physical blocker. New #375 / PIT-history / Owner Intelligence breadth remains HOLD until the read-only audit is accepted and the P0 simplification path is sequenced.
+Implementation is the sole writer for corrective execution. Work may be used for independent read-only checks but must not create a competing implementation stream. The first approved sequence is: measure the real customer read path; metadata-first persistence/egress correction; automatic asset fingerprints; simpler published-reader contract; lifecycle/resource consolidation; development/operations simplification.
+
+Preserve future architecture explicitly: one current publication does not erase immutable PIT/history; scenario/counterfactual jobs stay derivative from the baseline; Owner Intelligence/League Market/history products consume shared historical evidence; artifact storage remains replaceable behind stable identity/metadata/payload interfaces.
+
+New #375 / PIT-history product expansion / Owner Intelligence breadth remains HOLD through the P0 recovery gate.
 
 ## Prior Management objective
 Do not trade reliability for new capability. Do not restart completed Research. Preserve the authority chain:
