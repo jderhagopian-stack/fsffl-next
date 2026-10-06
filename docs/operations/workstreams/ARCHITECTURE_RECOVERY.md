@@ -124,7 +124,7 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** P0.1 measurement is complete; the captured Dynasty State mismatch corrective is merged and live. The next required gate is one physical iPhone/Safari saved-session acceptance of visible current-generation Dynasty ranks. P0.1 remains open until that journey is accepted and checkpointed. Do not begin P0.2 yet.
+**State:** P0.1 remains open after the #395 physical acceptance failure documented above. Complete the request-contract correction and one final physical iPhone/Safari saved-session acceptance before closing P0.1 or beginning P0.2.
 **Owner:** Work is the sole writer under Issue #393.
 **P0.1 application commits:** PR #394 instrumentation merged as `5b243b00179deeeeda26c6a06b72bd4abfd38506`; corrective PR #395 merged from validated head `3baeecb292481ac322bbab6c705bbf9374c47ac0` as `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
 **Current main before this documentation-only correction:** `f54c7eee9e97d1215cc541a7a1ea5bf37c33adaa`; fetch GitHub `main` for the exact resulting documentation commit.
@@ -144,13 +144,36 @@ Until Management changes the gate:
 
 ### Exact next action
 
-Run one saved-session acceptance on physical iPhone/Safari against the live service. Keep the existing authenticated league session; open FSFFL Dynasty → League Atlas → Dynasty Position & Depth, allow any exact-State Career rebuild to finish, and capture the visible table plus local time/timezone. Confirm Current ranks remain unchanged; Dynasty positional ranks visibly populate; browser target/served State IDs and publication generation match; no State-mismatch event occurs; and global current does not coexist with stale Dynasty evidence. Share the capture/time with Work so the journey ID can be correlated in Render logs. Stop here. P0.1 closes only after this hosted physical journey succeeds and its telemetry/checkpoint are recorded. Begin P0.2 only afterward.
+Implement the bounded publication-bound Dynasty request contract described in the current checkpoint, validate and deploy it, then stop for one final physical iPhone/Safari acceptance. P0.1 closes only after Dynasty ranks visibly render with the exact Atlas State and publication generation. Begin P0.2 only afterward.
 
 ### Safe handoff
 
 Read the governing P0 directive, this current checkpoint, the P0.1 exact-State corrective and physical-run entries, Issue #393, and merged PRs #394/#395. Main’s corrective app commit is `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`; live Render deployment is `dep-db26ufh7lnhs73drheqg` on the same commit. Do not redo the baseline, reopen frozen semantics, treat deployment/startup as physical acceptance, or begin P0.2 before the saved-session acceptance is captured and checkpointed.
 
+**State:** P0.1 remains open. Physical acceptance of PR #395 failed again; the new evidence isolates a request-identity race. This checkpoint records the failure before implementation. Do not begin P0.2.
+**Owner:** Work remains the sole writer under Issue #393.
+**Current main before checkpoint:** `c49295a56ce5ac676a271e0e6112af53a7064f36`.
+**Live Render:** service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db26ufh7lnhs73drheqg`, live on PR #395 application commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
+**Failed physical journey:** Safari captured visible Atlas State `3d7808d45587314cafa3e8fb1e694a57158cd16524b2c2a86b9dfb0e5b5176bf`, publication generation `da5a06b340a8ab7868f1876a91500d53b6da67c89338185d7944fa8eace8a8ab`. Dynasty returned State `e582e5ce160226c0ab65f88277c12d5dd4b957a97eacc4d70841f6f360f3a21d`; browser correctly recorded `state_mismatch`. The acceptance was 11:54–12:00 ET. #395 was already live.
+**Root cause:** the browser captured Atlas State/publication identity but called Dynasty without either value. The route independently called `runtime_store.get(user_id)`, which had advanced to a different State. This is distinct from #395’s persisted-fallback defect.
+**Approved bounded correction:** require `state_id` and `publication_generation_id` in the Dynasty GET. Compare the requested pair with the runtime publication before resolving or building evidence. If different, return an explicit `status: superseded` response containing requested and superseding identities and no rooms; do not serve B under A’s request. The browser must refresh Product Context read-first once and rely on the existing product-context-updated Atlas promotion path. Keep exact State/team/generation validation intact.
+**Branch / PR / head:** not started; create `work/p0-1-dynasty-publication-request-fence-20261006` from the checkpointed main commit returned by the doc update. One PR only.
+**Files expected:** Dynasty route, Atlas Dynasty request/promotion handling, focused route and browser contract regressions, and this handoff.
+**Measurements:** no new latency/RSS/egress baseline gathered; explicitly deferred P0.2. Failed journey identity above is the only new physical evidence.
+**Validation / unresolved:** no implementation/tests yet. The missing request pair is confirmed. Focused exact A-visible/B-runtime regression plus frontend request/superseded-promotion test required, then full CI at stable merge gate, fresh exact-head review, merge/deploy and live verification.
+**Frozen safeguards:** approved #370 Dynasty metric; Current semantics; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; exact State/team/publication-generation fence; atomic publication; tenant isolation. No model change, P0.2, #375, history expansion, Owner Intelligence, or broader persistence refactor.
+
 ## Execution log
+
+### 2026-10-06 — #395 physical acceptance failed; request-contract checkpoint
+
+- **Main / live:** main `c49295a56ce5ac676a271e0e6112af53a7064f36`; Render service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db26ufh7lnhs73drheqg`, #395 app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926` live.
+- **Journey:** Management’s Safari capture window was 11:54–12:00 ET. Atlas remained on State `3d7808d45587314cafa3e8fb1e694a57158cd16524b2c2a86b9dfb0e5b5176bf` / publication generation `da5a06b340a8ab7868f1876a91500d53b6da67c89338185d7944fa8eace8a8ab`. Live Dynasty telemetry recorded response State `e582e5ce160226c0ab65f88277c12d5dd4b957a97eacc4d70841f6f360f3a21d`; browser outcome was correctly `state_mismatch`.
+- **Finding:** browser held exact Atlas identity locally, but Dynasty GET sent neither State nor generation. Server independently resolved mutable runtime via `runtime_store.get(user_id)`, now State B. #395 correctly fenced the old persisted fallback; this new failure is a request-contract race.
+- **Change:** none yet. This is the pre-implementation checkpoint. Correction must pass both captured IDs to the route, compare before evidence resolution, and return explicit superseded identities without rooms when publication advanced. Frontend refreshes Product Context once and uses the existing context-update Atlas promotion hook.
+- **Validation / measurements:** no new tests or runtime measurements. The physical mismatch is conclusive; P0.2’s 67 MB/repeated-read evidence remains deferred.
+- **Unresolved / next:** create the bounded request-fence branch from checkpointed main; add route regression for Atlas A/runtime B and browser regression for IDs plus superseded promotion; validate, fresh review, PR, merge and deploy. Stop for final physical iPhone/Safari acceptance; no P0.2 until it passes.
+- **Frozen:** all safeguards from the current checkpoint; no Dynasty formula, Current, Simulation, Foundation 4 economics, or persistence architecture changes.
 
 ### 2026-10-06 — PR #395 merged/deployed; physical acceptance gate
 
