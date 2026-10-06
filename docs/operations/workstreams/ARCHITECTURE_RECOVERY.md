@@ -152,6 +152,59 @@ Read the governing P0 directive, this checkpoint and its physical-run entry, Iss
 
 ## Execution log
 
+### 2026-10-06 — PR #395 exact-head validation complete; merge gate
+
+- **Main / live:** base main is `da045325bd3916d8b1014f49dcacc24a5bbc1141`; live Render remains service `srv-dae6k7vqj5pc73af7bt0`, deploy `dep-db266fe7bikc73cjl5jg`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506`.
+- **Branch / PR / code head:** PR #395, branch `work/p0-1-dynasty-state-fence-20261006`; validated app/test commit `3a4eb0272ea969c46315ff382b01c518f040b949`. This handoff update is docs-only; fetch exact PR head afterward.
+- **Correction:** Dynasty persisted fallback now must match active league, exact current State and current publication generation; continuity’s preexisting exact-team and integrity checks remain in force. A mismatch falls through to canonical Career evidence and returns current-State preparing/current response, never stale rooms presented as current.
+- **Files:** `src/fsffl/product/foundation4_shadow_routes.py`; new `tests/test_dynasty_presentation_handoff.py`; updated `tests/test_foundation4_career_forward_runtime.py`; this handoff.
+- **Validation:** PR check `test` passed **2,175 tests, 1 warning** in 171.32 s; focused workflow passed 123 tests; forecast trace passed. The new captured State pair regression is collected in the full suite. First full run’s legacy last-good expectation was revised to assert the current-generation fence. The unrelated RSS ceiling test passed on rerun; no resource code changed.
+- **Measurements / physical acceptance:** hosted baseline is still the captured failed Safari journey; no new runtime measurement before deployment. No claim of visible Dynasty ranks yet.
+- **Review / unresolved:** exact code/test diff reviewed against this PR head; no remaining code finding identified. Need merge, explicit Render deploy (service auto-deploy is disabled), verify live commit/health, then one physical iPhone/Safari saved-session acceptance. P0.1 remains open until ranks visibly render under matching current State/generation and the post-deploy journey is checkpointed.
+- **Frozen safeguards:** current ranking semantics; approved #370 Dynasty formula; exact State/team/publication-generation fences; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; atomic publication and verified last-good. P0.2 repeated-read/egress changes remain deferred.
+- **Exact next action:** merge PR #395 with expected validated head, trigger deploy of resulting main commit, verify Render live identity, and return for physical Safari acceptance. Do not begin P0.2 before acceptance.
+- **Safe takeover:** read this entry, the exact-State trace entry, and PR #395; fetch live main/Render deployment identities. If Safari still fails, correlate a new P0.1 journey and preserve response State/team/generation; do not broaden to P0.2 without closing this customer path.
+
+
+### 2026-10-06 — PR 395 validation checkpoint
+
+- Main / branch / PR / head: main da045325bd3916d8b1014f49dcacc24a5bbc1141; PR #395 work/p0-1-dynasty-state-fence-20261006; prior head ed7b193e9c4796d7bd79b1a8673c6d49ec81d245. This checkpoint bundles with the regression-contract correction; fetch the resulting branch head.
+- Validation at prior head: forecast trace passed; focused subset passed 123 tests but did not include the new regression. Full CI ran 2,175 total: 2,173 passed, with failures in test_dynasty_last_good_keeps_verified_presentation_generation and test_resource_boundary_closure::test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layers. The Dynasty assertion encoded the prior route behavior of serving an older last-good generation despite a different active publication generation; this conflicts with the current-State/current-generation Dynasty contract. The resource test observed 540,524,544-byte peak RSS against its 536,870,900-byte ceiling; investigation/rerun is pending and no resource code is in scope.
+- Correction: renamed/revised the old Dynasty test to assert that a stale generation is rejected and canonical current-State evidence is requested. The captured ee05aa91… vs 3d7808d4… route regression remains in place and passed within the prior full suite.
+- Files: route, new captured-mismatch route test, existing Dynasty route test, and this handoff.
+- Measurements: hosted physical baseline unchanged; no deploy/new runtime measurement.
+- Unresolved / exact next action: run both Dynasty route regressions and rerun full CI. If only the resource-boundary RSS test remains failing, check whether the same limit fails on clean repeated runs and record any unrelated baseline issue without expanding this PR. No merge/deploy until required validation is green.
+- Safeguards: all P0.1 frozen boundaries remain; no P0.2 or broader resource changes.
+- Safe takeover: start from the new exact PR head, read this validation note and the failure log for CI run 37409527843; preserve the distinction between outdated Dynasty expectation and observed RSS failure.
+
+
+### 2026-10-06 — P0.1 narrow route correction implemented; validation pending
+
+- **Main / live:** main remains `da045325bd3916d8b1014f49dcacc24a5bbc1141`; Render remains deploy `dep-db266fe7bikc73cjl5jg`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506` (live).
+- **Branch / PR / head:** `work/p0-1-dynasty-state-fence-20261006`; no PR yet. Application and regression-test head before this documentation checkpoint: `acb180c3c7dfb0f8abcc62475ff760c6e8029cce`; this update is docs-only, fetch branch for exact resulting head.
+- **Finding / change:** confirmed the route’s persisted fallback passed any ready response with a generation ID, even when its State was the verified older last-good State. It now returns that fallback only when league ID, State ID and publication generation exactly equal the active runtime publication. Existing continuity loader continues to enforce selected team and promotion/payload integrity. On mismatch the route falls through to canonical Career evidence and returns preparing/current State rather than serving stale rooms. Browser fences and last-good labeling remain unchanged.
+- **Files:** `src/fsffl/product/foundation4_shadow_routes.py`; new `tests/test_dynasty_presentation_handoff.py` with the captured State pair and target generation.
+- **Focused regression:** constructed a ready stale fallback from captured State `3d7808d4…` while active context targets `ee05aa91…`; asserts the stale rooms are rejected and response is preparing under the active State/current generation. **Not yet run.**
+- **Measurements:** unchanged baseline as recorded in physical-run entry; no new hosted measurement.
+- **Unresolved / gate:** code and regression are committed but need focused test/CI, fresh review, merge/deploy, hosted verification, and one physical iPhone/Safari saved-session acceptance. P0.1 is not closed; do not begin P0.2.
+- **Safeguards:** exact State/team/publication-generation fences; approved #370 metric; Current semantics; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; atomic publication and verified last-good remain frozen.
+- **Exact next action:** open PR from this branch, run focused regression and required CI; inspect exact head/review before merge.
+- **Safe takeover:** fetch the branch’s current SHA, read this entry and the physical journey evidence above. Do not modify P0.2 persistence reads or weaken last-good/freshness identity.
+
+
+### 2026-10-06 — P0.1 exact-State handoff corrective started
+
+- **Current main:** `da045325bd3916d8b1014f49dcacc24a5bbc1141`. **Live Render:** service `srv-dae6k7vqj5pc73af7bt0`, deploy `dep-db266fe7bikc73cjl5jg`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506` (live).
+- **Branch / PR / head:** `work/p0-1-dynasty-state-fence-20261006`, created from the exact main SHA above; no PR yet; branch currently points at base SHA `da045325bd3916d8b1014f49dcacc24a5bbc1141`.
+- **Finding before change:** the Dynasty route accepts persisted data when only `status == ready` and a publication generation ID is present. Its continuity loader can return a verified same-team/same-league last-good surface whose served State is older than the active State. The route returns that payload without checking its served State against `context.league_state.state_id` or its generation against the current published generation. This is the precise server handoff that allows a legitimate last-good surface from `3d7808d4…` to reach a browser targeting `ee05aa91…`; the browser correctly rejects it. The simultaneous matching last-good telemetry event is a separate request and does not alter this diagnosis.
+- **Scope:** add an exact-current State + publication-generation acceptance guard at this Dynasty-only handoff, relying on the continuity loader’s existing league/team integrity checks; if fallback fails the guard, continue to canonical Career lifecycle, which returns preparing/current or current-State evidence. Add a focused regression using the captured State and generation identifiers. No changes to the browser fence, stale evidence identity, Current semantics, Dynasty formula, or persistence architecture.
+- **Baseline / measurements:** physical evidence remains as recorded below: target State `ee05aa91…`, stale served State `3d7808d4…`, target generation `94543b58…`; three Dynasty GETs (39,999.95 / 23,501.25 / 5,619.5 ms); 13 readiness polls; 30,000 ms retry wait; no visible Dynasty ranks. No new runtime measurement yet.
+- **Validation / unresolved:** implementation and focused route regression are not yet complete; no tests run; P0.1 remains open pending merge/deploy and one physical saved-session acceptance.
+- **Frozen safeguards:** preserve exact State/team/publication-generation fences, Current rank semantics, approved #370 metric, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, atomic publication and verified last-good. P0.2’s repeated-read/67 MB work remains deferred.
+- **Exact next action:** implement only the Dynasty route fallback guard and a route-level regression for the captured mismatch; run its focused test and CI before PR.
+- **Safe takeover:** read this corrective entry and the physical-run entry below, then inspect the exact branch SHA. Do not repeat baseline collection, weaken the browser fence, relabel last-good as current, or start P0.2.
+
+
 ### 2026-10-05 — Management handoff baseline
 
 - Audit: complete and accepted.

@@ -132,8 +132,14 @@ def install_career_intrinsic_routes(
             if (
                 persisted is not None
                 and persisted.get("status") == "ready"
+                and persisted.get("league_id") == state.league.league_id
+                and persisted.get("league_state_id") == state.state_id
                 and persisted.get("publication_generation_id")
+                == context.publication_generation_id
             ):
+                # The continuity loader validates league, team, promotion and
+                # payload integrity. Dynasty must additionally be current-State
+                # evidence: its consumer intentionally rejects last-good State.
                 return persisted
 
         # No canonical or verified last-good evidence is available. Request the

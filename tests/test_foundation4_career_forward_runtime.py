@@ -513,7 +513,7 @@ def test_dynasty_nonready_responses_keep_published_generation(
     assert payload["publication_generation_id"] == "dynasty-generation-nonready"
 
 
-def test_dynasty_last_good_keeps_verified_presentation_generation(monkeypatch) -> None:
+def test_dynasty_last_good_requires_current_publication_generation(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     context = _context()
     store = PrivateBetaRuntimeStore()
@@ -528,17 +528,20 @@ def test_dynasty_last_good_keeps_verified_presentation_generation(monkeypatch) -
         contract=None,
         error=None,
     )
+    request_calls = []
 
     class Coordinator:
         def current(self, _context):
             return pending
 
         def request(self, _context):
-            raise AssertionError("verified last-good must be served before requesting rebuild")
+            request_calls.append(_context)
+            return pending
 
     last_good = {
         "status": "ready",
         "capability": "career_intrinsic",
+        "league_id": context.league_state.league.league_id,
         "league_state_id": context.league_state.state_id,
         "publication_generation_id": "served-last-good-generation",
         "dynasty_evidence_status": "last_good",
@@ -553,9 +556,11 @@ def test_dynasty_last_good_keeps_verified_presentation_generation(monkeypatch) -
         presentation_payload_loader=lambda *_args: dict(last_good),
     )
     payload = TestClient(app).get("/api/league/dynasty-position-rooms").json()
-    assert payload["status"] == "ready"
-    assert payload["dynasty_evidence_status"] == "last_good"
-    assert payload["publication_generation_id"] == "served-last-good-generation"
+    assert payload["status"] == "preparing"
+    assert payload["league_state_id"] == context.league_state.state_id
+    assert payload["publication_generation_id"] == "replacement-runtime-generation"
+    assert payload.get("rooms") is None
+    assert request_calls
 
 
 def test_dynasty_rejects_unversioned_last_good_instead_of_guessing_generation(
