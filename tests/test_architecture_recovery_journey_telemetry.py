@@ -141,3 +141,14 @@ def test_saved_session_app_asset_and_event_merge_keep_generations_distinct():
     assert f"/static/app.js?v=20261004-safari-restore380&c=git-{app_blob_hash}" in index
     assert "item.target_state_id===fields.target_state_id" in source
     assert "item.publication_generation_id===fields.publication_generation_id" in source
+
+
+def test_startup_does_not_probe_unused_legacy_presentation_payloads():
+    source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
+    startup = source.split("def _run_lightweight_startup_restore", 1)[1].split(
+        "def _start_lightweight_startup_restore", 1
+    )[0]
+
+    assert "legacy_snapshot_available" not in startup
+    assert "_prepare_presentation_for_user(_beta_restore_user, context)" in startup
+    assert "_promote_presentation_for_user" in startup
