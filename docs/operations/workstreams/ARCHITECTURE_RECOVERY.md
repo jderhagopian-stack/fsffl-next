@@ -124,22 +124,54 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** P0.1 INSTRUMENTATION SLICE IN PROGRESS — Management authorizes GitHub API edits and focused GitHub Actions validation; physical Safari observation remains deferred to Management.  
-**Owner:** Work (per latest Issue #393 Management comment)  
-**Active branch:** `work/p0-1-baseline-20261006`. Previous checkpoint head: `092225cf92144ec919f3bfcc74a213d2e6143deb`; fetch branch HEAD before resuming.  
-**PR:** none. **Application code changes:** none. **Live deployment:** unchanged at #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`, Render deploy `dep-db229jvlot8c73dieqtg`.
+**State:** P0.1 INSTRUMENTATION IMPLEMENTED — pre-PR validation checkpoint.  \
+**Owner:** Work, confirmed by the latest Issue #393 Management ownership correction.  \
+**Current main:** `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.  \
+**Active branch / exact code head:** `work/p0-1-baseline-20261006` at `48b918350d75029c5b226236fe981dcdd33ddff5`. This head is based on current main and contains the pre-code docs checkpoint plus instrumentation/test/workflow commits.  \
+**PR:** none yet.  \
+**Live deploy:** Render service `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live commit `583f48dca0c6b763b7d249e420b82964a15291d2` (#391); unchanged because the instrumentation branch is not deployed.
 
-Before acting, Work must re-read:
-- this file;
-- the governing P0 directive;
-- CURRENT_STATE.md;
-- ACTIVE_WORKSTREAMS.md;
-- MANAGEMENT_CONTINUITY.md;
-- Issue #393;
-- current main/live GitHub + Render state.
+The accepted pre-change baseline above remains the only measured production baseline. No post-change performance or hosted/browser values exist yet.
 
-Then record the first execution checkpoint below.
+### Implementation in this slice
 
+Instrumentation only. No restore order, read contract, API response semantics, retry limits, publication fencing, Dynasty formula, model authority, or product behavior was changed.
+
+Files changed:
+
+- `src/fsffl/journey_telemetry.py`: bounded allowlisted structured events; opaque request/restore IDs; safe browser batch ingestion; persistence read decorator. It emits no raw user IDs, SQL parameters, player/roster payloads or credentials.
+- `src/fsffl/product/persistent_runtime.py`: records durable context restore, State activation, and exact-State intelligence restore stage elapsed time/outcome under one restore-run identity.
+- `src/fsffl/persistence/postgres.py`: counts correlated runtime-context, league/team State snapshot, sync cursor, and reusable-artifact reads; records hit/miss, elapsed time, rows, artifact kind, and returned serialized JSON byte count where present. This is application payload serialization size, **not** measured Supabase wire egress.
+- `src/fsffl/product/persistent_webapp.py`: traces only API requests carrying the browser journey header; returns request and startup-restore correlation headers; adds an authenticated, same-origin diagnostic intake with 64 KiB request limit and 80-event batch limit.
+- `src/fsffl/product/static/app.js`: creates a session-scoped opaque journey ID; traces real fetch attempts/status/latency and saved-session Product Context restore; records browser memory support/value at flush; buffers and coalesces repeated request/retry events; submits once on terminal result or pagehide.
+- `src/fsffl/product/static/product_shell.js`: counts actual shared-readiness poll calls, promotion retry waits, generation handoff outcome, and League Atlas asset URL.
+- `src/fsffl/product/static/league_comparison.js`: counts value-lens/Atlas alignment/Dynasty attempts and retry waits; logs exact State/generation mismatch as failure; marks first useful render only when Dynasty is selected, the document is visible, rank cells exist, and room State + publication generation exactly match the visible Atlas.
+- `tests/test_architecture_recovery_journey_telemetry.py`: covers allowlisting, bounded batch ingestion, persistence byte/count reporting, restore-run identity, and preservation of the exact-generation Dynasty failure/success fence.
+- `.github/workflows/league-atlas-north-star.yml`: includes the new focused telemetry regression file and syntax checks for app.js, product_shell.js and league_comparison.js.
+
+The browser captures `performance.memory` only where the browser exposes it. iPhone Safari may report memory as unsupported; this is explicitly represented rather than inferred. Render process memory remains a separate hosted sample.
+
+The unresolved live Dynasty issue remains unclaimed: no physical iPhone/Safari run has yet shown whether the live request returns unavailable, a State/generation mismatch, or a valid room that fails to render. The new terminal browser events preserve whichever failure the physical run observes; automated tests keep generation mismatch as failure and never loosen the accepted generation fence.
+
+### Validation and measurements at this checkpoint
+
+- Baseline numbers remain as recorded in the 01:25Z checkpoint: restore-ready success p50 10.89s / p95 127.48s / max 223.04s; failure p50 11.98s / max 96.76s; 12.69 GB accepted prior egress figure; historical adapter-query totals; Render memory high-water ~524.4 MB; no previous correlated browser counts or foreground request samples.
+- No local repository checkout, local JS/Python syntax checks, or local test runs were attempted in this continuation; Git transport/browser limitations are not being retried.
+- Focused telemetry + League Atlas GitHub Actions have **not yet run**. They are configured to run on the PR. Standard CI also runs the full suite for a PR; this will be the one stable merge-gate full suite.
+- No Codex review requested; the governing P0.1 continuation explicitly excludes Codex review.
+- Hosted acceptance and physical iPhone/Safari acceptance remain pending deployment.
+
+### Frozen safeguards
+
+Simulation 2.0 mathematics, 50k/RNG/replay, Foundation 4 economics, approved #370 Dynasty metric, Current ranking semantics, exact State/team/publication-generation fences, atomic publication, verified same-league/team last-good, tenant isolation, P0.1-only scope, and the #375/PIT-history/Owner Intelligence hold remain frozen.
+
+### Exact next action and safe continuation
+
+1. Update this handoff with the validation PR checkpoint and exact resulting head.
+2. Open one PR from `work/p0-1-baseline-20261006` to `main`; inspect focused League Atlas and standard CI checks on that exact PR head.
+3. Fix only demonstrated instrumentation/test defects. Do not start P0.2.
+4. After checks pass, record exact PR/head/review disposition. Deployment and physical acceptance require Management’s hosted process; when deployed, run the saved-session iPhone/Safari journey once and collect correlated `FSFFL_CUSTOMER_JOURNEY` Render logs by `journey_id` + `restore_id`, browser events, generation IDs, and matching Render memory window.
+5. Resume from this file + directive + Issue #393 and the PR’s exact head. Do not repeat the broad audit or pre-change baseline; do not treat prior `ERR_BLOCKED_BY_CLIENT` as the app failure; do not reopen frozen semantics or start P0.2 before P0.1 is fully evidenced/checkpointed.
 ---
 
 ## Execution log
@@ -224,3 +256,17 @@ Then record the first execution checkpoint below.
 - **Change scope authorized now:** P0.1 instrumentation-only using the exact source files/functions and event/test design in the prior implementation-ready checkpoint. Preserve the unresolved #391 Dynasty mismatch as a deterministic regression case. No architecture refactor, P0.2, or production deployment in this slice.
 - **Before-code tree:** this commit updates only this handoff to record slice start. Next action is implement telemetry on the named code paths, then focused tests and the league-atlas-north-star.yml PR validation. The repository ci.yml runs the full suite; reserve that for the stable merge gate.
 - **Frozen safeguards:** unchanged as enumerated above.
+
+
+### 2026-10-06 — P0.1 instrumentation implementation / pre-PR checkpoint
+
+- **Authority:** current main remains `0ef839ef9edeae7dad85fb6e52984c2998699e2a`; latest Issue #393 confirms Work as sole writer. Live service/deploy remains #391 / `583f48dca0c6b763b7d249e420b82964a15291d2` / `dep-db229jvlot8c73dieqtg`.
+- **Branch/head/PR:** `work/p0-1-baseline-20261006` at `48b918350d75029c5b226236fe981dcdd33ddff5`; no PR at checkpoint start.
+- **Before-change evidence:** see the accepted baseline above. The physical saved-session iPhone/Safari journey and actual failing Dynasty stage are still unknown.
+- **Changes:** instrumentation-only in journey telemetry, startup restore/runtime and persistence read boundaries, API request correlation/diagnostic intake, browser restore/API/retry/poll/handoff/useful-render/memory capture, focused regression coverage, and focused workflow inclusion. Exact files and event contract are in Current checkpoint.
+- **After-change measurements:** none yet; branch has not run in GitHub Actions or production. Application-level JSON byte counts are measured on returned payload serialization; actual Supabase wire bytes remain unavailable from this adapter-level instrumentation.
+- **Tests:** added focused tests but not executed yet. The PR will trigger the focused League Atlas action and standard CI once, at stable merge head. Full-suite result pending.
+- **Unresolved:** physical Safari acceptance; exact live Dynasty failure stage; Safari JS heap measurement may be unsupported. No service/runtime measurements can be attributed to these code changes until deployed.
+- **Frozen:** #370 metric, Current lens, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, publication fences, last-good and tenant boundaries; no P0.2 or product expansion.
+- **Exact next action:** checkpoint doc update, then open PR and inspect focused Actions on its exact head.
+- **Safe takeover:** continue this P0.1 PR only. Do not retry local cloud-browser/Git transport setup; use GitHub APIs/Actions. Do not deploy/merge based on unrun checks or claim the browser failure is resolved.
