@@ -22,7 +22,7 @@ from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
 from . import market_discovery_runtime as _market_discovery_runtime
 from . import opportunity_workspace as _opportunity_workspace
 from . import webapp as _webapp
-from . import journey_telemetry as _journey_telemetry
+from fsffl import journey_telemetry as _journey_telemetry
 from .annual_preseason_scheduler_routes import install_annual_preseason_scheduler_route
 from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
 from .focused_opportunity_routes import install_focused_opportunity_routes
