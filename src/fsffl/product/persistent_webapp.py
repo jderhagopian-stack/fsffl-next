@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import gc
+import json
 import logging
 import os
 from threading import Event, RLock, Thread
@@ -668,11 +669,10 @@ async def _gate_restored_session_reads(request, call_next):
 
 @app.middleware("http")
 async def _trace_customer_journey(request: Request, call_next):
-    if not request.url.path.startswith("/api/"):
+    supplied_journey_id = request.headers.get("x-fsffl-journey-id")
+    if not request.url.path.startswith("/api/") or not supplied_journey_id:
         return await call_next(request)
-    token, journey_id = _journey_telemetry.set_journey_id(
-        request.headers.get("x-fsffl-journey-id")
-    )
+    token, journey_id = _journey_telemetry.set_journey_id(supplied_journey_id)
     request.state.journey_id = journey_id
     started = monotonic()
     _journey_telemetry.emit_journey_event(
@@ -712,11 +712,17 @@ async def _collect_customer_journey(
     request: Request,
     _beta_user: str = Depends(_webapp.require_beta_user),
 ):
-    body = await request.body()
-    if len(body) > 65536:
+    if int(request.headers.get("content-length", "0") or "0") > 65536:
         return {"accepted": 0, "reason": "payload_too_large"}
+    body_parts = []
+    body_size = 0
+    async for chunk in request.stream():
+        body_size += len(chunk)
+        if body_size > 65536:
+            return {"accepted": 0, "reason": "payload_too_large"}
+        body_parts.append(chunk)
     try:
-        payload = __import__("json").loads(body)
+        payload = json.loads(b"".join(body_parts))
     except (TypeError, ValueError):
         return {"accepted": 0, "reason": "invalid_payload"}
     accepted = _journey_telemetry.record_browser_events(
