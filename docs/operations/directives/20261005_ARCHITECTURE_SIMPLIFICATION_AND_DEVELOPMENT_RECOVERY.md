@@ -309,3 +309,82 @@ This corrective is complete only when Management can truthfully say:
 - the primary customer journeys are covered end-to-end;
 - the repo operating state matches production reality;
 - development can again proceed through small, reviewable changes without repeated systemic regressions.
+
+
+## Management disposition — audit accepted
+
+**ACCEPTED FOR IMPLEMENTATION.**
+
+Management accepts the read-only P0 Architecture Recovery audit as the governing basis for Phase B corrective execution.
+
+Implementation is the sole writer for the corrective program. Work's role was independent read-only audit/review; do not create a competing Work implementation stream against the same runtime/application surfaces.
+
+Accepted target:
+- canonical current State;
+- exact/idempotent build identity from State + model/version + scope;
+- one coherent current publication contract;
+- cheap product readers that fetch payload only when actually consumed;
+- simple browser behavior with automatic content-derived asset fingerprints;
+- one declared lifecycle/resource ownership boundary;
+- heavy work outside ordinary request latency;
+- stable interfaces that can later move heavy compute to independent workers without rewriting model authority.
+
+Management also adopts these future-facing clarifications:
+
+1. **One current publication does not mean one history.**
+   Maintain one obvious current publication head per league/State while immutable PIT States, events, transactions, lineage and dated intelligence snapshots remain separately queryable historical evidence.
+
+2. **Baseline intelligence and bounded scenarios are separate.**
+   Canonical Forecast/Simulation/Value/Intrinsic outputs feed the current publication. Trade Center, What-If and counterfactual work may create idempotent derivative jobs/results from that baseline; they must not force every scenario into the primary publication lifecycle.
+
+3. **PIT/history is shared infrastructure.**
+   Future Owner Intelligence, League Market, historical trade analysis, Record Book, counterfactuals and league-history products should consume common historical State/event/lineage evidence rather than create parallel persistence or lifecycle systems.
+
+4. **Artifact storage must remain replaceable.**
+   Separate artifact identity/metadata from payload retrieval so large immutable payloads can later move to more appropriate storage without changing consumers or model authority. No storage migration is required now without measured need.
+
+5. **Private-beta simplicity and public-scale readiness are co-equal.**
+   The corrective must make the current app faster/simpler while preserving the ability to scale web readers and heavy workers independently later. Do not optimize solely for the free Render footprint and do not introduce premature distributed-system complexity.
+
+## Approved Phase B execution order
+
+Implementation should execute bounded slices in this order, re-measuring after each material change:
+
+### P0.1 — make the real customer read path measurable
+Establish one authoritative end-to-end journey from saved session/current State through Product Context and League Atlas to visible current-generation Dynasty evidence. Instrument restore stages, State/manifest/payload reads, first useful render, database call/byte counts and publication identity.
+
+### P0.2 — metadata-first persistence / egress correction
+Add metadata-only existence/identity/freshness lookup for reusable artifacts and presentation surfaces. Fetch large JSON payloads only when actually consumed. Eliminate repeated same-process reads where safe. Preserve exact-State, atomic publication and verified last-good semantics.
+
+### P0.3 — automatic static-asset identity
+Replace manual semantic cache-buster maintenance with centrally generated content-derived fingerprints for shipped browser assets. A changed asset must necessarily have a changed delivery identity.
+
+### P0.4 — simplify published-reader contract
+Move ordinary product reads toward one inexpensive publication manifest/read contract. Remove duplicate restore/manifest discovery and per-surface lifecycle negotiation only after consumer tracing proves safety.
+
+### P0.5 — consolidate lifecycle/resource ownership
+Collapse genuinely redundant readiness/promotion/polling/coordinator mechanisms one at a time behind a stable idempotent job interface. Declare cache/resource ownership, bounds, lifetime and invalidation centrally.
+
+### P0.6 — development/operations simplification
+Make one operational source of truth authoritative; archive/supersede historical current-state prose. Use focused tests during development, one stable-head full suite at merge gate, and a small set of real end-to-end runtime/browser journeys. Avoid repeated full-suite/review loops for trivial corrections.
+
+### P1/P2
+Continue the audit's P1 lifecycle/resource consolidation and P2 public-scale proof only after the P0 slices establish measured baselines and remove the highest-leverage waste.
+
+## Measurement requirement
+
+Every P0 slice must report before/after evidence where applicable:
+- saved-session time to useful State/intelligence;
+- ordinary foreground/API latency;
+- restore-stage latency;
+- Supabase calls and bytes transferred;
+- repeated artifact/presentation payload reads;
+- refresh/publication wall time;
+- Render current/high-water memory;
+- number of browser polling/retry/lifecycle handoffs on the acceptance journey.
+
+Do not claim simplification based only on code deletion or green tests; prove improved customer/runtime behavior.
+
+## Feature hold
+
+#375, new PIT/history product expansion, Owner Intelligence implementation and other new feature breadth remain on HOLD until the P0 architecture recovery reaches a Management-defined stable point. PIT/history may be considered only where a P0 slice needs to preserve its future architectural boundary; do not start productization opportunistically.
