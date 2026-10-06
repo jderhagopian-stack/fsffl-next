@@ -156,6 +156,14 @@ Until Management changes the gate:
 - **Hosted observation:** deployment `dep-db2iu6d9fdbs739j6clg` live at 17:27:24 UTC. Startup readiness completed in 9,402 ms. No post-deploy frontend Product Context/surface fetch was captured; therefore code-level read consolidation is verified, hosted foreground reduction is pending, and saved-session iPhone/Safari ranks remain unverified.
 - **Safe handoff:** current GitHub main is the base. Continue P0.4 consumer simplification only; preserve the stale local clone, do not patch Dynasty directly, revisit #396/P0.1/P0.2/P0.3, or enter P0.5.
 
+#### P0.4 tranche — readiness-only statement-snapshot bundle (in progress)
+
+- **Trace:** after the coherent Product Context + active-surface tranche, readiness-only callers without a requested surface still entered `has_snapshot`, which read the manifest and then required-surface metadata in separate persistence calls.
+- **Bounded contract:** when the runtime supplies its exact current or same-league last-good publication generation, construct those exact required-surface keys and resolve manifest plus metadata identities in one Postgres statement snapshot. Pass no requested payload key: readiness receives the manifest JSON and metadata only, not an unused surface payload.
+- **Fences:** the manifest's promotion id must equal the runtime's expected generation; tenant/league/State/team keys remain exact; required-surface completeness and reusable metadata remain mandatory. No mutable manifest is retained across requests.
+- **Validation status:** focused and full validation, merge, and Render deployment pending. This checkpoint will be updated with exact results before continuing P0.4.
+- **Next:** complete this bounded tranche only; do not start P0.5.
+
 ### P0.2 implementation merged and deployed — hosted read verified
 
 - **P0.1 disposition:** measurement complete; physical Dynasty acceptance still fails. Exact Safari run remains a mandatory end-to-end acceptance journey. No further #396 patch.
