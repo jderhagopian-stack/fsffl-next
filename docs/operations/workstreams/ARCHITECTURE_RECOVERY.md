@@ -156,13 +156,14 @@ Until Management changes the gate:
 - **Hosted observation:** deployment `dep-db2iu6d9fdbs739j6clg` live at 17:27:24 UTC. Startup readiness completed in 9,402 ms. No post-deploy frontend Product Context/surface fetch was captured; therefore code-level read consolidation is verified, hosted foreground reduction is pending, and saved-session iPhone/Safari ranks remain unverified.
 - **Safe handoff:** current GitHub main is the base. Continue P0.4 consumer simplification only; preserve the stale local clone, do not patch Dynasty directly, revisit #396/P0.1/P0.2/P0.3, or enter P0.5.
 
-#### P0.4 tranche — readiness-only statement-snapshot bundle (in progress)
+#### P0.4 tranche — readiness-only statement-snapshot bundle (merged and deployed)
 
-- **Trace:** after the coherent Product Context + active-surface tranche, readiness-only callers without a requested surface still entered `has_snapshot`, which read the manifest and then required-surface metadata in separate persistence calls.
-- **Bounded contract:** when the runtime supplies its exact current or same-league last-good publication generation, construct those exact required-surface keys and resolve manifest plus metadata identities in one Postgres statement snapshot. Pass no requested payload key: readiness receives the manifest JSON and metadata only, not an unused surface payload.
-- **Fences:** the manifest's promotion id must equal the runtime's expected generation; tenant/league/State/team keys remain exact; required-surface completeness and reusable metadata remain mandatory. No mutable manifest is retained across requests.
-- **Validation status:** focused and full validation, merge, and Render deployment pending. This checkpoint will be updated with exact results before continuing P0.4.
-- **Next:** complete this bounded tranche only; do not start P0.5.
+- **Trace / before:** readiness-only callers without a requested surface entered `has_snapshot`, which resolved the manifest and required-surface metadata through separate persistence calls.
+- **After:** PR #401 merged from head `b29b183eb911469ab6968ed949a7695c846a1908` as `9896e949c9c6f2095a9d0eb802299bf015105182`. With the runtime's exact current or same-league last-good generation, readiness now resolves manifest JSON and required-surface identities in one Postgres statement snapshot, with no requested surface payload. Generation, tenant/league/State/team, completeness, and reusability checks remain exact; no mutable manifest is retained across requests.
+- **Validation:** full CI run `37504582373` passed **2,191 tests, 1 existing warning, 169.08 seconds**. Home, Atlas, PR164, live forecast, and private-beta focused checks passed.
+- **Render:** deployment `dep-db2j4jd9fdbs739jvgs0` is live on `9896e949c9c6f2095a9d0eb802299bf015105182`, completed 2026-10-06 17:41:12.61 UTC. New-instance durable-context restore reached ready in **8,090 ms** (restore ID `515f5f24-b832-4f9f-bfe8-4bead47d7ef3`). No request-type entries or error-level logs were returned for the sampled post-deploy interval; only unauthenticated `GET /` was observed.
+- **Remaining consumer trace:** the post-deploy startup log contained one `runtime_presentation_manifest` miss via `get_reusable_artifact` at 17:41:41 UTC. Source trace identifies this as the legacy-v1 migration probe `legacy_snapshot_available`; its assigned `legacy_migration` result has no consumer. On a hit the probe also fetches each old surface payload, then startup proceeds to prepare/promote regardless of the boolean. This is a redundant startup read path, not evidence of saved-session rendering.
+- **Next:** remove only the unused legacy migration probe call; preserve startup preparation/promotion and all v2 read authority. Continue P0.4; do not start P0.5.
 
 ### P0.2 implementation merged and deployed — hosted read verified
 
