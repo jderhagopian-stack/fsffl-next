@@ -165,6 +165,17 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — PR #396 merged; Render deployment pending
+
+- **Main / merge:** PR #396 merged from reviewed/green head `a88f7c0349f855f49ad0a149ca2b089b5eb95dc4`; squash merge commit `d42593ed73aed4ca1fe62338273df9fa61947fed`. Full CI and all focused checks passed on the PR head; Codex review of exact head said no major issues.
+- **Branch / PR:** #396 `work/p0-1-dynasty-publication-request-fence-20261006`, merged. App changes include API route, internal publication builder caller, Dynasty loader, telemetry whitelist, asset keys, and focused regression/callsite tests.
+- **Live before deploy:** service `srv-dae6k7vqj5pc73af7bt0`, live deployment `dep-db26ufh7lnhs73drheqg`, app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`. Render service confirms auto-deploy disabled.
+- **Change:** exact State + publication generation travel from visible Atlas through the Dynasty request. Runtime mismatch returns explicit `superseded` (requested and superseding identities, no rooms) before coordinator/presentation reads. Browser refreshes Product Context through the existing Atlas promotion path. Internal presentation builder passes captured identity. Cache keys are refreshed.
+- **Validation:** full CI `37415031517` passed; Atlas `37415031461`, Home `37415031670`, Franchise `37415031454`, PR164 `37415031538`, private-beta diagnostics `37415031491`, forecast trace `37415031448` passed. Fresh Codex review at `a88f7c0349f855f49ad0a149ca2b089b5eb95dc4` reported no major issues.
+- **Physical acceptance / measures:** not yet rerun; the #395 capture remains failed. No new latency, RSS, or egress measurements. P0.1 remains open.
+- **Exact next action:** trigger manual Render deployment of the current main commit (Render auto-deploy is off), verify the deployment is live on the exact commit and hosted assets are current. Then stop for one final saved-session physical iPhone/Safari acceptance. Do not begin P0.2.
+- **Safeguards:** all current-generation State/team/generation fences, Current semantics, approved #370 metric, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, atomic publication and tenant isolation remain frozen.
+
 ### 2026-10-06 — green merge checkpoint; documentation-only advancement
 
 - **Main / live:** PR base `408431fd4bb0fb96daf800e7ec036616ba79c12c`. Render still serves #395 app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`, deployment `dep-db26ufh7lnhs73drheqg`.
