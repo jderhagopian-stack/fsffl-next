@@ -165,6 +165,17 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — green merge checkpoint; documentation-only advancement
+
+- **Main / live:** PR base `408431fd4bb0fb96daf800e7ec036616ba79c12c`. Render still serves #395 app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`, deployment `dep-db26ufh7lnhs73drheqg`.
+- **PR / branch / tested code head:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head `e7272f48210b878d6e520bbb4579d201bdc0b56c`. This handoff commit is docs-only and will advance PR head; refetch exact head.
+- **Validation at code/test head:** full CI `37414650538`, Atlas `37414650507`, Home `37414650509`, Franchise `37414650518`, PR164 `37414650568`, private-beta diagnostics `37414650546`, forecast trace `37414650535` all completed successfully.
+- **Fresh review:** Codex manually reviewed exact code/test head `e7272f48210b878d6e520bbb4579d201bdc0b56c` and reported “Didn't find any major issues.” Its earlier P1 about the internal route caller is fixed in `persistent_webapp.py` and covered by a focused test. Its cache-key finding is fixed; Atlas focused cache checks pass with refreshed bundle identities.
+- **Correction:** endpoint contract includes State + generation; server returns superseded/no rooms if either differs. Browser sends both and refreshes Product Context once through existing Atlas promotion. Superseded telemetry uses explicitly named superseding identity fields. Exact #395 A-visible/B-runtime test uses captured State IDs.
+- **Pre-merge / next:** because this record is docs-only, no application code changed since the green/reviewed code head. Require the exact updated PR head’s CI and mergeability to be green, then merge with expected head SHA. Deploy exact resulting main commit to Render (auto-deploy disabled), verify live, update this handoff with identities and stop for final physical iPhone/Safari acceptance.
+- **Unresolved:** final physical acceptance only. P0.1 stays open; no P0.2.
+- **Frozen safeguards:** exact State/team/generation fence; #370 formula; Current ranks; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; atomic publication and tenant isolation.
+
 ### 2026-10-06 — Codex review P1 corrected; validation pending
 
 - **PR / branch / code head:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this note `2dee8ac27deb2884ac51c62d9797d091c52edfab`.
