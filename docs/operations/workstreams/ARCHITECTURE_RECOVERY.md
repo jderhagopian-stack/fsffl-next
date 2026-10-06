@@ -165,6 +165,15 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — telemetry identity refinement; checks rerunning
+
+- **PR / branch:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this note `a648bbaa20426c0490f6aeca27fcb32d5d4637df`. This note advances the head; fetch exact head again.
+- **Material refinement:** on a superseded response, journey telemetry now records `superseding_state_id` and `superseding_publication_generation_id` explicitly. It no longer labels State B as `served_state_id`, since no B evidence was served under A’s request. The existing telemetry whitelist now preserves these names. Browser regression checks the distinction.
+- **Files:** route; League Atlas Dynasty loader; app journey telemetry whitelist; `tests/test_dynasty_presentation_handoff.py`; this handoff.
+- **Validation:** exact-head Actions must rerun after this change. Original #396 runs at the preceding head are not sufficient for merge.
+- **Next:** record exact new head; inspect all changed files, wait for focused and full checks, obtain fresh review at final exact head; merge/deploy only when green. Then stop for final physical Safari acceptance.
+- **Safety:** request mismatch exits before coordinator, persistence loader, or room assembly. All prior fences and frozen semantics remain.
+
 ### 2026-10-06 — PR #396 opened; exact-head validation running
 
 - **Main / live:** PR base main `408431fd4bb0fb96daf800e7ec036616ba79c12c`; Render is unchanged, live deployment `dep-db26ufh7lnhs73drheqg` on app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
