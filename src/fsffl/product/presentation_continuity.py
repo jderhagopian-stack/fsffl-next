@@ -391,6 +391,7 @@ class PresentationContinuityStore:
         league_state_id: str,
         required_surfaces: Sequence[str] = REQUIRED_PRESENTATION_SURFACES,
         selected_team_id: str | None = None,
+        manifest_record: ReusableArtifactRecord | None = None,
     ) -> bool:
         """Check manifest identity and required artifact presence without payload reads.
 
@@ -399,14 +400,19 @@ class PresentationContinuityStore:
         """
         if self._persistence is None:
             return False
-        manifest = self._persistence.get_reusable_artifact(
-            _manifest_key(
-                user_id=user_id,
-                league_id=league_id,
-                league_state_id=league_state_id,
-            )
+        manifest_key = _manifest_key(
+            user_id=user_id,
+            league_id=league_id,
+            league_state_id=league_state_id,
         )
+        manifest = manifest_record
         if manifest is None:
+            manifest = self._persistence.get_reusable_artifact(manifest_key)
+        if (
+            manifest is None
+            or manifest.key != manifest_key
+            or not manifest.reusable
+        ):
             return False
         available = set(manifest.payload.get("surfaces") or ())
         if not set(required_surfaces).issubset(available):
@@ -543,18 +549,12 @@ class PresentationContinuityStore:
                     league_id=served_league_id,
                     league_state_id=served_state_id,
                     selected_team_id=runtime.selected_team_id,
+                    manifest_record=manifest,
                 ):
                     return None
-                # Strict cold validation may have re-read a replacement manifest.
-                manifest = self._persistence.get_reusable_artifact(
-                    _manifest_key(
-                        user_id=user_id,
-                        league_id=served_league_id,
-                        league_state_id=served_state_id,
-                    )
-                )
-                if manifest is None:
-                    return None
+                # Validate the manifest already read against required-surface metadata.
+                # The expected publication generation and payload hash are still checked
+                # below before any presentation evidence can be returned.
 
             promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
             if (
