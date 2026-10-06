@@ -346,6 +346,16 @@ Management also adopts these future-facing clarifications:
 5. **Private-beta simplicity and public-scale readiness are co-equal.**
    The corrective must make the current app faster/simpler while preserving the ability to scale web readers and heavy workers independently later. Do not optimize solely for the free Render footprint and do not introduce premature distributed-system complexity.
 
+## Durable execution / fallback handoff
+
+Work must maintain `docs/operations/workstreams/ARCHITECTURE_RECOVERY.md` as the live execution record.
+
+Because Management has limited weekly Work capacity, continuity may not depend on the Work conversation. Before/after every material slice, PR/merge/deploy, subsystem transition, pause, or usage-limit stop, Work must record exact branch/PR/head, live deploy identity, what changed, before/after measurements, tests, unresolved findings, frozen safeguards, exact next action, and a safe handoff instruction.
+
+If Work capacity is exhausted, Management may reassign the remaining program to Implementation. Implementation must resume from the exact durable checkpoint rather than repeat the audit or reconstruct history from chat.
+
+Prefer completing one bounded slice cleanly over partially starting multiple later slices.
+
 ## Approved Phase B execution order
 
 Work should execute bounded slices in this order, re-measuring after each material change:
