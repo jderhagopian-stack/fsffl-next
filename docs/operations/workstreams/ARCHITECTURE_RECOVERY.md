@@ -165,6 +165,14 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — PR #396 opened; exact-head validation running
+
+- **Main / live:** PR base main `408431fd4bb0fb96daf800e7ec036616ba79c12c`; Render is unchanged, live deployment `dep-db26ufh7lnhs73drheqg` on app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
+- **Branch / PR / head:** PR #396, `work/p0-1-dynasty-publication-request-fence-20261006`, initial exact PR head `248fd83f7b5356686e7913f2555b8867a1f96b9b`. This note will advance the branch head; re-fetch PR head before review/merge.
+- **Validation running at recorded head:** League Atlas focused workflow run `37413730682`; Home focused run `37413730639`; full CI run `37413730702`. All were queued when checked. Focused local command remains `pytest tests/test_dynasty_presentation_handoff.py`; repository mutation/testing is performed through GitHub and Actions.
+- **Next:** inspect full PR diff, wait for exact-head checks, fix any concrete failure on this same PR, rerun checks on final head, conduct fresh review, merge only the exact green head, deploy the resulting main commit and verify it live. Then stop for final physical iPhone/Safari acceptance. P0.2 remains held.
+- **Unresolved / safeguards:** physical acceptance has failed on the request-contract race. No code has been deployed for this correction. Keep every publication/team fence and all frozen #370/Current/Simulation/Foundation safeguards.
+
 ### 2026-10-06 — publication-bound Dynasty request implemented; validation pending
 
 - **Main / live:** base main before pre-implementation checkpoint `c49295a56ce5ac676a271e0e6112af53a7064f36`; checkpoint commit `408431fd4bb0fb96daf800e7ec036616ba79c12c`. Live Render remains service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db26ufh7lnhs73drheqg`, application commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
