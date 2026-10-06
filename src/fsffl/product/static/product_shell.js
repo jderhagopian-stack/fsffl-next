@@ -322,6 +322,12 @@ function fsfflSharedReadinessJobActive(){
 }
 async function fsfflPollSharedReadinessOnce(){
   if(fsfflSharedReadinessState.requestInFlight||!state?.context?.league_id)return;
+  // The foreground job poll already carries current capability readiness while
+  // baseline reconciliation is active. Keep the strip current without a second GET.
+  if(fsfflSharedReadinessJobActive()){
+    fsfflRenderSharedReadiness();
+    return;
+  }
   fsfflSharedReadinessState.requestInFlight=true;
   const observedPolls=fsfflSharedReadinessState.observedPolls=(fsfflSharedReadinessState.observedPolls||0)+1;
   window.fsfflJourneyEvent?.('readiness_poll',{stage:'shared_readiness',attempt:observedPolls,retry_wait_ms:observedPolls===1?0:2500});
@@ -361,10 +367,32 @@ function installFsfflSharedReadinessStyles(){
   asOfStyle.textContent='.fsffl-readiness-asof{display:inline-block;margin-left:7px;color:#6f879a;font-size:8px;white-space:nowrap}@media(max-width:760px){.fsffl-readiness-asof{display:none}}';
   document.head.appendChild(asOfStyle);
 }
+function fsfflAcceptJobStatus(payload){
+  if(!payload||typeof payload!=='object')return;
+  const job=payload.job||payload;
+  const readiness=payload.capability_readiness;
+  if(readiness&&typeof readiness==='object'){
+    state.context={...state.context,capability_readiness:readiness};
+  }
+  state.intelligence={
+    ...(state.intelligence||{}),
+    ...(readiness&&typeof readiness==='object'?{capability_readiness:readiness}:{}),
+    job:{
+      ...(state.intelligence?.job||{}),
+      job_id:job.job_id||job.id||null,
+      status:job.status||null,
+      phase:job.phase||null,
+      failure_phase:job.failure_phase||null,
+      error:job.error||null,
+    },
+  };
+  fsfflRenderSharedReadiness();
+}
 window.fsfflSharedReadiness={
   snapshot:fsfflSharedReadinessSnapshot,
   render:fsfflRenderSharedReadiness,
   refresh:fsfflStartSharedReadinessPolling,
+  acceptJobStatus:fsfflAcceptJobStatus,
 };
 
 function productSurfaceError(label,error){const panel=document.querySelector('#generic-screen .panel');if(panel)panel.innerHTML=`<p class="eyebrow">${label}</p><h2>Unable to load this view.</h2><p class="lead">${String(error.message||error)}</p>`}

@@ -66,3 +66,9 @@ def test_first_team_handoff_resets_stale_settlement_and_starts_current_enrichmen
     assert "fsfflSettledStateId=null" in handoff
     assert "maintainFsfflIntelligence()" in handoff
     assert "maybeStartIntelligenceJob({manual:false})" not in handoff
+
+
+def test_job_polls_feed_the_shared_readiness_owner() -> None:
+    source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
+    assert source.count("window.fsfflSharedReadiness?.acceptJobStatus(payload)") == 2
+    assert "api('/api/intelligence/jobs/current')" in source
