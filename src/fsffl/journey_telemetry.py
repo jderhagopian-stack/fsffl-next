@@ -11,8 +11,9 @@ from uuid import uuid4
 
 _LOGGER = logging.getLogger("uvicorn.error")
 _JOURNEY_ID: ContextVar[str | None] = ContextVar("fsffl_journey_id", default=None)
+_RESTORE_ID: ContextVar[str | None] = ContextVar("fsffl_restore_id", default=None)
 _SAFE_FIELDS = {
-    "stage", "outcome", "api_path", "method", "status_code", "elapsed_ms",
+    "stage", "restore_id", "outcome", "api_path", "method", "status_code", "elapsed_ms",
     "attempt", "retry_wait_ms", "target_state_id", "served_state_id",
     "publication_generation_id", "artifact_kind", "read_kind", "cache_result",
     "call_count", "row_count", "payload_json_bytes", "first_useful_render_ms",
@@ -42,11 +43,31 @@ def current_journey_id() -> str | None:
     return _JOURNEY_ID.get()
 
 
+def current_restore_id() -> str | None:
+    return _RESTORE_ID.get()
+
+
+def set_restore_id(value: str | None = None):
+    candidate = value.strip() if isinstance(value, str) else ""
+    if not _JOURNEY_ID_PATTERN.fullmatch(candidate):
+        candidate = new_journey_id()
+    return _RESTORE_ID.set(candidate), candidate
+
+
+def reset_restore_id(token) -> None:
+    _RESTORE_ID.reset(token)
+
+
 def emit_journey_event(event: str, **fields: Any) -> None:
     journey_id = current_journey_id()
-    if journey_id is None:
+    restore_id = current_restore_id()
+    if journey_id is None and restore_id is None:
         return
-    record: dict[str, Any] = {"journey_id": journey_id, "event": str(event)[:48]}
+    record: dict[str, Any] = {"event": str(event)[:48]}
+    if journey_id is not None:
+        record["journey_id"] = journey_id
+    if restore_id is not None:
+        record["restore_id"] = restore_id
     for key, value in fields.items():
         if key not in _SAFE_FIELDS:
             continue
@@ -75,6 +96,33 @@ def record_browser_events(events: Any) -> int:
         accepted += 1
     return accepted
 
+
+
+def trace_restore_stage(stage: str) -> Callable:
+    """Measure a durable restore stage under one opaque restore-run identity."""
+    def decorate(method: Callable) -> Callable:
+        @wraps(method)
+        def wrapped(*args, **kwargs):
+            token = None
+            if current_restore_id() is None:
+                token, _ = set_restore_id()
+            started = monotonic()
+            outcome = "error"
+            try:
+                result = method(*args, **kwargs)
+                outcome = "ready" if result is not None else "empty"
+                return result
+            finally:
+                emit_journey_event(
+                    "restore_stage",
+                    stage=stage,
+                    outcome=outcome,
+                    elapsed_ms=round((monotonic() - started) * 1000, 2),
+                )
+                if token is not None:
+                    reset_restore_id(token)
+        return wrapped
+    return decorate
 
 def trace_persistence_read(read_kind: str) -> Callable:
     """Measure adapter reads without logging identifiers, SQL, or payload contents."""
