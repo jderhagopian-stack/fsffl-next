@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 
-from fsffl.product import journey_telemetry as telemetry
+from fsffl import journey_telemetry as telemetry
 
 
 def _records(caplog):
