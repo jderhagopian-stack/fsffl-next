@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -127,3 +128,16 @@ def test_api_paths_with_identifiers_are_redacted(caplog):
     record = _records(caplog)[0]
     assert record["api_path"] == "/api/other"
     assert "private-user-id" not in record["api_path"]
+
+
+def test_saved_session_app_asset_and_event_merge_keep_generations_distinct():
+    app = Path("src/fsffl/product/static/app.js").read_bytes()
+    app_blob_hash = hashlib.sha1(
+        b"blob " + str(len(app)).encode() + bytes([0]) + app
+    ).hexdigest()[:12]
+    index = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
+    source = app.decode("utf-8")
+
+    assert f"/static/app.js?v=20261004-safari-restore380&c=git-{app_blob_hash}" in index
+    assert "item.target_state_id===fields.target_state_id" in source
+    assert "item.publication_generation_id===fields.publication_generation_id" in source
