@@ -77,7 +77,7 @@ class MemoryPersistence:
         payload_key,
     ):
         self.read_count += 1
-        self.payload_read_count += 2
+        self.payload_read_count += 1 if payload_key is None else 2
         self.manifest_read_count += 1
         self.metadata_read_count += 1
 
@@ -816,9 +816,11 @@ def test_cold_snapshot_presence_checks_surface_metadata_without_payload_reads() 
         league_id=state.league.league_id,
         league_state_id=state.state_id,
         selected_team_id="a",
+        expected_generation_id=result.publication_generation_id,
     )
+    assert persistence.bundle_read_count == 1
     assert persistence.payload_read_count == 1  # the small manifest only
-    assert persistence.metadata_read_count == len(REQUIRED_PRESENTATION_SURFACES)
+    assert persistence.metadata_read_count == 1
 
 
 
