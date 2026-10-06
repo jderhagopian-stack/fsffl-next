@@ -863,3 +863,117 @@ def test_last_good_dynasty_is_rebased_with_explicit_source_provenance() -> None:
     assert 'dynasty_last_good["dynasty_evidence_publication_generation_id"]' in source
     assert 'dynasty_last_good["league_state_id"] = context.league_state.state_id' in source
     assert 'dynasty_last_good.pop("publication_generation_id", None)' in source
+
+def test_same_state_republish_is_fresh_and_rejects_prior_generation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    state = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    times = iter((state.as_of, state.as_of + timedelta(seconds=1)))
+    monkeypatch.setattr(
+        "fsffl.product.presentation_continuity.utc_now",
+        lambda: next(times),
+    )
+    first = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(state),
+        builders=_builders("first"),
+    )
+    assert first is not None
+    old_runtime = replace(
+        _runtime(state),
+        publication_generation_id=first.publication_generation_id,
+    )
+
+    second = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(state),
+        builders=_builders("republished"),
+    )
+    assert second is not None
+    assert second.publication_generation_id != first.publication_generation_id
+
+    # The manifest key is unchanged for same-State republishing. A request holding
+    # the prior generation must therefore re-read the mutable head and fail closed.
+    before = persistence.manifest_read_count
+    assert continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=old_runtime,
+        surface=HOME_SURFACE,
+    ) is None
+    assert persistence.manifest_read_count == before + 1
+
+    fresh_runtime = replace(
+        _runtime(state),
+        publication_generation_id=second.publication_generation_id,
+    )
+    current = continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=fresh_runtime,
+        surface=HOME_SURFACE,
+    )
+    assert current is not None
+    assert current["publication_generation_id"] == second.publication_generation_id
+    assert current["rows"][0]["id"] == "republished-state"
+
+
+def test_reader_rejects_incomplete_required_surface_set_even_with_warm_hint() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    state = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    promoted = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(state),
+        builders=_builders("current"),
+    )
+    assert promoted is not None
+    current = replace(
+        _runtime(state),
+        publication_generation_id=promoted.publication_generation_id,
+    )
+    missing_surface = REQUIRED_PRESENTATION_SURFACES[-1]
+    persistence.artifacts[:] = [
+        row
+        for row in persistence.artifacts
+        if not (
+            row.key.artifact_kind == "runtime_presentation_surface"
+            and row.payload.get("surface") == missing_surface
+        )
+    ]
+
+    before_metadata = persistence.metadata_read_count
+    assert continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=current,
+        surface=HOME_SURFACE,
+    ) is None
+    assert (
+        persistence.metadata_read_count - before_metadata
+        == len(REQUIRED_PRESENTATION_SURFACES)
+    )
+
+
+def test_presentation_read_contract_is_tenant_scoped() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    state = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    promoted = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(state),
+        builders=_builders("current"),
+    )
+    assert promoted is not None
+
+    foreign_tenant_runtime = replace(
+        _runtime(state),
+        user_id="other-tenant",
+        publication_generation_id=promoted.publication_generation_id,
+    )
+    before = persistence.manifest_read_count
+    assert continuity.load_for_runtime(
+        user_id="other-tenant",
+        runtime=foreign_tenant_runtime,
+        surface=HOME_SURFACE,
+    ) is None
+    assert persistence.manifest_read_count == before + 1
