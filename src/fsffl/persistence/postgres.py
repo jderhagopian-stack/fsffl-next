@@ -11,6 +11,7 @@ from .contracts import (
     ArtifactKey,
     LeagueSnapshotRecord,
     PersistenceStore,
+    ReusableArtifactMetadataRecord,
     ReusableArtifactRecord,
     SyncCursorRecord,
     TeamSnapshotRecord,
@@ -213,6 +214,61 @@ class PostgresPersistenceStore(PersistenceStore):
             invalidated_at=row["invalidated_at"],
             invalidation_reason=row["invalidation_reason"],
         )
+
+    @staticmethod
+    def _artifact_metadata_from_row(row) -> ReusableArtifactMetadataRecord:
+        return ReusableArtifactMetadataRecord(
+            key=ArtifactKey(
+                artifact_kind=row["artifact_kind"],
+                scope_kind=row["scope_kind"],
+                scope_id=row["scope_id"],
+                input_fingerprint=row["input_fingerprint"],
+                model_version=row["model_version"],
+            ),
+            computed_at=row["computed_at"],
+            invalidated_at=row["invalidated_at"],
+            invalidation_reason=row["invalidation_reason"],
+        )
+
+    @trace_persistence_read("get_reusable_artifact_metadata")
+    def get_reusable_artifact_metadata(
+        self, key: ArtifactKey
+    ) -> ReusableArtifactMetadataRecord | None:
+        """Read artifact identity/freshness without fetching its JSONB payload."""
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """select artifact_kind, scope_kind, scope_id, input_fingerprint,
+                          model_version, computed_at, invalidated_at, invalidation_reason
+                   from fsffl.derived_artifact
+                   where artifact_kind=%s and scope_kind=%s and scope_id=%s
+                     and input_fingerprint=%s and model_version=%s and invalidated_at is null""",
+                (key.artifact_kind, key.scope_kind, key.scope_id, key.input_fingerprint, key.model_version),
+            )
+            row = cursor.fetchone()
+        return self._artifact_metadata_from_row(row) if row else None
+
+    @trace_persistence_read("get_latest_reusable_artifact_metadata")
+    def get_latest_reusable_artifact_metadata(
+        self,
+        *,
+        artifact_kind: str,
+        scope_kind: str,
+        scope_id: str,
+        model_version: str,
+    ) -> ReusableArtifactMetadataRecord | None:
+        """Read latest reusable artifact identity/freshness without its payload."""
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """select artifact_kind, scope_kind, scope_id, input_fingerprint,
+                          model_version, computed_at, invalidated_at, invalidation_reason
+                   from fsffl.derived_artifact
+                   where artifact_kind=%s and scope_kind=%s and scope_id=%s
+                     and model_version=%s and invalidated_at is null
+                   order by computed_at desc limit 1""",
+                (artifact_kind, scope_kind, scope_id, model_version),
+            )
+            row = cursor.fetchone()
+        return self._artifact_metadata_from_row(row) if row else None
 
     @trace_persistence_read("get_reusable_artifact")
     def get_reusable_artifact(self, key: ArtifactKey) -> ReusableArtifactRecord | None:
