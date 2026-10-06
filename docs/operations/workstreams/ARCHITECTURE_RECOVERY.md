@@ -124,6 +124,22 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
+### P0.5 — active tranche 1: one presentation publication lifecycle entry point
+
+- **Timestamp / phase:** 2026-10-06 UTC; P0.5 lifecycle/resource ownership consolidation; bounded slice 1, prepared before PR.
+- **Current main:** `bf0a1147de69cb6cb05087f04e346c97d63aaafd` (P0.4 accepted and checkpointed).
+- **Branch / head:** `work/p05-publication-lifecycle-owner-20261006`, code/test head `fb17e8ba5546c5166c877046df48d85765633953`; PR not yet opened; checkpoint update follows on this branch.
+- **Live Render:** still P0.4 deployment `dep-db2j90k9v7es7389id6g`, app commit `e86768ee149beef6425a75c9b35b1c8eb628b7c1`; no P0.5 deployment yet.
+- **Trace finding:** `publish_working_generation` invoked an optional presentation-preparer hook before entering `publication_sequence`; startup called the same helper directly before calling the presentation promoter. Promotion and preparation therefore had separate entry points, with different sequencing around ownership revalidation.
+- **Change:** remove the separate webapp preparer hook and make `_promote_presentation_for_user` request idempotent Career Intrinsic preparation and register the existing terminal callback. Startup now calls only the promoter. The completion callback still performs presentation-only promotion under the exact-State publication sequence and binds that generation only after success.
+- **Read/lifecycle behavior:** before, saved-session reconciliation called preparation before publication ownership revalidation, while startup manually called prepare then promote. After, both startup and saved-session publication enter through promotion; reconciliation reaches preparation only after the publication sequence revalidates working-generation ownership. Intrinsic work remains asynchronous and idempotent. No manifest read, payload validation, publication ordering, or last-good rule changes.
+- **Subsystems/files:** `src/fsffl/product/webapp.py`, `src/fsffl/product/persistent_webapp.py`, `tests/test_presentation_continuity.py`.
+- **Validation:** focused CI pending PR creation. No full suite run yet; reserve the one full suite for this tranche's stable merge gate. Render before/after latency, persistence counts/bytes, and memory comparison remain unmeasured until hosted deployment. Existing saved-session iPhone/Safari acceptance remains the final P0.5 gate.
+- **Frozen safeguards:** exact State/team/publication-generation ownership; payload-hash and required-surface checks; manifest-last atomicity; same-league last-good; tenant isolation; Current, approved Dynasty, Career Intrinsic, Foundation 4 economics, and Simulation 2.0. No #396 patch, P0.1–P0.4 reopening, P0.6 work, queues/Redis/services, or product breadth.
+- **Known unresolved:** this removes one duplicated lifecycle entry point but does not yet establish that all restore/readiness/promotion/polling owners are consolidated. P0.5 remains active.
+- **Exact next action:** open the bounded PR, run focused lifecycle and presentation continuity checks on the exact head, address only slice-related failures, then one full suite at the stable merge gate. Merge, deploy manually because Render auto-deploy is disabled, record hosted results, and trace the next remaining P0.5 overlap.
+- **Safe handoff:** read the governing directive, Issue #393 and its ownership correction, this P0.5 entry, then live PR/Actions/Render state. Resume at the exact branch head above. Do not repeat P0.4 or the reader audit; do not start P0.6 or the physical acceptance journey between intermediate P0.5 slices.
+
 ### P0.3 merged, deployed, and hosted-verified — automatic static-asset identity
 
 - **Main / merge:** PR #398 merged from validated head `fe954b5078b2828d57088fd61d3399296dba430b`; current main and merged commit are `e90e96b18bc48d026d7cb971e9a09dc49dae80cb`.
