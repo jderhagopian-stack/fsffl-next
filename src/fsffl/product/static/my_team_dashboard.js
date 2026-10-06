@@ -100,7 +100,7 @@ async function loadMyTeamCommandCenter(){
   const panel=myTeamPanel();
   if(!state?.context?.team_id){if(panel)panel.innerHTML='<p class="eyebrow">Franchise</p><h2>Select the franchise you manage.</h2><p class="lead">Choose a team from the product context to unlock the diagnosis.</p>';return}
   if(panel)panel.innerHTML='<p class="eyebrow">Franchise</p><h2>Reading the franchise…</h2><p class="lead">Loading optimized lineup, league-relative position strength, resilience, Value and draft capital.</p>';
-  try{const[view,league]=await Promise.all([api('/api/my-team'),api('/api/league/team-views').catch(()=>({team_views:[],source_level:'unavailable'}))]);fsfflMyTeamState.view=view;fsfflMyTeamState.valueLenses=null;fsfflMyTeamState.leagueViews=league.team_views||[];fsfflMyTeamState.leagueSource=league.source_level||'';renderMyTeamCommandCenter();void loadMyTeamValueLenses(state.context?.state_id||null)}catch(error){if(panel)panel.innerHTML=`<p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2><p class="lead">${myTeamEsc(error.message)}</p>`}
+  try{const[view,league]=await Promise.all([window.fsfflTakeInitialPresentationPayload?.('franchise')||api('/api/my-team'),api('/api/league/team-views').catch(()=>({team_views:[],source_level:'unavailable'}))]);fsfflMyTeamState.view=view;fsfflMyTeamState.valueLenses=null;fsfflMyTeamState.leagueViews=league.team_views||[];fsfflMyTeamState.leagueSource=league.source_level||'';renderMyTeamCommandCenter();void loadMyTeamValueLenses(state.context?.state_id||null)}catch(error){if(panel)panel.innerHTML=`<p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2><p class="lead">${myTeamEsc(error.message)}</p>`}
 }
 window.renderFsfflMyTeam=loadMyTeamCommandCenter;
 
