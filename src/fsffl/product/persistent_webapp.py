@@ -2055,19 +2055,12 @@ def _run_lightweight_startup_restore() -> None:
                 )
                 if terminal:
                     try:
-                        # A pre-#382 v1 snapshot remains valid evidence for migration,
-                        # but it is never served as a v2 snapshot. Prepare Dynasty
-                        # opportunistically, then republish the already-restored core
-                        # runtime into the new manifest version without provider work.
-                        legacy_migration = _presentation_continuity.legacy_snapshot_available(
-                            user_id=_beta_restore_user,
-                            league_id=context.league_state.league.league_id,
-                            league_state_id=context.league_state.state_id,
-                            selected_team_id=context.selected_team_id,
-                        )
-                        # Startup never waits for Dynasty. Reuse/restore exact
-                        # evidence when available; otherwise start it in the background
-                        # and publish core/presentation continuity immediately.
+                        # This compatibility probe's result was unused: startup
+                        # always prepares Dynasty opportunistically and promotes the
+                        # already-restored runtime. Avoid pre-reading legacy surfaces;
+                        # current publication promotion remains the only write path.
+                        # Startup never waits for Dynasty. It starts any needed work in
+                        # the background and publishes core/presentation continuity.
                         _prepare_presentation_for_user(_beta_restore_user, context)
                         promotion = _promote_presentation_for_user(
                             _beta_restore_user,
