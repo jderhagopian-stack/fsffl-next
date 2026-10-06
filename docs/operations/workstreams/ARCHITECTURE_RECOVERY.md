@@ -124,17 +124,22 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-### P0.3 started — automatic static-asset identity
+### P0.3 implementation ready for merge gate — automatic static-asset identity
 
 - **P0.2 status:** implementation, tests, merge, and Render deployment are complete as recorded immediately below. P0.1's missing Dynasty ranks remain unresolved; the exact Safari journey remains a mandatory end-to-end acceptance test through the simplification sequence.
 - **Main base:** 762173840c186dffb2361f310a8c730a7518ba47, containing the P0.2 deployed checkpoint.
-- **Branch / PR / head:** branch work/p0-3-asset-fingerprints-20261006 created from that exact main SHA; no PR yet; branch head is the same SHA before implementation.
+- **Branch / PR / head:** `work/p0-3-asset-fingerprints-20261006`; no PR yet; implementation head `5eef140fb0d0910a5009a25662af2cad405a2ce2` is based on checkpoint `821b9bbf9307631f9df052a1ded48f6a357aef51`. A first GitHub API upload clipped `webapp.py`; that branch commit was corrected before PR creation, and the final diff is verified at six insertions/two deletions in that file.
 - **Live Render:** service srv-dae6k7vqj5pc73af7bt0, deployment dep-db2dr70ae00c73a085o0, live on commit 3a43ba8b36f60883d51e1924cc286bb9e6ab476e.
 - **P0.3 scope:** replace manual cache-buster maintenance with centrally generated content-derived static-asset fingerprints. Do not change app product behavior, State/publication lifecycle, or broaden asset delivery.
-- **Changes/tests/measurements:** none yet. P0.2 full suite and deploy remain as already recorded; do not repeat them for P0.3.
+- **Change:** the `/static` mount now hashes each served file's bytes with SHA-256 and redirects missing/stale `v` values to the current fingerprint while retaining other query parameters. Correct fingerprint URLs receive immutable one-year caching. Fingerprint memoization is capped at 512 file versions and invalidates on file metadata changes.
+- **Files:** `src/fsffl/product/static_assets.py`, `src/fsffl/product/webapp.py`, `tests/test_static_asset_fingerprints.py`.
+- **Focused validation:** dedicated fingerprint tests passed **3/3**; existing Atlas cache-key regression passed **1/1**; `compileall` and `git diff --check` passed. An additional broad local compatibility run was interrupted after TestClient stalled in this environment, including on a plain FastAPI route; do not count it as passing. Required full suite remains for the single stable merge gate.
+- **Measurements:** no production-serving or performance measurements yet. The change has not been deployed. P0.2 deployment details remain as recorded below; don't attribute its health read to P0.3.
+- **Full-suite status:** not run for P0.3; run once at the stable PR merge gate.
+- **Physical/hosted acceptance:** not yet run. After deployment, verify a live static asset with a stale query redirects to the content fingerprint, and the fingerprinted URL returns 200 with immutable cache headers. This is separate from the still-required physical P0.1 Safari journey.
 - **Frozen safeguards:** exact State/team/publication-generation safety; atomic publication; last-good; tenant isolation; Current, approved Dynasty, Career Intrinsic, Foundation 4 economics, Simulation 2.0/50k/RNG/replay. No #396 patch, P0.4/P0.5 early, #375, PIT/history expansion, Owner Intelligence, or distributed infrastructure.
-- **Exact next action:** inspect main static HTML/CSS/JS references and existing cache-buster conventions, then implement one bounded, centrally generated content hash/fingerprint mechanism with focused tests for changes and stable references. Record exact files and tests before PR.
-- **Safe handoff:** resume from branch work/p0-3-asset-fingerprints-20261006 at base SHA 762173840c186dffb2361f310a8c730a7518ba47. The workspace clone is stale and dirty with unrelated product edits; use connected GitHub tools or a clean branch checkout, do not overwrite existing changes. Do not repeat P0.1 baselines or reopen P0.2.
+- **Exact next action:** open one PR from this branch, wait for its single full-suite CI run, address any P0.3 regressions with focused tests, and merge only after green validation. Then deploy this main head, verify live fingerprint redirects/headers, record the exact deployment here, and advance to P0.4's published-reader contract.
+- **Safe handoff:** continue from branch `work/p0-3-asset-fingerprints-20261006` at `4390f0a6b660bb38a67a2f818caba32da4169948`. The older scratch clone is stale and dirty with unrelated product changes; do not overwrite it. Do not repeat P0.1 baselines or reopen P0.2 / #396.
 
 
 ### P0.2 implementation merged and deployed — hosted read verified
