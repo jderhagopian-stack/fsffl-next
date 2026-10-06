@@ -287,3 +287,19 @@ def test_last_good_recovery_is_compact_and_never_uses_blocking_takeover_copy() -
     assert "fsffl-shared-readiness-strip" in shell
     assert "panel.innerHTML=staleBanner+laAtlasHeader()" in league
     assert "renderFranchiseNorthStar();" in franchise
+
+
+def test_active_job_poll_is_the_readiness_owner_during_reconciliation() -> None:
+    shell = _shell()
+    refresh = _refresh()
+    poll = shell.split("async function fsfflPollSharedReadinessOnce()", 1)[1].split(
+        "function fsfflStartSharedReadinessPolling", 1
+    )[0]
+    accept = shell.split("function fsfflAcceptJobStatus(payload)", 1)[1].split(
+        "window.fsfflSharedReadiness={", 1
+    )[0]
+
+    assert "if(fsfflSharedReadinessJobActive())" in poll
+    assert "acceptJobStatus:fsfflAcceptJobStatus" in shell
+    assert "capability_readiness:readiness" in accept
+    assert refresh.count("window.fsfflSharedReadiness?.acceptJobStatus(payload)") == 2

@@ -166,6 +166,7 @@ async function pollIntelligenceJob(){
     const previousContext=state.context;
     const payload=await api('/api/intelligence/jobs/current');
     state.context={...state.context,...payload};
+    window.fsfflSharedReadiness?.acceptJobStatus(payload);
     fsfflCurrentJobId=payload.job_id||null;
     fsfflJobStateId=payload.state_id||payload.league_state_id||null;
 
@@ -261,6 +262,7 @@ async function maintainFsfflIntelligence(){
     const previousContext=state.context;
     const payload=await api('/api/intelligence/jobs/current');
     state.context={...state.context,...payload};
+    window.fsfflSharedReadiness?.acceptJobStatus(payload);
     await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
 
     if(payload.job_id&&(payload.status==='queued'||payload.status==='running')){
