@@ -9,9 +9,9 @@ Governing directive: `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFIC
 
 The read-only whole-system audit is complete and its architecture direction is **Management accepted**.
 
-**Implementation now owns the P0 corrective program as the sole writer.** Execute the accepted bounded sequence in the governing directive: measurable customer read path -> metadata-first persistence/egress correction -> automatic static fingerprints -> simpler published-reader contract -> lifecycle/resource consolidation -> development/operations simplification. Preserve the public-scale path without premature distributed-system complexity.
+**Work now owns the P0 corrective program as the sole writer.** Execute the accepted bounded sequence in the governing directive: measurable customer read path -> metadata-first persistence/egress correction -> automatic static fingerprints -> simpler published-reader contract -> lifecycle/resource consolidation -> development/operations simplification. Preserve the public-scale path without premature distributed-system complexity.
 
-Work remains appropriate for independent read-only verification, not as a parallel implementation stream against the same runtime/application surfaces. No new feature program starts while this gate is active.
+The separate Implementation stream is paused for this corrective. Work owns both continuity and execution of the accepted bounded slices; no parallel writer may modify the same runtime/application surfaces. Independent verification can be requested separately at Management gates. No new feature program starts while this gate is active.
 
 
 ## Management
