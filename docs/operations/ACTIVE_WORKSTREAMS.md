@@ -7,9 +7,11 @@ Updated: 2026-10-05
 
 Governing directive: `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md`.
 
-A read-only whole-system audit is authorized immediately. It must reconcile runtime lifecycle, persistence/publication, Supabase egress, resource ownership, frontend delivery, test/review strategy, and operating-doc drift against the Project Charter and North Star. The deliverable is a KEEP / SIMPLIFY / REMOVE / INVESTIGATE disposition and a bounded P0/P1/P2 corrective backlog.
+The read-only whole-system audit is complete and its architecture direction is **Management accepted**.
 
-No new feature program starts while this gate is active. Current Implementation may finish only the narrow live Dynasty Position & Depth physical blocker. The audit may run in parallel because it is read-only; it must not become a second implementation writer.
+**Implementation now owns the P0 corrective program as the sole writer.** Execute the accepted bounded sequence in the governing directive: measurable customer read path -> metadata-first persistence/egress correction -> automatic static fingerprints -> simpler published-reader contract -> lifecycle/resource consolidation -> development/operations simplification. Preserve the public-scale path without premature distributed-system complexity.
+
+Work remains appropriate for independent read-only verification, not as a parallel implementation stream against the same runtime/application surfaces. No new feature program starts while this gate is active.
 
 
 ## Management
