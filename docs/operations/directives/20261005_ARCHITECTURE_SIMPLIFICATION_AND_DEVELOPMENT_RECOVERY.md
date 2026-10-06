@@ -292,10 +292,10 @@ The problem under review is primarily runtime/application architecture, persiste
 
 ## Immediate concurrency rule
 
-- Current Implementation may finish the narrow live Dynasty Position & Depth physical blocker only.
-- The architecture audit is read-only and may run in parallel.
-- Do not create a second implementation writer against the same runtime code.
-- No new feature program begins until Management accepts the audit and P0 simplification path.
+- Work is the sole writer for the accepted P0 architecture-recovery program.
+- Pause the separate Implementation stream while Work owns this corrective; do not create a second writer against the same runtime/application code.
+- The unresolved Dynasty Position & Depth physical blocker is absorbed into Work's P0 customer-journey baseline/corrective rather than maintained as a competing implementation stream.
+- No new feature program begins until the P0 simplification path reaches a Management-defined stable point.
 
 ## Terminal condition
 
@@ -313,11 +313,11 @@ This corrective is complete only when Management can truthfully say:
 
 ## Management disposition — audit accepted
 
-**ACCEPTED FOR IMPLEMENTATION.**
+**ACCEPTED FOR WORK-OWNED CORRECTIVE EXECUTION.**
 
 Management accepts the read-only P0 Architecture Recovery audit as the governing basis for Phase B corrective execution.
 
-Implementation is the sole writer for the corrective program. Work's role was independent read-only audit/review; do not create a competing Work implementation stream against the same runtime/application surfaces.
+Work is the sole writer for the corrective program. The same Work environment that completed the independent read-only audit now owns the accepted Phase B execution so it can carry the whole-system context through the bounded corrective sequence. Pause the separate Implementation stream for this program; do not create competing writers against the same runtime/application surfaces.
 
 Accepted target:
 - canonical current State;
@@ -348,7 +348,7 @@ Management also adopts these future-facing clarifications:
 
 ## Approved Phase B execution order
 
-Implementation should execute bounded slices in this order, re-measuring after each material change:
+Work should execute bounded slices in this order, re-measuring after each material change:
 
 ### P0.1 — make the real customer read path measurable
 Establish one authoritative end-to-end journey from saved session/current State through Product Context and League Atlas to visible current-generation Dynasty evidence. Instrument restore stages, State/manifest/payload reads, first useful render, database call/byte counts and publication identity.
