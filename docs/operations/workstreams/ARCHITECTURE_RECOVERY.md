@@ -165,6 +165,70 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — green merge checkpoint; documentation-only advancement
+
+- **Main / live:** PR base `408431fd4bb0fb96daf800e7ec036616ba79c12c`. Render still serves #395 app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`, deployment `dep-db26ufh7lnhs73drheqg`.
+- **PR / branch / tested code head:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head `e7272f48210b878d6e520bbb4579d201bdc0b56c`. This handoff commit is docs-only and will advance PR head; refetch exact head.
+- **Validation at code/test head:** full CI `37414650538`, Atlas `37414650507`, Home `37414650509`, Franchise `37414650518`, PR164 `37414650568`, private-beta diagnostics `37414650546`, forecast trace `37414650535` all completed successfully.
+- **Fresh review:** Codex manually reviewed exact code/test head `e7272f48210b878d6e520bbb4579d201bdc0b56c` and reported “Didn't find any major issues.” Its earlier P1 about the internal route caller is fixed in `persistent_webapp.py` and covered by a focused test. Its cache-key finding is fixed; Atlas focused cache checks pass with refreshed bundle identities.
+- **Correction:** endpoint contract includes State + generation; server returns superseded/no rooms if either differs. Browser sends both and refreshes Product Context once through existing Atlas promotion. Superseded telemetry uses explicitly named superseding identity fields. Exact #395 A-visible/B-runtime test uses captured State IDs.
+- **Pre-merge / next:** because this record is docs-only, no application code changed since the green/reviewed code head. Require the exact updated PR head’s CI and mergeability to be green, then merge with expected head SHA. Deploy exact resulting main commit to Render (auto-deploy disabled), verify live, update this handoff with identities and stop for final physical iPhone/Safari acceptance.
+- **Unresolved:** final physical acceptance only. P0.1 stays open; no P0.2.
+- **Frozen safeguards:** exact State/team/generation fence; #370 formula; Current ranks; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; atomic publication and tenant isolation.
+
+### 2026-10-06 — Codex review P1 corrected; validation pending
+
+- **PR / branch / code head:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this note `2dee8ac27deb2884ac51c62d9797d091c52edfab`.
+- **Review finding:** initial Codex review was anchored to stale head `248fd83` and correctly identified an internal caller in `persistent_webapp.py`: Dynasty presentation promotion calls the route function directly without HTTP query arguments. This would break the publication builder after making IDs required. It also observed stale bundle keys; those were already updated before the latest full passing workflow.
+- **Correction:** internal presentation builder now passes the captured `context.league_state.state_id` and `context.publication_generation_id`. Added focused test assertions. Request contract remains required and server still returns superseded with no evidence on mismatch. Existing cache tokens reference final app/Atlas/shell bundle hashes and passed Atlas focused cache tests.
+- **Previous exact-head gate:** at `ffa78ec82bf0f99e68c8f94b8cf388044b00242b`, full CI `37414284224`, Atlas `37414284231`, Home `37414284246`, Franchise `37414284305`, PR164 `37414284207`, and forecast trace `37414284218` all passed. Because backend code changed after that gate, those results do not validate the new head.
+- **Next:** re-fetch PR head after this note; rerun focused and full CI, then request fresh Codex review on the final exact head. Merge and deploy only if green/clean. Stop for final physical iPhone/Safari acceptance. No P0.2.
+- **Safeguards:** exact State/team/generation validation stays intact; #370, Current, Simulation 2.0, Foundation 4 economics and all unrelated model semantics are unchanged.
+
+### 2026-10-06 — full CI contract callers updated; rerun pending
+
+- **PR / branch / code head:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this checkpoint `e3adc4cdc79c9383fc435603ca6ab9b5d6c91be2`.
+- **Full CI result at prior head:** run `37414005570` failed only five legacy cases in `tests/test_foundation4_career_forward_runtime.py`, all sending the newly publication-bound route no request IDs (3 returned HTTP 422; 2 failed reading error payload). The route correctly requires identity; the tests now provide the matching State/generation, preserving their intended ready/preparing/unavailable assertions. The new captured A/B case is separate and asserts superseded/no coordinator or presentation lookup.
+- **Already green at prior head:** Atlas focused `37414005536`, Home focused `37414005564`, PR164 focused `37414005546`, forecast trace `37414005555`. Earlier Atlas cache-key failures were corrected; this run’s Atlas focused suite passed with the refreshed tokens.
+- **Next / exact head:** this note advances PR head; re-fetch it. Wait for CI and focused checks to rerun. No merge until all required exact-head checks and fresh Codex review are clean.
+- **Scope:** test callsites only; no route/UI changes since the prior successful focus. Keep P0.1 and all safeguards unchanged.
+
+### 2026-10-06 — focused Atlas failures corrected; final-head validation pending
+
+- **PR / branch / exact code head:** PR #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code head before this note `df42c1a7bdaeee47db1bfb994d0210d38e6ecc89`. Documentation update advances it again; refetch before review.
+- **First focused result:** League Atlas North Star run `37413856028` failed 5 of 85 tests. Four failures were stale asset fingerprints after changing the Atlas/app bundles (including affected sha-derived assertion values); one static assertion still required the old unparameterized Dynasty URL. This did not identify a route logic failure. Full CI for the then-head was not complete and is not sufficient.
+- **Correction:** updated the static contract assertion; updated Atlas cache token to the modified bundle identity and the app/shell cache tokens in `index.html`. Changed assets are now reachable on physical Safari after deployment. The superseded trace fields remain explicitly named; no State B evidence is represented as served under A.
+- **Current CI queued:** run `37413969476` CI; League Atlas focused `37413969517`; Home `37413969498`; Franchise `37413969491`; PR164 `37413969485`; forecast trace `37413969541`. Runs refer to code head `df42c1a7bdaeee47db1bfb994d0210d38e6ecc89`, before this doc note.
+- **Next:** wait for exact-head reruns after this checkpoint, inspect any failures; when green, fresh exact-head Codex review, merge expected head, deploy resulting main to Render and verify exact live identity. Then stop for final physical Safari acceptance.
+- **Safeguards:** the superseded branch returns no rooms and exits before Career coordinator or presentation reads. Existing browser evidence fences remain active. No P0.2, #370 formula, Current, Simulation, or Foundation 4 economics changes.
+
+### 2026-10-06 — telemetry identity refinement; checks rerunning
+
+- **PR / branch:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this note `a648bbaa20426c0490f6aeca27fcb32d5d4637df`. This note advances the head; fetch exact head again.
+- **Material refinement:** on a superseded response, journey telemetry now records `superseding_state_id` and `superseding_publication_generation_id` explicitly. It no longer labels State B as `served_state_id`, since no B evidence was served under A’s request. The existing telemetry whitelist now preserves these names. Browser regression checks the distinction.
+- **Files:** route; League Atlas Dynasty loader; app journey telemetry whitelist; `tests/test_dynasty_presentation_handoff.py`; this handoff.
+- **Validation:** exact-head Actions must rerun after this change. Original #396 runs at the preceding head are not sufficient for merge.
+- **Next:** record exact new head; inspect all changed files, wait for focused and full checks, obtain fresh review at final exact head; merge/deploy only when green. Then stop for final physical Safari acceptance.
+- **Safety:** request mismatch exits before coordinator, persistence loader, or room assembly. All prior fences and frozen semantics remain.
+
+### 2026-10-06 — PR #396 opened; exact-head validation running
+
+- **Main / live:** PR base main `408431fd4bb0fb96daf800e7ec036616ba79c12c`; Render is unchanged, live deployment `dep-db26ufh7lnhs73drheqg` on app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
+- **Branch / PR / head:** PR #396, `work/p0-1-dynasty-publication-request-fence-20261006`, initial exact PR head `248fd83f7b5356686e7913f2555b8867a1f96b9b`. This note will advance the branch head; re-fetch PR head before review/merge.
+- **Validation running at recorded head:** League Atlas focused workflow run `37413730682`; Home focused run `37413730639`; full CI run `37413730702`. All were queued when checked. Focused local command remains `pytest tests/test_dynasty_presentation_handoff.py`; repository mutation/testing is performed through GitHub and Actions.
+- **Next:** inspect full PR diff, wait for exact-head checks, fix any concrete failure on this same PR, rerun checks on final head, conduct fresh review, merge only the exact green head, deploy the resulting main commit and verify it live. Then stop for final physical iPhone/Safari acceptance. P0.2 remains held.
+- **Unresolved / safeguards:** physical acceptance has failed on the request-contract race. No code has been deployed for this correction. Keep every publication/team fence and all frozen #370/Current/Simulation/Foundation safeguards.
+
+### 2026-10-06 — publication-bound Dynasty request implemented; validation pending
+
+- **Main / live:** base main before pre-implementation checkpoint `c49295a56ce5ac676a271e0e6112af53a7064f36`; checkpoint commit `408431fd4bb0fb96daf800e7ec036616ba79c12c`. Live Render remains service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db26ufh7lnhs73drheqg`, application commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
+- **Branch / PR / head:** `work/p0-1-dynasty-publication-request-fence-20261006`, no PR yet. Code/test head `21b94cffcf10ea560101f311305be0aa43f9ab9c`; this documentation checkpoint will produce the head to open as one PR.
+- **Files:** `foundation4_shadow_routes.py` requires the requested Atlas `state_id` and `publication_generation_id`, compares both with the runtime publication before coordinator/presentation reads, and returns explicit `superseded` with requested and superseding identities and no rooms on mismatch. `league_comparison.js` sends both values; on superseded it clears only its in-flight loading state and calls the existing read-first `loadContext()` hook, whose context update invokes existing Atlas promotion. Added regression uses exact captured A/B State IDs and generation A; it asserts the runtime’s coordinator and presentation loader are not consulted. Added static browser contract assertions.
+- **Validation:** not run yet; GitHub Actions PR validation required. Focused tests: `pytest tests/test_dynasty_presentation_handoff.py`.
+- **Measurements / acceptance:** no new latency, RSS, egress or browser measurements. The 11:54–12:00 ET failed physical journey and #395 telemetry remain the before-change evidence. No claim of hosted acceptance.
+- **Unresolved / exact next action:** checkpoint this record, open one PR, run focused and full CI at stable head, obtain fresh exact-head review, merge and deploy the exact approved main commit. Then stop for final physical iPhone/Safari acceptance. P0.2 remains blocked until it passes.
+- **Frozen safeguards:** current State/team/generation fence, #370 formula, Current ranks, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, atomic publication, tenant isolation. No model change or persistence refactor.
+
 ### 2026-10-06 — #395 physical acceptance failed; request-contract checkpoint
 
 - **Main / live:** main `c49295a56ce5ac676a271e0e6112af53a7064f36`; Render service `srv-dae6k7vqj5pc73af7bt0`, deployment `dep-db26ufh7lnhs73drheqg`, #395 app commit `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926` live.

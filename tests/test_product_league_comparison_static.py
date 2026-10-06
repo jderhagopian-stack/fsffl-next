@@ -33,7 +33,7 @@ def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authorit
     assert "data-position-view=\"current\"" in source
     assert "data-position-view=\"dynasty\"" in source
     assert "dynasty?laDynastyRoom(view.team_id,position):laStrength(view,position)" in source
-    assert "api('/api/league/dynasty-position-rooms')" in source
+    assert "api(`/api/league/dynasty-position-rooms?${query}`)" in source
     assert "raw holistic career-forward reference" in source
     assert "rostered · breadth" in source
     assert "depthBucket=player=>player.roster_slot==='IR'?'IR':player.roster_slot==='TAXI'?'TAXI':player.projected_starter?'STARTER':'BENCH'" in source

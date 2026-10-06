@@ -348,8 +348,15 @@ async function laLoadDynastyRooms(){
     if(typeof window.fsfflJourneyEvent==='function')window.fsfflJourneyEvent('dynasty_attempt',{attempt:attempt+1,target_state_id:requestedStateId||'',publication_generation_id:requestedGeneration||''});
     let lastResponse=null;
     try{
-      const payload=await api('/api/league/dynasty-position-rooms');lastResponse=payload;
+      const query=new URLSearchParams({state_id:requestedStateId||'',publication_generation_id:requestedGeneration||''});
+      const payload=await api(`/api/league/dynasty-position-rooms?${query}`);lastResponse=payload;
       if(!stillCurrent()){abandonSuperseded();return;}
+      if(payload?.status==='superseded'){
+        window.fsfflJourneyEvent?.('dynasty_publication_superseded',{outcome:'superseded',target_state_id:requestedStateId||'',superseding_state_id:payload.superseding_state_id||'',superseding_publication_generation_id:payload.superseding_publication_generation_id||'',handoff_to_generation:payload.superseding_publication_generation_id||''});
+        fsfflLeagueDynastyRoomsLoadingRequestId=0;fsfflLeagueStructureState.dynastyRooms=null;fsfflLeagueStructureState.dynastyRoomStatus='idle';renderLeagueComparison();
+        if(typeof loadContext!=='function'||!await loadContext())throw new Error('The Atlas publication advanced; refresh Product Context to promote Atlas before retrying Dynasty.');
+        return;
+      }
       if(payload?.league_state_id&&payload.league_state_id!==requestedStateId){window.fsfflJourneyEvent?.('dynasty_state_mismatch',{outcome:'failure',target_state_id:requestedStateId||'',served_state_id:payload.league_state_id||'',publication_generation_id:payload.publication_generation_id||''});throw new Error('Career-forward room evidence belongs to a different league State')}
       if(requestedGeneration&&payload?.publication_generation_id!==requestedGeneration){window.fsfflJourneyEvent?.('dynasty_generation_mismatch',{outcome:'failure',target_state_id:requestedStateId||'',served_state_id:payload?.league_state_id||'',publication_generation_id:payload?.publication_generation_id||'',handoff_to_generation:requestedGeneration});throw new Error('Career-forward room evidence belongs to a different publication generation')}
       if(payload?.status==='preparing'||payload?.status==='building'||payload?.build_status==='queued'||payload?.build_status==='running'){

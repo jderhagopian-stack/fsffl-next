@@ -87,13 +87,31 @@ def install_career_intrinsic_routes(
         return payload
 
     @app.get("/api/league/dynasty-position-rooms")
-    def dynasty_position_rooms(user_id: str = Depends(require_beta_user)):
-        """Return Dynasty rooms from canonical Career Intrinsic production authority."""
+    def dynasty_position_rooms(
+        state_id: str,
+        publication_generation_id: str,
+        user_id: str = Depends(require_beta_user),
+    ):
+        """Return Dynasty rooms only for the exact League Atlas publication requested."""
 
         context = runtime_store.get(user_id)
         if context.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
         state = context.league_state
+        if (
+            state_id != state.state_id
+            or publication_generation_id != context.publication_generation_id
+        ):
+            # Atlas may remain visible while the mutable runtime advances. Never
+            # answer that old request with evidence for this newer publication.
+            return {
+                "status": "superseded",
+                "requested_state_id": state_id,
+                "requested_publication_generation_id": publication_generation_id,
+                "superseding_state_id": state.state_id,
+                "superseding_publication_generation_id": context.publication_generation_id,
+                "reason": "The League Atlas publication has advanced; promote Atlas before retrying.",
+            }
 
         # Canonical Career Intrinsic is authoritative. A persisted presentation
         # snapshot is only last-good fallback while the exact-State production

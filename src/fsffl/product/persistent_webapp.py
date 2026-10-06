@@ -1883,7 +1883,12 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
                             else "Dynasty position-room evidence is unsupported or unavailable for this State"
                         ),
                     }
-                payload = endpoint(user_id=user_id, **kwargs)
+                payload = endpoint(
+                    user_id=user_id,
+                    state_id=context.league_state.state_id,
+                    publication_generation_id=context.publication_generation_id,
+                    **kwargs,
+                )
                 if payload.get("status") != "ready":
                     return {
                         "status": "unavailable",
