@@ -165,6 +165,15 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — Codex review P1 corrected; validation pending
+
+- **PR / branch / code head:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this note `2dee8ac27deb2884ac51c62d9797d091c52edfab`.
+- **Review finding:** initial Codex review was anchored to stale head `248fd83` and correctly identified an internal caller in `persistent_webapp.py`: Dynasty presentation promotion calls the route function directly without HTTP query arguments. This would break the publication builder after making IDs required. It also observed stale bundle keys; those were already updated before the latest full passing workflow.
+- **Correction:** internal presentation builder now passes the captured `context.league_state.state_id` and `context.publication_generation_id`. Added focused test assertions. Request contract remains required and server still returns superseded with no evidence on mismatch. Existing cache tokens reference final app/Atlas/shell bundle hashes and passed Atlas focused cache tests.
+- **Previous exact-head gate:** at `ffa78ec82bf0f99e68c8f94b8cf388044b00242b`, full CI `37414284224`, Atlas `37414284231`, Home `37414284246`, Franchise `37414284305`, PR164 `37414284207`, and forecast trace `37414284218` all passed. Because backend code changed after that gate, those results do not validate the new head.
+- **Next:** re-fetch PR head after this note; rerun focused and full CI, then request fresh Codex review on the final exact head. Merge and deploy only if green/clean. Stop for final physical iPhone/Safari acceptance. No P0.2.
+- **Safeguards:** exact State/team/generation validation stays intact; #370, Current, Simulation 2.0, Foundation 4 economics and all unrelated model semantics are unchanged.
+
 ### 2026-10-06 — full CI contract callers updated; rerun pending
 
 - **PR / branch / code head:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this checkpoint `e3adc4cdc79c9383fc435603ca6ab9b5d6c91be2`.
