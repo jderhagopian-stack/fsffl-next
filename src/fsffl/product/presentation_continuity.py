@@ -264,9 +264,9 @@ class PresentationContinuityStore:
         """Drop process-local validation hints; durable presentation stays intact."""
 
         with self._validation_lock:
-            stale = [item for item in self._validated_snapshots if item[0] == user_id]
+            stale = [item for item in self._known_snapshot_manifests if item[0] == user_id]
             for item in stale:
-                self._validated_snapshots.pop(item, None)
+                self._known_snapshot_manifests.pop(item, None)
             return len(stale)
 
     @staticmethod
@@ -278,7 +278,7 @@ class PresentationContinuityStore:
     ) -> tuple[str, str, str, str | None]:
         return user_id, league_id, league_state_id, selected_team_id
 
-    def _remember_validated_snapshot(
+    def _remember_snapshot_manifest(
         self,
         *,
         user_id: str,
@@ -294,7 +294,7 @@ class PresentationContinuityStore:
             selected_team_id,
         )
         with self._validation_lock:
-            self._validated_snapshots[key] = canonical_fingerprint(manifest_payload)
+            self._known_snapshot_manifests[key] = canonical_fingerprint(manifest_payload)
 
     def known_snapshot_available(
         self,
@@ -317,7 +317,7 @@ class PresentationContinuityStore:
             selected_team_id,
         )
         with self._validation_lock:
-            return key in self._validated_snapshots
+            return key in self._known_snapshot_manifests
 
     def legacy_snapshot_available(
         self,
@@ -447,7 +447,7 @@ class PresentationContinuityStore:
                 or int(expected.get("payload_size_bytes") or -1) < 0
             ):
                 return False
-        self._remember_validated_snapshot(
+        self._remember_snapshot_manifest(
             user_id=user_id,
             league_id=league_id,
             league_state_id=league_state_id,
@@ -541,7 +541,7 @@ class PresentationContinuityStore:
                 runtime.selected_team_id,
             )
             with self._validation_lock:
-                known_manifest_fingerprint = self._validated_snapshots.get(known_key)
+                known_manifest_fingerprint = self._known_snapshot_manifests.get(known_key)
             manifest_fingerprint = canonical_fingerprint(manifest.payload)
             if known_manifest_fingerprint != manifest_fingerprint:
                 if not self.has_snapshot(
