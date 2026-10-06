@@ -534,27 +534,17 @@ class PresentationContinuityStore:
             )
             if manifest is None:
                 return None
-            known_key = self._snapshot_key(
-                user_id,
-                served_league_id,
-                served_state_id,
-                runtime.selected_team_id,
-            )
-            with self._validation_lock:
-                known_manifest_fingerprint = self._known_snapshot_manifests.get(known_key)
-            manifest_fingerprint = canonical_fingerprint(manifest.payload)
-            if known_manifest_fingerprint != manifest_fingerprint:
-                if not self.has_snapshot(
-                    user_id=user_id,
-                    league_id=served_league_id,
-                    league_state_id=served_state_id,
-                    selected_team_id=runtime.selected_team_id,
-                    manifest_record=manifest,
-                ):
-                    return None
-                # Validate the manifest already read against required-surface metadata.
-                # The expected publication generation and payload hash are still checked
-                # below before any presentation evidence can be returned.
+            # Resolve completeness from the exact manifest read for this request.
+            # Fingerprint hints cannot prove that a required row still exists after
+            # a same-State republish or external invalidation.
+            if not self.has_snapshot(
+                user_id=user_id,
+                league_id=served_league_id,
+                league_state_id=served_state_id,
+                selected_team_id=runtime.selected_team_id,
+                manifest_record=manifest,
+            ):
+                return None
 
             promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
             if (
