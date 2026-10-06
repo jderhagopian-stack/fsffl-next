@@ -10,6 +10,7 @@ from threading import RLock, local
 from fsffl.persistence.contracts import (
     ArtifactKey,
     PersistenceStore,
+    ReusableArtifactMetadataRecord,
     ReusableArtifactRecord,
     canonical_fingerprint,
     utc_now,
@@ -392,6 +393,7 @@ class PresentationContinuityStore:
         required_surfaces: Sequence[str] = REQUIRED_PRESENTATION_SURFACES,
         selected_team_id: str | None = None,
         manifest_record: ReusableArtifactRecord | None = None,
+        metadata_records: Mapping[ArtifactKey, ReusableArtifactMetadataRecord] | None = None,
     ) -> bool:
         """Check manifest identity and required artifact presence without payload reads.
 
@@ -431,13 +433,16 @@ class PresentationContinuityStore:
             if isinstance(item, Mapping)
         }
         for surface in required_surfaces:
-            metadata = self._persistence.get_reusable_artifact_metadata(
-                _surface_key(
-                    user_id=user_id,
-                    league_id=league_id,
-                    promotion_id=promotion_id,
-                    surface=surface,
-                )
+            key = _surface_key(
+                user_id=user_id,
+                league_id=league_id,
+                promotion_id=promotion_id,
+                surface=surface,
+            )
+            metadata = (
+                metadata_records.get(key)
+                if metadata_records is not None
+                else self._persistence.get_reusable_artifact_metadata(key)
             )
             expected = expected_hashes.get(surface)
             if (
@@ -525,24 +530,60 @@ class PresentationContinuityStore:
             served_as_of: datetime,
             expected_generation_id: str,
         ) -> dict[str, object] | None:
-            manifest = self._persistence.get_reusable_artifact(
-                _manifest_key(
+            manifest_key = _manifest_key(
+                user_id=user_id,
+                league_id=served_league_id,
+                league_state_id=served_state_id,
+            )
+            payload_key = _surface_key(
+                user_id=user_id,
+                league_id=served_league_id,
+                promotion_id=expected_generation_id,
+                surface=surface,
+            )
+            required_keys = tuple(
+                _surface_key(
                     user_id=user_id,
                     league_id=served_league_id,
-                    league_state_id=served_state_id,
+                    promotion_id=expected_generation_id,
+                    surface=required_surface,
                 )
+                for required_surface in REQUIRED_PRESENTATION_SURFACES
             )
+            bundle_reader = getattr(
+                self._persistence,
+                "get_reusable_artifact_read_bundle",
+                None,
+            )
+            bundle = (
+                bundle_reader(
+                    manifest_key=manifest_key,
+                    metadata_keys=required_keys,
+                    payload_key=payload_key,
+                )
+                if callable(bundle_reader)
+                else None
+            )
+            if bundle is None:
+                manifest = self._persistence.get_reusable_artifact(manifest_key)
+                record = None
+            else:
+                manifest = bundle.manifest
+                record = bundle.requested_payload
             if manifest is None:
                 return None
-            # Resolve completeness from the exact manifest read for this request.
-            # Fingerprint hints cannot prove that a required row still exists after
-            # a same-State republish or external invalidation.
+
+            # The production bundle is one SQL statement snapshot: manifest
+            # authority, required-surface identities and consumed payload all come
+            # from the same committed view. The fallback supports older test/store
+            # adapters without changing the stricter identity and hash fences.
             if not self.has_snapshot(
                 user_id=user_id,
                 league_id=served_league_id,
                 league_state_id=served_state_id,
                 selected_team_id=runtime.selected_team_id,
                 manifest_record=manifest,
+                metadata_records=(bundle.metadata if bundle is not None else None),
             ):
                 return None
 
@@ -555,14 +596,8 @@ class PresentationContinuityStore:
             ):
                 return None
 
-            record = self._persistence.get_reusable_artifact(
-                _surface_key(
-                    user_id=user_id,
-                    league_id=served_league_id,
-                    promotion_id=promotion_id,
-                    surface=surface,
-                )
-            )
+            if bundle is None:
+                record = self._persistence.get_reusable_artifact(payload_key)
             if record is None:
                 return None
             wrapper = dict(record.payload)
