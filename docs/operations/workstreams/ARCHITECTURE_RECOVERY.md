@@ -165,6 +165,14 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 
 ## Execution log
 
+### 2026-10-06 — full CI contract callers updated; rerun pending
+
+- **PR / branch / code head:** #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code/test head before this checkpoint `e3adc4cdc79c9383fc435603ca6ab9b5d6c91be2`.
+- **Full CI result at prior head:** run `37414005570` failed only five legacy cases in `tests/test_foundation4_career_forward_runtime.py`, all sending the newly publication-bound route no request IDs (3 returned HTTP 422; 2 failed reading error payload). The route correctly requires identity; the tests now provide the matching State/generation, preserving their intended ready/preparing/unavailable assertions. The new captured A/B case is separate and asserts superseded/no coordinator or presentation lookup.
+- **Already green at prior head:** Atlas focused `37414005536`, Home focused `37414005564`, PR164 focused `37414005546`, forecast trace `37414005555`. Earlier Atlas cache-key failures were corrected; this run’s Atlas focused suite passed with the refreshed tokens.
+- **Next / exact head:** this note advances PR head; re-fetch it. Wait for CI and focused checks to rerun. No merge until all required exact-head checks and fresh Codex review are clean.
+- **Scope:** test callsites only; no route/UI changes since the prior successful focus. Keep P0.1 and all safeguards unchanged.
+
 ### 2026-10-06 — focused Atlas failures corrected; final-head validation pending
 
 - **PR / branch / exact code head:** PR #396, `work/p0-1-dynasty-publication-request-fence-20261006`; code head before this note `df42c1a7bdaeee47db1bfb994d0210d38e6ecc89`. Documentation update advances it again; refetch before review.
