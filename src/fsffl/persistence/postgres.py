@@ -254,17 +254,24 @@ class PostgresPersistenceStore(PersistenceStore):
         *,
         manifest_key: ArtifactKey,
         metadata_keys: Sequence[ArtifactKey],
-        payload_key: ArtifactKey,
+        payload_key: ArtifactKey | None,
     ) -> ReusableArtifactReadBundle:
-        """Read publication authority and its consumer from one SQL snapshot.
+        """Read publication authority and sibling identities from one SQL snapshot.
 
-        Payload JSON is returned only for the small manifest and the one requested
-        surface. Required sibling surfaces contribute identity metadata only.
+        Payload JSON is returned for the small manifest and, when requested, one
+        surface. Readiness-only consumers pass no payload key, avoiding unnecessary
+        surface JSON transfer while keeping completeness in the same statement view.
         """
-        payload_keys = {manifest_key, payload_key}
+        payload_keys = {manifest_key}
+        if payload_key is not None:
+            payload_keys.add(payload_key)
+        requested_keys = tuple(
+            dict.fromkeys(
+                (manifest_key, *metadata_keys, *((payload_key,) if payload_key else ()))
+            )
+        )
         requested: dict[ArtifactKey, bool] = {
-            key: key in payload_keys
-            for key in (manifest_key, *metadata_keys, payload_key)
+            key: key in payload_keys for key in requested_keys
         }
         values = tuple(
             value
