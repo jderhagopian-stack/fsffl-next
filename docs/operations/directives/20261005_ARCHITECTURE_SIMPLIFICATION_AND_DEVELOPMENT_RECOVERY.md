@@ -78,6 +78,39 @@ Background work builds or replaces intelligence.
 Presentation reads published intelligence.
 A page read must not quietly become an intelligence-orchestration engine.
 
+## Scale, speed, efficiency, and user-experience constraint
+
+This corrective must optimize for **both** the current private-beta experience and the eventual public-scale product.
+
+Treat `docs/operations/directives/20260929_PUBLIC_SCALE_ARCHITECTURE_PRINCIPLE.md` as co-governing authority.
+
+The target is not “make everything fit one free Render process forever.” The target is:
+
+**a simple core lifecycle whose correctness does not depend on one process, and whose throughput can later scale mainly by adding web/worker/cache/database capacity rather than rewriting the application.**
+
+The audit must therefore test every proposed simplification against four questions:
+
+1. **Speed:** does it reduce time-to-useful-State, ordinary read latency, refresh/publish latency, and unnecessary network/database work?
+2. **Efficiency:** does it eliminate redundant compute, duplicate payload transfer, repeated restores, unbounded retention, and unnecessary polling?
+3. **User experience:** can the user reach current/last-good intelligence quickly, understand truthful progress, and continue using unaffected surfaces while heavy work runs?
+4. **Scale path:** can the same lifecycle later support multiple web instances and independent heavy workers without moving model authority into the UI or requiring sticky-session/process-local correctness?
+
+Required future-scale properties to preserve while simplifying:
+- replaceable/stateless foreground web tier for correctness;
+- heavy Forecast/Simulation/Intrinsic/Market work outside request latency;
+- durable/idempotent job identity and exact-input reuse;
+- clear module/job boundaries so heavy workloads can move to workers later;
+- explicit resource ownership and bounded caches;
+- multi-user/tenant isolation;
+- backpressure/fairness hooks at clear workload boundaries;
+- provider-rate-limit awareness;
+- observability sufficient for capacity planning;
+- no requirement for Redis, queues, microservices, distributed locks, or paid infrastructure **now** unless current evidence proves they are necessary.
+
+Do not preserve accidental single-process complexity merely because it exists today. Equally, do not introduce premature distributed-system complexity in anticipation of scale.
+
+A successful target architecture should be **simpler in private beta and easier to scale later**.
+
 ## Phase A — read-only whole-system audit
 
 Run one bounded read-only audit before broad corrective coding.
