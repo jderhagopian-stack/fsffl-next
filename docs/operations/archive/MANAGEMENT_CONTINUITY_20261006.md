@@ -1,0 +1,739 @@
+# FSFFL NEXT — Management Continuity
+
+## Updated
+2026-10-05
+
+## Immediate Management objective — restore nimble development
+
+The immediate priority is the **accepted P0 Architecture Simplification and Development Recovery program** governed by `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md`.
+
+The read-only audit is complete. Management accepts the conclusion that the analytical authority chain remains sound while runtime/application plumbing, persistence/publication reads, resource/egress behavior, browser delivery, testing/review overhead and stale operating state have become materially too complex.
+
+Work is the sole writer for corrective execution. The separate Implementation stream is paused for this program so ownership is not split across two agents. The first approved sequence is: measure the real customer read path; metadata-first persistence/egress correction; automatic asset fingerprints; simpler published-reader contract; lifecycle/resource consolidation; development/operations simplification.
+
+Preserve future architecture explicitly: one current publication does not erase immutable PIT/history; scenario/counterfactual jobs stay derivative from the baseline; Owner Intelligence/League Market/history products consume shared historical evidence; artifact storage remains replaceable behind stable identity/metadata/payload interfaces.
+
+New #375 / PIT-history product expansion / Owner Intelligence breadth remains HOLD through the P0 recovery gate.
+
+## Prior Management objective
+Do not trade reliability for new capability. Do not restart completed Research. Preserve the authority chain:
+
+Data -> Point-in-Time State -> Forecast -> Simulation -> Value -> Decision -> Search/Optimization -> Analytics/API -> Presentation
+
+## Current stabilization state
+The atomic-publication program is the sole product-critical path.
+
+Completed / merged runtime corrections:
+- #284 — atomic intelligence publication / read isolation;
+- #285 — serialize managed-team publication race;
+- #287 — restore published managed-team + generation identity on cold exact-State activation;
+- #289 — deterministic managed-team hosted proof improvements.
+
+Current corrective:
+- PR #290 — `Close final atomic-publication acceptance edges`
+- head: `3ac755799e3f9d7a91e7ecf947e9d95f084ae908`
+- state: OPEN / mergeable
+- focused validations: green
+- full CI: RED, one deterministic failure
+
+Exact CI result:
+- 1 failed / 1,779 passed
+- failure: `test_changed_state_restore_carries_only_team_matched_served_publication_generation`
+- `restore_runtime_snapshot()` carries `served_publication_generation_id == "served-generation-a"`
+- but `PersistentPrivateBetaRuntimeStore.restore_user()` constructs active `ServedIntelligenceSnapshot.publication_generation_id=None`
+- therefore changed-State continuity still loses the served generation identity during active runtime restoration even when the team-matched persisted identity is valid.
+
+This is not accepted as CI noise.
+
+## Immediate Implementation requirement
+1. Fix the exact served-generation propagation mismatch without weakening the team-match / same-league / different-State / visible-snapshot predicates introduced to close #288 review findings.
+2. Keep the final publication sequence serialized against managed-team/league identity changes so team selection cannot delete an active working generation during checkpoint -> presentation promotion -> durable publication -> in-memory swap.
+3. Full CI green.
+4. Merge the corrected exact lineage.
+5. Deploy the exact merge SHA.
+6. Run hosted FSFFL -> Hodor -> FSFFL plus same-State refresh, active-read overlap, cross-surface generation identity, managed-team change, interruption/restart and status/banner truth.
+7. Only then return for physical iPhone/Safari validation.
+8. Runtime stabilization closes only after physical validation.
+
+No Forecast / Simulation / Value / Intrinsic semantic changes during this corrective.
+
+## Physical acceptance expectation
+On iPhone/Safari:
+- Home, Franchise, League Atlas, Player Intelligence and Market load from one coherent published generation;
+- a same-State intelligence refresh never makes previously valid Market / Intrinsic / Simulation data disappear merely because the replacement generation is mid-build;
+- banner/readiness copy matches visible surface truth;
+- one managed-team change survives refresh/restart;
+- FSFFL -> Hodor -> FSFFL round-trip does not cross-contaminate generations;
+- foreground reads remain usable while background reconciliation runs.
+
+## Post-stabilization near-term development sequence
+Execute only after runtime closure.
+
+### 1. In-season current-year Forecast
+Production:
+- Actual YTD statistics/points are facts;
+- governed third-party raw-stat ROS projections own the remaining-season expectation;
+- FSFFL league scoring downstream;
+- expected finish = Actual YTD + governed ROS;
+- separate availability from conditional healthy production;
+- no double-counting status/injury effects already embedded in ROS.
+
+Prospective PIT ROS capture is perishable and should be preserved.
+
+Native FSFFL ROS remains shadow Research until PIT comparison earns authority.
+
+### 2. Simulation 2.0
+Controlling directive:
+`docs/operations/directives/20260928_SIMULATION_2_0_PROGRAM.md`
+
+Bring forward / re-derive the strongest legacy capabilities:
+- real league schedule and divisions;
+- weekly player outcome distributions;
+- legal week-specific lineup optimization;
+- byes;
+- explicit empty-slot behavior;
+- availability / missed-game uncertainty and legal bench substitution;
+- historical/player-position volatility with shrinkage;
+- actual playoff qualification, seeding, byes and bracket rules;
+- expected wins / points;
+- full finish, playoff, division, bye, first-place and title distributions;
+- deterministic replay seeds;
+- governed counterfactual competitive-outcome deltas;
+- replayable Multiverse worlds / unusual outcome examples.
+
+Current-season engine:
+- completed weeks are facts;
+- future weeks are simulated from governed ROS distributions;
+- preseason / current / forward outlook remain separate.
+
+Performance architecture:
+- canonical 50,000-run authority remains until convergence evidence changes it;
+- compile static State once;
+- vectorized/batched worlds;
+- cache reusable lineup / substitution structures;
+- common random numbers for A/B scenarios;
+- dependency-based selective recomputation;
+- persist exact State+Forecast+model results;
+- ordinary page reads never rerun Simulation;
+- progressive explicitly provisional scenario batches (~2.5k-5k screening -> 15k-50k confirmation);
+- memory-bounded batching;
+- no uncontrolled multiprocess expansion on the free-tier host;
+- run 5k-100k convergence research before changing canonical 50k.
+
+Simulation also owns future team-of-origin pick-slot distributions and competitive counterfactual deltas.
+
+### 3. Origin-aware draft-pick Value
+Simulation answers: where is this origin-team pick likely to land?
+Value answers: what is that full slot distribution economically worth?
+
+Preserve exact pick identity:
+- year;
+- round;
+- origin team;
+- current owner;
+- actual league draft-order rules.
+
+Use:
+`PICK_INTRINSIC = E[value(slot, draft_class, horizon)]`
+
+Value the full nonlinear slot distribution, not only the expected slot.
+
+Separate:
+- Broad Market pick value;
+- FSFFL Intrinsic origin-aware value;
+- future League Market evidence;
+- downstream Team Utility.
+
+Uncertainty widens with horizon. Generic year/round values are fallback priors only.
+
+### 4. Long-Term Intrinsic
+Resume the already accepted contract:
+- Current Intrinsic = Y1-Y3;
+- Long-Term Intrinsic = Y4-Y7;
+- Y8 coarse only;
+- separate 0-10,000 rulers;
+- no arbitrary horizon weighting;
+- preserve exact-vs-set-valued Forecast authority and uncertainty.
+
+### 5. Historical / PIT market foundation
+Build/strengthen:
+- authoritative historical transaction ledger;
+- historical PIT rosters / State;
+- Historical Pick Coordinate with uncertainty/provenance;
+- package structure/concentration evidence;
+- contemporaneous Forecast/Value context where reconstructable;
+- stable owner/team identity through seasons.
+
+Do not substitute current values for historical values.
+
+### 6. League Market + Owner Intelligence
+Add the third economic lens:
+- Broad Market;
+- FSFFL Intrinsic;
+- League Market;
+- Team Utility downstream.
+
+Owner Intelligence is evidence-based and directional:
+- positional preferences;
+- pick appetite;
+- consolidation/diversification behavior;
+- roster-construction tendencies;
+- counterparties;
+- package shapes.
+
+No fabricated precise acceptance probability.
+
+### 7. Trade Decision
+Consume:
+- legality;
+- Broad Market;
+- Current + Long-Term Intrinsic;
+- League Market;
+- team need / roster construction before and after;
+- Simulation competitive deltas;
+- contender/retool/rebuild context;
+- pick timing / uncertainty;
+- package concentration;
+- bilateral counterparty effects.
+
+Keep disagreements among dimensions explicit rather than collapsing into one opaque score.
+
+### 8. Market / Search / Optimization
+Only after the upstream inputs are mature:
+- opportunity discovery;
+- roster-aware package generation;
+- bounded counters;
+- market-test options;
+- upgrade/downgrade paths;
+- horizon / position targeting;
+- owner-fit directional ranking;
+- explain why the opportunity exists.
+
+Search stays downstream of Decision.
+
+### 9. Intelligence surfaces
+Expose the matured foundations through North Star:
+- Player Intelligence;
+- Franchise;
+- League Atlas;
+- Owner Intelligence;
+- Market;
+- Trade Center.
+
+## Work usage pattern
+Use short read-only Work bursts as independent invariant reviewers:
+1. architecture red-team before a substantial corrective;
+2. focused adversarial PR review before merge;
+3. exact-SHA DEPLOY/HOLD proof audit;
+4. black-box cross-surface consistency audit after deploy.
+
+Instruction principle:
+**Prefer one violated invariant that explains a class of failures over many endpoint-specific symptoms.**
+
+Work should not become a parallel implementation stream.
+
+## Management preferences
+- User wants the app usable before new model/features.
+- After usability, robustness and foundational intelligence take priority over cosmetic feature work.
+- Keep Management chat concise.
+- Persist material Management decisions to `docs/operations/` before handing worker chats new scope.
+- Prefer short continuation prompts.
+- Watch chat length; when this Management conversation becomes unwieldy, start a new Management chat using this file + canonical operations docs as the handoff rather than recreating decisions from chat history.
+
+
+## Post-stabilization use of Work for rapid execution
+After runtime stabilization closes, Management may use short, explicitly authorized Work execution bursts to accelerate bounded capabilities whose authority contracts are already settled.
+
+Work is appropriate for rapid implementation when all of the following are true:
+- upstream authority and data contracts are already frozen;
+- the capability has a narrow repo-bounded acceptance contract;
+- no new empirical coefficient/model promotion is required;
+- the change can be validated deterministically and rolled back cleanly;
+- Work owns the exact branch/PR through tests, merge/deploy only when explicitly authorized.
+
+Good near-term Work candidates:
+- PIT capture / evidence persistence plumbing;
+- Actual YTD + governed third-party ROS integration once provider contract is frozen;
+- exposing already-governed Current / Long-Term Intrinsic outputs in product surfaces;
+- exact provenance / diagnostics / publication metadata;
+- bounded historical transaction / roster-state ingestion and normalization;
+- presentation/API wiring for already-authoritative outputs;
+- deterministic acceptance harnesses and regression coverage.
+
+Use a slower Research -> directive -> implementation path for capabilities that create new authority or need empirical validation, including:
+- Simulation 2.0 distribution/correlation/calibration changes;
+- future multi-season team-strength / pick-slot forecasting;
+- origin-aware pick-value curves if calibration is incomplete;
+- League Market inference;
+- Owner Intelligence behavior models;
+- trade acceptance / decision coefficients;
+- new Search/Optimization objective functions.
+
+Preferred cadence after stabilization:
+1. Management freezes a bounded directive and acceptance criteria.
+2. Work performs a short implementation burst on current main / dedicated branch.
+3. Independent review (Work or Codex) attacks the governing invariant before merge.
+4. Merge/deploy exact SHA only when checks are green and the directive is satisfied.
+5. Physical/product smoke where the capability is user-facing.
+
+Do not let Work and the main Implementation stream modify the same authority surface concurrently. Parallelism should be by clearly separated workstream, not by overlapping code ownership.
+
+
+## Latest stabilization delta — after PR #290
+PR #290 merged as `213c95014155de698b25681244024f4a0a66aa6b` and full CI is green. The changed-State served-generation restore ordering issue is addressed. A post-merge P1 remains and is now the **only known stabilization blocker**: publication serialization is store-global and can deadlock against the store-global cold-restore lock across different users because the two paths acquire those locks in opposite order. Fix with per-user publication sequencing or a consistent lock order, add deterministic two-user concurrency coverage, then merge/deploy/hosted-accept/physical-smoke. Do not start the post-stabilization foundation program before this closes.
+
+
+## Stabilization-management correction — stop calling each new defect “the last narrow fix”
+Management recognizes that the repeated one-defect-at-a-time loop has produced false finish lines. The closeout strategy is now whole-class verification under `docs/operations/directives/20260928_STABILIZATION_CLOSURE_PROTOCOL.md`. The next corrective must close publication/persistence/restore/identity concurrency as a class, including deterministic two-user races and bounded stress, with pre-merge red-team. A bounded lifecycle/lock refactor is authorized if it produces simpler per-user ownership and consistent lock ordering. Do not deploy merely because the currently known P1 is fixed locally.
+
+
+## User communication requirement
+The product owner is not a software/computer engineer. Every chat in this project should default to plain-language explanations that let the user understand the product consequence and make informed decisions.
+
+Use this order when discussing technical work:
+1. **What happened / what we found** in normal language.
+2. **Why it matters to the product or user experience.**
+3. **What we are doing about it.**
+4. **What remains uncertain or unproven.**
+5. **What, if anything, the user needs to decide or do.**
+
+Technical detail can follow, but should not be the primary explanation unless the user asks for it. Never assume familiarity with software-engineering concepts such as locks, race conditions, persistence, concurrency, threads, processes, caches, serialization, manifests, or dependency graphs; translate them when they matter.
+
+
+## Latest stabilization delta — PR #291
+The whole-class stabilization approach is now active in PR #291, head `7bcf6121688aa49f02cd4fbd4037925ca7d8503f`. The branch moves lifecycle coordination from one global lock to per-user coordination and adds deterministic two-user concurrency, restart/interruption and bounded stress coverage. Importantly, pre-merge review found adjacent issues **before deployment** (shared-league snapshot write ordering and idle worker accumulation), which is the behavior Management wanted from the new closure protocol. Current CI is 1 failed / 1,794 passed; the remaining failure concerns whether same-State checkpoint coalescing should durably write only the latest team context or also an initial State-only runtime pointer. Do not merge until that durability contract is explicitly resolved and CI/red-team gates are green.
+
+
+## Latest stabilization delta — PR #291 merged
+The whole-class stabilization corrective has now merged as `dbe7fccaceca525e0586389dcc5388764fa015a3`. The new process worked as intended: adjacent lifecycle defects were found and fixed before merge, full CI is green at 1,796 passed, deterministic single-user/two-user concurrency coverage and bounded stress are complete, and the pre-merge whole-class red-team found no remaining concrete P1/P2 lifecycle defect on the corrected head. Remaining gates are operational, not another planned code pass: deploy the exact merge SHA, complete hosted acceptance, then perform physical iPhone/Safari smoke. Do not start the post-stabilization foundation program until those two acceptance gates pass.
+
+
+## Latest deployment status — #291
+Exact merge SHA `dbe7fccaceca525e0586389dcc5388764fa015a3` is live on Render as deploy `dep-datdlnugekts73adssi0`. Hosted acceptance is currently running on the new instance. Initial FSFFL reconciliation and cross-surface publication consistency have passed so far, including PI history during active reconciliation; no terminal PASS/FAIL is recorded yet. Physical iPhone/Safari test begins only after terminal hosted PASS.
+
+
+## Latest beta-availability incident — first-load regression
+Physical iPhone testing after a surgical server-side reset proved the basic first-load path is regressed. The user's Sleeper submission was accepted, but Connect League remained visually inert for >1 minute; product-context reached ~51.6s; server State eventually persisted; browser-local saved team identity caused silent team restoration without an explicit choice; and the subsequent legitimate fresh Forecast acquisition did not reach a coherent published intelligence generation or surface a clear terminal failure.
+
+Regression boundary is concrete: PR #54 (`0021aefc...`) / #56 (`a8527e1...`) intentionally made hosted connect usable once Sleeper State existed in memory, with persistence asynchronous and visible Safari progress. PR #261 (`c57bc39...`) later preserved a State-activation checkpoint wait while solving switch-safe durability, recreating blocking on first connect.
+
+New controlling directive: `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`. Restore the old responsiveness contract while keeping #261/#291 switch, atomic-publication, restart and durability safety. Do not ask Jimmy to test again until a controlled hosted true-clean first-run explicitly clears both server runtime state and browser-local state and passes connect -> explicit team selection -> State-only usability -> visible intelligence progress -> coherent publish or explicit failure.
+
+
+## Latest architecture-audit disposition
+Independent read-only Work audit confirms the founding analytical authority chain remains sound; the recent failures are primarily runtime/application architecture drift. One residual P1 exposure is now a formal stabilization gate: cold foreground `get()` can still invoke durable restore before fresh Connect activation, meaning persistence recovery can remain on the State critical path.
+
+Controlling corrective: `docs/operations/directives/20260929_RUNTIME_ARCHITECTURE_AUDIT_CORRECTIVE.md`.
+
+Target invariant: valid canonical State opens the league; persistence/restore are continuity mechanisms, not permission gates. Foreground `get()` should be an in-memory published read; durable restore should be explicit/outside fresh State activation and may install only if the captured runtime identity is still current. Preserve atomic publication, per-user sequencing, team identity guards and strict Forecast source-health authority.
+
+PR #293 merged as `49ce8cae4f588fefc7c879e643504ee1b015cf42` and is currently under hosted acceptance. Let that run finish; then resolve any replay-scan P2 and the cold-restore/Connect architecture gate before declaring stabilization complete or requesting another iPhone/Safari test.
+
+
+## 2026-09-30 — Active Simulation Work continuity checkpoint
+Management has explicitly authorized the experimental, versioned NumPy/PCG64 batched-Gaussian Simulation path at the unchanged 50,000-trial count, subject to the separate production-adoption gate already recorded in `DECISION_LOG.md`.
+
+Repo-visible Work state at this checkpoint:
+- active PR: **#311 — [DRAFT] Study versioned batched Simulation RNG**;
+- branch: `work/simulation-modernization`;
+- repo-visible head: `6ef3fe9266c228b786a1cf5ab6ac915b057109e0`;
+- production remains on the Python `Random.gauss` protocol / deployed #310 generation;
+- the experimental RNG must not merge or deploy until Management reviews equivalence, replay, resource, downstream-behavior, CI/review, and hosted evidence.
+
+Important continuity rule: GitHub silence alone does **not** prove that a Work session is stalled, because long benchmarks/equivalence studies can run before a commit is pushed. A successor Management chat must first reconcile the live PR/branch, current CI/reviews, canonical operations docs, and Render before deciding whether Work needs a poke. Do not reuse a stale continuation prompt blindly.
+
+The current performance investigation also established a critical distinction for future profiling: the physical ~173.2s interval was measured from intelligence `job_start` at 11:22:57.729Z to `simulation_build_complete` at 11:25:50.938Z. Forecast was not rebuilt inside that interval on the observed run, and the heavy-work coordinator reported `active=behavioral` at job start. Render CPU was repeatedly at or near the 0.15 CPU service limit during the interval. Therefore ~173s must not be described as raw Monte Carlo draw time. It can include heavy-lane wait plus Simulation preparation, the 50k kernel, Team Utility/Analytics assembly, and contention from foreground work.
+
+After the batched-RNG production decision, re-profile the **full hosted Simulation call** before choosing the next optimization. Required decomposition should separately measure at least: heavy-lane wait; lineup/static-state compilation; bye-aware weekly scoring/input construction; RNG; matchup/scoring; standings; playoffs; aggregation; Team Utility/Analytics; memory reclaim; persistence/publication. Continue the broader Simulation modernization by measured bottleneck order rather than assuming the Gaussian kernel is the whole ~173s problem.
+
+If Work nears its session/context limit while authorized work remains, it must commit an exact handoff into `docs/operations/` with branch/PR/head, completed evidence, unresolved findings, current test/CI state, any Management gate, and the next executable action, then terminate as `TURN COMPLETE — CONTINUATION REQUIRED`. Normal Implementation should resume from that repo state rather than reconstructing from chat history.
+
+## 2026-10-02 — Management continuity checkpoint: Simulation 2.0 item 8
+
+Simulation 2.0 items #324 through #330 are accepted and must not be reopened absent contradictory evidence. The active implementation is **PR #331 — Simulation 2.0: add convergence and PIT calibration evidence** on branch `work/sim20-convergence-pit-calibration`.
+
+Current management contract:
+- production Simulation authority remains 50,000 runs unless Management explicitly approves a change;
+- item 8 convergence/stability work may compare governed counts across 5k-100k plus preview context, but study evidence alone does not change runtime authority;
+- PIT calibration is not a historical-data hunt. Use only authentic timestamped Forecast+State checkpoints already present and immediately identifiable;
+- do not reconstruct old Forecasts, backfill current projections into old dates, scrape archives, or delay closeout looking for historical evidence NEXT never captured;
+- if current realized PIT calibration coverage is too small, report the exact sample/coverage and close the slice as a prospective calibration framework that will strengthen as future snapshots resolve;
+- counterfactual scenarios are tested for replay/stability/sensitivity, not unknowable alternate-world causal accuracy.
+
+Latest repo-visible PR #331 status at this checkpoint:
+- draft PR head `a2b87f03e9058a473c51a3b86b8011f785c00670`;
+- convergence harness/workflow exists and is actively running;
+- one pre-registered convergence workflow completed successfully while corrected/newer runs continued;
+- recent CI on predecessor item-8 heads was green;
+- PR currently needs reconciliation with newer main management commits before final review/merge;
+- current evidence inventory reports **0 fully realized final-season PIT calibration cases** because the 2026 season is still active; this is expected and is not a blocker.
+
+Accepted product direction to retain after Simulation 2.0 closeout:
+- League Atlas should remain concise at league level;
+- tapping a team opens a richer franchise drill-down with competitive outlook, full roster grouped by starters/bench/IR/taxi, player age/projection/Intrinsic/Broad Market values, draft capital, depth/fragility, origin-team pick distributions, Multiverse examples and provenance through progressive disclosure;
+- actual/recorded lineup state and model-optimized/projected starters must remain semantically distinct.
+
+Management continuity rule: keep this file and the canonical operations state current before chat context becomes a risk. A successor management chat should read `OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this file, and the current active PR before issuing implementation direction.
+
+## 2026-10-02 — Simulation 2.0 item 8 / PR #331 CLOSEOUT: convergence stable, PIT framework prospective
+
+PR #331 closes the final Simulation 2.0 evidence item. Items #324-#330 remain accepted and are not reopened.
+
+Completed convergence evidence:
+- successful pre-registered eight-root workflow run: `36999960485`, study head `9ec10864aca3a785baeab941d746fe114ca1ab36`;
+- final artifact `11224026589`, digest `8116d174d9d6aef5bd9fa3c292c513718d2a98b8037337ff4b40a4f9372dbae8`;
+- production 50k versus same-root 100k reference p90 errors: expected wins **0.014007**, playoff probability **0.002964**, championship probability **0.002427**, finish-distribution TV **0.005272**, future-pick-slot TV **0.005575**;
+- clear and near-boundary expected-wins/playoff/title scenario-delta signs matched the same-root 100k reference for **8/8 roots**;
+- 50k independent-root dispersion was small: expected-wins SD **0.004624** / range **0.01438**, playoff-probability SD **0.002317** / range **0.00732**, title-probability SD **0.000752** / range **0.00216**, future-pick expected-slot SD **0.011119** / range **0.04002**;
+- three-run study-bundle median runtime was ~**24.23s at 35k**, **34.64s at 50k**, **51.86s at 75k**, and **69.09s at 100k** on the Actions fixture.
+
+Interpretation:
+- 50k is numerically stable for the governed fixture and materially tighter than lower counts while avoiding the additional runtime of 75k/100k;
+- 35k is reasonably close, but this study does not establish a product/governance reason to reduce authority;
+- 75k/100k reduce Monte Carlo error further, but the measured improvement is incremental rather than evidence that 50k is materially unstable;
+- **production Simulation authority remains 50,000 runs**; no adaptive-count rule is promoted. Any future count change still requires separate Management approval.
+
+PIT calibration closeout follows the explicit no-hunt rule:
+- bounded existing-store evidence: **364** canonical State snapshots, **12** immutable provider ROS projection snapshots / **22,050** normalized observations, and **6** prospective football-state captures;
+- authentic pre-opener Forecast artifact 63 exists but lacks a retained matching canonical State payload and is not reconstructed;
+- earliest retained matched State+Forecast checkpoint is post-opener State `a7d56f...` + Forecast artifact 87;
+- fully realized final-season Simulation calibration cases today: **0**; scored probability observations: **0**; scored continuous observations: **0**, because the 2026 season is still active;
+- no historical Forecast reconstruction, current-projection backdating, archive scraping, or broader PIT discovery is authorized or required for closeout;
+- the leakage-safe checkpoint/scoring framework is retained for prospective scoring as authentic 2026 checkpoints resolve.
+
+Durable evidence:
+- `docs/operations/evidence/simulation_item8_convergence_results_20261002.md`;
+- `docs/operations/evidence/simulation_item8_convergence_summary_20261002.json`;
+- `docs/operations/evidence/simulation_item8_pit_inventory_20261002.json`;
+- reusable scoring/guardrail code in `fsffl.team_utility.simulation_validation`.
+
+Promotion classification: research/evidence/framework only. This PR does not change production Simulation count, RNG, model authority, runtime/persistence identity, Decision authority, or accepted #324-#330 behavior. Therefore no Render deployment or physical acceptance is required for item-8 closeout; focused evidence/calibration tests + full CI + bounded exact-head P1/P2 review are sufficient.
+
+**Simulation 2.0 program status after #331: COMPLETE.** The already-accepted post-Simulation sequence resumes with origin-aware draft-pick Value consuming the governed team-of-origin pick-slot distributions, followed by Long-Term Intrinsic and the later PIT historical-market foundation. Do not reopen Simulation 2.0 without contradictory evidence or a new Management directive.
+
+## 2026-10-02 — #331 ACCEPTED: Simulation 2.0 convergence / PIT closeout
+
+PR #331 was squash-merged as `505531ab389da80bd9837922113fe9888f18ff7c`. **Simulation 2.0 is complete.**
+
+Final accepted item-8 evidence:
+- exact PR head `102fffe8e50887f280730ef35bd0811dc2ec5e8f`;
+- full CI **2,009 passed**, one existing warning;
+- PR164 focused corrective regression PASS;
+- completed eight-root convergence workflow run `36999960485`, final artifact `11224026589`, digest `8116d174d9d6aef5bd9fa3c292c513718d2a98b8037337ff4b40a4f9372dbae8`;
+- 50k production error envelope versus same-root 100k reference remained small and all tested clear/near counterfactual delta signs matched across 8/8 roots;
+- bounded manual exact-head P1/P2 review found no remaining issue after Codex review was unavailable because the account/repository code-review quota was exhausted;
+- no Render deploy/physical acceptance was required because #331 is research evidence + calibration framework only and does not change production Simulation count, RNG, model/persistence identity, Decision authority, or accepted #324-#330 behavior.
+
+Authority outcome:
+- **production Simulation remains 50,000 canonical runs**;
+- no adaptive trial-count rule is promoted;
+- any future count change requires a new Management decision and its own implementation/promotion validation.
+
+PIT outcome:
+- authentic prospective 2026 State/Forecast inputs exist;
+- fully realized final-season calibration cases remain **0** while the season is active;
+- item 8 closes with the leakage-safe prospective calibration framework;
+- no historical Forecast reconstruction, current-projection backdating, archive scraping, or broader PIT hunt is authorized.
+
+Next approved program sequence: **origin-aware draft-pick Value** consuming the accepted team-of-origin pick-slot distributions -> **Long-Term Intrinsic** -> later **PIT historical market evidence**. Do not reopen #324-#331 absent contradictory evidence or a new Management directive.
+
+
+
+## 2026-10-02 — Management follow-on: stress-test 35k before origin-aware Value
+
+After accepting #331 and closing Simulation 2.0, Management elected to test the one genuinely plausible lower authority candidate rather than immediately moving on. The controlling directive is `docs/operations/directives/20261002_SIMULATION_35K_STRESS_TEST.md`.
+
+This does **not** reopen #324-#331. Current production authority remains 50,000 runs. The bounded study compares 35k vs 50k under deliberately difficult governed cases, with same-root 100k as research reference. It must test not only numerical error but whether 35k changes product-relevant signs, rankings, classifications, pick summaries or downstream decisions where existing consumers apply.
+
+Original item-8 context motivating the test: 35k three-run median ~24.23s versus 50k ~34.64s, while the original eight-root fixture preserved all tested clear/near delta signs. That evidence is promising but not broad enough by itself to change authority.
+
+Temporarily hold origin-aware draft-pick Value until this gate resolves. If 35k is merely numerically noisier but product-equivalent across the stress set, return a Management proposal rather than changing production automatically. If any meaningful boundary case fails, retain 50k and resume the approved Value -> Long-Term Intrinsic -> PIT historical-market sequence.
+
+
+## 2026-10-02 — 35k authority gate resolved
+
+Management reviewed the completed 12-root / four-fixture stress study and retained **50,000** as canonical production Simulation authority. The candidate 35k count delivered ~29.9% median harness runtime savings but crossed materially more product-visible boundaries than 50k relative to the same-root 100k research reference: 71 candidate-only divergences versus 24 production-only divergences. Ranking agreement was 45/48 at 35k versus 47/48 at 50k; future-pick boundary summaries were 10/12 versus 11/12. Counterfactual signs/materiality remained stable at both counts.
+
+Directive outcome: do not promote 35k, do not add an adaptive authority rule, and stop count hunting. 35k remains permissible only for explicitly non-authoritative research/internal use. Production remains 50k.
+
+PR #333 is closeout-only and requires no Render/physical proof. Once merged, release the temporary hold and proceed immediately to **origin-aware draft-pick Value**, preserving the authority boundary: Simulation owns slot probability distributions; Value owns economic valuation; Decision remains downstream.
+
+
+## 2026-10-02 — Foundation 3 activated: origin-aware draft-pick Value
+
+The next management-controlled implementation is `docs/operations/directives/20261002_ORIGIN_AWARE_DRAFT_PICK_VALUE.md`.
+
+Use accepted Simulation as an upstream probability source only. Value must reuse `estimate_pick_value` / exact mixture moments and reconcile the Historical Pick Coordinate rather than create a second pick scale or slot model. Provider generic/early-mid-late pick values remain Broad Market evidence, not FSFFL Intrinsic.
+
+Authoritative scope begins with the next draft season because that is where accepted team-of-origin exact slot distributions exist. Do not extrapolate origin-team probabilities into later years. Missing class/horizon/slot economic evidence must produce transparent fallback/partial status rather than fabricated precision.
+
+Required regression themes include nonlinearity, origin differentiation, ownership invariance, mixture uncertainty, slot dominance, fallback truth, season boundary, preview-authority gating, no circularity and PIT safety.
+
+
+## 2026-10-02 — Narrow runtime corrective before Foundation 3 continues
+
+A new physical run contradicted the accepted startup/reconciliation behavior. On live #330, one refresh reached `simulation_build_complete`, then logged `job_aborted` before publication; a replacement job rebuilt Simulation and downstream intelligence before 7/7. Peak RSS was 445,063,168 bytes versus the 429,496,720-byte engineering budget.
+
+Management reopened only startup/manual-refresh lifecycle sequencing under `20261002_STARTUP_REFRESH_SEQUENCING_CORRECTIVE.md`. Do not reopen Simulation 2.0 semantics or reduce the 50k authority. PR #335 remains a valid safe checkpoint but is temporarily held. After the Tier-C corrective passes targeted hosted/physical acceptance, resume #335 immediately.
+
+
+## 2026-10-02 — runtime corrective closed; Safari status defect deferred
+
+The startup/manual-refresh sequencing corrective is accepted from physical + hosted telemetry. The winning physical refresh executed one State build, one 50k Simulation, Value, Intrinsic, and one terminal publication with no abort/restart. Peak RSS was **426,971,136 bytes**, below the **429,496,720-byte** engineering budget.
+
+Management observed a separate user-facing issue: iPhone/Safari did not visibly acknowledge Refresh, show useful progress, or transition clearly to completed without a manual page reload. Park this as a future bounded browser-status/polling presentation effort. Do not let it trigger another acceptance-infrastructure chain and do not keep Foundation 3 on hold.
+
+Resume PR #335 immediately from its pinned safe checkpoint, then continue the accepted Value -> Long-Term Intrinsic -> PIT historical-market sequence.
+
+## 2026-10-02 — Simulation production performance diagnostic COMPLETE
+
+The narrow production profile reproduced the current physical Simulation duration at ~127.8s while preserving 50,000 canonical trials, `numpy-pcg64-batched-gauss-v1`, and batch 500.
+
+Measured hotspots are team-of-origin future-pick ordering (~27.558s), playoffs/championship (~15.824s), per-trial H2H reconstruction (~11.267s), and standings (~9.064s). RNG is only 1.481s; Multiverse is ~0.519s; cooperative foreground yield is ~0.192s. Team Utility / Analytics assembly adds 8.695s outside the 105.595s kernel.
+
+Peak RSS was 388,489,216 bytes, below the 429,496,720-byte engineering budget and 536,870,900-byte Render limit. The service repeatedly reached its 0.15 CPU limit, so this is CPU-bound rather than memory-bound.
+
+Management disposition: keep 50k authority and current RNG. The next bounded performance effort should first remove/batch-vectorize unconditional H2H reconstruction and reduce repeated Python work in exact team-origin slot ordering, preserving exact output/replay semantics; playoff batching is secondary. The earlier ~59s hosted NumPy interval is not an apples-to-apples current-workload baseline, while the current path remains ~26-27% faster than the ~173s legacy Python physical path despite richer Simulation 2.0 work.
+
+Evidence: `docs/operations/evidence/simulation_production_performance_diagnostic_20261002.md`.
+
+## 2026-10-03 — Simulation H2H performance tranche: code accepted, hosted benchmark pending Render rollout
+
+Postseason PR #351 remains accepted and closed. Its controlling governed 50k benchmark is postseason **55.888s -> 8.836s** and kernel **104.901s -> 61.007s** with 50k/RNG/replay/model authority unchanged.
+
+The next measured target was the NumPy-path per-world matchup/H2H reconstruction (~20.4s controlling baseline). PR #353 — `Simulation: batch H2H and Multiverse schedule products` — was squash-merged as `ea33d479a414bfa6a62ff06f7c4d84bdc8779e3b`.
+
+Implementation:
+- eliminates the second 50,000 × schedule Python scan in the NumPy production path;
+- derives simulated H2H points plus Multiverse biggest-blowout/upset candidates inside the existing bounded 500-world schedule batch pass;
+- precompiles H2H game-count topology once because scheduled games are world-invariant;
+- leaves the legacy Python RNG path unchanged;
+- preserves exact score generation and RNG consumption/order.
+
+Correctness evidence at final PR head `c61aab7d6fb52e570e168d5ac6019d10257a2756`:
+- full CI: **2,086 passed**, one existing warning;
+- PR164 focused corrective regression: PASS;
+- complete serialized/result equality against a literal scalar schedule-product reference across seeds 17, 2718 and 20261003;
+- standing fixed 50k replay digest remained green;
+- existing deterministic H2H/future-pick, 2/4/6/8 postseason, exact-provider, Multiverse/common-world coverage remained green.
+
+Stale PR #349 was closed as superseded by accepted #351.
+
+Hosted benchmark status:
+- exact merged #353 deploy `dep-db05iiad0e5s73a6ijd0` built successfully and launched replacement instance `...-595zs`;
+- the prior #351 instance shut down cleanly, but Render has not advanced the replacement deploy beyond `update_in_progress` and has emitted no Uvicorn startup/readiness/error after the launch command;
+- a same-commit recovery deploy request was accepted as `dep-db05ksadails73995r9g` and is queued behind the stuck rollout;
+- therefore **no #353 hosted 50k benchmark is yet valid**. Do not infer savings from CI or local structure and do not advance team-origin ordering until the governed hosted exact profile lands.
+
+Next executable action: let Render resolve/cancel the stuck deployment lane, verify exact #353 is live, run one governed 50k exact profile, compare combined batch schedule-product + residual H2H cost and kernel/full-Simulation wall time against the accepted #351 baseline, then advance to team-origin ordering only if H2H has reached diminishing returns.
+
+
+## 2026-10-03 — Management continuity checkpoint: performance + Foundation 4 + rollout
+
+Current management intent:
+
+- Keep Simulation authority at **50,000**; do not reopen trial-count/RNG/model semantics.
+- Postseason optimization is accepted. H2H optimization is also materially proven in production: **20.355s -> 2.528s**, with the exact kernel now **43.487s** on the representative governed run.
+- The next measured Simulation target is **team-origin future-pick ordering (~17.440s)** via PR #357.
+- Do not declare H2H memory-safety closed until the post-merge #355 Codex P2 is fixed: release/reuse chunk storage so old + new dense H2H chunks/baselines cannot overlap beyond the intended bound.
+- The runtime-availability acceptance failure observed after the successful profile is a narrow lifecycle/acceptance issue to root-cause separately; it does not reopen accepted Simulation semantics.
+- Foundation 4 career-tail governance #352 is accepted. Empty draft #356 was closed and is not substantive implementation. Start the real holistic career-forward shadow implementation from current main.
+- Product definition remains: **Current Intrinsic = separate Y1-Y3 lens; Long-Term Intrinsic = holistic career-forward value from today across all future years**, built from compatible raw economics rather than display-index arithmetic.
+- After Foundation 4 passes shadow/persistence/API/resource acceptance, **pause the foundation-only cadence for one Product Integration / Capability Rollout tranche**. Put the accepted Simulation 2.0 competitive outlook, origin-aware pick intelligence and holistic Long-Term Intrinsic into the existing private-beta UI for the sole current user; use physical iPhone/Safari acceptance for the interaction/presentation change.
+- Then continue to Foundation 5 PIT historical-market evidence while incorporating product feedback.
+- Keep canonical `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, `MANAGEMENT_CONTINUITY.md` and the relevant workstream file updated at each acceptance/target transition; do not rely on chat history as durable authority.
+
+
+## 2026-10-03 — Management continuity after #357/#358 and active #356
+
+Current management handoff:
+- #357 is merged. Hosted 50k target phase moved **17.440s -> 11.593s** for team-origin ordering; kernel measured **42.895s** on that run.
+- #358 is merged/live and closes the outstanding H2H chunk-lifetime memory-bound P2 by reusing one bounded dense buffer instead of overlapping old/new chunks and a second baseline.
+- Do not declare the Simulation optimization sequence closed until one fresh governed 50k run on #358 verifies current timing/RSS/output identity.
+- The runtime-availability acceptance failure recurred after #357 publication while last-good surfaces were being served during an active newer generation. Treat this as a narrow lifecycle/acceptance issue; do not reopen Simulation 2.0 semantics.
+- Foundation 4 draft #356 is substantive and green. It freezes the governed terminal artifact and implements the pure career-tail consumer + holistic raw career-forward aggregator. The current-authority CI job passed and emitted artifact **11261836244**.
+- #356 is not yet Foundation 4 completion. Next: live cohort -> persistence/API -> restart/reload/resources -> bounded review/acceptance.
+- Then execute the approved Product Integration / Capability Rollout tranche for the sole private-beta user before starting Foundation 5.
+- Continue updating CURRENT_STATE, ACTIVE_WORKSTREAMS, MANAGEMENT_CONTINUITY and relevant workstream docs at each target/acceptance transition.
+
+
+## 2026-10-03 — Management handoff after #359/#360
+
+- #359 is merged but not fully closed from a management-quality perspective: fix the post-merge Codex P2 so **every** presentation surface must carry the expected publication generation during atomic last-good acceptance; missing generation IDs must fail closed.
+- #360 is merged/live; obtain one governed 50k hosted profile before claiming further performance gains or choosing another target.
+- Keep Simulation at 50k with exact RNG/replay/model semantics.
+- #356 Foundation 4 is still the substantive implementation workstream and should continue in parallel; do not park it while optimizing Simulation.
+- Foundation 4 completion path remains live cohort -> persistence/API -> restart/reload/resources -> bounded acceptance -> Product Integration / Capability Rollout -> Foundation 5.
+
+
+## 2026-10-03 — Management continuity after successful #360 hosted run
+
+- Exact live #360 completed governed 50k hosted acceptance: kernel **43.800s**, future-pick ordering **12.704s**, H2H **2.056s**, postseason **8.376s**, overall acceptance peak RSS **393,076,736 bytes**, runtime availability **PASS**, restored-refresh total **211.082s**.
+- The Simulation kernel is now ~58.2% faster than the corrected **104.901s** baseline with 50k/RNG/replay/model authority unchanged.
+- Do not claim #360 itself improved over #357 from one throttled-host run; #357 measured 42.895s kernel / 11.593s ordering. Treat the current performance band as ~43-44s kernel and re-profile only if pursuing another material optimization.
+- The recurring last-good-during-rebuild acceptance failure was not reproduced: #359 path passed. Still close its post-merge P2 so any missing per-surface publication generation fails closed.
+- Shift management emphasis back toward Foundation 4 #356. It is open/green but has not advanced since the shadow-contract/current-authority checkpoint.
+- Next Foundation 4 gates: live cohort -> persistence/API -> restart/reload/resources -> bounded shadow acceptance -> Product Integration / Capability Rollout -> Foundation 5.
+
+
+## 2026-10-03 — Intrinsic performance continuity note
+
+Do not lose the previously identified Intrinsic optimization work. There are two distinct goals:
+- **avoid unnecessary rebuilds** via dependency-scoped compatibility, durable persistence and exact restore/reuse; historical cold Shapley rebuilds were multi-minute;
+- **speed the rebuild that is genuinely necessary** only after profiling the accepted Foundation 4 holistic path.
+
+Recent hosted lifecycle evidence still puts the current Intrinsic phase at roughly **25–27s** when it runs. After #361 Foundation 4 correctness/persistence/hosted acceptance, run a bounded Intrinsic performance profile and optimize only measured material costs while preserving exact Current Intrinsic / Long-Term Intrinsic economics, fingerprints and restart identity. This should happen before or alongside Product Integration, not be forgotten behind the Simulation work.
+
+
+## 2026-10-03 — Foundation 4 scoring-coordinate management gate
+
+PR #361's Codex P1 corrections are directionally correct, but one exposes a non-negotiable acceptance condition: the production target FSFFL league is 0.5 PPR and the current frozen Y4-Y7 board is standard/non-PPR. A fail-closed half-PPR result is safer than mixing incompatible units, but it is not acceptable Foundation 4 completion for this product.
+
+Before Foundation 4 merge/promotion, produce a governed FSFFL-compatible Y4-Y7 + tail coordinate by direct 0.5-PPR materialization or a validated exact transform. Do not use an arbitrary multiplier. Preserve Current Intrinsic separately, the holistic raw Y1-Y7 + Y8+ economic definition, uncertainty typing and lineup-capacity governance. Add a direct FSFFL 0.5-PPR acceptance regression.
+
+
+## 2026-10-03 — Scoring adaptation policy for Foundation 4
+
+Long-Term Intrinsic should adapt to each league's **material, predictable** scoring methodology, not blindly to every exotic scoring switch.
+
+Policy:
+- model all material linear player-offense rules supported by governed forecast stats;
+- include rare-event effects only where a governed residual/event model exists;
+- explicitly omit genuinely rare/unpredictable bonuses that lack defensible forecast signal, with provenance and consistent omission across Y1-Y3, Y4-Y7 and Y8+;
+- fail closed or downgrade only when an unsupported rule is material enough to change valuation meaningfully.
+
+This creates one coherent effective scoring coordinate per league while avoiding fake precision. FSFFL 0.5 PPR must pass as the first live acceptance case. Do not use heuristic scoring multipliers.
+
+
+## 2026-10-03 — DURABLE IMPLEMENTATION RE-ANCHOR (chat history is non-authoritative)
+
+Implementation continuity must not depend on ChatGPT conversation history. If the Implementation chat loses visible context, **resume from this repo record plus PR #361 and the other canonical operations docs**.
+
+Current active work:
+- Foundation 4 / PR #361: `Foundation 4: materialize and persist career-forward shadow`.
+- Current observed head at this checkpoint: `fbb417901db9297717a9244803f25696295bf713` (PR may advance after this note; always re-read the live PR head first).
+- The branch now carries directly FSFFL-scored Y4-Y7 and Y8+ authority, with regenerated/frozen package identities and tests being reconciled to that authority.
+- At this checkpoint, all focused lanes except full CI are green; full CI is still running on the exact head.
+- Preserve Management scoring policy: model material/predictable league scoring rules; use only governed residual/event treatments; explicitly omit genuinely rare/unpredictable bonuses with provenance and consistent omission across Y1-Y3/Y4-Y7/Y8+; fail closed or downgrade on materially important unsupported rules. No heuristic multipliers and no incompatible-coordinate arithmetic.
+- If exact-head validation is green, request fresh Codex review and proceed directly through hosted 335-player build, persistence/API, restart/restore semantic identity, and resource acceptance.
+- After Foundation 4 acceptance, run the queued Intrinsic runtime-performance tranche (reuse/persist-first, then optimize unavoidable Shapley/materialization cost) and then the approved Product Integration / Capability Rollout tranche before Foundation 5.
+- Simulation 2.0 major semantics/performance work is complete; do not reopen it except for the narrow acceptance-tooling P2 or new contradictory evidence.
+
+Startup rule for any replacement/new Implementation chat: read `docs/operations/OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this `MANAGEMENT_CONTINUITY.md`, the applicable directive(s), and the live PR #361 exact head before acting. The repo is the durable authority; chat text is only a transport layer.
+
+## 2026-10-03 — Foundation 4 runtime/persistence acceptance tranche ACTIVE
+
+Foundation 4 / PR #361 remains the active capability workstream. Its directly FSFFL-scored 335-player Y4-Y7 + Y8+ authority is frozen; Current Intrinsic stays separate; holistic raw economics remain compatible Y1-Y7 Shapley coordinates plus cumulative Y8+ tail. Shadow holistic/Y4-Y7 artifacts are persisted separately, APIs remain separate from Current Intrinsic, and hosted acceptance must prove build -> persistence/API -> same-code restore/reuse -> resource safety.
+
+After #361 acceptance, run the queued Intrinsic performance tranche (reuse/persistence first, then measured unavoidable computation) and continue into Product Integration / Capability Rollout before Foundation 5.
+
+## 2026-10-03 — Foundation 4 #361 FSFFL artifact-freeze correction
+
+The directly recalibrated FSFFL-scored Foundation 4 artifacts are now the intended packaged authority; model-family and routing research remain frozen and were not reopened.
+
+Verified generation evidence:
+- generation workflow run `37096263982`, retained artifact `11263913850`;
+- packaged repo blobs exactly match the retained workflow artifact bytes;
+- Y4-Y7 board: 5,360 rows / 335 players, direct `connected_league_fantasy_points`, semantic SHA-256 `3caddc5c33be83088eaca30d8c1ac7031022f08668a031a0a3b08616aed773c2`;
+- terminal feature board: 335 players, direct connected-league scoring coordinates, semantic SHA-256 `ef52ccaaef0749d6d1e5786c351714570c0d0a0ea811cc1cf940fe2adac8c867`;
+- retained workflow ZIP SHA-256 `6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22`;
+- packaged Y8+ runtime JSON semantic SHA-256 `33158a26d50e71809cf0f38a7d479fda05ccbaa9fbd5703ba894c1cba4560537`.
+
+The runtime now consumes the exact packaged FSFFL Y8+ coefficients/residual bands and pins the regenerated Y4-Y7/terminal semantic identities. The superseded standard/non-PPR freeze is retained only as historical provenance/negative compatibility evidence. No heuristic scoring multiplier, retraining or model redesign was introduced.
+
+Promotion remains Tier C. Required closeout: final exact-head CI and focused validations -> fresh Codex review -> one hosted 335-player build -> same-code restart/restore semantic identity -> resource acceptance -> canonical closeout.
+
+## 2026-10-03 — Re-anchor after Foundation 4 #361 acceptance
+
+Foundation 4 is closed. PR #361 merged as `ef29a0e7f6243a9d429d18c6f76b3a66d4cd0410` after final head `4886b91f270bc0c07fcea9b89130132cb503126d` passed exact-head validation. The first live run created/persisted the Foundation 4 artifacts; a clean same-code redeploy restored the full 335-player artifact with identical semantic identity. Restore acceptance passed at **364,875,776 bytes** peak RSS and full runtime-availability acceptance passed at **402,485,248 bytes**, both under the **429,496,720-byte** engineering budget.
+
+Treat that as substantive Foundation 4 acceptance. Do not reopen model/scoring work or force another expensive build for harness cosmetics unless contradictory evidence appears. Draft #356 is superseded and closed.
+
+Implementation continuation order:
+1. **Intrinsic runtime performance** — measure cold build vs exact restore/reuse vs changed-State rebuild; eliminate unnecessary recomputation first; optimize unavoidable compute only if materially useful.
+2. **Product Integration / Capability Rollout** — expose accepted Simulation 2.0 competitive intelligence, origin-aware pick intelligence and holistic Long-Term Intrinsic across the existing product surfaces for the sole private-beta user; use physical iPhone/Safari feedback to refine.
+3. **Foundation 5** only after the rollout tranche.
+
+Simulation 2.0 is closed. Do not reopen completed Simulation semantics/performance work absent new contradictory evidence or an explicit Management directive.
+
+## 2026-10-03 — Intrinsic runtime performance CLOSED; Product Integration ACTIVE
+
+Intrinsic runtime-performance tranche is **CLOSED**.
+
+Accepted evidence:
+- #363 merged/live and changed-State `restored_refresh` improved `building_intrinsic` from **27.610s** to **14.398s** (~47.9% reduction) while full runtime availability passed at **409,612,288 bytes** peak RSS, below the **429,496,720-byte** engineering budget;
+- the changed-State path restored compatible Intrinsic rather than rebuilding Shapley economics;
+- narrow post-merge Codex P2 was closed by #364: the semantic Future Forecast reuse fingerprint now includes the coverage/provenance counts emitted by the cached contract, preventing stale coverage audit provenance without changing Intrinsic economics;
+- #364 exact-head focused lanes passed; the first full-CI attempt had one unrelated resource-boundary timing-race failure while 2,121 tests passed, and an exact same-head rerun passed;
+- remaining Intrinsic cost is not the dominant refresh bottleneck: the same hosted acceptance measured Simulation ~68.691s, attaching/publishing ~60.297s and State refresh ~23.692s versus Intrinsic ~14.398s. No further avoidable Intrinsic recomputation was identified that justifies additional model/runtime surgery now.
+
+**ACTIVE: Product Integration / Capability Rollout.** First slice is League Atlas consumption of already-published accepted capability contracts: replayable Simulation representative futures and origin-aware future-pick outlook/value. Preserve authority labels and progressive disclosure; do not create new economics, probability mass, composite scores or recommendations. Holistic Long-Term Intrinsic exposure follows through the governed Value/Player Intelligence product path.
+
+## 2026-10-03 — #367 physical acceptance correction
+
+Render production service `fsffl-next-private-beta` is on #367 merge `32aaa88a59f51b18a237b52ce49915e1225e6c3d` (deploy `dep-db0k3lfavr4c738342rg`, live). Management's two physical acceptance comments are the active product gate. The correction branch `fix/atlas-physical-acceptance-20261003` preserves core League Race ordering, moves the scenario list behind a compact disclosure with explicit league-wide category semantics, separates current owned picks from traded-away originals, and removes raw Sleeper pick IDs from user-facing rows without removing governed slot/value data.
+
+Exact validation/review/deploy and hosted verification remain before return to iPhone/Safari acceptance. Keep Simulation 2.0, Foundation 4 and Intrinsic economics closed. Continue Product Integration after this bounded physical correction.
+
+## 2026-10-03 — #369 Current | Dynasty position lens
+
+Issue #369 implementation is based on #368 merge `225c0a5982879da534832b8430c8349efb24c35b`. Discovery found no existing governed team-by-position long-term metric. The Current map continues consuming the exact published optimized-starter strength rows. Dynasty uses a separately versioned Analytics roster-breadth diagnostic: count each canonically rostered player once at actual position, including starters, bench, IR and taxi; rank by count and team ID for ties. Any incomplete team roster/player-position evidence suppresses the league-relative rank.
+
+The Dynasty drawer keeps roster slot/depth, age, Market, Current Intrinsic and per-player holistic Long-Term Intrinsic shadow evidence as separate evidence. Foundation 4 remains shadow-only and is not used to rank a team or combined with Current Intrinsic or Market. The Long-Term endpoint is fetched only after opening Dynasty player detail. No Simulation 2.0 or Foundation 4 economics changed. Exact-head CI/review, production deployment verification and physical iPhone/Safari acceptance remain required before closeout.
+
+
+
+## 2026-10-03 — Management continuity: Product Integration PR #366 active
+
+Foundation 4 and the bounded Intrinsic performance tranche are closed. Accepted recent sequence:
+- #361 Foundation 4 merged and substantively accepted with full 335-player Long-Term Intrinsic persistence/restore/resource proof;
+- #363 materially reduced changed-State Intrinsic time from 27.610s to 14.398s while staying under the engineering RSS budget;
+- #364 closed the semantic Future Forecast reuse-fingerprint provenance/coverage P2;
+- #365 closed the Intrinsic performance tranche and activated Product Integration / Capability Rollout.
+
+**Current active development is PR #366 — `Product: roll accepted intelligence into League Atlas`**, branch `product/capability-rollout-1-league-atlas-20261003`, observed head `e43b089700864acdb9080950d5a3a1549a65911c`.
+
+#366 is the first rollout slice only. It consumes already-governed League Atlas payloads to expose:
+- replayable representative Simulation futures in progressive disclosure;
+- origin-aware future-pick outlook / Intrinsic pick-value intelligence;
+- no new model math, probability mass, composite team score, recommendation, or authority.
+
+Current exact-head evidence:
+- focused/trace checks are green;
+- full CI has one failure with **2,122 passed**: `test_material_state_refresh_skips_stale_waiting_simulation_and_publishes_once` observed the replacement intelligence job as already `COMPLETED` rather than only `RUNNING/QUEUED`; this is a timing-sensitive resource-boundary assertion and must be reconciled before merge, not automatically treated as a product regression;
+- Codex exact-head review found two real rollout defects that must be fixed before promotion:
+  1. **P1** representative-futures UI reads nonexistent top-level world fields; managed-team rank/champion data must be taken from each world's `team_outcomes`, otherwise the section never renders;
+  2. **P2** pick drawer reads nonexistent `expected_value`; governed Intrinsic pick value is serialized under the estimate distribution mean, otherwise the authority label renders without the numeric value.
+- PR is open, non-draft, mergeable, but not merge-ready until those findings and the CI failure are resolved and exact-head validation/review is green.
+
+Management direction:
+1. finish #366 narrowly; do not reopen accepted Simulation 2.0, Foundation 4, or Intrinsic economics;
+2. require focused/static contract coverage that proves the actual payload shape for Multiverse team outcomes and PickValueEstimate distribution mean;
+3. reconcile the one full-CI failure proportionately and rerun exact-head CI;
+4. obtain fresh review after corrections;
+5. merge/deploy only when clean, then physically inspect League Atlas on iPhone/Safari for usefulness, density, progressive disclosure and semantic clarity;
+6. continue the Product Integration tranche after the first slice, including governed holistic Long-Term Intrinsic exposure through the Value/Player Intelligence path and other already-approved existing surfaces as appropriate;
+7. Foundation 5 PIT historical-market evidence remains **next after the rollout tranche**, not before it.
+
+A successor Management chat should begin by reading `OPERATING_PROTOCOL.md`, `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, this file, `workstreams/IMPLEMENTATION.md`, applicable directives/product IA, and the live #366 exact head/reviews/checks. Repo state is authoritative; do not reconstruct development state from prior chat.
+## 2026-10-03 — #370 Management formula disposition
+
+The earlier roster-breadth ranking description is superseded by Management’s approval on PR #370. Dynasty room strength uses Foundation 4 `raw_career_forward_reference`, summed once per canonically rostered player at actual QB/RB/WR/TE position, including starters, bench, IR and taxi. Do not weight players or sum display indices. Rank descending only when every team’s room has complete same-State evidence; ties share rank. The optional index is `100 × room raw / league-average room raw` only for a positive mean. Missing evidence is never zero-filled. Roster count is secondary Breadth/Depth evidence. Current optimized-starter ranking is unchanged. Complete focused tests, full CI, fresh exact-head review, then hosted and iPhone/Safari acceptance; no Simulation 2.0 or Foundation 4 economic change.
+
+
+## 2026-10-04 — PR #379 promoted; #369 physical acceptance gate
+
+PR #379 (Fix Safari restore and Atlas publication handoff) passed all six required workflows and fresh exact-head Codex review at `63d94f72c3a94ec2cf69a5d955a45451ce201903` with no major issues. It was squash-merged to main as `8240f2f17834c8350019c34bcaa157a733a8ddc6` and deployed explicitly to `fsffl-next-private-beta` as Render deployment `dep-db1e7hvavr4c73bgb5a0`. The deploy is live; build succeeded and application startup completed cleanly.
+
+#379 preserves read-first ordinary iPhone/Safari saved-session restore when recently published intelligence is current, refreshes only on explicit action or governed staleness/missing-State conditions, attaches correctly to in-flight connect/refresh work, and makes visible League Atlas promote to the matching newly current publication generation without navigation/reload. No #370 Dynasty semantic, #373 runtime/fairness, #374 mobile-presentation, Simulation 2.0, or Foundation 4 economics change is authorized or reopened.
+
+**ACTIVE GATE:** Management physical iPhone/Safari acceptance of #369 on the live #379 baseline. Verify saved-session restore does not silently launch an unnecessary provider refresh, Current and Dynasty remain usable, and an Atlas left visible during a legitimate publication transition promotes to the matching current generation automatically. Do not start #375 (3-Year Intrinsic / Career Intrinsic) until #369 is physically accepted.
+
+
+## 2026-10-05 — Management decision: Career Intrinsic is production authority
+
+Foundation 4's accepted 335-player holistic career-forward model is now canonically **Career Intrinsic**, a first-class persisted production artifact rather than a shadow capability. Preserve its accepted raw economics, cohort, provenance, fingerprint safety, scoring coverage and persistence; this is a lifecycle promotion, not model redesign. Normal startup must restore compatible Career Intrinsic directly, with safe migration/reuse of accepted legacy Foundation 4 persistence rather than unnecessary recomputation. Current Intrinsic readiness is the governed upstream dependency; once Current Intrinsic becomes ready, Career Intrinsic must attach/reuse automatically and may not remain stranded behind a failed startup shadow record.
+
+Dynasty Position & Depth consumes canonical Career Intrinsic directly. Its Rank/Strength authority remains the raw holistic career-forward room total across every canonically rostered QB/RB/WR/TE at actual position; displayed 0–10,000 player indices are never summed or averaged for room strength. Broad Market, 3-Year Intrinsic (Y1–Y3), and Career Intrinsic are distinct canonical player-value languages. Draft picks remain governed by their separate origin-aware model.
+
+Live #384 (22740932ecbbe5ca6febe9613a88614d4ec7f4ee) physically failed on iPhone/Safari despite corrected assets and HTTP 200 from the Dynasty endpoint. Live evidence showed Career Intrinsic did not log a compatible restore, while startup could report Current Intrinsic unavailable before later reconciliation. Corrective work is source/lifecycle-only; no additional Safari/cache machinery is authorized absent new evidence. #375 remains blocked until Dynasty/Career Intrinsic is physically accepted; after acceptance #375 is the next bounded Product Integration step to distinguish 3-Year Intrinsic from Career Intrinsic across appropriate existing player/value surfaces.

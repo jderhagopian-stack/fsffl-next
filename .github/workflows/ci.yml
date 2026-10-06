@@ -1,9 +1,8 @@
 name: CI
 
+# Pull-request CI is the stable merge gate; avoid a repeated full suite on merge push.
 on:
   pull_request:
-  push:
-    branches: [main]
 
 jobs:
   test:
@@ -16,5 +15,7 @@ jobs:
           python-version: '3.11'
       - name: Install
         run: python -m pip install -e '.[dev,web]'
-      - name: Test
+      - name: Focused Dynasty readiness regressions
+        run: pytest -q tests/test_dynasty_presentation_handoff.py
+      - name: Stable merge gate full suite
         run: pytest -q

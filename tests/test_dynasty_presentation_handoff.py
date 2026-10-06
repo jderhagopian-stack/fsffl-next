@@ -149,3 +149,66 @@ def test_dynasty_presentation_builder_passes_captured_publication_identity() -> 
     assert "payload = endpoint(" in source
     assert "state_id=context.league_state.state_id," in source
     assert "publication_generation_id=context.publication_generation_id," in source
+
+
+def test_dynasty_persisted_surface_reports_rank_completeness_without_relabeling_core_ready() -> None:
+    state_id, generation_id = "captured-state", "captured-generation"
+    observed_users: list[str] = []
+
+    def rooms(incomplete_position: str | None) -> list[dict[str, object]]:
+        result = []
+        for position in ("QB", "RB", "WR", "TE"):
+            for team_number in (1, 2):
+                incomplete = position == incomplete_position and team_number == 1
+                result.append({
+                    "team_id": f"team-{team_number}", "position": position,
+                    "room_raw": None if incomplete else float(team_number),
+                    "rostered_player_count": 1,
+                    "league_rank": None if incomplete else team_number,
+                    "strength_index": None if incomplete else 100.0,
+                    "team_count": 2,
+                    "coverage_count": 1 if incomplete_position == position else 2,
+                    "evidence_complete": not incomplete,
+                    "league_state_id": state_id if not incomplete else None,
+                })
+        return result
+
+    for incomplete_position, expected in (("QB", "incomplete"), (None, "ready")):
+        context = SimpleNamespace(
+            league_state=SimpleNamespace(state_id=state_id,
+                league=SimpleNamespace(league_id="captured-league"),
+                as_of=datetime(2026, 10, 6, tzinfo=timezone.utc)),
+            selected_team_id="captured-team", publication_generation_id=generation_id)
+        persisted = {"status":"ready", "capability":"career_intrinsic",
+            "league_id":"captured-league", "league_state_id":state_id,
+            "publication_generation_id":generation_id, "rooms":rooms(incomplete_position)}
+        app = FastAPI()
+        app.dependency_overrides[require_beta_user] = lambda: "tenant-a"
+        install_career_intrinsic_routes(app,
+            runtime_store=SimpleNamespace(get=lambda _user_id: context), loader=None,
+            coordinator=SimpleNamespace(current=lambda _context: None),
+            presentation_payload_loader=lambda user_id, _ctx, _surface:
+                (observed_users.append(user_id) or persisted))
+        response = TestClient(app).get("/api/league/dynasty-position-rooms",
+            params={"state_id":state_id,"publication_generation_id":generation_id})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["status"] == "ready"
+        assert payload["league_state_id"] == state_id
+        assert payload["publication_generation_id"] == generation_id
+        assert payload["dynasty_rank_readiness"]["status"] == expected
+        assert payload["dynasty_rank_readiness"]["incomplete_positions"] == (
+            ["QB"] if incomplete_position else [])
+        assert payload["dynasty_rank_readiness"]["coverage"]["QB"] == {
+            "coverage_count": 1 if incomplete_position else 2, "team_count": 2}
+        assert "dynasty_rank_readiness" not in persisted
+    assert observed_users == ["tenant-a", "tenant-a"]
+
+
+def test_dynasty_browser_explains_incomplete_coverage_and_refetches_new_generation() -> None:
+    source = (Path(__file__).parents[1] /
+              "src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "dynasty_rank_readiness?.status==='incomplete'" in source
+    assert "Career Intrinsic coverage is incomplete for league rosters." in source
+    assert "last-good-incomplete" in source
+    assert "&&fsfflLeagueStructureState.dynastyRooms?.publication_generation_id===requestedGeneration)return;" in source
