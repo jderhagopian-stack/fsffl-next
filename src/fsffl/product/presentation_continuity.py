@@ -392,6 +392,7 @@ class PresentationContinuityStore:
         league_state_id: str,
         required_surfaces: Sequence[str] = REQUIRED_PRESENTATION_SURFACES,
         selected_team_id: str | None = None,
+        expected_generation_id: str | None = None,
         manifest_record: ReusableArtifactRecord | None = None,
         metadata_records: Mapping[ArtifactKey, ReusableArtifactMetadataRecord] | None = None,
     ) -> bool:
@@ -408,6 +409,27 @@ class PresentationContinuityStore:
             league_state_id=league_state_id,
         )
         manifest = manifest_record
+        if manifest is None and metadata_records is None and expected_generation_id:
+            bundle_reader = getattr(
+                self._persistence, "get_reusable_artifact_read_bundle", None
+            )
+            if callable(bundle_reader):
+                metadata_keys = tuple(
+                    _surface_key(
+                        user_id=user_id,
+                        league_id=league_id,
+                        promotion_id=expected_generation_id,
+                        surface=surface,
+                    )
+                    for surface in required_surfaces
+                )
+                bundle = bundle_reader(
+                    manifest_key=manifest_key,
+                    metadata_keys=metadata_keys,
+                    payload_key=None,
+                )
+                manifest = bundle.manifest
+                metadata_records = bundle.metadata
         if manifest is None:
             manifest = self._persistence.get_reusable_artifact(manifest_key)
         if (
@@ -425,7 +447,13 @@ class PresentationContinuityStore:
         ):
             return False
         promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
-        if not promotion_id:
+        if (
+            not promotion_id
+            or (
+                expected_generation_id is not None
+                and promotion_id != expected_generation_id
+            )
+        ):
             return False
         expected_hashes = {
             str(item.get("surface")): item

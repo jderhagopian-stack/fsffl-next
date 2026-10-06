@@ -205,7 +205,7 @@ class PersistenceStore(Protocol):
         *,
         manifest_key: ArtifactKey,
         metadata_keys: Sequence[ArtifactKey],
-        payload_key: ArtifactKey,
+        payload_key: ArtifactKey | None,
     ) -> ReusableArtifactReadBundle: ...
 
     def get_latest_reusable_artifact(
