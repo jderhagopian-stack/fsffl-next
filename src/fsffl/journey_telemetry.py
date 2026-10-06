@@ -22,6 +22,15 @@ _SAFE_FIELDS = {
 }
 _SAFE_ID = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 _JOURNEY_ID_PATTERN = re.compile(r"^[0-9a-fA-F-]{36}$")
+_SAFE_API_PATHS = frozenset({
+    "/api/product-context",
+    "/api/intelligence/status",
+    "/api/league/atlas",
+    "/api/league/team-views",
+    "/api/league/value-lenses",
+    "/api/league/dynasty-position-rooms",
+    "/api/diagnostics/customer-journey",
+})
 
 
 def new_journey_id() -> str:
@@ -72,8 +81,9 @@ def emit_journey_event(event: str, **fields: Any) -> None:
         if key not in _SAFE_FIELDS:
             continue
         if isinstance(value, str):
-            if key == "api_path" and (not value.startswith("/api/") or "?" in value):
-                continue
+            if key == "api_path":
+                route_path = value.split("?", 1)[0]
+                value = route_path if route_path in _SAFE_API_PATHS else "/api/other"
             if key in {"restore_id", "publication_generation_id"} and not _JOURNEY_ID_PATTERN.fullmatch(value):
                 if key == "restore_id":
                     continue
