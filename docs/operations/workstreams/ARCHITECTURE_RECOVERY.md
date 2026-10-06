@@ -124,12 +124,12 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** P0.1 INSTRUMENTATION IMPLEMENTED — pre-PR validation checkpoint.  \
-**Owner:** Work, confirmed by the latest Issue #393 Management ownership correction.  \
+**State:** P0.1 INSTRUMENTATION PR OPEN — GitHub Actions validation in progress.  \
+**Owner:** Work, confirmed by Issue #393 Management ownership correction.  \
 **Current main:** `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.  \
-**Active branch / exact code head:** `work/p0-1-baseline-20261006` at `48b918350d75029c5b226236fe981dcdd33ddff5`. This head is based on current main and contains the pre-code docs checkpoint plus instrumentation/test/workflow commits.  \
-**PR:** none yet.  \
-**Live deploy:** Render service `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live commit `583f48dca0c6b763b7d249e420b82964a15291d2` (#391); unchanged because the instrumentation branch is not deployed.
+**Branch:** `work/p0-1-baseline-20261006`. Pre-PR exact code head `48b918350d75029c5b226236fe981dcdd33ddff5`; the post-PR documentation checkpoint is the current branch head and must be fetched before takeover.  \
+**PR:** #394 — https://github.com/jderhagopian-stack/fsffl-next/pull/394. The initial checks started on pre-PR head `c6f95217d621614c48a8eac75b976178a6e921c0`; the checkpoint commit advances the PR head without changing application code, so verify/rerun checks for the exact current head.  \
+**Live deploy:** Render service `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`; unchanged.
 
 The accepted pre-change baseline above remains the only measured production baseline. No post-change performance or hosted/browser values exist yet.
 
@@ -157,7 +157,7 @@ The unresolved live Dynasty issue remains unclaimed: no physical iPhone/Safari r
 
 - Baseline numbers remain as recorded in the 01:25Z checkpoint: restore-ready success p50 10.89s / p95 127.48s / max 223.04s; failure p50 11.98s / max 96.76s; 12.69 GB accepted prior egress figure; historical adapter-query totals; Render memory high-water ~524.4 MB; no previous correlated browser counts or foreground request samples.
 - No local repository checkout, local JS/Python syntax checks, or local test runs were attempted in this continuation; Git transport/browser limitations are not being retried.
-- Focused telemetry + League Atlas GitHub Actions have **not yet run**. They are configured to run on the PR. Standard CI also runs the full suite for a PR; this will be the one stable merge-gate full suite.
+- PR #394 was opened against main. At inspection, focused League Atlas, Home, Franchise, PR164, live diagnostics, and standard CI Actions had started on the initial PR head. Their results and exact-head status are pending. The handoff-only PR-head update requires checking the current head’s associated runs before merge; retain the one full-suite stable merge gate and do not rerun it for a defect that can be handled by focused tests alone.
 - No Codex review requested; the governing P0.1 continuation explicitly excludes Codex review.
 - Hosted acceptance and physical iPhone/Safari acceptance remain pending deployment.
 
@@ -167,11 +167,10 @@ Simulation 2.0 mathematics, 50k/RNG/replay, Foundation 4 economics, approved #37
 
 ### Exact next action and safe continuation
 
-1. Update this handoff with the validation PR checkpoint and exact resulting head.
-2. Open one PR from `work/p0-1-baseline-20261006` to `main`; inspect focused League Atlas and standard CI checks on that exact PR head.
-3. Fix only demonstrated instrumentation/test defects. Do not start P0.2.
-4. After checks pass, record exact PR/head/review disposition. Deployment and physical acceptance require Management’s hosted process; when deployed, run the saved-session iPhone/Safari journey once and collect correlated `FSFFL_CUSTOMER_JOURNEY` Render logs by `journey_id` + `restore_id`, browser events, generation IDs, and matching Render memory window.
-5. Resume from this file + directive + Issue #393 and the PR’s exact head. Do not repeat the broad audit or pre-change baseline; do not treat prior `ERR_BLOCKED_BY_CLIENT` as the app failure; do not reopen frozen semantics or start P0.2 before P0.1 is fully evidenced/checkpointed.
+1. Fetch exact PR #394 head after this checkpoint commit and check its associated workflow runs/combined status.
+2. Fix only concrete instrumentation/test defects at the PR head, with focused Actions. If CI did not rerun for the documentation update, establish which required checks are tied to the exact head before merging.
+3. After checks pass, record exact PR/head/review disposition. Deployment and physical acceptance require Management’s hosted process; when deployed, run the saved-session iPhone/Safari journey once and collect correlated `FSFFL_CUSTOMER_JOURNEY` Render logs by `journey_id` + `restore_id`, browser events, generation IDs, and matching Render memory window.
+4. Resume from this file + directive + Issue #393 and PR #394’s exact head. Do not repeat the broad audit or pre-change baseline; do not treat prior `ERR_BLOCKED_BY_CLIENT` as the app failure; do not reopen frozen semantics or start P0.2 before P0.1 is fully evidenced/checkpointed.
 ---
 
 ## Execution log
@@ -270,3 +269,12 @@ Simulation 2.0 mathematics, 50k/RNG/replay, Foundation 4 economics, approved #37
 - **Frozen:** #370 metric, Current lens, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, publication fences, last-good and tenant boundaries; no P0.2 or product expansion.
 - **Exact next action:** checkpoint doc update, then open PR and inspect focused Actions on its exact head.
 - **Safe takeover:** continue this P0.1 PR only. Do not retry local cloud-browser/Git transport setup; use GitHub APIs/Actions. Do not deploy/merge based on unrun checks or claim the browser failure is resolved.
+
+
+### 2026-10-06 — P0.1 PR #394 opened
+
+- **PR / branch:** #394 opened against main from `work/p0-1-baseline-20261006`. Pre-PR exact code head: `48b918350d75029c5b226236fe981dcdd33ddff5`; PR initially reported head `c6f95217d621614c48a8eac75b976178a6e921c0` after the pre-PR handoff update. This post-PR checkpoint itself advances the branch once more; fetch the current exact head and its Actions before proceeding.
+- **Checks at PR creation:** focused League Atlas North Star workflow, standard CI, Home/Franchise/other path-triggered Actions and diagnostics were in progress. No conclusions about validation yet.
+- **Changes/measurements:** same instrumentation-only P0.1 slice detailed above; no production measurements after code because no deployment. Existing baseline remains authoritative.
+- **Next action:** fetch exact current branch/PR head, inspect only its associated Actions, and handle concrete failures. No merge/deploy until exact-head checks are understood.
+- **Safe takeover:** read this checkpoint, P0 directive, Issue #393, then PR #394. Continue sole-writer P0.1 only; keep all frozen safeguards and do not begin P0.2.
