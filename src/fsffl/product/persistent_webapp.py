@@ -1807,6 +1807,10 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
 def _promote_presentation_for_user(user_id: str, context) -> object | None:
     if not _presentation_continuity.enabled or context.league_state is None:
         return None
+    # One publication owner requests optional Dynasty preparation and publishes
+    # the resulting complete presentation. Core promotion stays non-blocking; a
+    # terminal Intrinsic build schedules a generation-fenced presentation follow-up.
+    _prepare_presentation_for_user(user_id, context)
     # Prime the bounded Future Forecast cache while the exact authoritative
     # Forecast is attached. A later same-league State reconciliation may then keep
     # Y2/Y3 visible as explicitly stale-last-good without rebuilding Forecast on a
@@ -2004,7 +2008,6 @@ def _publish_dynasty_presentation_followup(
             _dynasty_followups.discard(key)
 
 
-app.state.presentation_preparer = _prepare_presentation_for_user
 app.state.presentation_promoter = _promote_presentation_for_user
 
 
@@ -2061,7 +2064,6 @@ def _run_lightweight_startup_restore() -> None:
                         # current publication promotion remains the only write path.
                         # Startup never waits for Dynasty. It starts any needed work in
                         # the background and publishes core/presentation continuity.
-                        _prepare_presentation_for_user(_beta_restore_user, context)
                         promotion = _promote_presentation_for_user(
                             _beta_restore_user,
                             context,
