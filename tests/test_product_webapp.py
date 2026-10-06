@@ -1173,3 +1173,51 @@ def test_product_capability_failure_phase_is_reported_separately_from_core_autho
     assert status["forecast_raw_observation_count"] == 0
     assert status["value_ready"] is False
     assert status["capability_readiness"]["publication"]["working_generation_active"] is False
+
+def test_product_context_surface_resolution_reuses_one_reader_result() -> None:
+    observed: dict[str, object] = {}
+    surface_payload = {
+        "league_id": "sleeper:123",
+        "league_state_id": "state-current",
+        "publication_generation_id": "generation-current",
+        "intelligence_freshness": {
+            "status": "current",
+            "target_league_id": "sleeper:123",
+            "target_state_id": "state-current",
+            "publication_generation_id": "generation-current",
+        },
+    }
+
+    def load_surface(user_id, runtime, surface):
+        observed["loader"] = (user_id, runtime, surface)
+        return surface_payload
+
+    def readiness(
+        runtime,
+        *,
+        presentation_payload=None,
+        presentation_resolved=False,
+    ):
+        observed["readiness"] = (
+            runtime,
+            presentation_payload,
+            presentation_resolved,
+        )
+        return {"overall_status": "full", "served_last_good": {"available": False}}
+
+    client = TestClient(
+        create_app(
+            presentation_payload_loader=load_surface,
+            capability_readiness_reader=readiness,
+        )
+    )
+    response = client.get("/api/product-context?presentation_surface=home")
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["presentation_payload"] == surface_payload
+    assert observed["loader"][0] == "local-beta-user"
+    assert observed["loader"][2] == "home"
+    assert observed["readiness"][0] is observed["loader"][1]
+    assert observed["readiness"][1] == surface_payload
+    assert observed["readiness"][2] is True
