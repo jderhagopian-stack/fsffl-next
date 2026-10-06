@@ -1,6 +1,6 @@
 # FSFFL NEXT — Architecture Recovery Workstream
 
-Updated: 2026-10-05
+Updated: 2026-10-06
 
 ## Purpose
 
@@ -124,9 +124,10 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** READY TO BEGIN P0.1  
-**Owner:** Work  
-**Fallback owner if Work capacity is exhausted:** Implementation, only after Management reassigns ownership.
+**State:** P0.1 PRE-IMPLEMENTATION CHECKPOINT — baseline evidence assembled; authoritative live journey is not yet observed or instrumented.  
+**Owner:** Work (per latest Issue #393 Management comment)  
+**Active branch:** `work/p0-1-baseline-20261006`, created from current main `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.  
+**PR:** none. **Application code changes:** none. **Live deployment:** unchanged at #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`, Render deploy `dep-db229jvlot8c73dieqtg`.
 
 Before acting, Work must re-read:
 - this file;
@@ -151,3 +152,24 @@ Then record the first execution checkpoint below.
 - New feature breadth: HOLD.
 - Next action: P0.1 baseline and unresolved Dynasty customer-journey trace.
 - No P0 corrective implementation has yet been accepted under this workstream record.
+
+
+### 2026-10-06 01:25Z — P0.1 baseline / safe pre-implementation checkpoint
+
+- **Authority and current main:** latest commit found on main is `0ef839ef9edeae7dad85fb6e52984c2998699e2a` (“Require durable Work checkpoints for P0 recovery”). Issue #393 is open; its latest Management ownership correction confirms Work is the sole writer. The P0 directive, current-state files, this handoff, Issue #393 and latest Render deploy were reread.
+- **Branch / PR / head:** branch `work/p0-1-baseline-20261006` created from `0ef839ef9edeae7dad85fb6e52984c2998699e2a`; no PR. This checkpoint commit changes this handoff file only. Resolve the exact current branch head from GitHub before continuing.
+- **Live deploy:** service `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, commit `583f48dca0c6b763b7d249e420b82964a15291d2` (#391), live. Main/live application difference remains documentation-only; no new deployment occurred.
+- **Journey evidence:** #391 binds Dynasty ready/preparing/unavailable/verified-last-good responses to publication generation and retains the client's exact-generation fence. Physical iPhone/Safari acceptance of visible Dynasty ranks remains unresolved. Current live visible publication ID and the actual user-facing failing stage are **not established** by this checkpoint; do not describe the browser-access failure below as an application failure.
+- **Restore baseline (Supabase `user_perceived_latency`, prior 7 days):** `restore_ready` success n=52, p50 10,889.5 ms, p95 127,479.05 ms, max 223,043 ms (latest 2026-10-05 23:03:36Z); failed n=10, p50 11,978.5 ms, p95 58,609.95 ms, max 96,756 ms (latest 2026-10-05 19:06:45Z). These are restore-ready totals, not per-stage timings.
+- **State / manifest / payload journey reads:** no correlated journey-level counts or timings currently exist in the observed data. Existing app artifact queries retrieve full payloads; per-stage read counts/bytes remain **not measured**.
+- **Supabase baseline:** current `pg_stat_statements` shows 12,749 calls / 12,261 rows / 102,394.1 ms total execution for one full-payload `derived_artifact` identity lookup; 11,747 calls / 8,011 rows / 149,234.8 ms for the latest-by-scope full-payload lookup; 10,685 full-payload upserts / 212,541.9 ms. Query statistics reset was recorded as 2026-09-08. These totals are not journey- or artifact-kind attribution; query-level bytes are not recorded. Latest canonical egress figure remains 12.69 GB (directive; not independently refreshed here).
+- **Foreground latency:** Render returned no `http_latency` or `http_request_count` samples for the seven-day window. A last-24-hour request-log filter for Product Context and Dynasty paths returned no rows. Therefore current endpoint p50/p95 and request counts are unavailable.
+- **Memory:** Render seven-day samples: 194 points across 136 instance IDs; min 2,252,800 bytes; max 524,447,740 bytes (about 524.4 MB). This approaches the 536.9 MB runtime ceiling; the sparse, many-instance-ID telemetry does not establish cause or a leak.
+- **First useful render / generation identity:** no browser performance mark or end-to-end trace links restore → Product Context → Atlas render → visible Dynasty room generation. Not measured.
+- **Browser retry/poll baseline (source inspection, not physical request counts):** Atlas value-lens loader has up to 80 requests with default 1,500 ms retry delay; Dynasty position-room loader up to 20 requests with the same default delay; Atlas/team view alignment up to 3 attempts at 150 ms spacing; shared readiness polling caps at 36 ticks; Atlas publication promotion allows one bounded 250 ms retry; Forecast refresh maintenance runs on a 2,500 ms interval. These are configured bounds/intervals, not observed counts in a real saved-session run.
+- **Physical/browser observation:** a single attempt to open the live host from the available cloud browser failed with `net::ERR_BLOCKED_BY_CLIENT`. It did not reach an auth page or app response and is not evidence the service/Dynasty endpoint is failing. No alternate route or repeated browser probing was attempted. A testable local repository checkout could not be created because outbound Git transport is blocked in this environment. No code or tests were changed/run.
+- **Files/subsystems changed:** handoff documentation only. No app/runtime/browser code, persistence data/schema, Render configuration, or model semantics touched.
+- **Focused tests / full suite:** none; documentation-only checkpoint. Full suite remains reserved for stable merge gate.
+- **Frozen safeguards / non-goals:** Simulation 2.0 mathematics, 50k/RNG/replay, Foundation 4 and accepted #370 Dynasty semantics; exact State/team/publication-generation fences; atomic publication, verified same-league/team last-good, tenant isolation; no #375/PIT-history product expansion/Owner Intelligence; no broad model changes, distributed infrastructure, or unrelated product breadth.
+- **Exact next action:** in a code-capable repo checkout, fetch current main and this branch, confirm main has not advanced, then use a saved-session customer context to run and instrument exactly one before-change journey: restore/current State → Product Context → League Atlas → visible Dynasty rooms, capturing State/manifest/payload reads and bytes, generation IDs, per-stage timings, first useful render, foreground latencies, memory and actual browser requests/retries/polls/handoffs. Preserve the failing stage and response as a regression case. If a physical saved-session browser is unavailable, record that as an explicit acceptance gap and do not invent its evidence. Keep P0.1 limited to this measurement/authoritative journey slice.
+- **Safe takeover:** read this file, the governing directive and Issue #393 first; verify exact GitHub branch/main/live deploy. Continue only on `work/p0-1-baseline-20261006` or a Management-reassigned successor; do not repeat the broad audit, do not treat `ERR_BLOCKED_BY_CLIENT` as the product failure, and do not start P0.2 until P0.1 has a complete baseline/checkpoint and Management-authorized sequencing.
