@@ -152,6 +152,19 @@ Read the governing P0 directive, this checkpoint and its physical-run entry, Iss
 
 ## Execution log
 
+### 2026-10-06 — P0.1 exact-State handoff corrective started
+
+- **Current main:** `da045325bd3916d8b1014f49dcacc24a5bbc1141`. **Live Render:** service `srv-dae6k7vqj5pc73af7bt0`, deploy `dep-db266fe7bikc73cjl5jg`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506` (live).
+- **Branch / PR / head:** `work/p0-1-dynasty-state-fence-20261006`, created from the exact main SHA above; no PR yet; branch currently points at base SHA `da045325bd3916d8b1014f49dcacc24a5bbc1141`.
+- **Finding before change:** the Dynasty route accepts persisted data when only `status == ready` and a publication generation ID is present. Its continuity loader can return a verified same-team/same-league last-good surface whose served State is older than the active State. The route returns that payload without checking its served State against `context.league_state.state_id` or its generation against the current published generation. This is the precise server handoff that allows a legitimate last-good surface from `3d7808d4…` to reach a browser targeting `ee05aa91…`; the browser correctly rejects it. The simultaneous matching last-good telemetry event is a separate request and does not alter this diagnosis.
+- **Scope:** add an exact-current State + publication-generation acceptance guard at this Dynasty-only handoff, relying on the continuity loader’s existing league/team integrity checks; if fallback fails the guard, continue to canonical Career lifecycle, which returns preparing/current or current-State evidence. Add a focused regression using the captured State and generation identifiers. No changes to the browser fence, stale evidence identity, Current semantics, Dynasty formula, or persistence architecture.
+- **Baseline / measurements:** physical evidence remains as recorded below: target State `ee05aa91…`, stale served State `3d7808d4…`, target generation `94543b58…`; three Dynasty GETs (39,999.95 / 23,501.25 / 5,619.5 ms); 13 readiness polls; 30,000 ms retry wait; no visible Dynasty ranks. No new runtime measurement yet.
+- **Validation / unresolved:** implementation and focused route regression are not yet complete; no tests run; P0.1 remains open pending merge/deploy and one physical saved-session acceptance.
+- **Frozen safeguards:** preserve exact State/team/publication-generation fences, Current rank semantics, approved #370 metric, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, atomic publication and verified last-good. P0.2’s repeated-read/67 MB work remains deferred.
+- **Exact next action:** implement only the Dynasty route fallback guard and a route-level regression for the captured mismatch; run its focused test and CI before PR.
+- **Safe takeover:** read this corrective entry and the physical-run entry below, then inspect the exact branch SHA. Do not repeat baseline collection, weaken the browser fence, relabel last-good as current, or start P0.2.
+
+
 ### 2026-10-05 — Management handoff baseline
 
 - Audit: complete and accepted.
