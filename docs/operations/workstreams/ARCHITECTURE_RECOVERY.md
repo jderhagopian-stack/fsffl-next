@@ -124,54 +124,39 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** P0.1 PR #394 — focused Actions exposed asset-key and test-harness issues; route redaction is also hardened, final-head validation pending.  \
-**Owner:** Work per latest Issue #393 Management ownership correction.  \
-**Current main:** `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.  \
-**Branch:** `work/p0-1-baseline-20261006`. Exact instrumentation/test/privacy/RSS/delivery head before this handoff commit: `a2e069b0f8a22a1dd8076722ee9e0f52ca1b8aa8`; fetch the resulting PR head before takeover.  \
-**PR:** #394 — https://github.com/jderhagopian-stack/fsffl-next/pull/394.  \
-**Live deploy:** Render `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`; unchanged.
+**State:** P0.1 instrumentation implementation and automated validation are complete at a stable PR head. Hosted production measurement and physical saved-session iPhone/Safari acceptance remain pending. Do not start P0.2.
+**Owner:** Work is the sole writer for this corrective under Issue #393.
+**Current main:** `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.
+**Branch / PR / exact current head:** `work/p0-1-baseline-20261006`, PR #394 (open, unmerged), `05c38ebdb743d4eac653488938e421323113d256`.
+**Exact validated application/test head:** `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`. The only subsequent changes are handoff-document updates; no application/test code changed after the validated code head.
+**Live Render:** service `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`; unchanged and does not contain this PR.
+**Latest exact-head Actions:** on `05c38ebdb743d4eac653488938e421323113d256`, CI #4692, League Atlas #1047, Home #947, Franchise #504, PR164 #1356, private-beta diagnostics #796, and forecast corrective trace #1371 all completed successfully. Full CI passed 2,174 tests on validated code head `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`; latest docs-only head CI is also green.
 
-The accepted pre-change baseline above remains the only production measurement. No post-change runtime or physical-browser values are available until deployment.
+### P0.1 changes
 
-### Implementation in this slice
+Instrumentation only: opaque journey/restore correlation; runtime restore-stage timing; State/context/intelligence and reusable-artifact persistence read/call/row/hit-miss/elapsed/application-JSON-byte measurements; authenticated bounded diagnostic intake; request/status/latency and Render RSS sampling; browser restore, first useful exact-generation Dynasty render, retry/poll/handoff, and Safari memory availability events. Static delivery identities were refreshed. A generation-mismatch Dynasty outcome remains a failure and regression case; only visible ranks aligned to exact current State and publication generation count as success.
 
-Instrumentation only. No restore order, read contract, API response semantics, retry limits, publication fencing, Dynasty formula, Current ranking, model authority, or product behavior changed.
+No State restore order, API semantics, retry policy, publication fencing, Dynasty formula, Current ranking, model authority, or product behavior changed. No architecture refactor or schema change.
 
-Files changed:
+### Measurements and limits
 
-- `src/fsffl/journey_telemetry.py`: bounded allowlisted structured events; opaque request/restore IDs; bounded browser batch intake; persistence read decorator.
-- `src/fsffl/product/persistent_runtime.py`: timings/outcomes for durable context restore, State activation, and exact-State intelligence restore under one startup restore ID.
-- `src/fsffl/persistence/postgres.py`: correlated call/read/row/hit-miss/elapsed and returned serialized JSON byte counts for runtime context, State snapshots, sync cursor and reusable artifacts. Payload bytes are application JSON serialization size, **not** exact Supabase wire egress.
-- `src/fsffl/product/persistent_webapp.py`: request/restore correlation headers, journey request timings, and authenticated same-origin telemetry intake limited to 64 KiB / 80 events.
-- `src/fsffl/product/static/app.js`: session-scoped opaque ID, actual API attempt/status/latency counts, Product Context restore, Safari memory availability, coalesced bounded batch flushed once at success/failure/pagehide.
-- `src/fsffl/product/static/product_shell.js`: actual shared-readiness poll counts, bounded promotion retry wait, generation handoff, and asset identity.
-- `src/fsffl/product/static/league_comparison.js`: value-lens/Atlas alignment/Dynasty attempts/retry waits; exact Dynasty State/generation failure; visible exact-generation first useful render.
-- `src/fsffl/product/static/index.html` and `product_shell.js`: refreshed required static cache identities so the modified JavaScript reaches browsers.
-- `tests/test_architecture_recovery_journey_telemetry.py`: allowlisting, bounded batches, payload-byte/call counts, restore identity and Dynasty failure/success fence.
-- `.github/workflows/league-atlas-north-star.yml`: new regression tests and JS syntax checks included.
+The accepted pre-change production baseline in the 01:25Z execution-log entry remains authoritative. No production post-change values exist because PR #394 is not deployed. Payload byte counts represent application JSON serialization, not Supabase wire egress. Safari may not expose `performance.memory`; the instrumentation reports availability. The actual failing live Dynasty stage and first current-generation visible ranks remain unobserved until Management performs the saved-session physical journey.
 
-Safari `performance.memory` may be unavailable and will be reported as unsupported. Render RSS is a separate hosted sample.
+### Validation
 
-### Validation and measurements
+At validated code head `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`, focused League Atlas #1046 passed JS syntax, telemetry regression tests, Atlas tests, composition sanity, and final-acceptance provider-authority audit; Home #946 passed; full CI #4691 passed 2,174 tests (one warning); Franchise #503, PR164 #1355, diagnostics #795, and forecast trace #1370 passed. Subsequent commits only updated this handoff. All corresponding workflow categories passed again at latest PR head `05c38ebdb743d4eac653488938e421323113d256`.
 
-- Pre-change baselines remain those in the 01:25Z entry: restore-ready success p50 10.89s/p95 127.48s/max 223.04s; failure p50 11.98s/max 96.76s; accepted previous egress 12.69 GB; Render high-water about 524.4 MB; no correlated browser/API stage measurements.
-- On PR head `c6f95217d621614c48a8eac75b976178a6e921c0`, the focused JS syntax step passed; the Atlas and Home suites exposed stale inner/outer cache keys after the modified shipped asset. Those keys were recalculated from the Git blob identities.
-- On PR head `1da8a14eeb111d4143c837bea5584134b1650482`, Home passed; Atlas syntax passed but telemetry tests needed INFO capture and a `Path` import. Head `b7f5fe7f0e275e70e60da8ca5647c6cfa51a0bf1` fixed those, and exact guarded-selector assertion alignment landed in `621c24c0e500e4cd3af6e7d093ed63fa766a3f49`. Atlas focused validation, including composition sanity and final-acceptance authority audit, then passed on `621c24c…`. A final privacy review restricted logged route names and added an identifier-redaction regression at `f2c7898b0d057c408735835831b916da0e4376a5`; final-head checks are pending.
-- Full CI was started on earlier heads and had not completed at this checkpoint. Full CI on `621c24c…` was still in progress before the final path-redaction change; exact final-head checks must be fetched after this checkpoint commit and used for disposition. The stable final full suite remains required.
-- No local checkout or local tests were attempted; cloud-browser/Git-transport recovery was not retried. No Codex review requested per P0.1 gate.
-- Physical iPhone/Safari acceptance and production post-change measurements remain pending deployment. The unresolved Dynasty failure remains preserved; actual live failing stage is unknown.
+No local tests, authenticated Safari run, Codex review, merge, or deployment were performed. GitHub automatically ran the repository-configured PR bot when PR #394 opened; no fresh Codex review was requested.
 
 ### Frozen safeguards
 
-Approved #370 Dynasty metric, Current ranking semantics, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, exact State/team/publication-generation fences, atomic publication, verified last-good, tenant isolation, no P0.2, #375/PIT-history/Owner Intelligence hold.
+Approved #370 Dynasty metric, Current ranking semantics, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, exact State/team/publication-generation fences, atomic publication, verified last-good, and tenant isolation. No P0.2, #375, PIT/history expansion, Owner Intelligence, provider refresh, broad model changes, architecture refactor, schema migration, or distributed infrastructure.
 
 ### Exact next action and safe takeover
 
-1. Fetch PR #394’s exact post-checkpoint head and associated Actions.
-2. Require focused Atlas checks and standard CI to pass at a stable exact head. Fix only demonstrated defects; avoid broad refactors and repeated full suites beyond the final stable merge gate.
-3. Record final PR/head/check disposition. Then follow Management’s hosted deployment process and have Management run the saved-session iPhone/Safari journey once; correlate Render events by `journey_id` and `restore_id`, and compare server/browser State + generation IDs, retries/polls/handoffs, timings, payload bytes and Render memory.
-4. Resume from this file, the governing directive, Issue #393 and PR #394. Do not repeat the broad audit or pre-change baseline, treat `ERR_BLOCKED_BY_CLIENT` as product evidence, reopen frozen semantics, or start P0.2 before P0.1 is complete and checkpointed.
----
+Management should use the hosted process to merge/deploy PR #394, then run the saved-session iPhone/Safari journey once. Correlate browser and Render events by `journey_id` and `restore_id`; record State/manifest/payload reads and serialized bytes, publication identity, restore/foreground timings, first useful render, actual retry/poll/handoff counts, and Render RSS. Compare the live result against the preserved exact-generation Dynasty mismatch regression. Only after recording that evidence and checkpointing P0.1 should Management decide whether to authorize P0.2.
+
+Resume by reading the governing P0 directive, this workstream, Issue #393, and PR #394. Verify the exact branch/head/live deploy first. Do not repeat the accepted audit or pre-change baseline; do not reinterpret browser access failure as application evidence; do not weaken frozen safeguards or begin P0.2.
 
 ## Execution log
 
