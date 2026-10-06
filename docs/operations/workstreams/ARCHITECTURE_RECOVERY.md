@@ -124,39 +124,26 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
-**State:** P0.1 instrumentation implementation and automated validation are complete at a stable PR head. Hosted production measurement and physical saved-session iPhone/Safari acceptance remain pending. Do not start P0.2.
-**Owner:** Work is the sole writer for this corrective under Issue #393.
-**Current main:** `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.
-**Branch / PR / exact head before this handoff-only commit:** `work/p0-1-baseline-20261006`, PR #394 (open, unmerged), `929f98e7ae063c9137076bd8da335663d5656377`. This update changes this document only; read the PR head SHA from GitHub for the resulting ref.
-**Exact validated application/test head:** `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`. The only subsequent changes are handoff-document updates; no application/test code changed after the validated code head.
-**Live Render:** service `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`; unchanged and does not contain this PR.
-**Latest exact-head Actions before this handoff-only commit:** on `929f98e7ae063c9137076bd8da335663d5656377`, CI #4693, League Atlas #1048, Home #948, Franchise #505, PR164 #1357, private-beta diagnostics #797, and forecast corrective trace #1372 all completed successfully. Full CI passed 2,174 tests on validated code head `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`; CI #4693 also passed on the handoff-only head.
+**State:** P0.1 instrumentation is merged and live. Stop here for Management’s physical iPhone/Safari saved-session journey. P0.1 is not complete until that customer journey and its evidence are captured and checkpointed. Do not begin P0.2.
+**Owner:** Work remains the sole writer for this corrective under Issue #393.
+**Application merge commit / main at deployment:** `5b243b00179deeeeda26c6a06b72bd4abfd38506`, PR #394 (merged from head `34bc4f267283e8c35dac9f5457e6ec4713b96475)).
+**Live Render:** service `fsffl-next-private-beta` (`srv-dae6k7vqj5pc73af7bt0`), deployment `dep-db266fe7bikc73cjl5jg`, status `live`, deployed commit `5b243b00179deeeeda26c6a06b72bd4abfd38506`; became live at 2026-10-06 02:57:25Z. Render service is attached to `main` with auto-deploy off; this exact merge commit was manually deployed.
+**Validation:** PR head `34bc4f267283e8c35dac9f5457e6ec4713b96475` passed CI #4694, League Atlas #1049, Home #949, Franchise #506, PR164 #1358, private-beta diagnostics #798, and forecast trace #1373. The full suite passed at the validated application head; no application code changed after it. The earlier automated review findings were fixed and all three inline threads resolved before merge.
+**Hosted instrumentation verification:** Render reports build success, deploy success, service live, and `Application startup complete`. Startup logs contain `FSFFL_CUSTOMER_JOURNEY` restore and persistence events, including a `durable_context_restore=ready` event. For restore `0b1eaf56-a172-47d7-ac0c-3fd120f7cead`, startup recorded one runtime-context read, one State snapshot row with 547,185 serialized JSON bytes, and one published-intelligence-generation lookup with 1,060 bytes. This confirms the deployed server instrumentation emits events; it is not the saved-session Safari journey or its browser-side evidence.
+**Production outcome:** no authenticated physical iPhone/Safari journey has been run after deployment. No current customer journey ID, first useful Dynasty render, customer-facing failing stage, actual retry/poll/handoff count, or Safari memory measurement is available yet. The approved pre-change baseline remains in the 01:25Z execution-log entry. Application JSON byte measurements are not exact Supabase wire egress; Safari heap may be unsupported.
+**Safeguards remain frozen:** approved #370 Dynasty metric; Current ranking semantics; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; exact State/team/publication-generation fences; atomic publication; verified last-good; tenant isolation. No P0.2, #375, PIT/history expansion, Owner Intelligence, provider refresh, broad model changes, or distributed infrastructure.
 
-### P0.1 changes
+### Management’s physical acceptance steps
 
-Instrumentation only: opaque journey/restore correlation; runtime restore-stage timing; State/context/intelligence and reusable-artifact persistence read/call/row/hit-miss/elapsed/application-JSON-byte measurements; authenticated bounded diagnostic intake; request/status/latency and Render RSS sampling; browser restore, first useful exact-generation Dynasty render, retry/poll/handoff, and Safari memory availability events. Static delivery identities were refreshed. A generation-mismatch Dynasty outcome remains a failure and regression case; only visible ranks aligned to exact current State and publication generation count as success.
+1. On the usual iPhone, open Safari with the ordinary saved, authenticated session for the affected league and team. Do not clear site data or sign out. Record the local time and timezone, league/team, Safari/iOS version, and whether Safari was freshly opened or resumed.
+2. Restore the session and navigate normally to League Atlas. Select Dynasty and Position & Depth. Do not manually refresh, reconnect, trigger provider refresh, or navigate away during the first observation.
+3. Capture a short screen recording or screenshots from restore through the first settled Position & Depth result. Record whether the page shows current intelligence, loading, unavailable, or last-good; note when rows/ranks first become visible and whether they match the selected league/team.
+4. If the Dynasty evidence fails or remains ambiguous, preserve the first failure as-is: note the time and visible message, capture the screen, and do not reload before recording it. Then allow the page’s normal recovery behavior to finish and capture the final state separately.
+5. Send the recording/screenshots, local test time/timezone, league/team, and a short outcome note to Management. Do not send login credentials or session tokens.
+6. Correlate the test window in Render logs using `FSFFL_CUSTOMER_JOURNEY` records. Use the browser’s opaque `journey_id` and server `restore_id` to trace restore stages, State/manifest/payload reads and bytes, publication/generation identity, request timings, retries/polls/handoffs, first useful render, and Render RSS. Preserve the failing stage and response as the regression case if visible Dynasty ranks do not bind to the exact current State and generation.
 
-No State restore order, API semantics, retry policy, publication fencing, Dynasty formula, Current ranking, model authority, or product behavior changed. No architecture refactor or schema change.
-
-### Measurements and limits
-
-The accepted pre-change production baseline in the 01:25Z execution-log entry remains authoritative. No production post-change values exist because PR #394 is not deployed. Payload byte counts represent application JSON serialization, not Supabase wire egress. Safari may not expose `performance.memory`; the instrumentation reports availability. The actual failing live Dynasty stage and first current-generation visible ranks remain unobserved until Management performs the saved-session physical journey.
-
-### Validation
-
-At validated code head `d2cc376c97e6a7f9ae2bfb5d944f13ef26060a4a`, focused League Atlas #1046 passed JS syntax, telemetry regression tests, Atlas tests, composition sanity, and final-acceptance provider-authority audit; Home #946 passed; full CI #4691 passed 2,174 tests (one warning); Franchise #503, PR164 #1355, diagnostics #795, and forecast trace #1370 passed. Subsequent commits only updated this handoff. All corresponding workflow categories passed again at latest PR head `05c38ebdb743d4eac653488938e421323113d256`.
-
-No local tests, authenticated Safari run, Codex review, merge, or deployment were performed. GitHub automatically ran the repository-configured PR bot when PR #394 opened; no fresh Codex review was requested.
-
-### Frozen safeguards
-
-Approved #370 Dynasty metric, Current ranking semantics, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, exact State/team/publication-generation fences, atomic publication, verified last-good, and tenant isolation. No P0.2, #375, PIT/history expansion, Owner Intelligence, provider refresh, broad model changes, architecture refactor, schema migration, or distributed infrastructure.
-
-### Exact next action and safe takeover
-
-Management should use the hosted process to merge/deploy PR #394, then run the saved-session iPhone/Safari journey once. Correlate browser and Render events by `journey_id` and `restore_id`; record State/manifest/payload reads and serialized bytes, publication identity, restore/foreground timings, first useful render, actual retry/poll/handoff counts, and Render RSS. Compare the live result against the preserved exact-generation Dynasty mismatch regression. Only after recording that evidence and checkpointing P0.1 should Management decide whether to authorize P0.2.
-
-Resume by reading the governing P0 directive, this workstream, Issue #393, and PR #394. Verify the exact branch/head/live deploy first. Do not repeat the accepted audit or pre-change baseline; do not reinterpret browser access failure as application evidence; do not weaken frozen safeguards or begin P0.2.
+**Exact next action:** stop for Management to perform and return the physical journey in steps 1–5. Then correlate its logs, record measurements and pass/fail evidence in this workstream, and decide whether P0.1 is complete. Do not begin P0.2 before that checkpoint.
+**Safe takeover:** read the P0 directive, this workstream, Issue #393, and merged PR #394. Application commit `5b243b0…` is live at deployment `dep-db266fe7bikc73cjl5jg`. Do not repeat the pre-change baseline or broad audit, change frozen semantics, or start later slices before the physical journey is recorded.
 
 ## Execution log
 
@@ -319,3 +306,17 @@ Resume by reading the governing P0 directive, this workstream, Issue #393, and P
 - **Safeguards held:** Current semantics, approved #370 metric, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, exact State/team/publication fences, atomic publication, verified last-good and tenant isolation. No P0.2 or feature expansion.
 - **Exact next action:** Management to merge/deploy PR #394 through hosted process, then run the saved-session iPhone/Safari journey once. Correlate Render logs via `journey_id` + `restore_id`, collect State/manifest/payload counts and serialized bytes, foreground latency, actual browser retry/poll/handoff counts, exact publication identity, and per-request RSS; compare first visible Dynasty render against the preserved mismatch fixture.
 - **Safe handoff:** read the P0 directive, this workstream, Issue #393 and PR #394. Continue from PR branch’s current exact head. Do not repeat broad audit/baseline, reopen frozen semantics, or begin P0.2 before post-deployment P0.1 evidence is recorded.
+
+
+### 2026-10-06 — P0.1 merged and deployed; physical acceptance gate
+
+- **Main/application commit:** PR #394 merged from exact head `34bc4f267283e8c35dac9f5457e6ec4713b96475` as merge commit `5b243b00179deeeeda26c6a06b72bd4abfd38506`.
+- **Branch / PR:** PR #394 merged; its source branch was `work/p0-1-baseline-20261006`. No open implementation PR remains for P0.1.
+- **Render:** auto-deploy is disabled for the Virginia Free service. Manually triggered deployment `dep-db266fe7bikc73cjl5jg` on service `srv-dae6k7vqj5pc73af7bt0`; exact commit `5b243b00179deeeeda26c6a06b72bd4abfd38506`; build and deploy succeeded; status live at 2026-10-06 02:57:25Z.
+- **Hosted verification:** Render startup log reports `Application startup complete`, then emits `FSFFL_CUSTOMER_JOURNEY` restore/persistence events. Sample cold restore ID `0b1eaf56-a172-47d7-ac0c-3fd120f7cead`: runtime context read 1 call; State snapshot read 1 row / 547,185 serialized JSON bytes; published-intelligence-generation metadata read 1 call / 1,060 serialized JSON bytes; durable-context restore ready in 8,599.91 ms. This verifies the server instrumentation on the live instance; it does not satisfy the physical customer journey.
+- **Validation:** latest pre-merge PR head CI #4694, Atlas #1049, Home #949, Franchise #506, PR164 #1358, diagnostics #798, and forecast trace #1373 all passed. Full suite passed at the validated application code head. The only commits after code validation updated the handoff.
+- **Changes in this checkpoint:** exact deployment identity, startup-event proof, physical acceptance procedure, and the stop/P0.2 gate recorded here. No app code, settings, data, or semantics changed after deployment.
+- **Measurements still missing:** authenticated saved-session browser journey correlation, Product Context-to-Atlas completion, customer State/manifest/payload reads, foreground latency, publication identity as observed by Safari, visible current-generation Dynasty ranks or exact failure stage, browser retry/poll/handoff counts, and physical Safari memory availability. Do not infer these from the Render startup probe.
+- **Frozen safeguards:** Current semantics, approved #370 Dynasty metric, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, exact State/team/publication-generation fences, atomic publication, verified last-good, and tenant isolation. No P0.2 or feature expansion.
+- **Exact next action:** Management’s physical iPhone/Safari acceptance using the steps in Current checkpoint; return its recording, local time/timezone, selected league/team and observed result, then correlate Render journey events and checkpoint P0.1. Stop here until that evidence is available.
+- **Safe handoff:** read the governing P0 directive, this file’s Current checkpoint, Issue #393, and PR #394. Resume from live main after this documentation commit. Do not redo the baseline, alter the approved formula or frozen safeguards, or begin P0.2.
