@@ -152,6 +152,20 @@ Read the governing P0 directive, this checkpoint and its physical-run entry, Iss
 
 ## Execution log
 
+### 2026-10-06 — PR #395 exact-head validation complete; merge gate
+
+- **Main / live:** base main is `da045325bd3916d8b1014f49dcacc24a5bbc1141`; live Render remains service `srv-dae6k7vqj5pc73af7bt0`, deploy `dep-db266fe7bikc73cjl5jg`, app commit `5b243b00179deeeeda26c6a06b72bd4abfd38506`.
+- **Branch / PR / code head:** PR #395, branch `work/p0-1-dynasty-state-fence-20261006`; validated app/test commit `3a4eb0272ea969c46315ff382b01c518f040b949`. This handoff update is docs-only; fetch exact PR head afterward.
+- **Correction:** Dynasty persisted fallback now must match active league, exact current State and current publication generation; continuity’s preexisting exact-team and integrity checks remain in force. A mismatch falls through to canonical Career evidence and returns current-State preparing/current response, never stale rooms presented as current.
+- **Files:** `src/fsffl/product/foundation4_shadow_routes.py`; new `tests/test_dynasty_presentation_handoff.py`; updated `tests/test_foundation4_career_forward_runtime.py`; this handoff.
+- **Validation:** PR check `test` passed **2,175 tests, 1 warning** in 171.32 s; focused workflow passed 123 tests; forecast trace passed. The new captured State pair regression is collected in the full suite. First full run’s legacy last-good expectation was revised to assert the current-generation fence. The unrelated RSS ceiling test passed on rerun; no resource code changed.
+- **Measurements / physical acceptance:** hosted baseline is still the captured failed Safari journey; no new runtime measurement before deployment. No claim of visible Dynasty ranks yet.
+- **Review / unresolved:** exact code/test diff reviewed against this PR head; no remaining code finding identified. Need merge, explicit Render deploy (service auto-deploy is disabled), verify live commit/health, then one physical iPhone/Safari saved-session acceptance. P0.1 remains open until ranks visibly render under matching current State/generation and the post-deploy journey is checkpointed.
+- **Frozen safeguards:** current ranking semantics; approved #370 Dynasty formula; exact State/team/publication-generation fences; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; atomic publication and verified last-good. P0.2 repeated-read/egress changes remain deferred.
+- **Exact next action:** merge PR #395 with expected validated head, trigger deploy of resulting main commit, verify Render live identity, and return for physical Safari acceptance. Do not begin P0.2 before acceptance.
+- **Safe takeover:** read this entry, the exact-State trace entry, and PR #395; fetch live main/Render deployment identities. If Safari still fails, correlate a new P0.1 journey and preserve response State/team/generation; do not broaden to P0.2 without closing this customer path.
+
+
 ### 2026-10-06 — PR 395 validation checkpoint
 
 - Main / branch / PR / head: main da045325bd3916d8b1014f49dcacc24a5bbc1141; PR #395 work/p0-1-dynasty-state-fence-20261006; prior head ed7b193e9c4796d7bd79b1a8673c6d49ec81d245. This checkpoint bundles with the regression-contract correction; fetch the resulting branch head.
