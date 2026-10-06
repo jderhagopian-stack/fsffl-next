@@ -320,11 +320,12 @@ async function loadLeagueValueLenses(){
   const stillCurrent=(payloadGeneration=requestedGeneration)=>laValueLensResponseMatches(requestId,fsfflLeagueValueLensRequestId,requestedStateId,fsfflLeagueStructureState.atlas?.league_state_id||null,requestedGeneration,fsfflLeagueStructureState.atlas?.publication_generation_id||null,payloadGeneration);
   fsfflLeagueStructureState.valueStatus='loading';renderLeagueComparison();
   for(let attempt=0;attempt<80;attempt+=1){
+    window.fsfflJourneyEvent?.('value_lens_attempt',{attempt:attempt+1,target_state_id:requestedStateId||'',publication_generation_id:requestedGeneration||''});
     try{
       const payload=await api('/api/league/value-lenses');
       if(!stillCurrent(payload?.publication_generation_id||null))return;
       if(payload?.status==='loading'||payload?.build_status==='queued'||payload?.build_status==='running'){
-        await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));if(!stillCurrent())return;continue;
+        const retryWaitMs=Number(payload?.retry_after_ms)||1500;window.fsfflJourneyEvent?.('value_lens_retry_wait',{outcome:'building',attempt:attempt+1,retry_wait_ms:retryWaitMs,target_state_id:requestedStateId||'',publication_generation_id:requestedGeneration||''});await new Promise(resolve=>setTimeout(resolve,retryWaitMs));if(!stillCurrent())return;continue;
       }
       fsfflLeagueStructureState.valueLenses=payload;fsfflLeagueStructureState.valueStatus=payload?.status||'ready';fsfflLeagueStructureState.valueError=null;renderLeagueComparison();return;
     }catch(error){
@@ -353,7 +354,7 @@ async function laLoadDynastyRooms(){
       if(requestedGeneration&&payload?.publication_generation_id!==requestedGeneration){window.fsfflJourneyEvent?.('dynasty_generation_mismatch',{outcome:'failure',target_state_id:requestedStateId||'',served_state_id:payload?.league_state_id||'',publication_generation_id:payload?.publication_generation_id||'',handoff_to_generation:requestedGeneration});throw new Error('Career-forward room evidence belongs to a different publication generation')}
       if(payload?.status==='preparing'||payload?.status==='building'||payload?.build_status==='queued'||payload?.build_status==='running'){
         fsfflLeagueStructureState.dynastyRoomStatus='building';renderLeagueComparison();
-        await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));if(!stillCurrent()){abandonSuperseded();return;}continue;
+        const retryWaitMs=Number(payload?.retry_after_ms)||1500;window.fsfflJourneyEvent?.('dynasty_retry_wait',{outcome:'building',attempt:attempt+1,retry_wait_ms:retryWaitMs,target_state_id:requestedStateId||'',publication_generation_id:requestedGeneration||''});await new Promise(resolve=>setTimeout(resolve,retryWaitMs));if(!stillCurrent()){abandonSuperseded();return;}continue;
       }
       if(payload?.status!=='ready'||!Array.isArray(payload?.rooms))throw new Error(payload?.reason||'Holistic career-forward room evidence is unavailable');
       fsfflLeagueStructureState.dynastyRooms=payload;fsfflLeagueStructureState.dynastyRoomStatus=(payload?.dynasty_evidence_status==='last_good'||payload?.intelligence_freshness?.stale)?'last-good':'ready';window.fsfflJourneyEvent?.('dynasty_evidence_loaded',{outcome:fsfflLeagueStructureState.dynastyRoomStatus,target_state_id:requestedStateId||'',served_state_id:payload?.league_state_id||'',publication_generation_id:payload?.publication_generation_id||'',attempt:attempt+1});renderLeagueComparison();return;
@@ -454,9 +455,10 @@ async function fetchFsfflLeagueComparison({force=false,expectedGeneration=null}=
   try{
     let atlasPayload=null,teamViewsPayload=null;
     for(let attempt=0;attempt<3;attempt+=1){
+      window.fsfflJourneyEvent?.('atlas_alignment_attempt',{attempt:attempt+1,target_state_id:stateId||'',publication_generation_id:expectedGeneration||''});
       const results=await Promise.all([api('/api/league/atlas'),api('/api/league/team-views')]);
       if(laAtlasPayloadsAligned(results[0],results[1],stateId,expectedGeneration)){atlasPayload=results[0];teamViewsPayload=results[1];break}
-      if(attempt<2)await new Promise(resolve=>setTimeout(resolve,150));
+      if(attempt<2){window.fsfflJourneyEvent?.('atlas_alignment_retry_wait',{attempt:attempt+1,retry_wait_ms:150,target_state_id:stateId||'',publication_generation_id:expectedGeneration||''});await new Promise(resolve=>setTimeout(resolve,150))}
     }
     const latestContext=state?.context||{},latestTarget=laAtlasContextTarget(latestContext,force,null);
     if(!atlasPayload||!teamViewsPayload||atlasPayload.league_state_id!==stateId||latestContext.state_id!==contextStateId||latestTarget.stateId!==stateId||latestTarget.generationId!==expectedGeneration)throw new Error('League State changed while the Atlas and roster views were loading. Reload to align the evidence.');
