@@ -4,11 +4,13 @@ Updated: 2026-10-05
 
 ## P0 Management gate — architecture simplification and development recovery
 
-Management has frozen new product expansion while a bounded whole-system runtime/application audit is performed under `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md`.
+The read-only whole-system architecture audit under `docs/operations/directives/20261005_ARCHITECTURE_SIMPLIFICATION_AND_DEVELOPMENT_RECOVERY.md` is complete and **Management has accepted its direction for corrective implementation**.
 
-Triggering evidence includes the #383-#391 Dynasty Position & Depth corrective chain, repeated physical failures despite broad green automated coverage, stale operating-state documents, and excessive Supabase egress from repeated persisted-artifact reads. The analytical authority chain remains presumed sound; the urgent concern is runtime/application complexity, persistence/resource behavior, browser delivery, test strategy, and development process.
+The governing conclusion is that the analytical authority chain remains sound, while runtime/application lifecycle ownership, persistence/publication reads, browser delivery, resource/egress behavior, test/review overhead and operating-state drift have become too complex and are materially slowing product development.
 
-Current Implementation may finish only the narrow live Dynasty physical blocker. #375, PIT/history expansion, Owner Intelligence implementation, and other new product breadth remain HOLD until Management accepts the simplification audit and P0 corrective sequence.
+**Implementation is the sole writer for Phase B.** The approved target is a simpler current-State/build/publication/read lifecycle with metadata-first persistence, cheap readers, automatic content fingerprints, declared resource ownership and stable future-scale interfaces. One current publication does not replace immutable PIT/history; bounded scenario jobs remain separate from the baseline publication; future Owner Intelligence/League Market/history products must consume shared historical infrastructure.
+
+#375, PIT/history product expansion, Owner Intelligence implementation, and other new product breadth remain HOLD during the P0 recovery sequence.
 
 
 ## Product state
