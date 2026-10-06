@@ -150,6 +150,18 @@ Until Management changes the gate:
 - **Safe handoff:** start from current GitHub main and this checkpoint, with P0.4 active. Preserve the stale/dirty local scratch clone. Do not patch #396, reopen completed P0.1/P0.2/P0.3, alter publication identity fences, or start P0.5.
 
 
+#### P0.4 tranche — coherent Product Context + surface read (implementation checkpoint)
+
+- **Base:** GitHub main 994efd36d173d76522a05fa554775443d64a9ca5; PR #399 remains complete and untouched.
+- **Branch / implementation head:** work/p0-4-coherent-presentation-read-contract-20261006, code head a1bbac9a3a8cac2693a21a89e5935ef935f9412f before this checkpoint update.
+- **Bounded design:** active Home, Franchise, or League Atlas context rehydration requests its presentation surface with /api/product-context?presentation_surface=.... One persistence statement resolves the mutable State-keyed manifest, required-surface metadata, and exact requested payload. Only the manifest and consumed surface JSON are returned; sibling surfaces contribute identity metadata only. Readiness is derived from that same validated payload. The browser consumes the included payload once instead of making the immediate second surface GET.
+- **Freshness/safety:** no manifest or fingerprint is used as cross-request authority. Every read checks the current manifest against the runtime's exact expected generation and selected team; same-State republish with an older generation fails closed. Required-surface completeness is checked against the same SQL statement snapshot. Existing per-surface wrapper identity and payload-hash checks and same-league last-good candidate ordering remain in force. Promotion still writes surfaces then manifest last.
+- **Files in this tranche:** persistence contract/Postgres adapter, presentation reader, Product Context route/readiness composition, initial Home/Franchise/Atlas hydration, and focused regressions.
+- **Read behavior expected from code path (not yet a hosted measurement):** the previous cold Product Context + first surface path could perform a manifest read and one metadata read per required surface, followed by a second manifest read and surface-payload read. The combined path performs one bundle statement for manifest + required-surface identities + requested payload; no sibling payload JSON is fetched. Post-deploy Render telemetry must confirm the observed read event count.
+- **Validation:** same-State republish/freshness, missing required surface, exact-generation mismatch, requested payload hash failure, current-vs-last-good and tenant isolation are covered across focused tests. One coherent-bundle adapter test and Product Context composition regression were added. Focused Actions and the single stable-gate full suite are pending; no suite result is claimed.
+- **Render / physical acceptance:** no deployment of this branch yet. The saved-session iPhone/Safari acceptance remains outstanding; startup or request logs alone will not be represented as visible-ranks acceptance.
+- **Next action:** finish branch diff review, open one PR so the focused and full merge-gate workflows run, correct any findings before merging, then verify Render on the merged main SHA and update this checkpoint with actual read telemetry and deploy identity. Continue P0.4 only; do not start P0.5.
+
 ### P0.2 implementation merged and deployed — hosted read verified
 
 - **P0.1 disposition:** measurement complete; physical Dynasty acceptance still fails. Exact Safari run remains a mandatory end-to-end acceptance journey. No further #396 patch.
