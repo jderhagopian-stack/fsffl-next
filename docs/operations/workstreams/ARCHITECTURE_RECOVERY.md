@@ -124,6 +124,20 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
+### P0.2 in progress — metadata-first persistence / egress
+
+- **P0.1 disposition:** measurement complete, physical Dynasty acceptance still failing. Exact Safari run is recorded below and remains a mandatory end-to-end acceptance journey. No further #396 code patch.
+- **Failure class:** B. The 07:12 ET browser request included exact Atlas State `606ba3cd0acf427f6724665546dfcbcce0013e593abb658277466c2725b7d2d3` and generation `58d3d6edb95d30e52159b58df8fa5a269f7637158dbc1487fde252f8486bbc23`; endpoint completed HTTP 200 but the screen had no Dynasty ranks. The State/generation fence itself remains frozen; remaining display failure is in per-surface persistence/readiness/generation/promotion machinery scheduled for P0.4/P0.5.
+- **P0.2 branch:** `work/p0-2-metadata-first-20261006`, created from main `1552c8be8efe7c29a15a640bd0e215774d2ed554`. This checkpoint commit is docs-only; implementation not yet changed and no PR is open.
+- **Live Render:** `fsffl-next-private-beta`, deploy `dep-db28eoks728c73bgnu00`, live on app commit `d7cbbb5820a03de8309165752e124ecd0dce30fe`.
+- **P0.2 measured problem:** earlier customer journey: 158 persistence reads, 67,074,210 application-serialized JSON bytes, with repeated forecast and presentation surface reads. Latest run also shows repeated 1,717-byte presentation-manifest reads and repeated surface reads; Dynasty endpoint 5,401 ms. Wire bytes are not directly measured.
+- **Initial code trace:** persistence protocol `src/fsffl/persistence/contracts.py`; PostgreSQL implementation `src/fsffl/persistence/postgres.py`; publication continuity `src/fsffl/product/presentation_continuity.py`. Current `get_reusable_artifact` and `get_latest_reusable_artifact` select JSONB `payload` on every reusable-artifact lookup. `has_snapshot` reads the full manifest and every required surface payload for integrity checks; cold runtime loads may invoke it and then refetch the manifest and selected surface. P0.2 should first separate metadata-only checks from payload consumption while preserving exact keys, manifest-last publication and hash verification on each consumed surface.
+- **Current findings/guardrails:** no code changes yet. Do not simply skip integrity/hash verification or cache payloads without clear ownership/invalidation. Preserve cold-start validation and process-local trust semantics; ensure a requested surface's full payload is loaded once and validated before serving. Keep Current, Dynasty metric, Career Intrinsic, Foundation 4 economics, Simulation 2.0/50k/RNG/replay, State/team/generation fences, atomic publication, last-good and tenant isolation frozen.
+- **Next action:** inspect all implementations/callers/tests of artifact lookup, then implement the smallest metadata-only API and presentation-continuity consumer slice with focused tests for SQL projection, cold validation, subsequent reads, corruption/missing surface, exact generation and payload byte/read counts. Do not start P0.3 or P0.4 early.
+- **Safe handoff:** resume from this P0.2 branch and exact branch head. Read directive and this checkpoint first. The local scratch clone is not aligned to current main; use connected GitHub file/Actions tools and do not import or overwrite its dirty unrelated changes.
+
+### P0.1 measurement checkpoint (completed; physical acceptance failed)
+
 ### Latest checkpoint — P0.1 measurement complete; Dynasty acceptance remains a required architecture test
 
 - **Status:** P0.1 measurement/instrumentation objective is complete. Dynasty Position & Depth still fails physical acceptance, but no further #396 request-handoff patch is authorized. Carry the exact Safari journey as a mandatory end-to-end acceptance test through the approved P0 sequence; do not block P0.2 on repairing the old per-surface plumbing.
