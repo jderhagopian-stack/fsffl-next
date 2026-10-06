@@ -127,7 +127,7 @@ Until Management changes the gate:
 **State:** P0.1 PR #394 — focused Actions exposed asset-key and test-harness issues; route redaction is also hardened, final-head validation pending.  \
 **Owner:** Work per latest Issue #393 Management ownership correction.  \
 **Current main:** `0ef839ef9edeae7dad85fb6e52984c2998699e2a`.  \
-**Branch:** `work/p0-1-baseline-20261006`. Exact instrumentation/test/privacy head before this handoff commit: `f2c7898b0d057c408735835831b916da0e4376a5`; fetch the resulting PR head before takeover.  \
+**Branch:** `work/p0-1-baseline-20261006`. Exact instrumentation/test/privacy/RSS head before this handoff commit: `76bb04b27306b8e6066232fd4fdfd405184371eb`; fetch the resulting PR head before takeover.  \
 **PR:** #394 — https://github.com/jderhagopian-stack/fsffl-next/pull/394.  \
 **Live deploy:** Render `fsffl-next-private-beta`, deploy `dep-db229jvlot8c73dieqtg`, live #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`; unchanged.
 
@@ -295,8 +295,18 @@ Approved #370 Dynasty metric, Current ranking semantics, Simulation 2.0/50k/RNG/
 
 - **Main / branch / PR:** main `0ef839ef9edeae7dad85fb6e52984c2998699e2a`; PR #394; branch `work/p0-1-baseline-20261006`.
 - **Exact code/test/privacy head before this checkpoint:** `f2c7898b0d057c408735835831b916da0e4376a5`. This handoff commit advances PR head; fetch exact branch head and associated Actions.
-- **Checks:** focused Atlas workflow passed on preceding head `621c24c0e500e4cd3af6e7d093ed63fa766a3f49` including syntax, telemetry regression tests, League Atlas tests, composition sanity and final-acceptance provider authority audit. Home focused checks also passed on the same head. Full CI was still in progress on that preceding head. Route redaction adds one small Python regression and is pending exact-head validation.
+- **Checks:** focused Atlas workflow passed on preceding head `621c24c0e500e4cd3af6e7d093ed63fa766a3f49` including syntax, telemetry regression tests, League Atlas tests, composition sanity and final-acceptance provider authority audit. Home focused checks also passed on the same head. Full CI was still in progress on that preceding head. Route redaction and per-request Render RSS sampling add the final privacy/memory measurements; exact-head validation is pending.
 - **Final privacy change:** browser and server logs now preserve only the known Product Context, readiness, Atlas, team views, value lenses, Dynasty rooms and diagnostics API route names; any other API route is recorded as `/api/other`. This prevents dynamic endpoint segments from carrying identifiers into diagnostics.
 - **Measurements:** production baseline remains pre-change and is unchanged; implementation has not been deployed. Application payload JSON byte counts are not exact wire egress. Physical Safari/browser memory remains unobserved until Management’s acceptance run.
 - **Next action:** fetch latest PR head/runs; require final focused + full CI success, then report the ready PR for hosted deployment and physical iPhone/Safari measurement. Do not merge/deploy without explicit hosted acceptance direction; do not start P0.2.
 - **Safe takeover:** continue PR #394 at current exact branch head. Do not repeat pre-change audit or baseline, reopen #370/model/runtime semantics, or begin later P0 slices.
+
+
+### 2026-10-06 — P0.1 correlated memory measurement checkpoint
+
+- **Branch / PR:** `work/p0-1-baseline-20261006`, PR #394. Main remains `0ef839ef9edeae7dad85fb6e52984c2998699e2a`; Render remains #391 commit `583f48dca0c6b763b7d249e420b82964a15291d2`, deploy `dep-db229jvlot8c73dieqtg`.
+- **Exact code head before this checkpoint:** `76bb04b27306b8e6066232fd4fdfd405184371eb`. This documentation commit advances the PR; fetch exact head and associated Actions.
+- **Change:** correlated request-completion events now include `HeavyWorkCoordinator` current RSS and peak RSS, in addition to browser `performance.memory` supported/value fields. No resource ownership or scheduling behavior changed.
+- **Validation:** focused Atlas passed on earlier code head `621c24c…`; exact head with API redaction and RSS sampling is pending focused + full CI.
+- **Next action:** inspect Actions at post-checkpoint exact head. After green checks, return PR #394 for Management’s hosted deployment and physical iPhone/Safari journey; no merge/deploy initiated here.
+- **Safe takeover:** continue P0.1 only from exact PR head and this file. Keep all accepted model/runtime safeguards closed and do not start P0.2.
