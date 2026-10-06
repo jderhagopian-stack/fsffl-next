@@ -374,9 +374,11 @@ def _hosted_capability_readiness(
     presentation_available = False
     presentation_league_id = None
     presentation_state_id = None
+    presentation_generation_id = None
     if publication_id and context.league_state is not None:
         presentation_league_id = context.league_state.league.league_id
         presentation_state_id = context.league_state.state_id
+        presentation_generation_id = publication_id
     elif (
         served is not None
         and context.league_state is not None
@@ -386,6 +388,9 @@ def _hosted_capability_readiness(
     ):
         presentation_league_id = served.league_id
         presentation_state_id = served.league_state_id
+        presentation_generation_id = str(
+            served.publication_generation_id or ""
+        ).strip()
 
     if presentation_resolved:
         # Product Context with a requested surface receives the proof returned by
@@ -436,6 +441,7 @@ def _hosted_capability_readiness(
             league_id=presentation_league_id,
             league_state_id=presentation_state_id,
             selected_team_id=context.selected_team_id,
+            expected_generation_id=presentation_generation_id,
         )
     served_payload = dict(payload.get("served_last_good") or {})
     served_payload["presentation_available"] = presentation_available
