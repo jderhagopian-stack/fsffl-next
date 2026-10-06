@@ -468,11 +468,11 @@ class PresentationContinuityStore:
             expected = expected_hashes.get(surface)
             if (
                 metadata is None
+                or expected is None
                 or not metadata.reusable
                 or metadata.key != key
                 or metadata.payload_hash != expected.get("payload_hash")
                 or metadata.payload_size_bytes != expected.get("payload_size_bytes")
-                or expected is None
                 or not str(expected.get("payload_hash") or "").strip()
                 or int(expected.get("payload_size_bytes") or -1) < 0
             ):
