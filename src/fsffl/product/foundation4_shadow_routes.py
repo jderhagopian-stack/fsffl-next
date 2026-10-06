@@ -28,14 +28,49 @@ def _building_payload(record) -> dict[str, object]:
     }
 
 
+def _dynasty_rank_readiness(rooms: object) -> dict[str, object]:
+    """Report whether every required position has complete league-wide ranks."""
+
+    positions = ("QB", "RB", "WR", "TE")
+    room_rows = rooms if isinstance(rooms, list) else []
+    coverage: dict[str, dict[str, int]] = {}
+    incomplete: list[str] = []
+    for position in positions:
+        rows = [row for row in room_rows if isinstance(row, dict) and row.get("position") == position]
+        first = rows[0] if rows else {}
+        team_count = first.get("team_count")
+        coverage_count = first.get("coverage_count")
+        complete = (
+            isinstance(team_count, int) and not isinstance(team_count, bool)
+            and team_count > 0 and len(rows) == team_count
+            and isinstance(coverage_count, int) and not isinstance(coverage_count, bool)
+            and coverage_count == team_count
+            and len({row.get("team_id") for row in rows}) == team_count
+            and all(row.get("evidence_complete") is True
+                    and isinstance(row.get("league_rank"), int)
+                    and not isinstance(row.get("league_rank"), bool) for row in rows)
+        )
+        coverage[position] = {
+            "coverage_count": coverage_count if isinstance(coverage_count, int) else 0,
+            "team_count": team_count if isinstance(team_count, int) else 0,
+        }
+        if not complete:
+            incomplete.append(position)
+    return {"status": "incomplete" if incomplete else "ready",
+            "incomplete_positions": incomplete, "coverage": coverage}
+
+
 def _dynasty_publication_payload(
     context,
     payload: dict[str, object],
 ) -> dict[str, object]:
-    """Bind a live Dynasty response to the published runtime generation."""
+    """Bind Dynasty truth to the exact published runtime generation."""
 
-    payload["publication_generation_id"] = context.publication_generation_id
-    return payload
+    result = dict(payload)
+    result["publication_generation_id"] = context.publication_generation_id
+    if result.get("status") == "ready":
+        result["dynasty_rank_readiness"] = _dynasty_rank_readiness(result.get("rooms"))
+    return result
 
 
 def install_career_intrinsic_routes(
@@ -158,7 +193,7 @@ def install_career_intrinsic_routes(
                 # The continuity loader validates league, team, promotion and
                 # payload integrity. Dynasty must additionally be current-State
                 # evidence: its consumer intentionally rejects last-good State.
-                return persisted
+                return _dynasty_publication_payload(context, persisted)
 
         # No canonical or verified last-good evidence is available. Request the
         # production Career lifecycle and report its real state; never fabricate
