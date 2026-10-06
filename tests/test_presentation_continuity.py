@@ -46,6 +46,7 @@ class MemoryPersistence:
         self.read_count = 0
         self.payload_read_count = 0
         self.metadata_read_count = 0
+        self.manifest_read_count = 0
 
     def put_artifact(self, record) -> None:
         self.artifacts.append(record)
@@ -53,6 +54,8 @@ class MemoryPersistence:
     def get_reusable_artifact(self, key):
         self.read_count += 1
         self.payload_read_count += 1
+        if key.artifact_kind == PRESENTATION_MANIFEST_ARTIFACT_KIND:
+            self.manifest_read_count += 1
         return next(
             (
                 row
@@ -166,6 +169,38 @@ def _builders(prefix: str):
         )
         for surface in REQUIRED_PRESENTATION_SURFACES
     )
+
+
+def test_cold_surface_read_reuses_manifest_during_snapshot_validation() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    state = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    result = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(state),
+        builders=_builders("current"),
+    )
+    assert result is not None
+
+    # Simulate a cold process-local hint while retaining the exact runtime
+    # publication identity that the reader must serve.
+    continuity.clear_user_validation_hints("jimmy")
+    runtime = replace(
+        _runtime(state),
+        publication_generation_id=result.publication_generation_id,
+    )
+    before_manifest_reads = persistence.manifest_read_count
+
+    payload = continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=runtime,
+        surface=HOME_SURFACE,
+    )
+
+    assert payload is not None
+    assert payload["publication_generation_id"] == result.publication_generation_id
+    assert persistence.manifest_read_count - before_manifest_reads == 1
+    assert persistence.metadata_read_count == len(REQUIRED_PRESENTATION_SURFACES)
 
 
 def test_manifest_last_promotion_and_stale_read_are_truthful() -> None:
