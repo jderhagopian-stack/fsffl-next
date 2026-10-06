@@ -712,7 +712,8 @@ async def _collect_customer_journey(
     request: Request,
     _beta_user: str = Depends(_webapp.require_beta_user),
 ):
-    if int(request.headers.get("content-length", "0") or "0") > 65536:
+    content_length = request.headers.get("content-length", "")
+    if content_length.isdigit() and int(content_length) > 65536:
         return {"accepted": 0, "reason": "payload_too_large"}
     body_parts = []
     body_size = 0
