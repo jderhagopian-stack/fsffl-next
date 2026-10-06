@@ -124,6 +124,23 @@ Until Management changes the gate:
 
 ## Current checkpoint
 
+### Latest checkpoint — PR #396 deployed; final physical acceptance required
+
+- **Status:** P0.1 request-contract correction is merged and live. Await one final Management iPhone/Safari saved-session acceptance. P0.1 closes only if Dynasty ranks visibly render for the exact Atlas State and publication generation.
+- **Main / deployed commit:** `d7cbbb5820a03de8309165752e124ecd0dce30fe` (main before this post-deploy documentation update).
+- **PR / branch / reviewed head:** PR #396 merged; branch `work/p0-1-dynasty-publication-request-fence-20261006`; reviewed/green exact head `a88f7c0349f855f49ad0a149ca2b089b5eb95dc4`; squash merge `d42593ed73aed4ca1fe62338273df9fa61947fed`.
+- **Render:** service `fsffl-next-private-beta` / `srv-dae6k7vqj5pc73af7bt0`; deployment `dep-db28eoks728c73bgnu00`; status `live`; deployed exact main commit `d7cbbb5820a03de8309165752e124ecd0dce30fe`; live since 2026-10-06 05:31:52Z. Auto-deploy is disabled.
+- **Hosted verification:** Render logs confirm application startup complete on instance `srv-dae6k7vqj5pc73af7bt0-mdrqk` and active `FSFFL_CUSTOMER_JOURNEY` restore/persistence instrumentation, including durable-context restore ready. This verifies deployment and instrumentation only, not Dynasty acceptance.
+- **Correction:** Dynasty request carries Atlas `state_id` and `publication_generation_id`. A runtime mismatch returns explicit superseded identity with no rooms; client refreshes Product Context once through the existing Atlas promotion path. Exact State/team/generation fences remain intact.
+- **Validation:** exact PR-head full CI run `37415031517` and focused Atlas `37415031461`, Home `37415031670`, Franchise `37415031454`, PR164 `37415031538`, private-beta diagnostics `37415031491`, forecast trace `37415031448` passed. Fresh Codex review at exact head `a88f7c0349f855f49ad0a149ca2b089b5eb95dc4` found no major issues.
+- **Physical acceptance:** #395 failed because Atlas targeted State `3d7808d4…` / publication `da5a06b3…` while Dynasty independently served runtime State `e582e5ce…`. The new correction is deployed; no post-deploy physical acceptance has been run.
+- **Measurements:** no new customer latency/RSS/egress baseline was gathered. Render startup restore reported 7,598 ms with correlated persistence events; this is a startup observation, not the saved-session measurement. During startup a FUMBLES_LOST supplement emitted a canonical cutoff mismatch warning; it is outside this P0.1 correction and is not a Dynasty acceptance result.
+- **Frozen safeguards:** approved #370 Dynasty metric; Current ranking semantics; Simulation 2.0/50k/RNG/replay; Foundation 4 economics; exact State/team/publication-generation fences; atomic publication; verified last-good; tenant isolation. No P0.2/P0.4, model change, #375, PIT/history expansion, Owner Intelligence, or broader lifecycle/persistence refactor before final physical acceptance.
+- **Exact next action:** Management: on iPhone/Safari, restore the existing saved session, open the same FSFFL Dynasty league and team, select Dynasty Position & Depth, and capture whether ranked position rooms visibly render. Include local time/timezone and screenshots; if ranks fail, preserve the browser journey/telemetry ID and exact requested/served/superseding State + generation.
+- **Safe handoff:** resume from current GitHub main after this documentation-only checkpoint. Read the governing P0 directive, this latest checkpoint, Issue #393, PR #396, and #395 failure evidence. Do not repeat baseline collection or reopen frozen semantics. Do not start P0.2 until the final physical journey passes and P0.1 is checkpointed closed.
+
+### Historical checkpoint (superseded by latest execution entry)
+
 **State:** P0.1 remains open after the #395 physical acceptance failure documented above. Complete the request-contract correction and one final physical iPhone/Safari saved-session acceptance before closing P0.1 or beginning P0.2.
 **Owner:** Work is the sole writer under Issue #393.
 **P0.1 application commits:** PR #394 instrumentation merged as `5b243b00179deeeeda26c6a06b72bd4abfd38506`; corrective PR #395 merged from validated head `3baeecb292481ac322bbab6c705bbf9374c47ac0` as `3c8c04a5eb6eb225f77b831c1a98d5ac7998e926`.
@@ -516,3 +533,15 @@ Read the governing P0 directive, this current checkpoint, the P0.1 exact-State c
 - **Next action / stop:** wait for Management disposition on a bounded corrective to the observed Dynasty failure. Do not start P0.2 or reopen #370, Simulation 2.0, Foundation 4 economics, Current semantics, or exact-generation safeguards.
 - **Safe handoff:** resume from main after this documentation-only checkpoint. Read this entry and Current checkpoint first; query live Render logs by journey ID above. Do not repeat the physical run baseline or treat the successful HTTP status as proof of correct State/generation.
 
+
+
+### 2026-10-06 — PR #396 deployed; awaiting final physical acceptance
+
+- **Main/deploy commit:** `d7cbbb5820a03de8309165752e124ecd0dce30fe`.
+- **PR #396:** merged as `d42593ed73aed4ca1fe62338273df9fa61947fed`, from reviewed exact head `a88f7c0349f855f49ad0a149ca2b089b5eb95dc4` on `work/p0-1-dynasty-publication-request-fence-20261006`.
+- **Render:** deployment `dep-db28eoks728c73bgnu00` is live on service `srv-dae6k7vqj5pc73af7bt0`, exact commit above. Auto-deploy remains disabled.
+- **Hosted check:** startup completed and customer-journey restore/persistence instrumentation emitted on the new instance. No authenticated Dynasty route was tested and no product acceptance is inferred from startup.
+- **Validation:** exact PR-head checks are green (full CI `37415031517` plus focused workflows `37415031461`, `37415031670`, `37415031454`, `37415031538`, `37415031491`, `37415031448`); fresh exact-head review found no major issues.
+- **Unresolved:** one final physical iPhone/Safari saved-session acceptance. No new egress/latency/memory baseline; startup restore was 7,598 ms. A FUMBLES_LOST cutoff-mismatch warning appeared during startup and is outside this P0.1 correction.
+- **Next:** Management runs same-league/team saved-session journey and captures Dynasty ranks plus local time/timezone. If it passes, close P0.1 and immediately begin P0.2 metadata-first persistence/egress in approved sequence. If it fails, correlate journey telemetry and fix only the proven P0.1 blocker.
+- **Safeguards:** approved #370 metric, Current semantics, Simulation 2.0/50k/RNG/replay, Foundation 4 economics, exact State/team/generation fences, atomic publication, last-good, tenant isolation; no P0.2 before acceptance.
