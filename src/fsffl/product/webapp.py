@@ -13,7 +13,6 @@ from typing import Callable
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.staticfiles import StaticFiles
 
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.opportunity import WaiverMove
@@ -70,6 +69,7 @@ from .runtime import (
     default_sleeper_state_loader,
 )
 from .scenario_cache import ScenarioComputationStage
+from .static_assets import ContentFingerprintStaticFiles
 from .simulation_runtime import (
     LiveSimulationAnalyticsResult,
     build_live_simulation_analytics,
@@ -1231,7 +1231,11 @@ def create_app(
                 )
             return published
 
-    application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+    application.mount(
+        "/static",
+        ContentFingerprintStaticFiles(directory=_STATIC_DIR),
+        name="static",
+    )
 
     @application.get("/health")
     def health() -> dict[str, str]:
