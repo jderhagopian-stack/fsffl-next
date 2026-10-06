@@ -154,6 +154,20 @@ Until Management changes the gate:
 - **Exact next action:** open PR, run focused checks on the exact head, run one full suite at the stable merge gate, merge/deploy, then continue P0.5 lifecycle trace. Do not infer traffic reduction from removing an interval that previously returned without a request.
 - **Safe handoff:** read governing directive, Issue #393, and the latest P0.5 checkpoints. Base next work on the current main after merge; do not repeat P0.4 or PR #399.
 
+### P0.5 — active tranche 2: readiness timer lifecycle owner
+
+- **Timestamp / phase:** 2026-10-06 UTC; P0.5 lifecycle/resource ownership consolidation; bounded slice 2 complete.
+- **Base / branch / PR:** base `dcf6de7ea8dd3097d0b1e694f46b1deb0c1a237b`; branch `work/p05-polling-owner-20261006`; PR #404 merged from exact head `a60307713079c23c8c845906189eca4845665ff8`.
+- **Main / Render:** PR #404 squash `360597d56582d6e4532b32f84f98ef7bf83107c3`; deployment `dep-db2ktbei0phs738vargg` is live on that exact commit. App startup completed at 19:42:10Z; restore `0e8d19a8-c3ff-4c37-942a-a88db037b805` reached durable context in 8,189.35 ms.
+- **Trace and change:** current-job polling already supplies readiness during active reconciliation. The shared readiness interval nevertheless remained installed, waking every 2.5 seconds to render and return with no GET. The interval now stops on active-job status and the shared poll start guard also refuses to install it while active. A terminal job response starts freshness polling again subject to the pre-existing readiness guards.
+- **Before/after behavior:** active job window previously ran one current-job GET per interval plus one idle readiness timer callback; after, it runs the current-job GET without the extra timer callback. No endpoint-read reduction is claimed for this tranche because the idle callback already issued no GET. After terminal status, readiness polling can resume for optional freshness. No authenticated current-job workload or saved-session browser run was exercised.
+- **Files:** `src/fsffl/product/static/product_shell.js`, `src/fsffl/product/static/index.html` (matching shell content identity), `tests/test_readiness_progress_truth_static.py`, this checkpoint.
+- **Validation:** focused PR-head workflows passed: Home `37519394845`, Franchise `37519394850`, Atlas `37519395045`, PR164 `37519395110`, Live Forecast `37519394876`. Stable CI `37519394615` attempt 1 found one unrelated 50k Simulation replay-digest mismatch (2,194 passed); failed-job rerun attempt 2 passed **2,195 tests, one existing warning, 171.65 s**. PR #404 changed no Simulation code or fixtures; no expected digest was altered.
+- **Hosted behavior:** startup restore succeeded on the new deploy. Render health traffic included an unauthenticated GET / returning 401. The deployment itself had startup telemetry only; there is no customer polling comparison to report.
+- **Safeguards:** exact State/team/publication-generation identity; manifest-last atomicity; required-surface completeness; payload-hash validation; same-league last-good; tenant isolation; Current; approved Dynasty; Career Intrinsic; Foundation 4 economics; Simulation 2.0. Do not reopen P0.1–P0.4, change #396/Dynasty, or begin P0.6.
+- **Exact next action:** continue P0.5 trace around startup restore, saved-session restore, publication promotion and foreground freshness. Remove only a demonstrated duplicate lifecycle owner, then use one full suite at its stable merge gate. Final saved-session iPhone/Safari journey remains after P0.5 simplification is complete.
+- **Safe handoff:** latest app main is `360597d56582d6e4532b32f84f98ef7bf83107c3`; this entry is a follow-up documentation checkpoint. Read the directive, Issue #393 and current checkpoint. Do not repeat #399, PR #403/#404, or the P0.4 consumer trace.
+
 ### P0.4 — published-reader simplification complete
 
 - **P0.3 closeout:** PR #398 and its Render deployment remain complete. PR #399 remains complete on app commit `d13817b57d51fa8533eb3117a5dc1d227d5733af`; it reused the manifest already fetched during cold surface validation.
