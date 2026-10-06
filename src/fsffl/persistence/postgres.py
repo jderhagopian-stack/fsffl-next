@@ -311,12 +311,11 @@ class PostgresPersistenceStore(PersistenceStore):
                 input_fingerprint=row["input_fingerprint"],
                 model_version=row["model_version"],
             )
+            metadata[key] = self._artifact_metadata_from_row(row)
             if key == manifest_key:
                 manifest = self._artifact_from_row(row)
-            elif key == payload_key:
+            if key == payload_key:
                 requested_payload = self._artifact_from_row(row)
-            else:
-                metadata[key] = self._artifact_metadata_from_row(row)
         return ReusableArtifactReadBundle(
             manifest=manifest,
             requested_payload=requested_payload,
