@@ -72,6 +72,11 @@ def emit_journey_event(event: str, **fields: Any) -> None:
         if key not in _SAFE_FIELDS:
             continue
         if isinstance(value, str):
+            if key == "api_path" and (not value.startswith("/api/") or "?" in value):
+                continue
+            if key in {"restore_id", "publication_generation_id"} and not _JOURNEY_ID_PATTERN.fullmatch(value):
+                if key == "restore_id":
+                    continue
             if key.endswith("_state_id") or key.endswith("_generation") or key == "publication_generation_id":
                 if not _SAFE_ID.fullmatch(value):
                     continue
@@ -89,7 +94,7 @@ def record_browser_events(events: Any) -> int:
         if not isinstance(item, dict):
             continue
         event = item.get("event")
-        if not isinstance(event, str):
+        if not isinstance(event, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,47}", event):
             continue
         fields = {key: value for key, value in item.items() if key in _SAFE_FIELDS}
         emit_journey_event(event[:48], **fields)
