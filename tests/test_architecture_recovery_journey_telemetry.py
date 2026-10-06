@@ -49,6 +49,7 @@ def test_persistence_read_trace_reports_application_payload_bytes(caplog):
 
     record = next(item for item in _records(caplog) if item["event"] == "persistence_read")
     assert record["read_kind"] == "derived_artifact"
+    assert record["artifact_kind"] == "derived_artifact"
     assert record["call_count"] == 1
     assert record["row_count"] == 1
     assert record["payload_json_bytes"] == len(b'{"rooms":[{"position":"QB"}]}')
@@ -71,3 +72,32 @@ def test_browser_event_batch_is_bounded_and_sanitized(caplog):
     assert len(records) == 80
     assert records[0]["event"] == "dynasty_generation_mismatch"
     assert "player_payload" not in records[0]
+
+
+def test_restore_stage_has_opaque_run_identity_without_browser_context(caplog):
+    @telemetry.trace_restore_stage("state_activation")
+    def activate_state():
+        return "ready"
+
+    activate_state()
+
+    record = next(item for item in _records(caplog) if item["event"] == "restore_stage")
+    assert record["stage"] == "state_activation"
+    assert record["outcome"] == "ready"
+    assert len(record["restore_id"]) == 36
+    assert "journey_id" not in record
+
+
+def test_dynasty_failure_remains_a_failure_and_success_requires_exact_visible_generation():
+    atlas = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    browser = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
+    assert "payload?.publication_generation_id!==requestedGeneration" in atlas
+    assert "dynasty_generation_mismatch" in atlas
+    assert "dynasty_request_failed" in atlas
+    assert "fsfflFlushJourney?.()" in atlas
+    assert "rooms.publication_generation_id!==atlas.publication_generation_id" in atlas
+    assert "document.visibilityState!=='visible'" in atlas
+    assert "panel.querySelector('[data-position-view=\"dynasty\"].active')" in atlas
+    assert "memory_supported" in atlas
+    assert "X-FSFFL-Journey-ID" in browser
+    assert "X-FSFFL-Restore-ID" in browser
