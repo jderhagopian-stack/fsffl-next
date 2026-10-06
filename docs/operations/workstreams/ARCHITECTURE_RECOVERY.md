@@ -165,6 +165,13 @@ Until Management changes the gate:
 - **Remaining consumer trace:** the post-deploy startup log contained one `runtime_presentation_manifest` miss via `get_reusable_artifact` at 17:41:41 UTC. Source trace identifies this as the legacy-v1 migration probe `legacy_snapshot_available`; its assigned `legacy_migration` result has no consumer. On a hit the probe also fetches each old surface payload, then startup proceeds to prepare/promote regardless of the boolean. This is a redundant startup read path, not evidence of saved-session rendering.
 - **Next:** remove only the unused legacy migration probe call; preserve startup preparation/promotion and all v2 read authority. Continue P0.4; do not start P0.5.
 
+#### P0.4 tranche — remove unused startup legacy probe (in progress)
+
+- **Trace:** after PR #401 deployed, Render logged one `runtime_presentation_manifest` miss through `get_reusable_artifact` during startup restore (2026-10-06 17:41:41 UTC, restore ID `515f5f24-b832-4f9f-bfe8-4bead47d7ef3`). Source maps it to `legacy_snapshot_available`; its boolean result is assigned to `legacy_migration` and never consumed. If the old manifest exists, the probe also reads every pre-Dynasty surface payload before startup prepares/promotes regardless of that boolean.
+- **Bounded change:** remove only the dead probe invocation; keep current runtime preparation, asynchronous Dynasty work, current-version publication, and manifest-last behavior unchanged. A source regression asserts startup no longer invokes the legacy probe but still prepares and promotes.
+- **Validation:** focused Actions and the single stable full-suite merge gate pending.
+- **Next:** merge/deploy and verify startup no longer emits the redundant legacy manifest read. Continue P0.4; do not start P0.5.
+
 ### P0.2 implementation merged and deployed — hosted read verified
 
 - **P0.1 disposition:** measurement complete; physical Dynasty acceptance still fails. Exact Safari run remains a mandatory end-to-end acceptance journey. No further #396 patch.
