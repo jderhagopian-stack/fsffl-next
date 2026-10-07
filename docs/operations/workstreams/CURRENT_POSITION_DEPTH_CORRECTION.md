@@ -372,3 +372,24 @@ Static delivery identities:
 - `product_shell.js` blob `abd5ed4d63ee760fbf7ce3cc578d35305d199dab` → outer index key `git-abd5ed4d63ee`.
 
 No further executable changes are planned. After this durable checkpoint push receives the ordinary draft check, mark the exact PR head ready for the single P0.6 stable full-suite gate.
+
+
+### 2026-10-07 — #411 final-gate reconciliation after fallback review
+The earlier focused-green checkpoint at `532568a790d0999aaca406ca3941f0c72d1d5b93` was superseded before final promotion by two bounded Codex findings. Both are now addressed without broadening Current authority:
+
+1. **Scoring-gap-only fallback.** Current no longer fills every player absent from authoritative ROS output. `InSeasonForecastRuntimeResult` now retains strict scorer partial fantasy-point rows. The preseason remaining-prior substitution is eligible only for player IDs that have a current partial row with omitted active scoring coordinates. A player absent from current raw/scored evidence entirely is not backfilled. Live authoritative rows still win, missing evidence is never zero-imputed, and slot fail-closed semantics remain unchanged.
+2. **Optional preseason artifact.** The preserved preseason authority is now an optional Current fallback input. If neither the league preseason baseline nor governed annual preseason snapshot exists, Current receives an empty fallback input rather than failing before healthy live ROS or the Week-18 completed-actuals-only path can run.
+
+Review-thread reconciliation:
+- P1 scoring-gap finding was answered and resolved against exact corrective code;
+- P2 missing-preseason-artifact finding was answered and resolved against exact corrective code;
+- focused regressions cover positive scoring-gap substitution, no-proven-gap non-substitution, retained strict-scorer partial evidence, and missing-preserved-prior optionality.
+
+Validation after those executable corrections:
+- corrective executable head `46e8a8b77cff1d05a4c27301cadea7bff3375310` passed all draft focused workflows: CI `37572454202`, League Atlas `37572454223`, Home `37572454249`, Franchise `37572454168`, Live Forecast corrective trace `37572454146`, corrective live-provider numerical trace `37572454175`, and PR164 corrective regression `37572454214`;
+- marking that head ready correctly triggered Stable full-suite run `37609333773`. The gate exposed **one stale hosted-orchestration test double only**: it mocked the pre-correction runtime shape with `fantasy_point_forecasts` but omitted the new `partial_fantasy_point_forecasts` field, causing the mocked healthy-current path to raise `AttributeError` and fall into the preserved-prior branch. The result was **2,221 passed / 1 failed / 1 warning**; this was not a production behavior defect;
+- PR #411 was returned to draft before changing the head;
+- test-only head `3da42baa6983867d9e225c5a0f144b4e02f5cd23` updates that mock to the current runtime contract with `partial_fantasy_point_forecasts=()`. No runtime/product/model file changed after `46e8a8b7`;
+- all draft focused workflows on `3da42baa6983867d9e225c5a0f144b4e02f5cd23` are green: CI `37609891170`, League Atlas `37609891201`, Home `37609891195`, Franchise `37609891297`, Live Forecast corrective trace `37609891192`, PR164 corrective regression `37609891275`, and corrective live-provider numerical trace `37609891183` (green on retry after a transient one-source provider-health result).
+
+No executable work remains. The final PR-head movement after this section is documentation-only checkpointing. The next action is to mark that exact documentation-final PR head ready and run the Stable full suite once; if green, merge/deploy and record hosted identity. Physical authenticated iPhone/Safari re-acceptance remains required after deploy.
