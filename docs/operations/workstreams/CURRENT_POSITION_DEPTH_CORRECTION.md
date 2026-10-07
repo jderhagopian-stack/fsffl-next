@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: MERGED + DEPLOYED — hosted runtime accepted; physical Current surface acceptance pending
+Status: PHYSICAL ACCEPTANCE REOPENED — #408 core authority accepted; bounded Current presentation/coverage corrective active
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -276,3 +276,36 @@ Accepted implementation now live:
 - Dynasty/#370, Career Intrinsic, provider-refresh lifecycle and Simulation production semantics are unchanged.
 
 **MANAGEMENT GATE — CURRENT POSITION & DEPTH:** code, exact-head validation, merge, static delivery identity and hosted startup/runtime deployment are accepted. A final authenticated iPhone/Safari Current-lens check remains the only unproven presentation layer: confirm the Current grid renders configured lineup-slot columns, fixed-position ranks do not absorb FLEX/SUPERFLEX contribution, and the displayed Current evidence copy reflects completed actuals + ROS. Do not reopen settled model/cache/terminal-season findings unless contradictory hosted or physical evidence appears.
+
+
+### 2026-10-07 — physical iPhone/Safari acceptance failure after #408
+Management supplied authenticated iPhone/Safari physical evidence after live deploy `dep-db2rr1id0e5s73e6o7fg`. Contradictory evidence reopens only the affected Current Position & Depth acceptance layer under OPERATING_PROTOCOL.md; the lower-level #408 authority/slot-attribution work remains accepted where physically confirmed.
+
+Physical evidence / accepted observations:
+- the core fixed-slot vs FLEX/SUPERFLEX attribution is working;
+- Current physical acceptance still fails because FLEX/RB/WR/TE are league-wide unavailable;
+- Current column order is not the desired canonical scan order;
+- Current position-detail player ordering, starter/depth counts and summary evidence are not yet slot-specific/product-correct;
+- Current drawer still exposes team-wide fragility and Long-Term/Career Intrinsic shadow copy that do not belong in the Current positional summary;
+- portrait iPhone layout wraps the slot headers instead of keeping one horizontally scrollable grid.
+
+Management decisions for this corrective:
+1. Trace why FLEX/RB/WR/TE are league-wide unavailable. Correct the **underlying governed coverage issue** only if an already accepted fallback exists; do not weaken fail-closed semantics or convert missing evidence to zero.
+2. Current grid canonical order is `QB, RB, WR, TE, FLEX, SUPERFLEX, K, DST`, filtered to configured slots.
+3. Current position-detail players sort by **Current Intrinsic Value descending**. Role/assignment remains visible. This is presentation ordering only; Value authority remains upstream.
+4. Current drawer starter/depth counts are **specific to the selected slot**. A player assigned to SUPERFLEX does not count as a starter in the QB drawer merely because his actual position is QB.
+5. Remove team-wide fragility from positional summary unless governed slot-specific resilience evidence exists. No new resilience model is authorized in this tranche.
+6. Remove Long-Term/Career Intrinsic shadow copy from the **Current** drawer. Dynasty player/detail behavior remains unchanged.
+7. Portrait iPhone Current layout must retain one horizontally scrollable grid with all configured slot columns on the same row; headers must not wrap into a second line/row.
+8. Preserve lineup optimizer authority: maximize governed annual Current season-outlook points. Among equivalent optimal assignments, the higher season-outlook eligible player occupies the fixed position before FLEX/SUPERFLEX. Do not hard-code player-specific ordering.
+9. Management's live physical example is Dak Prescott `327.1` vs Lamar Jackson `321.4` actuals+ROS; Dak at QB and Lamar at SUPERFLEX is currently consistent with the accepted tie/assignment rule. Any disagreement with those underlying projections is a separate Forecast-evidence question and is outside this corrective.
+10. Preserve accepted actuals+ROS authority, Dynasty/#370, Simulation, and P0 architecture.
+
+Validation protocol:
+- keep implementation PR draft while correcting;
+- use focused Current/Atlas/lineup coverage validation during development;
+- mark one exact stable head ready only after focused evidence is green;
+- run exactly one stable full-suite merge gate for that corrective head;
+- merge/deploy/checkpoint only if green.
+
+**Do not broaden scope.** In particular, do not redesign Forecast, change Dynasty/#370, alter Simulation production semantics, add a new resilience model, or reopen P0 lifecycle/publication architecture.
