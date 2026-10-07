@@ -14,6 +14,17 @@ CURRENT_POSITION_DEPTH_MODEL_VERSION = (
     "completed-actuals-plus-ros:configured-slot-attribution"
 )
 
+_CURRENT_SLOT_ORDER: tuple[RosterSlot, ...] = (
+    RosterSlot.QB,
+    RosterSlot.RB,
+    RosterSlot.WR,
+    RosterSlot.TE,
+    RosterSlot.FLEX,
+    RosterSlot.SUPERFLEX,
+    RosterSlot.K,
+    RosterSlot.DST,
+)
+
 _SLOT_ELIGIBILITY: dict[RosterSlot, frozenset[Position]] = {
     RosterSlot.QB: frozenset({Position.QB}),
     RosterSlot.RB: frozenset({Position.RB}),
@@ -83,15 +94,15 @@ def configured_current_slots(
     """Return configured supported starter-slot types in league-defined order."""
 
     counts: dict[RosterSlot, int] = {}
-    order: list[RosterSlot] = []
     for requirement in league_state.league.rules.lineup:
         if requirement.count <= 0 or requirement.slot not in _SLOT_ELIGIBILITY:
             continue
-        if requirement.slot not in counts:
-            order.append(requirement.slot)
-            counts[requirement.slot] = 0
-        counts[requirement.slot] += requirement.count
-    return tuple((slot, counts[slot]) for slot in order)
+        counts[requirement.slot] = counts.get(requirement.slot, 0) + requirement.count
+    return tuple(
+        (slot, counts[slot])
+        for slot in _CURRENT_SLOT_ORDER
+        if slot in counts
+    )
 
 
 def _unavailable_contract(
