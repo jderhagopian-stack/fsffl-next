@@ -418,12 +418,6 @@ def build_governed_current_position_depth(
             preseason_season_forecasts=preseason_season_forecasts,
             history_writer=history_writer,
         )
-        return build_current_position_depth_from_outlook(
-            league_state,
-            season_outlook=governed.season_outlook,
-            evidence_basis=governed.evidence_basis,
-            completed_through_week=governed.completed_through_week,
-        )
     except Exception as exc:
         return _unavailable_contract(
             league_state,
@@ -432,3 +426,10 @@ def build_governed_current_position_depth(
                 f"{type(exc).__name__}: {exc}"
             ),
         )
+
+    return build_current_position_depth_from_outlook(
+        league_state,
+        season_outlook=governed.season_outlook,
+        evidence_basis=governed.evidence_basis,
+        completed_through_week=governed.completed_through_week,
+    )
