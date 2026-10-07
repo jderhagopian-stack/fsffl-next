@@ -113,9 +113,12 @@ window.renderFsfflMyTeam=loadMyTeamCommandCenter;
 
 /* Franchise North Star 2026-09-24.
  * Presentation-only recomposition of existing governed Franchise evidence.
- * Uses /api/my-team, /api/league/team-views, /api/home and the existing
- * /api/league/value-lenses read path. It does not launch Forecast,
- * Simulation, Value reconstruction, Decision, Search, or Optimization work.
+ * Uses /api/my-team, /api/league/team-views and the existing
+ * /api/league/value-lenses read path. Current slot evidence comes from the
+ * published current_position_depth contract on league team views; Simulation
+ * outcomes come from the canonical Franchise/team-view utility contract.
+ * It does not launch Forecast, Simulation, Value reconstruction, Decision,
+ * Search, or Optimization work.
  */
 Object.assign(fsfflMyTeamState,{
   franchiseTab:'overview',
