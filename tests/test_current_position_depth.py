@@ -346,6 +346,7 @@ def test_governed_current_builder_consumes_existing_in_season_outlook(monkeypatc
             {
                 "preseason_season_forecasts": (),
                 "history_writer": "history-writer",
+                "allow_governed_fumbles_ros_gap": True,
             },
         )
     ]
