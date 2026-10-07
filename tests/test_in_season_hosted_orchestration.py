@@ -185,7 +185,10 @@ def test_governed_outlook_prefers_healthy_current_ros(monkeypatch):
     monkeypatch.setattr(
         orchestration,
         "build_in_season_forecasts",
-        lambda *args, **kwargs: SimpleNamespace(fantasy_point_forecasts=(ros,)),
+        lambda *args, **kwargs: SimpleNamespace(
+            fantasy_point_forecasts=(ros,),
+            partial_fantasy_point_forecasts=(),
+        ),
     )
     result = build_governed_in_season_outlook(
         _state(),
