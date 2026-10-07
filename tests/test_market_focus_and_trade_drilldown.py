@@ -194,8 +194,7 @@ def test_legacy_players_route_delegates_to_market_player_board() -> None:
     assert "marketTab:'player_board'" in shell
     assert "{route:'players_assets',label:'Players & Assets',legacy:true,navigation:false}" in shell
     assert "fsfflProductRoutes.filter(item=>item.primary)" in shell
-    decision_block = navigation.split("const DECISIONS=[", 1)[1].split("];", 1)[0]
-    assert "players_assets" not in decision_block
+    assert "route:'players_assets'" not in navigation
 
 
 def test_focus_client_configures_without_request_and_submits_explicitly() -> None:
