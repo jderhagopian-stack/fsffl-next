@@ -1,0 +1,58 @@
+name: Stable full suite
+
+on:
+  push:
+    branches:
+      - 'merge-gate/**'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+# Moving the gate ref to a newer PR head cancels a run for the old candidate.
+concurrency:
+  group: stable-full-suite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-suite:
+    name: full-suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify gate ref matches current PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.sha }}
+          GATE_REF: ${{ github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          pr_number="${GATE_REF##*/}"
+          actual_head="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" --jq '.head.sha')"
+          if [ "$actual_head" != "$GITHUB_SHA" ]; then
+            echo "::error::Gate SHA $GITHUB_SHA is not current PR #$pr_number head $actual_head"
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: python -m pip install -e '.[dev,web]'
+      - name: Stable-head full suite
+        run: pytest -q
+      - name: Verify PR head did not change during the suite
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.sha }}
+          GATE_REF: ${{ github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          pr_number="${GATE_REF##*/}"
+          actual_head="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" --jq '.head.sha')"
+          if [ "$actual_head" != "$GITHUB_SHA" ]; then
+            echo "::error::PR #$pr_number moved from gate SHA $GITHUB_SHA to $actual_head during the suite"
+            exit 1
+          fi
