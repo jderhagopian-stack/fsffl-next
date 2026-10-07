@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Literal
 
 from fsffl.forecast.in_season_orchestration import build_governed_in_season_outlook
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import FrozenModel, LeagueState, Position, RosterSlot
 from fsffl.team_utility.lineup import optimize_team_lineup
+from fsffl.team_utility.models import LineupAssignment
 
 
 CURRENT_POSITION_DEPTH_MODEL_VERSION = (
@@ -219,7 +219,7 @@ def build_current_position_depth_from_outlook(
     }
 
     assignment_totals: dict[tuple[str, RosterSlot], tuple[int, float]] = {}
-    assignment_by_player: dict[tuple[str, str], object] = {}
+    assignment_by_player: dict[tuple[str, str], LineupAssignment] = {}
     for team in ordered_teams:
         lineup = lineups[team.team_id]
         for assignment in lineup.assignments:
