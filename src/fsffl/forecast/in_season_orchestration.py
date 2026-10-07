@@ -243,6 +243,11 @@ def fill_current_ros_fumbles_lost_gaps(
         )
         factor = max(0.0, min(1.0, remaining_games / NFL_GAMES_PER_TEAM))
         version = f"{observation.model_version}:{FUMBLES_ROS_MODEL_VERSION}"
+        current_authority_as_of = max(
+            partial.as_of,
+            observation.as_of,
+            supplement.authority_valid_from,
+        )
         ros_supplement.append(
             observation.model_copy(
                 update={
@@ -253,6 +258,7 @@ def fill_current_ros_fumbles_lost_gaps(
                         mean=observation.distribution.mean * factor,
                         stddev=observation.distribution.stddev * factor,
                     ),
+                    "as_of": current_authority_as_of,
                     "model_version": version,
                     "provenance": observation.provenance.model_copy(
                         update={
