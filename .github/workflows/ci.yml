@@ -1,7 +1,7 @@
 name: CI
 
 # PR updates get focused validation only. The stable-head full suite is triggered
-# separately by a merge-gate/<PR> ref; see OPERATING_PROTOCOL.md.
+# when a merge-ready PR is marked ready for review; see OPERATING_PROTOCOL.md.
 on:
   pull_request:
 
