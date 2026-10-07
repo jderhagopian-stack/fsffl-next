@@ -1,4 +1,4 @@
-const fsfflMyTeamState={view:null,valueLenses:null,leagueViews:[],leagueSource:'',valueLensLoading:false,valueLensGeneration:0};
+const fsfflMyTeamState={view:null,valueLenses:null,leagueViews:[],leagueSource:'',currentPositionDepth:null,valueLensLoading:false,valueLensGeneration:0};
 
 function myTeamEsc(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
 function myTeamNum(value,digits=1){return typeof value==='number'&&Number.isFinite(value)?value.toFixed(digits):'—'}
@@ -113,9 +113,12 @@ window.renderFsfflMyTeam=loadMyTeamCommandCenter;
 
 /* Franchise North Star 2026-09-24.
  * Presentation-only recomposition of existing governed Franchise evidence.
- * Uses /api/my-team, /api/league/team-views, /api/home and the existing
- * /api/league/value-lenses read path. It does not launch Forecast,
- * Simulation, Value reconstruction, Decision, Search, or Optimization work.
+ * Uses /api/my-team, /api/league/team-views and the existing
+ * /api/league/value-lenses read path. Current slot evidence comes from the
+ * published current_position_depth contract on league team views; Simulation
+ * outcomes come from the canonical Franchise/team-view utility contract.
+ * It does not launch Forecast, Simulation, Value reconstruction, Decision,
+ * Search, or Optimization work.
  */
 Object.assign(fsfflMyTeamState,{
   franchiseTab:'overview',
@@ -125,7 +128,7 @@ Object.assign(fsfflMyTeamState,{
   franchiseAssetLens:'market',
   franchisePickLens:'count',
   franchiseExpandedPickSeason:null,
-  franchiseHome:null,
+  franchisePublicationGenerationId:null,
 });
 const FSFFL_FRANCHISE_GAME_BASIS=17;
 const FSFFL_FRANCHISE_POSITIONS=['QB','RB','WR','TE'];
@@ -133,25 +136,74 @@ const FSFFL_FRANCHISE_POSITIONS=['QB','RB','WR','TE'];
 function franchiseNSStateId(){
   return fsfflMyTeamState.view?.context?.league_state_id||null;
 }
-function franchiseNSHome(){
-  const home=fsfflMyTeamState.franchiseHome;
-  return home&&home.league_state_id===franchiseNSStateId()?home:null;
+function franchiseNSResponseStateId(view,league){
+  const viewStateId=view?.context?.league_state_id||null,leagueStateId=league?.league_state_id||null;
+  const viewContinuity=view?.presentation_continuity||{},leagueContinuity=league?.presentation_continuity||{};
+  return{
+    viewStateId,
+    leagueStateId,
+    viewTargetStateId:viewContinuity.target_league_state_id||viewStateId,
+    leagueTargetStateId:leagueContinuity.target_league_state_id||leagueStateId,
+    viewServedStateId:viewContinuity.served_league_state_id||viewStateId,
+    leagueServedStateId:leagueContinuity.served_league_state_id||leagueStateId,
+    viewGenerationId:view?.publication_generation_id??null,
+    leagueGenerationId:league?.publication_generation_id??null,
+  };
 }
-function franchiseNSStandings(){
-  return franchiseNSHome()?.standings||[];
+function franchiseNSManagedViewTargetsState(view,expectedStateId){
+  const identity=franchiseNSResponseStateId(view,null);
+  return identity.viewTargetStateId===expectedStateId
+    && Boolean(identity.viewServedStateId)
+    && Boolean(identity.viewGenerationId);
 }
-function franchiseNSStanding(){
-  const id=state?.context?.team_id;
-  return franchiseNSStandings().find(row=>row.team_id===id)||null;
+function franchiseNSResponsesAligned(view,league,expectedStateId){
+  const identity=franchiseNSResponseStateId(view,league);
+  return identity.viewTargetStateId===expectedStateId
+    && identity.leagueTargetStateId===expectedStateId
+    && Boolean(identity.viewServedStateId)
+    && identity.viewServedStateId===identity.leagueServedStateId
+    && Boolean(identity.viewGenerationId)
+    && identity.viewGenerationId===identity.leagueGenerationId;
 }
-function franchiseNSSimulation(){
-  const home=franchiseNSHome(),id=state?.context?.team_id;
-  if(!home||home.simulation?.status!=='ready')return null;
-  return (home.simulation.teams||[]).find(row=>row.team_id===id)||null;
+async function franchiseNSLoadAlignedPair(expectedStateId){
+  for(let attempt=0;attempt<4;attempt+=1){
+    const settled=await Promise.allSettled([
+      api('/api/my-team'),
+      api('/api/league/team-views'),
+    ]);
+    if(state?.context?.state_id!==expectedStateId)return null;
+    if(settled[0].status!=='fulfilled')throw settled[0].reason;
+    const view=settled[0].value;
+    if(settled[1].status!=='fulfilled'){
+      if(franchiseNSManagedViewTargetsState(view,expectedStateId))return[view,null];
+      if(attempt<3){await new Promise(resolve=>setTimeout(resolve,75));continue}
+      throw settled[1].reason;
+    }
+    const league=settled[1].value;
+    if(franchiseNSResponsesAligned(view,league,expectedStateId))return[view,league];
+    if(attempt<3)await new Promise(resolve=>setTimeout(resolve,75));
+  }
+  throw new Error('Franchise publication changed while loading; keeping last-good view.');
+}
+function franchiseNSOutcome(){
+  return fsfflMyTeamState.view?.utility?.competitive_outcome||null;
+}
+function franchiseNSCurrentContract(){
+  const current=fsfflMyTeamState.currentPositionDepth;
+  const viewGeneration=fsfflMyTeamState.view?.publication_generation_id??null;
+  return current
+    && current.league_state_id===franchiseNSStateId()
+    && viewGeneration===fsfflMyTeamState.franchisePublicationGenerationId
+    ?current:null;
 }
 function franchiseNSPositionRows(){
-  const view=fsfflMyTeamState.view;
-  return FSFFL_FRANCHISE_POSITIONS.map(position=>(view?.position_strengths||[]).find(row=>row.position===position)||null);
+  const current=franchiseNSCurrentContract(),teamId=state?.context?.team_id;
+  if(!current||!teamId)return[];
+  const strengths=current.strengths||[];
+  return (current.slot_order||[])
+    .map(slot=>strengths.find(row=>row.team_id===teamId&&row.slot===slot)||null)
+    .filter(Boolean)
+    .map(row=>({...row,position:row.slot}));
 }
 function franchiseNSPositionBand(row){
   if(!row)return'unknown';
@@ -295,9 +347,8 @@ function franchiseNSPickValueAvailable(){
     row=>franchiseNSPickPercentile(row)!=null||franchiseNSPickCardinal(row)!=null
   );
 }
-function franchiseNSCurrentRank(){
-  const standing=franchiseNSStanding();
-  return standing?.rank||null;
+function franchiseNSExpectedWinsRank(){
+  return myTeamLeagueOutcomeRank('expected_wins');
 }
 function franchiseNSStrongWeak(){
   const rows=franchiseNSPositionRows().filter(Boolean).filter(row=>typeof row.strength_index==='number');
@@ -313,10 +364,11 @@ function franchiseNSPositionRing(row){
   if(!row)return '<div class="franchise-ns-position-ring unavailable"><span>—</span><small>No evidence</small></div>';
   const mode=fsfflMyTeamState.franchisePositionLens;
   const count=row.team_count||fsfflMyTeamState.leagueViews.length||12;
-  const value=mode==='index'?Math.round(row.strength_index):'#'+(row.league_rank||'—');
-  const sub=mode==='index'?'Index · 100 avg':'of '+count;
-  return '<button type="button" class="franchise-ns-position-ring '+franchiseNSPositionBand(row)+(fsfflMyTeamState.franchiseExpandedPosition===row.position?' selected':'')+'" data-franchise-position="'+myTeamEsc(row.position)+'">'+
-    '<span>'+myTeamEsc(row.position)+'</span><i><strong>'+myTeamEsc(value)+'</strong></i><small>'+myTeamEsc(sub)+'</small>'+
+  const ready=row.status==='ready'&&typeof row.league_rank==='number'&&typeof row.strength_index==='number';
+  const value=!ready?'—':mode==='index'?Math.round(row.strength_index):'#'+row.league_rank;
+  const sub=!ready?'Unavailable':mode==='index'?'Index · 100 avg':'of '+count;
+  return '<button type="button" class="franchise-ns-position-ring '+(ready?franchiseNSPositionBand(row):'unknown')+'" data-franchise-current-slot="'+myTeamEsc(row.position)+'" aria-label="Open Current Position and Depth for '+myTeamEsc(row.position)+'">'+
+    '<span>'+myTeamEsc(row.position==='SUPERFLEX'?'SF':row.position)+'</span><i><strong>'+myTeamEsc(value)+'</strong></i><small>'+myTeamEsc(sub)+'</small>'+
   '</button>';
 }
 function franchiseNSPositionDetail(){
@@ -334,39 +386,44 @@ function franchiseNSPositionDetail(){
   '</div>';
 }
 function franchiseNSOverview(){
-  const view=fsfflMyTeamState.view,simulation=franchiseNSSimulation(),standing=franchiseNSStanding(),rank=franchiseNSCurrentRank();
-  const {strongest,weakest}=franchiseNSStrongWeak(),foundation=franchiseNSFoundationPlayers(strongest?.position),fragility=franchiseNSFragility();
-  const starterAge=view?.starter_average_age??myTeamAverageAge((view?.players||[]).filter(player=>player.projected_starter));
-  const rosterAge=view?.roster_average_age??myTeamAverageAge(view?.players||[]);
-  const pressureAction=weakest?'<button type="button" class="franchise-ns-context-action" data-franchise-market-position="'+myTeamEsc(weakest.position)+'">Explore '+myTeamEsc(weakest.position)+' upgrades <b>→</b></button>':'';
-  const foundationNames=foundation.length?foundation.map(player=>player.full_name).join(' · '):'Player detail unavailable';
+  const view=fsfflMyTeamState.view,outcome=franchiseNSOutcome(),expectedWinsRank=franchiseNSExpectedWinsRank();
+  const {strongest,weakest}=franchiseNSStrongWeak(),fragility=franchiseNSFragility();
   const positionRows=franchiseNSPositionRows();
-  return '<section class="franchise-ns-view" data-franchise-view="overview">'+
-    '<section class="franchise-ns-outlook" aria-label="Competitive outlook">'+
-      '<div><small>Expected wins</small><strong>'+myTeamNum(simulation?.expected_wins,1)+'</strong></div>'+
-      '<div><small>Playoffs</small><strong>'+myTeamPct(simulation?.playoff_probability,0)+'</strong></div>'+
-      '<div><small>Championship</small><strong>'+myTeamPct(simulation?.championship_probability,0)+'</strong></div>'+
-      '<div><small>League rank</small><strong>'+(rank?'#'+rank:'—')+'</strong><span>'+(standing?myTeamEsc(String(standing.wins??0)+'-'+String(standing.losses??0)+(Number(standing.ties||0)>0?'-'+String(standing.ties):'')):'Current standings unavailable')+'</span></div>'+
-    '</section>'+
-    '<section class="franchise-ns-section franchise-ns-position-section">'+
-      '<div class="franchise-ns-section-head"><div><p class="eyebrow">Position strength</p><h3>How the starting lineup stacks up</h3></div><div class="franchise-ns-segment" role="group" aria-label="Position strength lens"><button type="button" data-franchise-position-lens="rank" aria-pressed="'+(fsfflMyTeamState.franchisePositionLens==='rank')+'">Rank</button><button type="button" data-franchise-position-lens="index" aria-pressed="'+(fsfflMyTeamState.franchisePositionLens==='index')+'">Index</button></div></div>'+
-      '<div class="franchise-ns-position-grid">'+positionRows.map(franchiseNSPositionRing).join('')+'</div>'+
-      franchiseNSPositionDetail()+
-    '</section>'+
-    '<section class="franchise-ns-section"><div class="franchise-ns-section-head"><div><p class="eyebrow">What defines this franchise</p><h3>Three structural facts</h3></div></div>'+
-      '<div class="franchise-ns-diagnosis">'+
-        '<article class="foundation"><span>Foundation</span><h4>'+(strongest?myTeamEsc(strongest.position)+' is the clearest strength':'Strength unavailable')+'</h4><p>'+(strongest?'#'+myTeamEsc(strongest.league_rank||'—')+' of '+myTeamEsc(strongest.team_count||'—')+' · Index '+myTeamNum(strongest.strength_index,0)+' · '+myTeamEsc(foundationNames):'Position-strength evidence has not attached.')+'</p></article>'+
-        '<article class="pressure"><span>Pressure point</span><h4>'+(weakest?myTeamEsc(weakest.position)+' is the first position to investigate':'Pressure point unavailable')+'</h4><p>'+(weakest?'#'+myTeamEsc(weakest.league_rank||'—')+' of '+myTeamEsc(weakest.team_count||'—')+' · Index '+myTeamNum(weakest.strength_index,0)+'. Descriptive diagnosis only.':'Position-strength evidence has not attached.')+'</p></article>'+
-        '<article class="exposure"><span>Largest single-player exposure</span><h4>'+(fragility?(fragility.playerName?myTeamEsc(fragility.playerName):myTeamNum(fragility.drop,1)+' projected points'):'Exposure unavailable')+'</h4><p>'+(fragility?(fragility.playerName?myTeamNum(fragility.drop,1)+' projected-point lineup drop if unavailable.':'Largest projected lineup drop: '+myTeamNum(fragility.drop,1)+' points.'):'Roster-resilience evidence has not attached.')+'</p></article>'+
+  const simulationReady=outcome&&typeof outcome.expected_wins==='number';
+  const weakestReady=weakest&&weakest.status==='ready'&&typeof weakest.league_rank==='number';
+  const strongestReady=strongest&&strongest.status==='ready'&&typeof strongest.league_rank==='number';
+  const mattersTitle=weakestReady?weakest.position+' is the clearest Current pressure point':'Current position pressure is unavailable';
+  const mattersMeta=weakestReady?'#'+weakest.league_rank+' of '+weakest.team_count+' · Strength Index '+myTeamNum(weakest.strength_index,0):'Current Position & Depth has not attached complete slot evidence.';
+  const mattersContext=strongestReady?'Strongest Current slot: '+strongest.position+' #'+strongest.league_rank+' of '+strongest.team_count+'.':'No substitute position ranking is invented.';
+  const outlookMetric=(label,value,kind)=>{
+    const shown=kind==='percent'?myTeamPct(value,0):myTeamNum(value,1);
+    const ring=kind==='percent'&&typeof value==='number'&&Number.isFinite(value)?Math.max(0,Math.min(100,value*100)).toFixed(1)+'%':'100%';
+    return '<div class="franchise-home-outlook-metric '+kind+'" style="--franchise-home-ring:'+ring+'"><span><b>'+shown+'</b></span><small>'+myTeamEsc(label)+'</small></div>';
+  };
+  return '<section class="franchise-ns-view franchise-home-overview" data-franchise-view="overview">'+
+    '<section class="franchise-home-outlook-card">'+
+      '<div class="franchise-home-card-head"><span class="franchise-home-kicker">Season Outlook · current Simulation</span><small>'+(simulationReady?(expectedWinsRank?'Expected wins #'+expectedWinsRank.rank+' of '+expectedWinsRank.count:'Governed Simulation'):'Unavailable')+'</small></div>'+
+      '<div class="franchise-home-outlook-grid">'+
+        outlookMetric('Expected wins',outcome?.expected_wins,'number')+
+        outlookMetric('Playoffs',outcome?.playoff_probability,'percent')+
+        outlookMetric('Championship',outcome?.championship_probability,'percent')+
       '</div>'+
     '</section>'+
-    '<section class="franchise-ns-age-row"><div><small>Projected starter age</small><strong>'+(starterAge==null?'—':starterAge.toFixed(1))+'</strong></div><div><small>Full-roster age</small><strong>'+(rosterAge==null?'—':rosterAge.toFixed(1))+'</strong></div><p>Descriptive age profile only.</p></section>'+
-    '<section class="franchise-ns-section franchise-ns-draft">'+
-      '<div class="franchise-ns-section-head"><div><p class="eyebrow">Draft capital</p><h3>Future runway</h3></div><div class="franchise-ns-segment" role="group" aria-label="Draft capital lens"><button type="button" data-franchise-pick-lens="count" aria-pressed="'+(fsfflMyTeamState.franchisePickLens==='count')+'">Count</button><button type="button" data-franchise-pick-lens="value" aria-pressed="'+(fsfflMyTeamState.franchisePickLens==='value')+'" '+(franchiseNSPickValueAvailable()?'':'disabled')+'>Value</button></div></div>'+
-      '<div class="franchise-ns-pick-years">'+franchiseNSPickSeasonMarkup(true)+'</div>'+
-      (!franchiseNSPickValueAvailable()?'<p class="franchise-ns-note">Broad Market pick Value evidence is unavailable; literal owned-pick inventory remains visible.</p>':'')+
+    '<button type="button" class="franchise-home-matters" data-franchise-current-slot="'+myTeamEsc(weakestReady?weakest.position:'')+'" '+(weakestReady?'':'disabled')+'>'+
+      '<span class="franchise-home-kicker">What Matters Right Now</span>'+
+      '<span class="franchise-home-matters-main"><i>'+myTeamEsc(weakestReady?(weakest.position==='SUPERFLEX'?'SF':weakest.position):'—')+'</i><span><strong>'+myTeamEsc(mattersTitle)+'</strong><small>'+myTeamEsc(mattersMeta)+'</small><em>'+myTeamEsc(mattersContext)+'</em></span><b aria-hidden="true">›</b></span>'+
+      '<span class="franchise-home-cta">'+(weakestReady?'Open Current Position & Depth →':'Current evidence unavailable')+'</span>'+
+    '</button>'+
+    '<section class="franchise-ns-section franchise-ns-position-section">'+
+      '<div class="franchise-ns-section-head"><div><p class="eyebrow">Current Position & Depth</p><h3>Where the optimized lineup is strongest</h3><p>Canonical Current slot ranks only. FLEX/SF stay separate from fixed positions.</p></div><div class="franchise-ns-segment" role="group" aria-label="Current position strength lens"><button type="button" data-franchise-position-lens="rank" aria-pressed="'+(fsfflMyTeamState.franchisePositionLens==='rank')+'">Rank</button><button type="button" data-franchise-position-lens="index" aria-pressed="'+(fsfflMyTeamState.franchisePositionLens==='index')+'">Index</button></div></div>'+
+      '<div class="franchise-ns-position-grid franchise-current-slot-grid">'+(positionRows.length?positionRows.map(franchiseNSPositionRing).join(''):'<p class="franchise-ns-empty">Current Position & Depth evidence is unavailable.</p>')+'</div>'+
     '</section>'+
-    pressureAction+
+    '<section class="franchise-home-secondary">'+
+      '<div class="franchise-home-card-head"><span class="franchise-home-kicker">Also worth knowing</span></div>'+
+      '<button type="button" class="franchise-home-secondary-row" data-franchise-route="what_if" '+(fragility?'':'disabled')+'><span class="franchise-home-secondary-icon">!</span><span><small>Largest single-player exposure</small><strong>'+myTeamEsc(fragility?.playerName||'Unavailable')+'</strong><em>'+(fragility?myTeamNum(fragility.drop,1)+' projected-point lineup drop':'Roster-resilience evidence unavailable')+'</em></span><b aria-hidden="true">›</b></button>'+
+      '<button type="button" class="franchise-home-secondary-row" data-franchise-tab-open="roster"><span class="franchise-home-secondary-icon outlook">R</span><span><small>Roster</small><strong>Lineup and depth</strong><em>Open the canonical roster view.</em></span><b aria-hidden="true">›</b></button>'+
+      '<button type="button" class="franchise-home-secondary-row" data-franchise-tab-open="assets"><span class="franchise-home-secondary-icon assets">A</span><span><small>Assets & Picks</small><strong>Value and future capital</strong><em>Open the existing asset view.</em></span><b aria-hidden="true">›</b></button>'+
+    '</section>'+
   '</section>';
 }
 function franchiseNSRoster(){
@@ -403,11 +460,11 @@ function renderFranchiseNorthStar(){
   const panel=myTeamPanel(),view=fsfflMyTeamState.view;
   if(!panel)return;
   if(!view){panel.innerHTML='<div class="franchise-ns-shell"><p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2></div>';return}
-  const stateLabel=myTeamStateLabel(view.utility?.calculated_competitive_state),rank=franchiseNSCurrentRank();
+  const stateLabel=myTeamStateLabel(view.utility?.calculated_competitive_state),expectedWinsRank=franchiseNSExpectedWinsRank();
   const stateOnly=!view.forecast_authority?.evidence_basis;
   const fallback=view.forecast_authority?.fallback_active;
   panel.innerHTML='<div class="franchise-ns-shell">'+
-    '<header class="franchise-ns-header"><div class="franchise-ns-mark" aria-hidden="true">'+myTeamEsc((view.display_name||'?').slice(0,1).toUpperCase())+'</div><div><p class="eyebrow">Franchise</p><h2>'+myTeamEsc(view.display_name)+'</h2><p><strong>'+myTeamEsc(stateLabel)+'</strong>'+(rank?' · #'+rank+' of '+franchiseNSStandings().length:' · League rank unavailable')+'</p></div></header>'+
+    '<header class="franchise-ns-header franchise-home-identity"><div class="franchise-ns-mark" aria-hidden="true">'+myTeamEsc((view.display_name||'?').slice(0,1).toUpperCase())+'</div><div><p class="eyebrow">Franchise</p><h2>'+myTeamEsc(view.display_name)+'</h2><p><strong>'+myTeamEsc(stateLabel)+'</strong>'+(expectedWinsRank?' · Expected wins #'+expectedWinsRank.rank+' of '+expectedWinsRank.count:' · Simulation rank unavailable')+'</p></div></header>'+
     '<nav class="franchise-ns-tabs" role="tablist" aria-label="Franchise views">'+
       myTeamTabButton('overview','Overview',fsfflMyTeamState.franchiseTab==='overview')+
       myTeamTabButton('roster','Roster',fsfflMyTeamState.franchiseTab==='roster')+
@@ -418,8 +475,9 @@ function renderFranchiseNorthStar(){
   '</div>';
   panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchiseTab=button.dataset.franchiseTab;renderFranchiseNorthStar()}));
   panel.querySelectorAll('[data-franchise-position-lens]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchisePositionLens=button.dataset.franchisePositionLens==='index'?'index':'rank';renderFranchiseNorthStar()}));
-  panel.querySelectorAll('[data-franchise-position]').forEach(button=>button.addEventListener('click',()=>{const pos=button.dataset.franchisePosition;fsfflMyTeamState.franchiseExpandedPosition=fsfflMyTeamState.franchiseExpandedPosition===pos?null:pos;renderFranchiseNorthStar()}));
-  panel.querySelector('[data-franchise-position-close]')?.addEventListener('click',()=>{fsfflMyTeamState.franchiseExpandedPosition=null;renderFranchiseNorthStar()});
+  panel.querySelectorAll('[data-franchise-current-slot]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;const slot=button.dataset.franchiseCurrentSlot||null;const intent={route:'league_comparison',section:'positions',teamId:state?.context?.team_id||null,position:slot,source:'franchise-overview-current'};if(typeof window.fsfflNavigateTo==='function')window.fsfflNavigateTo(intent);else if(typeof setRoute==='function')setRoute('league_comparison')}));
+  panel.querySelectorAll('[data-franchise-tab-open]').forEach(button=>button.addEventListener('click',()=>{const tab=button.dataset.franchiseTabOpen;if(!['roster','assets'].includes(tab))return;fsfflMyTeamState.franchiseTab=tab;renderFranchiseNorthStar()}));
+  panel.querySelectorAll('[data-franchise-route]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;const route=button.dataset.franchiseRoute;if(!route)return;const intent={route,teamId:state?.context?.team_id||null,source:'franchise-overview'};if(typeof window.fsfflNavigateTo==='function')window.fsfflNavigateTo(intent);else if(typeof setRoute==='function')setRoute(route)}));
   panel.querySelectorAll('[data-franchise-roster-filter]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchiseRosterFilter=button.dataset.franchiseRosterFilter;renderFranchiseNorthStar()}));
   panel.querySelectorAll('[data-franchise-asset-lens]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;fsfflMyTeamState.franchiseAssetLens=button.dataset.franchiseAssetLens;renderFranchiseNorthStar()}));
   panel.querySelectorAll('[data-franchise-pick-lens]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;fsfflMyTeamState.franchisePickLens=button.dataset.franchisePickLens;renderFranchiseNorthStar()}));
@@ -468,13 +526,10 @@ async function loadFranchiseNorthStar(){
     panel.innerHTML='<div class="franchise-ns-shell"><aside class="franchise-ns-forecast-strip" role="status"><strong>Loading Franchise</strong><span>Checking current or last-good published intelligence…</span></aside></div>';
   }
   try{
-    const results=await Promise.all([
-      api('/api/my-team'),
-      api('/api/league/team-views').catch(()=>({team_views:[],source_level:'unavailable'})),
-      api('/api/home').catch(()=>null),
-    ]);
-    if(state?.context?.state_id!==expectedStateId)return;
+    const results=await franchiseNSLoadAlignedPair(expectedStateId);
+    if(!results||state?.context?.state_id!==expectedStateId)return;
     fsfflMyTeamState.view=results[0];
+    fsfflMyTeamState.franchisePublicationGenerationId=results[0]?.publication_generation_id??null;
     if(!results[0]?.forecast_authority?.evidence_basis){
       // Without Forecast authority there is no governed starter classification.
       // Show the complete canonical roster instead of an empty "Starters" filter.
@@ -482,8 +537,8 @@ async function loadFranchiseNorthStar(){
       fsfflMyTeamState.franchiseRosterFilter='all';
     }
     fsfflMyTeamState.leagueViews=results[1]?.team_views||[];
-    fsfflMyTeamState.leagueSource=results[1]?.source_level||'';
-    fsfflMyTeamState.franchiseHome=results[2]&&results[2].league_state_id===results[0]?.context?.league_state_id?results[2]:null;
+    fsfflMyTeamState.leagueSource=results[1]?.source_level||'unavailable';
+    fsfflMyTeamState.currentPositionDepth=results[1]?.current_position_depth||null;
     renderFranchiseNorthStar();
     void loadFranchiseNorthStarValueLenses(expectedStateId);
   }catch(error){
@@ -504,11 +559,16 @@ window.renderFsfflMyTeam=loadFranchiseNorthStar;
     '.franchise-ns-shell{max-width:1080px;margin:0 auto;color:var(--text);min-width:0}',
     '.franchise-ns-header{display:flex;align-items:center;gap:12px;margin:0 0 12px}.franchise-ns-header h2{margin:1px 0 3px;font-size:clamp(1.65rem,5vw,2.35rem);letter-spacing:-.035em}.franchise-ns-header p{margin:0;color:var(--muted);font-size:11px;text-transform:capitalize}.franchise-ns-header p strong{color:#5ee6a8}.franchise-ns-mark{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid #2b7898;background:#10243a;color:#7dd3fc;font-weight:850}',
     '.franchise-ns-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:#08101c;margin-bottom:12px}.franchise-ns-tabs button{min-height:44px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:inherit;font-size:11px;font-weight:800}.franchise-ns-tabs button[aria-selected=true]{background:#0b4d82;color:#f8fafc;box-shadow:inset 0 0 0 1px #1874ad}',
+    '.franchise-home-identity{padding:10px 12px;border:1px solid var(--line);border-radius:15px;background:#091522;box-shadow:0 10px 28px rgba(0,0,0,.14)}.franchise-home-identity .franchise-ns-mark{width:50px;height:50px;border:2px solid #2a789d;background:linear-gradient(145deg,#12304a,#07111d);color:#7dd3fc;font-size:18px}',
+    '.franchise-home-overview{gap:9px}.franchise-home-outlook-card,.franchise-home-matters,.franchise-home-secondary{width:100%;border:1px solid var(--line);border-radius:15px;background:#091522;color:var(--text);box-shadow:0 10px 28px rgba(0,0,0,.14)}.franchise-home-outlook-card,.franchise-home-secondary{padding:11px}.franchise-home-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.franchise-home-card-head>small{font-size:9px;color:var(--muted)}.franchise-home-kicker{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:900;color:#9bcbe7}',
+    '.franchise-home-outlook-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}.franchise-home-outlook-metric{display:grid;justify-items:center;gap:5px;min-height:92px;align-content:center}.franchise-home-outlook-metric>span{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#35d399 var(--franchise-home-ring),#173247 0);position:relative}.franchise-home-outlook-metric>span:after{content:"";position:absolute;inset:5px;border-radius:50%;background:#091522}.franchise-home-outlook-metric.number>span{background:#173247;border:5px solid #36b4d7}.franchise-home-outlook-metric.number>span:after{inset:0}.franchise-home-outlook-metric b{position:relative;z-index:1;font-size:16px}.franchise-home-outlook-metric small{text-align:center;color:#a9bdd0;font-size:9px}',
+    '.franchise-home-matters{display:grid;gap:8px;padding:11px;text-align:left;font:inherit}.franchise-home-matters-main{display:grid;grid-template-columns:38px minmax(0,1fr) 20px;gap:9px;align-items:center}.franchise-home-matters-main>i{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#2a1638;color:#d8b4fe;font-style:normal;font-size:10px;font-weight:900}.franchise-home-matters-main>span{display:grid;gap:2px}.franchise-home-matters-main strong{font-size:13px}.franchise-home-matters-main small,.franchise-home-matters-main em{font-size:9px;color:var(--muted);font-style:normal}.franchise-home-matters-main>b,.franchise-home-secondary-row>b{font-size:25px;font-weight:300;color:#6d94ad}.franchise-home-cta{font-size:9px;color:#9bcbe7;font-weight:800}.franchise-home-matters:disabled{opacity:.6}',
+    '.franchise-home-secondary{padding:8px 11px 5px}.franchise-home-secondary-row{width:100%;display:grid;grid-template-columns:38px minmax(0,1fr) 20px;gap:9px;align-items:center;border:0;border-top:1px solid var(--line);background:transparent;color:var(--text);padding:9px 0;text-align:left;font:inherit}.franchise-home-secondary-row:first-of-type{margin-top:7px}.franchise-home-secondary-row>span:nth-child(2){display:grid;gap:2px}.franchise-home-secondary-row small,.franchise-home-secondary-row em{font-size:9px;color:var(--muted);font-style:normal}.franchise-home-secondary-row strong{font-size:13px}.franchise-home-secondary-icon{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#2a1638;color:#d8b4fe;font-weight:900}.franchise-home-secondary-icon.outlook{background:#123452;color:#7dd3fc}.franchise-home-secondary-icon.assets{background:#17352a;color:#86efac}',
     '.franchise-ns-forecast-strip{display:flex;align-items:center;gap:6px;min-height:30px;border:1px solid #765526;border-radius:8px;background:rgba(155,106,42,.07);padding:5px 8px;margin:-4px 0 10px;color:#d7bc8c;line-height:1.25}.franchise-ns-forecast-strip strong{font-size:9px;white-space:nowrap}.franchise-ns-forecast-strip span{font-size:9px;color:#bda77f}.franchise-ns-warning{border:1px solid #9b6a2a;border-radius:10px;background:rgba(155,106,42,.10);padding:8px 10px;color:#d6b57d;font-size:10px}',
     '.franchise-ns-view{display:grid;gap:11px}.franchise-ns-outlook{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;border:1px solid var(--line);border-radius:15px;background:#091321;overflow:hidden}.franchise-ns-outlook>div{padding:11px 8px;display:grid;gap:2px;text-align:center;border-left:1px solid var(--line)}.franchise-ns-outlook>div:first-child{border-left:0}.franchise-ns-outlook small{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}.franchise-ns-outlook strong{font-size:1.18rem}.franchise-ns-outlook span{font-size:8px;color:var(--muted)}',
     '.franchise-ns-section{border:1px solid var(--line);border-radius:16px;background:#0a1120;padding:14px;min-width:0}.franchise-ns-section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:10px}.franchise-ns-section-head h3,.franchise-ns-roster-head h3,.franchise-ns-assets-top h3{margin:2px 0;font-size:1.08rem}.franchise-ns-section-head p:not(.eyebrow),.franchise-ns-roster-head p:not(.eyebrow),.franchise-ns-assets-top p:not(.eyebrow){margin:4px 0 0;font-size:10px;line-height:1.4;color:var(--muted)}',
     '.franchise-ns-segment{display:flex;gap:3px;border:1px solid #223149;border-radius:999px;padding:3px;background:#07101d;flex:0 0 auto}.franchise-ns-segment button{min-height:36px;border:0;border-radius:999px;padding:6px 12px;background:transparent;color:#8091aa;font:inherit;font-size:10px;font-weight:800}.franchise-ns-segment button[aria-pressed=true]{color:#f8fafc;background:#153a54;box-shadow:inset 0 0 0 1px #2b7796}.franchise-ns-segment button:disabled{opacity:.38}',
-    '.franchise-ns-position-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.franchise-ns-position-ring{min-height:100px;border:0;background:transparent;color:var(--text);display:grid;justify-items:center;align-content:center;gap:5px;font:inherit;border-radius:12px;touch-action:manipulation}.franchise-ns-position-ring>span{font-size:10px;font-weight:850}.franchise-ns-position-ring>i{--ring:#718096;width:52px;height:52px;border:4px solid var(--ring);border-radius:50%;display:grid;place-items:center;font-style:normal;background:#0a1625}.franchise-ns-position-ring>i strong{font-size:13px}.franchise-ns-position-ring>small{font-size:8px;color:var(--muted)}.franchise-ns-position-ring.strong>i{--ring:#35d399}.franchise-ns-position-ring.middle>i{--ring:#efc65d}.franchise-ns-position-ring.weak>i{--ring:#ef6478}.franchise-ns-position-ring.selected{background:#0c1c2d;box-shadow:inset 0 0 0 1px #2d5f7c}',
+    '.franchise-ns-position-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:7px}.franchise-current-slot-grid{grid-template-columns:repeat(auto-fit,minmax(68px,1fr))}.franchise-ns-position-ring{min-height:100px;border:0;background:transparent;color:var(--text);display:grid;justify-items:center;align-content:center;gap:5px;font:inherit;border-radius:12px;touch-action:manipulation}.franchise-ns-position-ring>span{font-size:10px;font-weight:850}.franchise-ns-position-ring>i{--ring:#718096;width:52px;height:52px;border:4px solid var(--ring);border-radius:50%;display:grid;place-items:center;font-style:normal;background:#0a1625}.franchise-ns-position-ring>i strong{font-size:13px}.franchise-ns-position-ring>small{font-size:8px;color:var(--muted)}.franchise-ns-position-ring.strong>i{--ring:#35d399}.franchise-ns-position-ring.middle>i{--ring:#efc65d}.franchise-ns-position-ring.weak>i{--ring:#ef6478}.franchise-ns-position-ring.selected{background:#0c1c2d;box-shadow:inset 0 0 0 1px #2d5f7c}',
     '.franchise-ns-position-detail{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}.franchise-ns-position-detail-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.franchise-ns-position-detail-head span{display:grid;gap:2px}.franchise-ns-position-detail-head small{font-size:9px;color:var(--muted)}.franchise-ns-position-detail-head button{width:36px;height:36px;border:0;border-radius:50%;background:#101b2c;color:var(--muted);font-size:18px}.franchise-ns-position-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}.franchise-ns-position-players button{min-height:48px;border:1px solid var(--line);border-radius:10px;background:#0c1728;color:var(--text);display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;text-align:left;padding:8px 10px;font:inherit}.franchise-ns-position-players button span{display:grid}.franchise-ns-position-players button small{font-size:9px;color:var(--muted)}.franchise-ns-position-players button em{font-style:normal;font-size:8px;color:#f5b8c0}.franchise-ns-position-detail>p{font-size:10px;color:var(--muted);margin:8px 0 0}',
     '.franchise-ns-diagnosis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.franchise-ns-diagnosis article{border:1px solid var(--line);border-radius:12px;padding:11px;background:#0b1626;min-width:0}.franchise-ns-diagnosis article>span{font-size:8px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:800}.franchise-ns-diagnosis h4{margin:5px 0 5px;font-size:12px}.franchise-ns-diagnosis p{margin:0;color:var(--muted);font-size:9px;line-height:1.4}.franchise-ns-diagnosis .foundation{border-top-color:#35d399}.franchise-ns-diagnosis .pressure{border-top-color:#ef6478}.franchise-ns-diagnosis .exposure{border-top-color:#efc65d}',
     '.franchise-ns-age-row{display:grid;grid-template-columns:1fr 1fr minmax(110px,1.2fr);gap:1px;border:1px solid var(--line);border-radius:13px;background:#091321;overflow:hidden}.franchise-ns-age-row>div{padding:10px 12px;display:grid;gap:1px}.franchise-ns-age-row>div+div{border-left:1px solid var(--line)}.franchise-ns-age-row small{font-size:8px;text-transform:uppercase;color:var(--muted)}.franchise-ns-age-row strong{font-size:1.2rem}.franchise-ns-age-row p{margin:0;padding:10px 12px;color:var(--muted);font-size:9px;display:grid;place-items:center;text-align:center;border-left:1px solid var(--line)}',
@@ -518,7 +578,7 @@ window.renderFsfflMyTeam=loadFranchiseNorthStar;
     '.franchise-ns-asset-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.franchise-ns-asset-card{min-height:68px;border:1px solid var(--line);border-radius:12px;background:#0b1626;color:var(--text);display:grid;grid-template-columns:24px minmax(0,1fr) auto 10px;gap:8px;align-items:center;text-align:left;padding:9px;font:inherit}.franchise-ns-asset-rank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#142139;color:#94a3b8;font-size:9px}.franchise-ns-asset-main{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:6px;align-items:center}.franchise-ns-asset-main i{grid-row:1/3;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#10233a;color:#8ddfff;font-style:normal;font-size:8px;font-weight:850}.franchise-ns-asset-main strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.franchise-ns-asset-main small{font-size:9px;color:var(--muted)}.franchise-ns-asset-value{display:grid;text-align:right}.franchise-ns-asset-value>span,.franchise-ns-asset-value>small{font-size:8px;color:var(--muted)}.franchise-ns-asset-value strong{font-size:11px}',
     '.franchise-ns-additional{border-top:1px solid var(--line);padding:11px 2px 0}.franchise-ns-additional>div{display:flex;gap:8px;flex-wrap:wrap}.franchise-ns-additional>div>span{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:2px;background:#091321}.franchise-ns-additional small{font-size:9px;color:var(--muted)}',
     '.franchise-ns-empty{color:var(--muted);font-size:10px}.franchise-ns-loading p{color:var(--muted)}',
-    '@media(max-width:760px){.franchise-ns-shell{padding:0 0 calc(74px + env(safe-area-inset-bottom,0px));width:100%;max-width:none}.franchise-ns-header{padding:0 2px}.franchise-ns-outlook>div{padding:9px 4px}.franchise-ns-outlook strong{font-size:1.02rem}.franchise-ns-section{padding:12px}.franchise-ns-section-head,.franchise-ns-roster-head,.franchise-ns-assets-top{align-items:flex-start}.franchise-ns-position-ring{min-height:94px}.franchise-ns-position-ring>i{width:48px;height:48px}.franchise-ns-position-players{grid-template-columns:1fr}.franchise-ns-diagnosis{grid-template-columns:1fr}.franchise-ns-pick-years{grid-template-columns:1fr}.franchise-ns-player-row{grid-template-columns:minmax(0,1fr) 52px 64px;grid-template-areas:"id ppg proj" "market market intrinsic"}.franchise-ns-player-id{grid-area:id}.franchise-ns-player-stat:nth-of-type(2){grid-area:ppg}.franchise-ns-player-stat:nth-of-type(3){grid-area:proj}.franchise-ns-player-value.market{grid-area:market;border-top:1px solid rgba(51,65,85,.45);padding-top:5px}.franchise-ns-player-value.intrinsic{grid-area:intrinsic;border-top:1px solid rgba(51,65,85,.45);padding-top:5px}.franchise-ns-chevron{display:none}.franchise-ns-asset-grid{grid-template-columns:1fr}}',
+    '@media(max-width:760px){.franchise-home-outlook-grid{gap:3px}.franchise-home-outlook-metric{min-height:88px}.franchise-home-outlook-card,.franchise-home-matters,.franchise-home-secondary{border-radius:13px}.franchise-home-card-head{align-items:flex-start}.franchise-home-identity{border-radius:13px}.franchise-current-slot-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.franchise-ns-shell{padding:0 0 calc(74px + env(safe-area-inset-bottom,0px));width:100%;max-width:none}.franchise-ns-header{padding:0 2px}.franchise-ns-outlook>div{padding:9px 4px}.franchise-ns-outlook strong{font-size:1.02rem}.franchise-ns-section{padding:12px}.franchise-ns-section-head,.franchise-ns-roster-head,.franchise-ns-assets-top{align-items:flex-start}.franchise-ns-position-ring{min-height:94px}.franchise-ns-position-ring>i{width:48px;height:48px}.franchise-ns-position-players{grid-template-columns:1fr}.franchise-ns-diagnosis{grid-template-columns:1fr}.franchise-ns-pick-years{grid-template-columns:1fr}.franchise-ns-player-row{grid-template-columns:minmax(0,1fr) 52px 64px;grid-template-areas:"id ppg proj" "market market intrinsic"}.franchise-ns-player-id{grid-area:id}.franchise-ns-player-stat:nth-of-type(2){grid-area:ppg}.franchise-ns-player-stat:nth-of-type(3){grid-area:proj}.franchise-ns-player-value.market{grid-area:market;border-top:1px solid rgba(51,65,85,.45);padding-top:5px}.franchise-ns-player-value.intrinsic{grid-area:intrinsic;border-top:1px solid rgba(51,65,85,.45);padding-top:5px}.franchise-ns-chevron{display:none}.franchise-ns-asset-grid{grid-template-columns:1fr}}',
     '@media(max-width:420px){.franchise-ns-tabs button{font-size:10px;padding:6px 4px}.franchise-ns-section-head,.franchise-ns-roster-head,.franchise-ns-assets-top{display:grid}.franchise-ns-segment{width:max-content;max-width:100%}.franchise-ns-position-grid{gap:2px}.franchise-ns-position-ring{min-height:88px;padding:4px 1px}.franchise-ns-position-ring>i{width:45px;height:45px}.franchise-ns-position-ring>small{font-size:7px}.franchise-ns-age-row{grid-template-columns:1fr 1fr}.franchise-ns-age-row p{grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}.franchise-ns-player-row{padding:7px}.franchise-ns-player-id{grid-template-columns:30px minmax(0,1fr)}.franchise-ns-player-id>i{width:30px;height:30px}}'
   ].join('');
   document.head.appendChild(style);

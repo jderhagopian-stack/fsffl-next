@@ -2,152 +2,123 @@ import hashlib
 from pathlib import Path
 
 
-HOME = Path("src/fsffl/product/static/home_dashboard.js").read_text(encoding="utf-8")
-SHELL = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
-LEAGUE = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
-MARKET = Path("src/fsffl/product/static/opportunities.js").read_text(encoding="utf-8")
-INDEX = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
-APP = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
+STATIC = Path("src/fsffl/product/static")
+HOME = (STATIC / "home_dashboard.js").read_text(encoding="utf-8")
+FRANCHISE = (STATIC / "my_team_dashboard.js").read_text(encoding="utf-8")
+NORTH_STAR = FRANCHISE.split("/* Franchise North Star 2026-09-24.", 1)[1]
+SHELL = (STATIC / "product_shell.js").read_text(encoding="utf-8")
+INDEX = (STATIC / "index.html").read_text(encoding="utf-8")
+NAV = (STATIC / "product_navigation.js").read_text(encoding="utf-8")
 
 
-def test_home_matches_north_star_single_screen_information_architecture() -> None:
+def _git_blob_prefix(path: Path) -> str:
+    blob = path.read_bytes()
+    return hashlib.sha1(
+        b"blob " + str(len(blob)).encode() + bytes([0]) + blob
+    ).hexdigest()[:12]
+
+
+def test_managed_standalone_home_is_retired_from_delivered_shell() -> None:
+    assert "/static/home_dashboard.js" not in INDEX
+    assert "home-north-star-presentation-guard" not in INDEX
+    assert "fsffl-home-north-star-active" not in INDEX
+    assert "ensureHomeScript" not in SHELL
+    assert "homeNorthStarStaticVersion" not in SHELL
+
+
+def test_managed_home_route_normalizes_to_franchise_without_changing_nav_structure() -> None:
+    assert "function fsfflManagedLandingRoute(route)" in SHELL
+    assert "route==='league'&&state?.context?.team_id?'my_team':route" in SHELL
+    assert "if(state?.context?.team_id&&state?.route==='league')" in SHELL
+    # Bottom-nav structure remains a separate follow-on.
+    assert "{route:'league',label:'Home'" in NAV
+    assert "{route:'my_team',label:'Franchise'" in NAV
+    assert "{route:'league_comparison',label:'League'" in NAV
+    assert "{route:'opportunities',label:'Market'" in NAV
+
+
+def test_unselected_league_bootstrap_remains_available() -> None:
+    assert '<div id="league-screen" class="route-screen">' in INDEX
+    assert 'id="connect-button"' in INDEX
+    assert "Connect Sleeper League" in INDEX
+    assert "route==='league'&&state?.context?.team_id" in SHELL
+
+
+def test_franchise_overview_preserves_approved_home_visual_language() -> None:
     for label in (
-        "Season outlook · current Simulation",
+        "Season Outlook · current Simulation",
+        "What Matters Right Now",
         "Also worth knowing",
-        "Around the league",
-        "Projected final wins",
+        "Expected wins",
         "Playoffs",
         "Championship",
-        "Largest single-player exposure",
-        "Current outlook",
     ):
-        assert label in HOME
-    assert "home-north-star" in HOME
-    assert "home-position-grid" not in HOME
-    assert "What matters right now" not in HOME
-    assert "Your roster at a glance" not in HOME
-    assert "home-outlook-grid" in HOME
-    assert "home-secondary-row" in HOME
-    assert "home-workflows" not in HOME
-    assert "Franchise pulse" not in HOME
-    assert "Best next action" not in HOME
-
-
-def test_home_does_not_publish_legacy_position_strength_as_current_authority() -> None:
-    assert "function homePressurePoint()" not in HOME
-    assert "position_strengths" not in HOME
-    assert "data-home-action=\"pressure\"" not in HOME
-    assert "data-home-action=\"position\"" not in HOME
-    assert "Roster position lens" not in HOME
-    assert "Strength Index" not in HOME
-    for forbidden in (
-        "recommendation_authority",
-        "acceptance_probability",
-        "most_promising_evaluated",
-        "risk grade",
-        "weekly win",
-        "injury",
+        assert label in FRANCHISE
+    for visual in (
+        "franchise-home-identity",
+        "franchise-home-outlook-card",
+        "franchise-home-outlook-grid",
+        "franchise-home-outlook-metric",
+        "franchise-home-matters",
+        "franchise-home-secondary-row",
+        "conic-gradient(#35d399",
+        "#36b4d7",
     ):
-        assert forbidden.lower() not in HOME.lower()
+        assert visual in FRANCHISE
 
 
-def test_home_outlook_is_exact_current_simulation_or_unavailable() -> None:
-    assert "payload.simulation?.status==='ready'" in HOME
-    assert "simulation_count" in HOME
-    assert "expected_wins" in HOME
-    assert "playoff_probability" in HOME
-    assert "championship_probability" in HOME
-    assert "Matching current Simulation unavailable" in HOME
+def test_franchise_overview_uses_canonical_current_and_simulation_not_home_specific_current() -> None:
+    assert "current_position_depth" in NORTH_STAR
+    assert "currentPositionDepth" in NORTH_STAR
+    assert "view?.utility?.competitive_outcome" in NORTH_STAR
+    assert "myTeamLeagueOutcomeRank('expected_wins')" in NORTH_STAR
+    assert "api('/api/home')" not in NORTH_STAR
+    assert "view?.position_strengths" not in NORTH_STAR
+    assert "source:'franchise-overview-current'" in NORTH_STAR
+    assert "acceptance_probability" not in NORTH_STAR
 
 
-
-def test_home_cold_load_uses_only_home_composition_and_shared_shell_owns_status_reads() -> None:
-    assert "api('/api/home')" in HOME
-    assert "api('/api/intelligence/status')" not in HOME
-    assert HOME.count("api(") == 1
-    assert "api('/api/intelligence/status')" in SHELL
-    for forbidden in (
-        "/api/opportunities/workspace",
-        "/api/opportunities/trade",
-        "/api/trade-center",
-        "/api/what-if",
-        "/api/intelligence/refresh-forecasts",
-        "/api/league/value-lenses",
-    ):
-        assert forbidden not in HOME
-    assert "It does not launch Opportunity Search, Decision, Value or new Simulation work." in HOME
-
-def test_home_contextual_navigation_contract_is_presentation_owned() -> None:
-    assert "fsfflNavigateTo" in HOME
-    assert "fsfflSetDeepLinkIntent" in SHELL
-    assert "fsfflConsumeDeepLinkIntent" in SHELL
-    assert "route:'my_team'" in HOME
-    assert "route:'league_comparison'" in HOME
-    assert "section:'positions'" in HOME
-    assert "section:'overview'" in HOME
-    assert "metric:'expected_finish'" in HOME
-    assert "fragilityDriver:true" in HOME
-    assert "laConsumeDeepLinkIntent" in LEAGUE
-    assert "oppConsumeHomeIntent" in MARKET
+def test_franchise_roster_and_assets_tabs_remain_primary_siblings() -> None:
+    nav = FRANCHISE.split('<nav class="franchise-ns-tabs"', 1)[1].split("</nav>", 1)[0]
+    assert "myTeamTabButton('overview','Overview'" in nav
+    assert "myTeamTabButton('roster','Roster'" in nav
+    assert "myTeamTabButton('assets','Assets & Picks'" in nav
+    assert "function franchiseNSRoster()" in FRANCHISE
+    assert "function franchiseNSAssets()" in FRANCHISE
 
 
-def test_home_is_mobile_first_without_horizontal_scrolling() -> None:
-    assert "@media(max-width:760px)" in HOME
-    assert "home-position-grid" not in HOME
-    assert "home-pressure" not in HOME
-    assert "padding:4px 10px calc(76px + env(safe-area-inset-bottom,0px))" in HOME
-    assert "touch-action:manipulation" in HOME
-    assert "overflow-x:auto" not in HOME
-
-
-def test_home_north_star_suppresses_all_legacy_home_modules_from_first_paint() -> None:
-    assert 'class="route-screen fsffl-home-north-star-active"' in INDEX
-    assert 'data-home-surface="north-star"' in INDEX
-    assert '<section id="home-attention" class="home-attention"' in INDEX
-    assert 'id="home-north-star-presentation-guard"' in INDEX
-    for selector in (
-        "#league-screen.fsffl-home-north-star-active > .hero-row",
-        "#league-screen.fsffl-home-north-star-active > #runtime-status",
-        "#league-screen.fsffl-home-north-star-active > .metric-grid",
-        "#league-screen.fsffl-home-north-star-active > .dashboard-grid",
-        "#league-screen.fsffl-home-north-star-active > .roster-panel",
-        "#league-screen.fsffl-home-north-star-active > #home-quick-actions",
-    ):
-        assert selector in INDEX
-    assert "display: none !important;" in INDEX
-    assert "leagueScreen.classList.add('fsffl-home-north-star-active')" in HOME
-
-
-def test_home_north_star_has_no_literal_escape_text_in_document_shell() -> None:
-    assert r"\n" not in INDEX
-    head = INDEX.split("</head>", 1)[0]
-    assert r"\n" not in head
-
-
-def test_home_north_star_accepted_sections_and_drill_ins_remain_intact_after_cleanup() -> None:
-    for label in (
-        "Season outlook · current Simulation",
-        "Also worth knowing",
-        "Around the league",
-    ):
-        assert label in HOME
-    for action in (
-        "data-home-action=\"franchise\"",
-        "data-home-action=\"outlook\"",
-        "data-home-action=\"exposure\"",
-    ):
-        assert action in HOME
-
-
-
-def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -> None:
-    assert '<details class="home-evidence">' not in HOME
-    assert "Evidence & readiness" not in HOME
-    assert "homeReadiness" not in HOME
+def test_shared_readiness_remains_shell_owned_and_does_not_launch_model_work() -> None:
     assert "FSFFL_SHARED_READINESS_STEPS=7" in SHELL
+    assert "api('/api/intelligence/status')" in SHELL
     assert "fsffl-shared-readiness-strip" in SHELL
-    assert "Core intelligence current · FSFFL Intrinsic unavailable" in SHELL
-    assert "fsffl-capability-chip" in SHELL
+    readiness = SHELL.split("const FSFFL_SHARED_READINESS_STEPS=7;", 1)[1].split(
+        "function productSurfaceError", 1
+    )[0]
+    for forbidden in (
+        "/api/intelligence/jobs",
+        "/api/intelligence/refresh-forecasts",
+        "/api/what-if",
+        "/api/opportunities/workspace",
+        "/api/trade-center/analyze",
+        "/api/trade-center/simulate",
+    ):
+        assert forbidden not in readiness
+
+
+def test_franchise_and_shell_delivery_keys_are_content_bound() -> None:
+    franchise_prefix = _git_blob_prefix(STATIC / "my_team_dashboard.js")
+    shell_prefix = _git_blob_prefix(STATIC / "product_shell.js")
+    assert (
+        f"const franchiseNorthStarStaticVersion='20261007-franchise-{franchise_prefix}';"
+        in SHELL
+    )
+    assert (
+        f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{shell_prefix}"
+        in INDEX
+    )
+
+
+def test_shared_readiness_keeps_compact_governed_status_contract() -> None:
     for label in (
         "Preparing current intelligence…",
         "Building projections…",
@@ -170,18 +141,15 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
     assert "overflow-wrap:normal;word-break:normal" in SHELL
 
 
-def test_shared_readiness_tracks_status_on_every_route_without_launching_model_work() -> None:
+def test_shared_readiness_tracks_status_on_every_route_without_starting_model_work() -> None:
     readiness = SHELL.split("const FSFFL_SHARED_READINESS_STEPS=7;", 1)[1].split(
         "function productSurfaceError", 1
     )[0]
-    assert "api('/api/intelligence/status')" in readiness
     assert "fsffl:intelligence-status-updated" in SHELL
     assert "fsffl:product-context-updated" in SHELL
     assert "fsffl:sync-state" in SHELL
     assert "setInterval(" in readiness
     assert "2500" in readiness
-    assert "state?.route" not in readiness
-    assert "route==='league'" not in readiness
     assert "if(!status.connected" in readiness
     assert "node.hidden=true" in readiness
     assert "fsfflSharedReadinessJobActive" in readiness
@@ -196,95 +164,22 @@ def test_shared_readiness_tracks_status_on_every_route_without_launching_model_w
         assert forbidden not in readiness
 
 
-def test_first_load_hotfix_busts_changed_assets_without_churning_other_surfaces() -> None:
-    assert f"/static/app.js?v=20261004-safari-restore380" in INDEX
-    assert f"/static/home_dashboard.js?v=20261004-safari-restore380" in INDEX
-    assert f"/static/product_shell.js?v=20261004-safari-restore380" in INDEX
-    home_blob = Path("src/fsffl/product/static/home_dashboard.js").read_bytes()
-    home_git_sha = hashlib.sha1(
-        b"blob " + str(len(home_blob)).encode() + bytes([0]) + home_blob
-    ).hexdigest()[:12]
-    mobile_blob = Path("src/fsffl/product/static/mobile_safari_recovery.js").read_bytes()
-    mobile_git_sha = hashlib.sha1(
-        b"blob " + str(len(mobile_blob)).encode() + bytes([0]) + mobile_blob
-    ).hexdigest()[:12]
-    assert (
-        f"/static/home_dashboard.js?v=20261004-safari-restore380&c=git-{home_git_sha}"
-        in INDEX
-    )
-    assert (
-        f"/static/mobile_safari_recovery.js?v=20261004-safari-restore380&c=git-{mobile_git_sha}"
-        in INDEX
-    )
-    assert "const homeNorthStarStaticVersion='20261001-continuity2';" in SHELL
-    assert "const franchiseNorthStarStaticVersion='20261001-continuity2';" in SHELL
-
-
-
-def test_readiness_refresh_invokes_intelligence_lifecycle_directly():
-    shell = (Path(__file__).parents[1] / 'src/fsffl/product/static/product_shell.js').read_text()
-    refresh = (Path(__file__).parents[1] / 'src/fsffl/product/static/forecast_refresh.js').read_text()
-    assert "window.fsfflManualIntelligenceRefresh?.()" in shell
+def test_manual_readiness_refresh_still_invokes_governed_intelligence_lifecycle() -> None:
+    refresh = (STATIC / "forecast_refresh.js").read_text(encoding="utf-8")
+    assert "window.fsfflManualIntelligenceRefresh?.()" in SHELL
     assert "window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh" in refresh
 
 
-def test_home_removes_redundant_large_intelligence_status_card() -> None:
-    assert "Current intelligence is partially available" not in HOME
-    assert "homeCapabilityNote" not in HOME
-    assert "home-capability-note" not in HOME
-    assert "fsffl-shared-readiness-strip" in SHELL
-
-
-
-def test_home_explicitly_labels_stale_last_good_during_target_rebuild() -> None:
-    assert "payload.intelligence_freshness||{}" in HOME
-    assert "State current · last-good intelligence" in HOME
-    assert "home-last-good-status" in HOME
-    assert "Derived fields as of " in HOME
-    assert "Replacement intelligence is rebuilding." not in HOME
-
-
-def test_home_accepts_only_verified_same_league_team_last_good_generation() -> None:
-    import subprocess
-
-    helper = HOME.split("function homePayloadMatchesContext(", 1)[1].split(
-        "\nfunction ", 1
-    )[0]
-    javascript = "function homePayloadMatchesContext(" + helper
-    javascript += r"""
-const assert = require('node:assert/strict');
-const context = {leagueId: 'league-a', teamId: 'team-a', stateId: 'target-state'};
-const current = {
-  league_id: 'league-a', league_state_id: 'target-state', managed_team_id: 'team-a',
-  team_view: {team_id: 'team-a'}, intelligence_freshness: {status: 'current', target_state_id: 'target-state'}
-};
-assert.equal(homePayloadMatchesContext(current, context), true);
-const stale = {
-  league_id: 'league-a', league_state_id: 'served-state', managed_team_id: 'team-a',
-  team_view: {team_id: 'team-a'}, publication_generation_id: 'generation-a',
-  intelligence_freshness: {
-    status: 'stale_last_good', stale: true, target_state_id: 'target-state',
-    target_league_id: 'league-a', served_state_id: 'served-state',
-    served_league_id: 'league-a', publication_generation_id: 'generation-a'
-  },
-  presentation_continuity: {
-    mode: 'stale_last_good', target_league_id: 'league-a', served_league_id: 'league-a',
-    target_league_state_id: 'target-state', served_league_state_id: 'served-state',
-    promotion_id: 'generation-a', publication_generation_id: 'generation-a'
-  }
-};
-assert.equal(homePayloadMatchesContext(stale, context), true);
-assert.equal(homePayloadMatchesContext({...stale, managed_team_id: 'team-b'}, context), false);
-assert.equal(homePayloadMatchesContext({...stale, team_view: {team_id: 'team-b'}}, context), false);
-assert.equal(homePayloadMatchesContext({...stale, presentation_continuity: {...stale.presentation_continuity, served_league_id: 'league-b'}}, context), false);
-assert.equal(homePayloadMatchesContext({...stale, intelligence_freshness: {status: 'stale_last_good', stale: true}}, context), false);
-assert.equal(homePayloadMatchesContext({...stale, presentation_continuity: {...stale.presentation_continuity, promotion_id: 'generation-b'}}, context), false);
-assert.equal(homePayloadMatchesContext({...stale, intelligence_freshness: {...stale.intelligence_freshness, target_state_id: 'other-target'}}, context), false);
-"""
-    result = subprocess.run(
-        ["node", "-e", javascript],
-        check=False,
-        capture_output=True,
-        text=True,
+def test_unrelated_static_delivery_keys_remain_intact_during_home_retirement() -> None:
+    assert "/static/app.js?v=20261004-safari-restore380" in INDEX
+    mobile_prefix = _git_blob_prefix(STATIC / "mobile_safari_recovery.js")
+    assert (
+        f"/static/mobile_safari_recovery.js?v=20261004-safari-restore380&c=git-{mobile_prefix}"
+        in INDEX
     )
-    assert result.returncode == 0, result.stderr
+
+
+def test_document_shell_contains_no_literal_escape_text() -> None:
+    assert r"\n" not in INDEX
+    head = INDEX.split("</head>", 1)[0]
+    assert r"\n" not in head

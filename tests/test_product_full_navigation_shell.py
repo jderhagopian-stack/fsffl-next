@@ -53,7 +53,7 @@ def test_product_surfaces_explain_authoritative_reuse_not_frontend_model_logic()
 
 def test_trade_center_route_loads_browser_after_dynamic_navigation() -> None:
     source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
-    assert "route==='trade_center'" in source
+    assert "targetRoute==='trade_center'" in source
     assert "setTimeout(loadTradeCenter,0)" in source
 
 
