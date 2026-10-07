@@ -1,6 +1,7 @@
 /* FSFFL NEXT Home North Star.
  * Presentation only. Home summarizes governed evidence already owned by State,
- * Team Utility, position-strength Analytics and the exact current Simulation.
+ * Team Utility and the exact current Simulation. Legacy position-strength rows are
+ * intentionally not presented as Current authority while Home consolidation is pending.
  * It does not launch Opportunity Search, Decision, Value or new Simulation work.
  */
 const fsfflHomeNorthStarState={
@@ -112,14 +113,13 @@ function renderFsfflHomeNorthStar(){
   if(fsfflHomeNorthStarState.error&&!homePayload()){container.innerHTML=homeUnavailableMarkup(fsfflHomeNorthStarState.error);return}
   const payload=homePayload(),view=homeView();if(!payload||!view){container.innerHTML=homeLoadingMarkup();return}
 
-  const standing=homeStanding(),simulation=homeSimulation(),pressure=homePressurePoint(),fragility=homeFragility(),adjacent=homeAdjacentStandings(),positions=homePositionRows();
+  const standing=homeStanding(),simulation=homeSimulation(),fragility=homeFragility(),adjacent=homeAdjacentStandings();
   const freshness=payload.intelligence_freshness||{};
   const staleBanner=freshness.stale?'<aside class="home-last-good-status" role="status"><strong>State current · last-good intelligence</strong><span>Derived fields as of '+homeEscape(freshness.served_as_of||'the last-good snapshot')+'.</span></aside>':'';
   const competitiveState=homeStateLabel(view.utility?.calculated_competitive_state);
   const simulationReady=payload.simulation?.status==='ready'&&simulation;
-  const lens=fsfflHomeNorthStarState.positionLens;
-  const pressureTitle=pressure?`${pressure.position} is your clearest roster pressure point`:'Position pressure point unavailable';
-  const pressureMeta=pressure?`#${pressure.league_rank??'—'} of ${pressure.team_count||homeStandings().length||'—'} · Strength Index ${homeNumber(pressure.strength_index,0)}`:'Governed position-strength evidence is not available.';
+  // Home does not derive or display Current position ranks here. League Atlas owns
+  // the accepted lineup-slot Current contract; Home consolidation is a separate decision.
   const expectedFinish=simulationReady?homeNumber(simulation.expected_finish,1):'—';
   const finishContext=simulationReady&&standing?`You’re #${standing.rank} now · projected finish ${expectedFinish}`:'Matching current Simulation unavailable';
   const exposureDetail=fragility?`${homeNumber(fragility.drop,1)} projected-point drop`:'Roster-resilience evidence unavailable';
@@ -132,19 +132,11 @@ function renderFsfflHomeNorthStar(){
       <span class="home-identity-copy"><strong>${homeEscape(view.display_name)}</strong><span>${homeRecord(standing)} · #${standing?.rank??'—'} of ${homeStandings().length||'—'}</span><small>${homeEscape(competitiveState)}</small></span><b aria-hidden="true">›</b>
     </button>
 
-    <button type="button" class="home-pressure" data-home-action="pressure" data-position="${homeEscape(pressure?.position||'')}" ${pressure?'':'disabled'} aria-label="${pressure?'Explore '+homeEscape(pressure.position)+' options in Market':'Position pressure point unavailable'}">
-      <span class="home-card-kicker">What matters right now</span>
-      <div class="home-pressure-main"><span class="home-pressure-badge">${homeEscape(pressure?.position||'—')}</span><span><strong>${homeEscape(pressureTitle)}</strong><small>${homeEscape(pressureMeta)}</small></span><b aria-hidden="true">›</b></div>
-      <span class="home-pressure-cta">${pressure?'Explore '+homeEscape(pressure.position)+' options →':'Unavailable'}</span>
-    </button>
-
     <section class="home-card home-outlook"><div class="home-card-head"><span class="home-card-kicker">Season outlook · current Simulation</span><small>${simulationReady?Number(payload.simulation.simulation_count||0).toLocaleString()+' runs':'Unavailable'}</small></div><div class="home-outlook-grid">
       ${homeOutlookMetric('Projected final wins',simulationReady?simulation.expected_wins:null,'expected_wins')}
       ${homeOutlookMetric('Playoffs',simulationReady?simulation.playoff_probability:null,'playoff_probability','percent')}
       ${homeOutlookMetric('Championship',simulationReady?simulation.championship_probability:null,'championship_probability','percent')}
     </div></section>
-
-    <section class="home-card home-roster-shape"><div class="home-card-head"><span class="home-card-kicker">Your roster at a glance</span><div class="home-lens-toggle" role="group" aria-label="Roster position lens"><button type="button" data-home-position-lens="rank" class="${lens==='rank'?'active':''}">Rank</button><button type="button" data-home-position-lens="strength" class="${lens==='strength'?'active':''}">Strength Index</button></div></div><div class="home-position-grid">${positions.map(homeCircle).join('')}</div></section>
 
     <section class="home-card home-secondary"><div class="home-card-head"><span class="home-card-kicker">Also worth knowing</span></div>
       <button type="button" class="home-secondary-row" data-home-action="exposure" data-position="${homeEscape(fragility?.position||'')}" data-player-id="${homeEscape(fragility?.playerId||'')}" ${fragility?'':'disabled'}><span class="home-secondary-icon exposure" aria-hidden="true">!</span><span><small>Largest single-player exposure</small><strong>${homeEscape(fragility?.label||'Unavailable')}</strong><em>${homeEscape(exposureDetail)}</em></span><b aria-hidden="true">›</b></button>
