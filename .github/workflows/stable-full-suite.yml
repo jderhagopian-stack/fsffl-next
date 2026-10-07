@@ -26,13 +26,13 @@ jobs:
       - name: Verify PR head before testing
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           actual_head="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
-          if [ "$actual_head" != "$GITHUB_SHA" ]; then
-            echo "::error::Stable suite SHA $GITHUB_SHA is not current PR head $actual_head"
+          if [ "$actual_head" != "$EXPECTED_HEAD_SHA" ]; then
+            echo "::error::Stable suite SHA $EXPECTED_HEAD_SHA is not current PR head $actual_head"
             exit 1
           fi
       - uses: actions/setup-python@v5
@@ -45,12 +45,12 @@ jobs:
       - name: Verify PR head after testing
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           actual_head="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
-          if [ "$actual_head" != "$GITHUB_SHA" ]; then
-            echo "::error::PR head moved from tested SHA $GITHUB_SHA to $actual_head during the full suite"
+          if [ "$actual_head" != "$EXPECTED_HEAD_SHA" ]; then
+            echo "::error::PR head moved from tested SHA $EXPECTED_HEAD_SHA to $actual_head during the full suite"
             exit 1
           fi
