@@ -494,6 +494,19 @@ def test_superseded_dynasty_request_resets_loading_and_restarts_for_new_generati
     assert "abandonSuperseded" not in long_term_loader
 
 
+def test_league_atlas_css_delivery_key_matches_css_content() -> None:
+    atlas = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    css_blob = Path("src/fsffl/product/static/league_atlas.css").read_bytes()
+    css_git_sha = hashlib.sha1(
+        b"blob " + str(len(css_blob)).encode() + bytes([0]) + css_blob
+    ).hexdigest()[:12]
+
+    assert (
+        f"/static/league_atlas.css?v=20261007-atlas-css-{css_git_sha}"
+        in atlas
+    )
+
+
 def test_league_atlas_modified_bundle_requires_new_inner_and_outer_cache_keys() -> None:
     atlas_path = Path("src/fsffl/product/static/league_comparison.js")
     shell_path = Path("src/fsffl/product/static/product_shell.js")
