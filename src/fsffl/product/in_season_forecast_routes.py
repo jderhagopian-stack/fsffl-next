@@ -10,35 +10,33 @@ from fsffl.forecast.in_season_orchestration import (
 )
 from fsffl.forecast.in_season_runtime import build_in_season_forecasts
 from fsffl.forecast.models import ForecastHorizon
-from fsffl.forecast.preseason_baseline import (
-    PRESEASON_BASELINE_MODEL_VERSION,
-    build_runtime_from_preseason_baseline,
-    preseason_scope_id,
-)
 from fsffl.persistence.contracts import PersistenceStore
 from fsffl.persistence.projection_history import PostgresProjectionHistoryStore
-from fsffl.persistence.runtime_cache import (
-    LEAGUE_SEASON_SCOPE_KIND,
-    PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND,
-    decode_preseason_forecast_baseline,
-)
-
+from .forecast_resilience import make_preseason_baseline_authority_loader
 from .runtime import PrivateBetaRuntimeStore
 from .webapp import require_beta_user
 
 
-def load_preseason_season_forecasts(persistence_store: PersistenceStore, league_state):
-    record = persistence_store.get_latest_reusable_artifact(
-        artifact_kind=PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND,
-        scope_kind=LEAGUE_SEASON_SCOPE_KIND,
-        scope_id=preseason_scope_id(league_state),
-        model_version=PRESEASON_BASELINE_MODEL_VERSION,
+def load_preseason_season_forecasts(
+    persistence_store: PersistenceStore,
+    league_state,
+):
+    """Load the accepted immutable preseason fallback through Forecast authority.
+
+    The shared authority loader applies the same league scoring and accepted
+    first-party FUMBLES_LOST supplement used by the existing resilient Forecast
+    fallback. Current therefore consumes a valid scored season prior rather than
+    replaying raw preseason evidence without a required material coordinate.
+    """
+
+    evidence = make_preseason_baseline_authority_loader(persistence_store)(
+        league_state
     )
-    if record is None:
-        return ()
-    baseline = decode_preseason_forecast_baseline(dict(record.payload))
-    runtime = build_runtime_from_preseason_baseline(league_state, baseline)
-    return runtime.fantasy_point_forecasts
+    return tuple(
+        item
+        for item in evidence.league_scored_forecasts
+        if item.horizon == ForecastHorizon.SEASON
+    )
 
 
 def _obs_payload(item) -> dict[str, object]:
