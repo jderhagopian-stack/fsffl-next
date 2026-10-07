@@ -1,6 +1,6 @@
 # Current Operations
 
-Updated: 2026-10-06  
+Updated: 2026-10-07  
 Authority: sole current cross-workstream status. Historical snapshots are under `docs/operations/archive/`. Detailed P0 decisions and evidence remain in [Architecture Recovery](workstreams/ARCHITECTURE_RECOVERY.md).
 
 ## Current program
@@ -8,14 +8,14 @@ Authority: sole current cross-workstream status. Historical snapshots are under 
 - **P0.1–P0.4:** complete; do not reopen.
 - **P0.5:** lifecycle simplification architecturally complete. Final saved-session iPhone/Safari acceptance found a separate Career Intrinsic coverage blocker: the exact State/publication Dynasty surface was served correctly, while accepted #370 logic withheld ranks because rostered players were absent from the 335-estimate artifact.
 - **Dynasty truth correction:** this tranche reports explicit rank readiness and incomplete Career coverage. Global core-intelligence readiness is unchanged. No imputation and no #370 change.
-- **Career coverage follow-up:** [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405), outside Architecture Recovery. Management reports 22 missing players; preserved evidence enumerates 25 distinct IDs. Reconcile the count, then decide whether the artifact is intentionally bounded or must cover all target-State rostered players. Do not refresh/rebuild to mask the question.
+- **Career coverage follow-up:** [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405), outside Architecture Recovery. The read-only audit verified **25** distinct missing rostered IDs in the exact preserved State; “22” was a summary-count error. Management has approved the coverage principle. [Career Coverage Extension checkpoint](workstreams/CAREER_COVERAGE_EXTENSION.md) contains the exact boundary trace, extension contract, evidence tiers, on-demand free-agent semantics, limitations and bounded PR sequence. No implementation code has started; first gate is frozen-scorer provenance/parity, particularly Y4–Y7 inference.
 - **P0.6:** operational simplification is implemented, merged and deployed: one current-status source, stale status snapshots archived, a focused + single stable-head full-suite merge gate, explicit merge/deploy verification, and five authoritative E2E journeys. No new product breadth. The final physical iPhone/Safari replay remains the required post-simplification acceptance gate.
 
 ## Operational source
 
 Read this page for current cross-workstream status and Architecture Recovery for P0 decisions, exact evidence and tranche history. Former CURRENT_STATE, ACTIVE_WORKSTREAMS, ACCEPTANCE_GATES, MANAGEMENT_CONTINUITY, MANAGEMENT_HANDOFF and workstreams/IMPLEMENTATION contents are archived under `archive/`; old status is historical.
 
-GitHub main at tranche start: `65fbf0b272f1f856df1424116050d6c7f4e44f6d`. PR #406 merged at `48d6f0941d425d10a63410b3e799ea8daad0607c`; Render service `srv-dae6k7vqj5pc73af7bt0` is live on that exact commit at deployment `dep-db2mq5id0e5s73bmnfog` (completed `2026-10-06T21:52:01.856Z`). Startup restore `62c6d182-f6dd-47c0-a8f7-02afbd5e7c2f` reached durable-context ready in `8,096.79 ms`; startup completed without error-level logs.
+GitHub main at P0.6 tranche start: `65fbf0b272f1f856df1424116050d6c7f4e44f6d`. PR #406 merged at `48d6f0941d425d10a63410b3e799ea8daad0607c`; Render service `srv-dae6k7vqj5pc73af7bt0` was verified live on that exact commit at deployment `dep-db2mq5id0e5s73bmnfog` (completed `2026-10-06T21:52:01.856Z`). Startup restore `62c6d182-f6dd-47c0-a8f7-02afbd5e7c2f` reached durable-context ready in `8,096.79 ms`; startup completed without error-level logs.
 
 ## Test, merge, deploy
 
