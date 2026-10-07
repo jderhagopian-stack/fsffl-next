@@ -151,3 +151,34 @@ Product implementation remains unchanged from the final focused-green logic. Sta
 - `product_shell.js` Git blob `1625483baa5a506fbdf00d296768c8a95be83a0f` → outer index key `git-1625483baa5a`.
 
 The branch is now ready for the stable PR merge gate. No more executable changes are planned unless exact-head validation identifies a defect.
+
+
+### 2026-10-06 — PR #408 draft reconciliation under final P0.6 protocol
+Current main is now `4f49106676b98d39ab7d43fa5fa241368bb7b55c`. The final P0.6 method supersedes the older “generic PR CI runs the full suite” wording recorded earlier in this checkpoint:
+
+- implementation PRs remain **draft** during corrective/code/checkpoint pushes;
+- generic `CI / test` is focused development validation only;
+- the one full suite runs from `.github/workflows/stable-full-suite.yml` only after the exact stable head is marked ready for review;
+- if code changes after that run, return to draft before pushing and mark ready again only when the new head is stable;
+- before merge, the current PR head must exactly equal the successful stable-full-suite head;
+- GitHub enforcement is not claimed; this is the procedural pre-merge gate.
+
+PR #408 was converted back to draft before making the corrections below.
+
+#### Open review finding — cache freshness
+Codex review on reviewed head `f54c8dcd4b9d05cdcc0793c224412071161d4c11` correctly identified that the hosted Current contract cache was keyed only by `(league_id, state_id)`. ROS evidence and the completed-week boundary can advance while canonical State identity remains unchanged, and a transient unavailable result could therefore persist across same-State republications.
+
+Bounded correction:
+- removed the State-only `_current_position_depth_cache` entirely;
+- `_current_position_depth_provider()` now composes from fresh governed completed-actuals + ROS evidence whenever a new presentation payload is built;
+- exact published presentation continuity remains the reusable read cache after composition, so this does not create a second lifecycle/cache authority;
+- an explicit regression forbids reintroducing the State-only Current cache.
+
+#### Prior PR test blockers
+The pre-final-P0.6 PR run happened while #408 was incorrectly non-draft and used the older generic full-suite workflow. Its relevant failures were:
+- stale static expectations for the superseded “optimized starter production” Current wording;
+- one standing read-only Atlas copy assertion lost during copy cleanup.
+
+Those Current/Atlas assertions are being corrected narrowly. The unrelated Simulation replay digest failure from that obsolete full-suite run is not being patched in this workstream; current main's accepted P0.6 full-suite gates passed and this tranche does not alter Simulation.
+
+No Forecast, Simulation, Dynasty/#370, Career Intrinsic, publication-generation, or provider-refresh semantics are broadened by these corrections.
