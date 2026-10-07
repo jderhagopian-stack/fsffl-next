@@ -101,7 +101,7 @@ Implemented on the work branch, not yet promoted:
 - configured K/DST remain visible but fail closed league-wide when governed Current season-outlook evidence cannot fill the slot;
 - player/depth rows carry completed-actuals + ROS season-outlook evidence and optimized slot assignment separately from the strength numerator;
 - `/api/league/team-views` now carries the Current contract as part of the already-governed atomic presentation surface; no new presentation surface/generation mechanism was added;
-- hosted runtime caches the exact-State Current contract and obtains preseason fallback evidence through the existing governed in-season loader;
+- hosted runtime rebuilds the Current contract from fresh governed evidence for each presentation build and obtains preseason fallback evidence through the existing governed in-season loader; the published presentation surface is the reusable read cache;
 - League Atlas Current browser grid now consumes the new contract and derives columns dynamically; Dynasty continues to hard-code its accepted QB/RB/WR/TE room lens and uses the unchanged Dynasty endpoint/room contract;
 - Current Overview pressure-point/position takeaway no longer reads the old full-season/actual-position strength rows;
 - focused regressions added for FLEX isolation, SUPERFLEX isolation, configured K/DST unavailable behavior, depth separation, endpoint exposure and client contract selection.
@@ -179,6 +179,16 @@ The pre-final-P0.6 PR run happened while #408 was incorrectly non-draft and used
 - stale static expectations for the superseded “optimized starter production” Current wording;
 - one standing read-only Atlas copy assertion lost during copy cleanup.
 
-Those Current/Atlas assertions are being corrected narrowly. The unrelated Simulation replay digest failure from that obsolete full-suite run is not being patched in this workstream; current main's accepted P0.6 full-suite gates passed and this tranche does not alter Simulation.
+Those Current/Atlas assertions were corrected narrowly. The unrelated Simulation replay digest failure from that obsolete full-suite run is not being patched in this workstream; current main's accepted P0.6 full-suite gates passed and this tranche does not alter Simulation.
 
 No Forecast, Simulation, Dynasty/#370, Career Intrinsic, publication-generation, or provider-refresh semantics are broadened by these corrections.
+
+
+### 2026-10-06 — draft corrective validation complete
+PR #408 draft head `477b17d9981effd2d65397fdab02d123019c7b06` completed the post-review focused gate successfully:
+- `CI` run `37563486886`: success under the final P0.6 draft-focused protocol;
+- `League Atlas North Star focused validation` run `37563486829`: success, including JavaScript syntax, **106 focused tests passed / 1 warning**, real-league Atlas composition sanity, final live-provider authority audit, and evidence upload;
+- Home, Franchise, Live Forecast corrective trace, PR164 corrective regression, and Private-beta Intrinsic diagnostics triggered by the touched shared files all completed successfully;
+- `Stable full suite` correctly skipped while the PR remained draft.
+
+The cache-freshness review thread was answered and resolved after this evidence. PR #408 is mergeable/clean against current main `4f49106676b98d39ab7d43fa5fa241368bb7b55c`. No executable changes remain planned. After this documentation-only checkpoint push receives its ordinary draft focused check, the exact head may be marked ready for the **single** stable full-suite gate.
