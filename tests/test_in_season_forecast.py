@@ -473,7 +473,7 @@ def test_current_ros_gap_uses_governed_remaining_prior_without_zero_imputation()
         _state(),
         current_ros_forecasts=(),
         preseason_season_forecasts=(preseason,),
-        scoring_gap_player_ids=frozenset({"p1"}),
+        scoring_gap_positions={"p1": Position.RB},
         completed_through_week=4,
         as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
     )
@@ -502,7 +502,7 @@ def test_current_ros_authority_wins_over_preseason_gap_fallback_for_supported_pl
         _state(),
         current_ros_forecasts=(current,),
         preseason_season_forecasts=(preseason,),
-        scoring_gap_player_ids=frozenset({"p1"}),
+        scoring_gap_positions={"p1": Position.RB},
         completed_through_week=4,
         as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
     )
@@ -522,7 +522,7 @@ def test_current_ros_does_not_backfill_player_without_proven_scoring_gap():
         _state(),
         current_ros_forecasts=(),
         preseason_season_forecasts=(preseason,),
-        scoring_gap_player_ids=frozenset(),
+        scoring_gap_positions={},
         completed_through_week=4,
         as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
     )
@@ -567,3 +567,27 @@ def test_in_season_runtime_retains_partial_scoring_rows_for_gap_eligibility():
     partial = result.partial_fantasy_point_forecasts[0]
     assert partial.player_id == "p1"
     assert partial.omitted_rule_stats == ("fum_lost",)
+
+
+def test_current_ros_gap_rebinds_preseason_position_to_current_partial_position():
+    preseason = _fantasy_points_forecast(
+        horizon=ForecastHorizon.SEASON,
+        mean=170.0,
+        source="fsffl:preseason-authority",
+    )
+    assert preseason.position == Position.RB
+
+    forward, fallback_count = fill_current_ros_coverage_gaps(
+        _state(),
+        current_ros_forecasts=(),
+        preseason_season_forecasts=(preseason,),
+        scoring_gap_positions={"p1": Position.WR},
+        completed_through_week=4,
+        as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
+    )
+
+    assert fallback_count == 1
+    assert len(forward) == 1
+    assert forward[0].player_id == "p1"
+    assert forward[0].position == Position.WR
+    assert forward[0].source == "fsffl:preseason_remaining_prior"
