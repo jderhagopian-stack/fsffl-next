@@ -364,7 +364,7 @@ def test_current_position_grid_uses_governed_slot_contract_and_dynasty_stays_fix
     assert "FLEX/SF stay separate from fixed positions" in matrix
     assert "Current columns follow configured league starter slots" in matrix
     assert "grid-template-columns:150px repeat('+columnCount+',86px)" in matrix
-    assert "width:'+gridWidth+'px;min-width:'+gridWidth+'px" in matrix
+    assert "width:'+gridWidth+'px!important;min-width:'+gridWidth+'px!important" in matrix
     assert "repeat(var(--league-position-columns" not in source
     assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
     assert "grid-template-columns:minmax(125px,1.25fr)" not in source
@@ -440,12 +440,28 @@ def test_current_position_grid_stays_one_horizontal_scroll_row_on_portrait() -> 
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "columnCount=Math.max(1,positions.length)" in source
     assert "grid-template-columns:150px repeat('+columnCount+',86px)" in source
-    assert "width:'+gridWidth+'px;min-width:'+gridWidth+'px" in source
+    assert "width:'+gridWidth+'px!important;min-width:'+gridWidth+'px!important" in source
     assert ".league-edge-matrix{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch" in source
     assert ".league-edge-row.header>span{white-space:nowrap;overflow:visible}" in source
     assert ".league-edge-cell{display:flex" in source and "white-space:nowrap" in source
     assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
     assert "repeat(var(--league-position-columns" not in source
+
+
+def test_current_position_mobile_css_cannot_restore_legacy_four_column_compression() -> None:
+    css = Path("src/fsffl/product/static/league_atlas.css").read_text(encoding="utf-8")
+
+    assert "grid-template-columns:minmax(82px,1.32fr) repeat(4,minmax(0,1fr))!important" not in css
+    assert "grid-template-columns:minmax(80px,1.25fr) repeat(4,minmax(0,1fr))!important" not in css
+    assert "grid-template-columns:minmax(78px,1.22fr) repeat(4,minmax(0,1fr))!important" not in css
+    assert ".league-atlas-north-star .league-edge-map{overflow-x:auto!important;overflow-y:hidden!important" in css
+    compressed = css[
+        css.index(".league-atlas-north-star.ns-app-compressed .league-edge-map,"):
+        css.index("/* Final density/value acceptance")
+    ]
+    assert "overflow-x:auto!important" in compressed
+    assert "overflow-y:hidden!important" in compressed
+    assert "overflow-x:visible!important" not in compressed
 
 
 def test_current_position_copy_discloses_governed_gap_fallback() -> None:
