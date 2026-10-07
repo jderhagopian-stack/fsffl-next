@@ -107,3 +107,23 @@ Implemented on the work branch, not yet promoted:
 - focused regressions added for FLEX isolation, SUPERFLEX isolation, configured K/DST unavailable behavior, depth separation, endpoint exposure and client contract selection.
 
 Development validation has not yet been declared complete. The final static delivery fingerprints must be refreshed only after the implementation head is otherwise stable, then the P0.6 merge gate will run affected focused validation plus one full suite.
+
+
+### 2026-10-06 — focused development validation green
+A temporary branch-only focused workflow was used solely to satisfy the P0.6 development-validation step without opening a merge-gate PR or running the full suite early. It was removed before the stable PR head and will not merge to `main`.
+
+Final focused development run:
+- workflow run `37556570175`;
+- JavaScript syntax check passed;
+- 122 focused tests passed with 1 unrelated Starlette TestClient deprecation warning;
+- coverage included the new Current contract, governed in-season Forecast orchestration, lineup optimization, unchanged legacy league-relative position strength, League Atlas browser/static contracts, presentation continuity and provisional K/DST guardrails.
+
+The focused run confirmed:
+- FLEX points remain in the FLEX slot rather than moving into RB/WR;
+- SUPERFLEX is independently ranked from fixed QB;
+- configured K/DST are visible but unavailable without governed Current season-outlook fantasy-point authority;
+- depth/player evidence remains separate from the slot-strength numerator;
+- the legacy shared Team Utility actual-position strength contract still passes unchanged;
+- browser Current consumes the new slot contract while Dynasty keeps its fixed QB/RB/WR/TE contract.
+
+The temporary workflow was deleted at branch commit `bfe3a6e193c4c7eba0f2ffbfa8726e291309a802`. No full suite has been run for this correction yet. The next step is a bounded exact-head review, then the stable PR merge gate with affected focused workflows plus one full CI suite.
