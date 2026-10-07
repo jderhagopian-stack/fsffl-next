@@ -26,15 +26,17 @@ def test_managed_standalone_home_is_retired_from_delivered_shell() -> None:
     assert "homeNorthStarStaticVersion" not in SHELL
 
 
-def test_managed_home_route_normalizes_to_franchise_without_changing_nav_structure() -> None:
+def test_managed_home_compatibility_route_normalizes_to_franchise_without_remaining_in_nav() -> None:
     assert "function fsfflManagedLandingRoute(route)" in SHELL
     assert "route==='league'&&state?.context?.team_id?'my_team':route" in SHELL
     assert "if(state?.context?.team_id&&state?.route==='league')" in SHELL
-    # Bottom-nav structure remains a separate follow-on.
-    assert "{route:'league',label:'Home'" in NAV
+    assert "{route:'league',label:'Home'" not in NAV
     assert "{route:'my_team',label:'Franchise'" in NAV
     assert "{route:'league_comparison',label:'League'" in NAV
-    assert "{route:'opportunities',label:'Market'" in NAV
+    assert "{route:'opportunities',label:'Explore'" in NAV
+    assert "{route:'trade_center',label:'Trade'" in NAV
+    compatibility = NAV.split("const COMPATIBILITY=[", 1)[1].split("];", 1)[0]
+    assert "{route:'league',label:'Franchise'" in compatibility
 
 
 def test_unselected_league_bootstrap_remains_available() -> None:
