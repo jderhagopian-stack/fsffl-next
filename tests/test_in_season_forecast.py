@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from fsffl.forecast.in_season_orchestration import build_governed_in_season_outlook
 from fsffl.forecast.in_season_runtime import (
     NamedInSeasonProjectionFetcher,
     build_in_season_forecasts,
@@ -15,9 +16,13 @@ from fsffl.forecast.models import (
     ForecastMetric,
     ForecastObservation,
 )
-from fsffl.forecast.season_rollforward import compose_completed_actuals_with_ros
+from fsffl.forecast.season_rollforward import (
+    compose_completed_actuals_only,
+    compose_completed_actuals_with_ros,
+)
 from fsffl.forecast.backtest import RealizedOutcome
 from fsffl.providers.current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
+from fsffl.providers.sleeper_weekly_stats import SleeperNflState, SleeperWeeklyStatLine
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -337,3 +342,88 @@ def test_season_roll_forward_rejects_overlapping_or_duplicate_actual_periods():
             ros_forecasts=(ros,),
             season_start=datetime(2026, 9, 1, tzinfo=UTC),
         )
+
+
+def test_completed_actuals_only_is_zero_uncertainty_terminal_season_outlook():
+    season_start = datetime(2026, 9, 1, tzinfo=UTC)
+    season_end = datetime(2027, 1, 5, tzinfo=UTC)
+    actuals = (
+        _actual(
+            start=datetime(2026, 9, 1, tzinfo=UTC),
+            end=datetime(2026, 9, 8, tzinfo=UTC),
+            value=10.0,
+        ),
+        _actual(
+            start=datetime(2026, 9, 8, tzinfo=UTC),
+            end=datetime(2026, 9, 15, tzinfo=UTC),
+            value=20.0,
+        ),
+    )
+
+    season = compose_completed_actuals_only(
+        completed_actuals=actuals,
+        season_start=season_start,
+        season_end=season_end,
+    )[0]
+
+    assert season.horizon == ForecastHorizon.SEASON
+    assert season.period_start == season_start
+    assert season.period_end == season_end
+    assert season.distribution.mean == pytest.approx(30.0)
+    assert season.distribution.stddev == 0.0
+    assert season.distribution.p10 == pytest.approx(30.0)
+    assert season.distribution.p50 == pytest.approx(30.0)
+    assert season.distribution.p90 == pytest.approx(30.0)
+    assert season.source == "fsffl:completed-actuals-only"
+
+
+def test_governed_outlook_uses_completed_actuals_only_after_week_18(monkeypatch):
+    state = _state()
+
+    class CompletedSeasonSource:
+        source_version = "test-weekly-stats"
+
+        def fetch_nfl_state(self):
+            return SleeperNflState(
+                season=2026,
+                week=18,
+                season_type="post",
+                captured_at=datetime(2027, 1, 8, tzinfo=UTC),
+            )
+
+        def fetch_week(self, *, season: int, week: int):
+            return (
+                SleeperWeeklyStatLine(
+                    player_id="p1",
+                    season=season,
+                    week=week,
+                    stats={"rush_yd": 10.0},
+                    captured_at=datetime(2027, 1, 8, tzinfo=UTC),
+                ),
+            )
+
+    def fail_if_ros_runs(*args, **kwargs):
+        raise AssertionError("terminal season must not request ROS Forecast")
+
+    monkeypatch.setattr(
+        "fsffl.forecast.in_season_orchestration.build_in_season_forecasts",
+        fail_if_ros_runs,
+    )
+
+    result = build_governed_in_season_outlook(
+        state,
+        preseason_season_forecasts=(),
+        stats_source=CompletedSeasonSource(),
+        clock=lambda: datetime(2027, 1, 8, tzinfo=UTC),
+    )
+
+    assert result.completed_through_week == 18
+    assert result.evidence_basis == "completed_actuals_only"
+    assert result.forward_forecasts == ()
+    assert result.current_runtime is None
+    assert result.current_failure is None
+    assert len(result.season_outlook) == 1
+    season = result.season_outlook[0]
+    assert season.metric == ForecastMetric.FANTASY_POINTS
+    assert season.distribution.mean == pytest.approx(18.0)
+    assert season.distribution.stddev == 0.0
