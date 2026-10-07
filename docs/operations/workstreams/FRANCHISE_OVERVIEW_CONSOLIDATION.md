@@ -263,3 +263,21 @@ Next gate:
 - allow ordinary draft focused validation to complete on the corrected head;
 - if green and no new executable finding appears, checkpoint the exact head and mark it ready for a fresh Stable full-suite run;
 - merge/deploy only that exact successful head.
+
+
+## 2026-10-07 — test-only gate correction focused-green
+
+The stale readiness/static assertions exposed by Stable full-suite run `37681492299` were corrected without changing executable behavior. The assertions now enforce the accepted Home-retirement contract: `index.html` must **not** ship `/static/home_dashboard.js`, while unchanged refresh/recovery/Product Shell delivery identity checks remain intact.
+
+Exact corrected draft head `b72e85f6054d7e81176d774d7b8fb5f9325526db` is focused-green:
+- CI `37682328049`: success;
+- Franchise North Star `37682328141`: success;
+- Home North Star / retirement + destination regression `37682328151`: success;
+- League Atlas North Star `37682328068`: success;
+- PR164 focused corrective regression `37682328051`: success;
+- Live Forecast corrective trace `37682328024`: success;
+- Stable full suite `37682328287`: correctly skipped because PR #418 remained draft.
+
+The only executable implementation remains the previously reviewed focused-green Franchise consolidation. No executable, server, model, Current, Simulation, lifecycle, Roster, Assets & Picks, or bottom-navigation behavior changed after implementation head `f568e385683f7d0ef809840bfc0e98732f1be181`.
+
+No further executable or test work remains planned. After this documentation-only checkpoint push, mark the exact final PR head ready for the fresh Stable full-suite merge gate. If that exact head is green, merge/deploy/checkpoint; do not broaden scope.
