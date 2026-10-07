@@ -12,7 +12,7 @@ from fsffl.forecast.models import (
     ForecastMetric,
     ForecastObservation,
 )
-from fsffl.product import current_position_depth
+from fsffl.product import current_position_depth, in_season_forecast_routes
 from fsffl.product.current_position_depth import (
     build_current_position_depth_from_outlook,
     build_governed_current_position_depth,
@@ -396,3 +396,26 @@ def test_current_slots_use_canonical_scan_order_not_provider_lineup_order() -> N
         ("K", 1),
         ("DST", 1),
     ]
+
+
+def test_current_preseason_fallback_is_optional_when_preserved_artifact_is_missing(
+    monkeypatch,
+) -> None:
+    def unavailable_loader(_store):
+        def load(_state):
+            raise ValueError("preserved preseason Year-1 baseline is unavailable")
+        return load
+
+    monkeypatch.setattr(
+        in_season_forecast_routes,
+        "make_preseason_baseline_authority_loader",
+        unavailable_loader,
+    )
+
+    assert (
+        in_season_forecast_routes.load_preseason_season_forecasts(
+            object(),
+            _state(),
+        )
+        == ()
+    )
