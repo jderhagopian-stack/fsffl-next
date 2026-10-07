@@ -197,9 +197,11 @@ def test_final_iphone_polish_uses_one_tappable_rank_strength_map_and_valid_value
     assert '<div class="league-value-row ' in source
     assert "league-edge-map .league-edge-cell>b" in css
     assert "width:36px" in css
-    assert "grid-template-columns:150px repeat('+columnCount+',86px)!important" in source
+    assert "grid-template-columns:'+franchiseWidth+'px repeat('+columnCount+','+positionWidth+'px)!important" in source
     assert "grid-template-columns:minmax(80px,1.25fr) repeat(4,minmax(0,1fr))!important" not in css
     assert ".league-atlas-north-star .league-edge-map{overflow-x:auto!important;overflow-y:hidden!important" in css
+    assert "franchiseWidth=104,positionWidth=64" in source
+    assert "position==='SUPERFLEX'?'SF':position" in source
 
 
 def test_final_iphone_polish_race_has_two_tier_synced_sticky_header_dock() -> None:
@@ -230,7 +232,7 @@ def test_physical_iphone_acceptance_hides_legacy_duplicate_map_and_fits_retained
     assert ".league-structure-panel .ns-league-atlas{display:none!important}" in css
     assert "height:31px!important" in css
     assert "width:27px!important" in css
-    assert "grid-template-columns:150px repeat('+columnCount+',86px)!important" in source
+    assert "grid-template-columns:'+franchiseWidth+'px repeat('+columnCount+','+positionWidth+'px)!important" in source
     assert "grid-template-columns:minmax(78px,1.22fr) repeat(4,minmax(0,1fr))!important" not in css
     assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
 

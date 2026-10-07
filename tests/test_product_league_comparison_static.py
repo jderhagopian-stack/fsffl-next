@@ -363,8 +363,11 @@ def test_current_position_grid_uses_governed_slot_contract_and_dynasty_stays_fix
     assert "positions=dynasty?['QB','RB','WR','TE']:[...laCurrentSlotOrder()].sort" in matrix
     assert "FLEX/SF stay separate from fixed positions" in matrix
     assert "Current columns follow configured league starter slots" in matrix
-    assert "grid-template-columns:150px repeat('+columnCount+',86px)" in matrix
+    assert "grid-template-columns:'+franchiseWidth+'px repeat('+columnCount+','+positionWidth+'px)" in matrix
+    assert "franchiseWidth=104,positionWidth=64" in matrix
     assert "width:'+gridWidth+'px!important;min-width:'+gridWidth+'px!important" in matrix
+    assert "position==='SUPERFLEX'?'SF':position" in matrix
+    assert "aria-label=\"'+laEsc(position)+'\"" in matrix
     assert "repeat(var(--league-position-columns" not in source
     assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
     assert "grid-template-columns:minmax(125px,1.25fr)" not in source
@@ -439,10 +442,11 @@ def test_current_room_drawer_excludes_unowned_fragility_and_long_term_shadow() -
 def test_current_position_grid_stays_one_horizontal_scroll_row_on_portrait() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "columnCount=Math.max(1,positions.length)" in source
-    assert "grid-template-columns:150px repeat('+columnCount+',86px)" in source
+    assert "grid-template-columns:'+franchiseWidth+'px repeat('+columnCount+','+positionWidth+'px)" in source
     assert "width:'+gridWidth+'px!important;min-width:'+gridWidth+'px!important" in source
     assert ".league-edge-matrix{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch" in source
     assert ".league-edge-row.header>span{white-space:nowrap;overflow:visible}" in source
+    assert ".league-edge-row.header>span:not(:first-child){display:flex;align-items:center;justify-content:center;text-align:center}" in source
     assert ".league-edge-cell{display:flex" in source and "white-space:nowrap" in source
     assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
     assert "repeat(var(--league-position-columns" not in source
@@ -534,3 +538,20 @@ def test_league_atlas_modified_bundle_requires_new_inner_and_outer_cache_keys() 
         "/static/product_shell.js?v=20261004-safari-restore380"
         "&c=20261005-dynasty-handoff383a"
     ) not in index
+
+
+def test_position_grid_superflex_abbreviation_is_visual_only() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    matrix = source[
+        source.index("function laPositionMatrix()"):
+        source.index("function laValueDot(")
+    ]
+    cell = source[
+        source.index("function laPositionCell(view,position)"):
+        source.index("function laPositionMatrix()")
+    ]
+
+    assert "position==='SUPERFLEX'?'SF':position" in matrix
+    assert "aria-label=\"'+laEsc(position)+'\"" in matrix
+    assert "data-room-position=\"'+laEsc(position)+'\"" in cell
+    assert "laCurrentStrength(view.team_id,position)" in cell

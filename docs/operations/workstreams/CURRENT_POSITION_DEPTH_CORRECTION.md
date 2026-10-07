@@ -627,3 +627,47 @@ Physical-target regressions now directly lock:
 - compressed iPhone Atlas retains `overflow-x:auto` / `overflow-y:hidden`, sticky Franchise and no vertical matrix cap.
 
 No executable work remains planned. After this documentation-only checkpoint head receives ordinary draft focused checks, mark that exact head ready for the single Stable full-suite gate.
+
+
+### 2026-10-07 — quick portrait-grid polish
+Management authorized one **presentation-only** polish pass after #414. Scope is limited to Position & Depth grid density/readability:
+- substantially tighten the sticky Franchise column;
+- tighten and equalize QB/RB/WR/TE/FLEX/SUPERFLEX grid columns;
+- center all position headers;
+- render `SUPERFLEX` as `SF` **in the grid header only**.
+
+Preserve:
+- one-row horizontal scrolling;
+- sticky Franchise identity;
+- canonical Current slot order and all Current evidence/rank semantics;
+- Dynasty/#370 semantics and data contracts;
+- drawer labels/data keys (the underlying slot remains `SUPERFLEX`);
+- all model, data, lifecycle, restore, refresh, Forecast, Simulation and P0 behavior.
+
+Validation: focused League Atlas/browser/static validation while draft, then the normal exact stable-head full-suite gate before merge/deploy. No broader UI work or Home→Franchise consolidation is authorized.
+
+
+### 2026-10-07 — portrait-grid polish focused validation green
+Draft PR #415 implements only the authorized Position & Depth density/readability polish. Executable/test head `ff7644e96aa04a1f9593ef514f2edfdff06bdab8` is focused-green.
+
+Presentation changes only:
+- sticky Franchise track reduced from 150px to **104px**;
+- every position track reduced/equalized from 86px to **64px**;
+- position headers are centered;
+- `SUPERFLEX` renders visually as **SF** in the matrix header only; the underlying slot, aria label, cell key, drawer contract, Current/Dynasty calculations and canonical ordering remain `SUPERFLEX`;
+- the existing one-row horizontal-scroll and sticky-Franchise behavior is preserved.
+
+Focused evidence on the exact executable head:
+- League Atlas North Star focused validation `37663459740`: success, including JavaScript syntax, focused Atlas/Player Intelligence regressions, real-league Atlas composition sanity, live-provider authority audit and evidence upload;
+- CI `37663459787`: success;
+- Franchise North Star `37663459665`: success;
+- PR164 focused corrective regression `37663459700`: success;
+- Live Forecast corrective trace `37663459716`: success;
+- the first Atlas run on the prior head failed only two newly-added Python static assertions that accidentally evaluated JavaScript identifiers as Python names; those test assertions were corrected without changing product code.
+
+Static delivery remains content-bound:
+- Atlas CSS key matches the current `league_atlas.css` blob;
+- League Atlas JS inner key matches the current `league_comparison.js` blob;
+- Product Shell outer key matches the current `product_shell.js` blob.
+
+No data/model/lifecycle/Current/Dynasty behavior changed. This checkpoint push is documentation-only. Next: mark the exact documentation-final PR head ready for the normal one Stable full-suite gate; if green, merge/deploy/checkpoint.
