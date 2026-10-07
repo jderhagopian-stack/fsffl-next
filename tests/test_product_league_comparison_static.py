@@ -37,7 +37,7 @@ def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authorit
     assert "api(`/api/league/dynasty-position-rooms?${query}`)" in source
     assert "raw holistic career-forward reference" in source
     assert "rostered · breadth" in source
-    assert "dynasty?player.projected_starter:Boolean(currentAssigned(player))" in source
+    assert "dynasty?player.projected_starter:currentAssigned(player)===room.position" in source
     assert "peerRooms.filter(item=>item.room_raw===row.room_raw).length" in source
     assert "api('/api/value/long-term-intrinsic-shadow-v1')" in source
     assert "Array.isArray(longTerm?.uncertainty?.long_horizon_y4_y7)" in source
