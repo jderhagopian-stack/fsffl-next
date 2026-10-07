@@ -15,31 +15,25 @@ EXPECTED_ROUTES = (
 )
 
 
-def test_full_product_navigation_shell_is_exposed() -> None:
+def test_full_product_navigation_shell_preserves_routes_under_new_labels() -> None:
     source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
     for route in EXPECTED_ROUTES:
         assert f"route:'{route}'" in source
 
-    for label in (
-        "Home",
-        "Franchise",
-        "Players & Assets",
-        "League",
-        "Trade Center",
-        "Market",
-        "What-If",
-        "Simulator",
-        "Analytics Terminal",
-        "Reports",
-    ):
-        assert f"label:'{label}'" in source
+    assert "{route:'league',label:'Franchise',navigation:false}" in source
+    assert "{route:'my_team',label:'Franchise',teamScoped:true,primary:true}" in source
+    assert "{route:'league_comparison',label:'League',primary:true}" in source
+    assert "{route:'opportunities',label:'Explore',primary:true}" in source
+    assert "{route:'trade_center',label:'Trade',teamScoped:true,primary:true}" in source
+    assert "label:'Home'" not in source
+    assert "label:'Market'" not in source
 
 
 def test_legacy_players_route_is_compatibility_only_and_delegates_to_market() -> None:
     source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
     assert "{route:'players_assets',label:'Players & Assets',legacy:true}" in source
     assert "marketTab:'player_board'" in source
-    assert "fsfflProductRoutes.filter(item=>!item.legacy)" in source
+    assert "fsfflProductRoutes.filter(item=>item.primary)" in source
 
 
 def test_product_surfaces_explain_authoritative_reuse_not_frontend_model_logic() -> None:
