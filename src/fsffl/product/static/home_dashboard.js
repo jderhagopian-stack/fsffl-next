@@ -9,7 +9,6 @@ const fsfflHomeNorthStarState={
   loading:false,
   error:null,
   requestKey:null,
-  positionLens:'rank',
 };
 
 function homeEscape(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
@@ -24,22 +23,6 @@ function homeManagedTeamId(){return homePayload()?.managed_team_id||state?.conte
 function homeStandings(){return homePayload()?.standings||[]}
 function homeStanding(){const id=homeManagedTeamId();return homeStandings().find(row=>row.team_id===id)||null}
 function homeSimulation(){const id=homeManagedTeamId();return (homePayload()?.simulation?.teams||[]).find(row=>row.team_id===id)||null}
-function homePositionRows(){
-  const rows=homeView()?.position_strengths||[],positions=['QB','RB','WR','TE'];
-  return positions.map(position=>rows.find(row=>row.position===position)||null);
-}
-function homePressurePoint(){
-  const order={QB:0,RB:1,WR:2,TE:3};
-  const rows=homePositionRows().filter(Boolean);
-  if(!rows.length)return null;
-  return [...rows].sort((a,b)=>{
-    const ar=Number.isFinite(Number(a.league_rank))?Number(a.league_rank):-1,br=Number.isFinite(Number(b.league_rank))?Number(b.league_rank):-1;
-    if(ar!==br)return br-ar;
-    const ai=Number.isFinite(Number(a.strength_index))?Number(a.strength_index):Infinity,bi=Number.isFinite(Number(b.strength_index))?Number(b.strength_index):Infinity;
-    if(ai!==bi)return ai-bi;
-    return (order[a.position]??99)-(order[b.position]??99);
-  })[0]||null;
-}
 function homeFragility(){
   const view=homeView(),resilience=view?.utility?.roster_resilience;
   if(!resilience||typeof resilience.largest_single_player_lineup_drop!=='number')return null;
@@ -67,9 +50,7 @@ function homeNavigate(intent){
 function homeIntentFromButton(button){
   const action=button.dataset.homeAction,teamId=homeManagedTeamId();
   if(action==='franchise')return{route:'my_team',teamId};
-  if(action==='pressure')return{route:'opportunities',teamId,position:button.dataset.position||null,source:'home-pressure'};
   if(action==='outlook')return{route:'league_comparison',section:'overview',teamId,metric:button.dataset.metric||null,source:'home-outlook'};
-  if(action==='position')return{route:'league_comparison',section:'positions',teamId,position:button.dataset.position||null,source:'home-position'};
   if(action==='exposure')return{route:'league_comparison',section:'positions',teamId,position:button.dataset.position||null,playerId:button.dataset.playerId||null,fragilityDriver:true,source:'home-exposure'};
   if(action==='expected-finish')return{route:'league_comparison',section:'overview',teamId,metric:'expected_finish',source:'home-expected-finish'};
   if(action==='league-context')return{route:'league_comparison',section:'overview',teamId,source:'home-league-context'};
@@ -79,20 +60,6 @@ function homeWireActions(root){
   root.querySelectorAll('[data-home-action]').forEach(button=>button.addEventListener('click',()=>{
     const intent=homeIntentFromButton(button);if(intent)homeNavigate(intent);
   }));
-  root.querySelectorAll('[data-home-position-lens]').forEach(button=>button.addEventListener('click',()=>{
-    fsfflHomeNorthStarState.positionLens=button.dataset.homePositionLens==='strength'?'strength':'rank';
-    renderFsfflHomeNorthStar();
-  }));
-}
-function homeCircle(row){
-  if(!row)return'<span class="home-position-pill unavailable"><b>—</b><small>Unavailable</small></span>';
-  const mode=fsfflHomeNorthStarState.positionLens;
-  const value=mode==='strength'?homeNumber(row.strength_index,0):'#'+(row.league_rank??'—');
-  const detail=mode==='strength'?'Strength Index':'Rank';
-  const count=row.team_count||homeStandings().length||12;
-  const share=(Number(row.league_rank||count)-1)/Math.max(1,count-1);
-  const band=share<=.2?'strong':share<=.7?'middle':'weak';
-  return `<button type="button" class="home-position-pill ${band}" data-home-action="position" data-position="${homeEscape(row.position)}" aria-label="Open ${homeEscape(row.position)} position detail, ${homeEscape(detail)} ${homeEscape(value)}"><span>${homeEscape(row.position)}</span><b>${homeEscape(value)}</b><small>${homeEscape(detail)}</small></button>`;
 }
 function homeOutlookMetric(label,value,metric,kind='number'){
   const shown=kind==='percent'?homePercent(value,0):homeNumber(value,1);
