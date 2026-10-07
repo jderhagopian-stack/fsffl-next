@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 
 
@@ -198,6 +199,22 @@ def test_first_load_hotfix_busts_changed_assets_without_churning_other_surfaces(
     assert f"/static/app.js?v=20261004-safari-restore380" in INDEX
     assert f"/static/home_dashboard.js?v=20261004-safari-restore380" in INDEX
     assert f"/static/product_shell.js?v=20261004-safari-restore380" in INDEX
+    home_blob = Path("src/fsffl/product/static/home_dashboard.js").read_bytes()
+    home_git_sha = hashlib.sha1(
+        b"blob " + str(len(home_blob)).encode() + bytes([0]) + home_blob
+    ).hexdigest()[:12]
+    mobile_blob = Path("src/fsffl/product/static/mobile_safari_recovery.js").read_bytes()
+    mobile_git_sha = hashlib.sha1(
+        b"blob " + str(len(mobile_blob)).encode() + bytes([0]) + mobile_blob
+    ).hexdigest()[:12]
+    assert (
+        f"/static/home_dashboard.js?v=20261004-safari-restore380&c=git-{home_git_sha}"
+        in INDEX
+    )
+    assert (
+        f"/static/mobile_safari_recovery.js?v=20261004-safari-restore380&c=git-{mobile_git_sha}"
+        in INDEX
+    )
     assert "const homeNorthStarStaticVersion='20261001-continuity2';" in SHELL
     assert "const franchiseNorthStarStaticVersion='20261001-continuity2';" in SHELL
 
