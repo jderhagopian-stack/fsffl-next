@@ -93,7 +93,8 @@ def test_home_contextual_navigation_contract_is_presentation_owned() -> None:
 
 def test_home_is_mobile_first_without_horizontal_scrolling() -> None:
     assert "@media(max-width:760px)" in HOME
-    assert "grid-template-columns:repeat(4,minmax(0,1fr))" in HOME
+    assert "home-position-grid" not in HOME
+    assert "home-pressure" not in HOME
     assert "padding:4px 10px calc(76px + env(safe-area-inset-bottom,0px))" in HOME
     assert "touch-action:manipulation" in HOME
     assert "overflow-x:auto" not in HOME
