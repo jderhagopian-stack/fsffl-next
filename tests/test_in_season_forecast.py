@@ -646,7 +646,10 @@ def test_current_ros_fumbles_gap_reuses_governed_first_party_coordinate(monkeypa
     )
     monkeypatch.setattr(
         "fsffl.forecast.in_season_orchestration.build_first_party_fumbles_lost_supplement",
-        lambda *args, **kwargs: SimpleNamespace(observations=(full_season_fumbles,)),
+        lambda *args, **kwargs: SimpleNamespace(
+            observations=(full_season_fumbles,),
+            authority_valid_from=NOW,
+        ),
     )
 
     forward, filled = fill_current_ros_fumbles_lost_gaps(
@@ -664,6 +667,111 @@ def test_current_ros_fumbles_gap_reuses_governed_first_party_coordinate(monkeypa
     assert forward[0].metric == ForecastMetric.FANTASY_POINTS
     assert "supplemental_mixed_vintage_current" in forward[0].model_version
     assert forward[0].distribution.mean < runtime.partial_fantasy_point_forecasts[0].distribution.mean
+
+
+def test_current_ros_fumbles_gap_advances_mixed_vintage_as_of_to_authority_cutoff(monkeypatch):
+    state = _state()
+    rules = state.league.rules.model_copy(
+        update={
+            "scoring": state.league.rules.scoring
+            + (ScoringRule(stat="fum_lost", points=-1.0),)
+        }
+    )
+    state = state.model_copy(
+        update={"league": state.league.model_copy(update={"rules": rules})}
+    )
+    runtime = build_in_season_forecasts(
+        state,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START,
+        period_end=PERIOD_END,
+        fetchers=(
+            NamedInSeasonProjectionFetcher(
+                source_id="one",
+                fetch=lambda season, week: _snapshot("one", rush_yards=700.0),
+            ),
+            NamedInSeasonProjectionFetcher(
+                source_id="two",
+                fetch=lambda season, week: _snapshot("two", rush_yards=900.0),
+            ),
+        ),
+        clock=lambda: NOW,
+    )
+    old_cutoff = NOW - timedelta(hours=2)
+    runtime = runtime.model_copy(
+        update={
+            "raw_ensemble": tuple(
+                item.model_copy(
+                    update={
+                        "as_of": old_cutoff,
+                        "provenance": item.provenance.model_copy(
+                            update={
+                                "retrieved_at": old_cutoff,
+                                "effective_at": old_cutoff,
+                            }
+                        ),
+                    }
+                )
+                for item in runtime.raw_ensemble
+            ),
+            "partial_fantasy_point_forecasts": tuple(
+                item.model_copy(
+                    update={
+                        "as_of": old_cutoff,
+                        "provenance": item.provenance.model_copy(
+                            update={
+                                "retrieved_at": old_cutoff,
+                                "effective_at": old_cutoff,
+                            }
+                        ),
+                    }
+                )
+                for item in runtime.partial_fantasy_point_forecasts
+            ),
+        }
+    )
+    full_season_fumbles = ForecastObservation(
+        player_id="p1",
+        position=Position.RB,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=datetime(2026, 9, 1, tzinfo=UTC),
+        period_end=datetime(2027, 1, 5, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=1.7, stddev=1.0),
+        source="fsffl:first_party:fumbles_lost",
+        model_version="accepted-fumbles-v1",
+        as_of=old_cutoff,
+        provenance=Provenance(
+            source="fsffl:first_party:fumbles_lost",
+            retrieved_at=NOW,
+            effective_at=old_cutoff,
+            source_version="accepted-fumbles-v1",
+        ),
+    )
+    monkeypatch.setattr(
+        "fsffl.forecast.in_season_orchestration.build_first_party_fumbles_lost_supplement",
+        lambda *args, **kwargs: SimpleNamespace(
+            observations=(full_season_fumbles,),
+            authority_valid_from=NOW,
+        ),
+    )
+
+    forward, filled = fill_current_ros_fumbles_lost_gaps(
+        state,
+        current_runtime=runtime,
+        stats_source=SimpleNamespace(),
+        completed_through_week=4,
+        as_of=NOW,
+    )
+
+    assert filled == 1
+    assert forward[0].as_of == NOW
+    assert forward[0].provenance.retrieved_at <= forward[0].as_of
+    compose_completed_actuals_with_ros(
+        completed_actuals=(),
+        ros_forecasts=forward,
+        season_start=datetime(2026, 9, 1, tzinfo=UTC),
+    )
 
 
 def test_current_ros_fumbles_gap_stays_fail_closed_for_multi_coordinate_partial(monkeypatch):
