@@ -1,7 +1,7 @@
 # Franchise Overview Consolidation
 
 Updated: 2026-10-07
-Status: ACTIVE — bounded implementation focused-green; stable merge gate pending
+Status: MERGED + DEPLOYED — hosted consolidation accepted; final authenticated iPhone/Safari acceptance pending
 Authority: Management directive 2026-10-07, AGENTS.md, OPERATING_PROTOCOL.md, Project Charter, North Star Product Directive, architecture authority boundaries, CURRENT_OPERATIONS.md.
 
 ## Objective
@@ -338,3 +338,41 @@ Focused validation on the executable head is green:
 - Stable full suite `37688553376`: correctly skipped while PR #418 remained draft.
 
 Both final review threads were answered and resolved after this evidence. No executable work remains. The next PR-head movement is documentation-only checkpointing; mark that exact final head ready for one fresh Stable full-suite gate, then merge/deploy only if the successful gate still matches the PR head exactly.
+
+
+## 2026-10-07 — #418 final stable gate, merge and hosted deployment
+
+Final exact merge candidate:
+- PR #418 final head: `eed81a01c1b39a03351cf4a933ab0a2ab0acf9f1`;
+- exact-head focused workflows were green before promotion: Home North Star `37688998239`, League Atlas North Star `37688998438`, PR164 focused corrective regression `37688998319`, Live Forecast corrective trace `37688998096`, CI `37688998137`, and Franchise North Star `37688998101`;
+- all review threads were resolved before the final gate;
+- no executable work remained after the final documented corrective checkpoint.
+
+Final P0.6 stable merge gate:
+- marking exact head `eed81a01c1b39a03351cf4a933ab0a2ab0acf9f1` ready triggered Stable full-suite run `37690556503`;
+- the workflow verified the PR head matched that SHA before and after testing;
+- result: **2,229 passed / 1 warning** in `170.12s`;
+- no code or test change followed the successful gate.
+
+Merge/deploy identity:
+- PR #418 squash-merged as `ba66f906bde49bd7c956a5e495bc6e33a07ae9e6`;
+- Render deploy `dep-db3bpn67bikc73cahdkg` was triggered explicitly because auto-deploy is disabled;
+- deploy completed `live` at `2026-10-07T21:44:33.152986Z` on exact commit `ba66f906bde49bd7c956a5e495bc6e33a07ae9e6`;
+- build completed successfully;
+- uvicorn launched at `21:43:50Z`, server process started at `21:44:22.794Z`, and application startup completed at `21:44:22.797Z`;
+- durable saved context restore `91a68ef1-18ab-4ac9-9824-4d20205d0699` reached `ready` in **8,201.33 ms**;
+- startup persistence reads hit the saved league snapshot, published intelligence generation, current Forecast evidence, live Simulation analytics, current Market value and preseason baseline;
+- no startup error-level failure was observed.
+
+Hosted consolidated behavior now live:
+- Franchise Overview is the managed-team landing experience;
+- standalone managed-session Home delivery is retired;
+- approved Home identity/card/dial/Season Outlook language is carried into Franchise Overview;
+- active Franchise Overview consumes canonical Simulation/team-view evidence and accepted top-level `current_position_depth`, not legacy `position_strengths` or `/api/home`;
+- Current slot drill-through delegates to League Atlas Position & Depth;
+- Roster and Assets & Picks remain intact;
+- governed `stale_last_good` continuity is accepted only when target State, served State and publication generation align;
+- transient league team-view failure degrades only league-relative Overview evidence while managed-team Roster / Assets & Picks remain usable;
+- no backend, Current, Simulation, Value, lifecycle or publication architecture was changed.
+
+**MANAGEMENT GATE — FRANCHISE OVERVIEW CONSOLIDATION:** implementation, exact-head validation, merge and hosted startup/deployment are accepted. The remaining layer is authenticated iPhone/Safari physical acceptance of the consolidated managed-team landing experience. Confirm that managed navigation lands on Franchise Overview, the consolidated Overview is compact/readable/useful, Roster and Assets & Picks remain usable, Current drill-through reaches League Atlas, and no standalone Home experience reappears. Bottom-navigation composition remains the separate follow-on and is not reopened here.
