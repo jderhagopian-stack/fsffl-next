@@ -304,3 +304,13 @@ Automated ready-head review surfaced two bounded product defects on the consolid
 2. **Overview action controls (P2).** The new Overview renders `data-franchise-route` and `data-franchise-tab-open` actions, but the active North Star render path did not bind those selectors. Corrective contract: bind the existing route actions and internal Roster / Assets & Picks tab openers. Do not change navigation composition or add new destinations.
 
 The separate readiness-test finding from the prior Stable run has already been corrected. PR #418 remains draft while these two executable defects are fixed and focused-tested. A new Stable full-suite gate is required after the exact corrective head is focused-green.
+
+
+## 2026-10-07 — final-head review blockers before merge
+
+Exact ready head `a746e577e2813acd71bb689f4e787843e2186964` passed Stable full-suite run `37685510399` successfully. Before merge, final automated review on that **same exact head** surfaced two bounded presentation defects. Under AGENTS.md's reviewed-stable-head rule these are merge blockers, so PR #418 was returned to draft before changing code.
+
+1. **Last-good continuity alignment.** The new Franchise pair loader requires both served State IDs to equal the target `expectedStateId`. That rejects an accepted `presentation_continuity.mode === "stale_last_good"` pair, where both responses legitimately serve the same prior State/generation while explicitly targeting the current canonical State. Correct behavior: accept a pair only when both responses target the expected State, agree on served State, and agree on publication generation. Do not weaken generation fencing or mix publications.
+2. **Independent Franchise tabs on league-read failure.** The pair loader uses an uncaught `Promise.all`, so a transient `/api/league/team-views` failure prevents the otherwise healthy `/api/my-team` response from rendering. Roster and Assets & Picks are owned by the managed-team contract and must remain usable. Correct behavior: fail closed only for league-relative Overview/Current evidence when the league read is unavailable; retain the managed-team response and intact tabs.
+
+These corrections do not change the product contract, Current semantics, Simulation, Roster, Assets & Picks, bottom navigation, lifecycle architecture, or server APIs. After focused Franchise validation is green, a new exact-head Stable full-suite gate is required before merge.
