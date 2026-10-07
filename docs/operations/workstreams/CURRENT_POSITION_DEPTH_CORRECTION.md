@@ -309,3 +309,32 @@ Validation protocol:
 - merge/deploy/checkpoint only if green.
 
 **Do not broaden scope.** In particular, do not redesign Forecast, change Dynasty/#370, alter Simulation production semantics, add a new resilience model, or reopen P0 lifecycle/publication architecture.
+
+
+### 2026-10-07 — physical failure root-cause trace before corrective code
+Hosted persisted evidence localizes the league-wide unavailable columns to **Forecast coverage**, not the slot-attribution guard:
+
+- latest FSFFL `league_team_views` publication inspected: State `5ca7d09323d133ea927f142d4e2eceec56bfc885006f4b57d7df8ef16d2b9e3d`, generation `b9a5eefc00274c0c167c0701141e30919b1c5f84ebf47e6d2d325109af1d93c1`;
+- Current status is `partial`; QB and SUPERFLEX are `ready`, while RB/WR/TE/FLEX are `unavailable`;
+- for all 12 teams, the optimized Current contract recorded **zero** filled RB, WR, TE and FLEX slots, while QB/SUPERFLEX filled. The fail-closed league-wide guard is therefore reporting a real upstream absence rather than mis-ranking a partially filled slot.
+
+Projection-history evidence shows the exact missing coordinate:
+- current CBS ROS snapshot supplies `FUMBLES_LOST` for QB/RB/WR/TE;
+- current Razzball ROS snapshot supplies `FUMBLES_LOST` for QB but not RB/WR/TE;
+- the live ensemble correctly requires two independent sources per player/metric group;
+- league scoring correctly treats an active scored `fum_lost` coordinate as material and refuses to interpret an undercovered coordinate as zero;
+- result: the strict current ROS scorer can produce authoritative QB fantasy points but skill-position RB/WR/TE fantasy-point rows fall out of authoritative output. That in turn leaves the optimizer with no governed RB/WR/TE candidates.
+
+An **already accepted Forecast fallback exists** and will be reused rather than weakening that strictness:
+- the immutable preseason baseline is already the governed fallback when current provider output fails;
+- `remaining_prior_from_preseason()` already converts that accepted season prior to only the unplayed schedule before completed actuals are added;
+- the accepted preseason-baseline authority loader already applies Forecast's first-party `FUMBLES_LOST` supplement when the league scores that coordinate, preserving the existing strict scorer and provenance.
+
+Bounded corrective design:
+1. keep live current ROS authoritative wherever the strict scorer produces a player fantasy-point row;
+2. for a player missing from authoritative live ROS output, use that player's **already-governed preseason remaining prior** only when available;
+3. never replace a supported live player, never synthesize zero, and leave the player missing if neither authority can support him;
+4. label the mixed evidence basis explicitly so Presentation does not imply every player came from live ROS;
+5. keep the existing slot-level fail-closed rule unchanged.
+
+The preserved preseason raw baseline has enough historical subject coverage to fill the configured offensive starter counts for the current FSFFL rosters once its accepted scoring/supplement path is applied; this is not a player-specific exception.
