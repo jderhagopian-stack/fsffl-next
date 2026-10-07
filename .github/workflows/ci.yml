@@ -1,10 +1,11 @@
 name: CI
 
-# Pull-request CI is the stable merge gate; avoid a repeated full suite on merge push.
+# PR updates get focused validation only. The stable-head full suite is triggered
+# when a merge-ready PR is marked ready for review; see OPERATING_PROTOCOL.md.
 on:
   pull_request:
 
-# New PR heads supersede older test runs; keep the required test job/check unchanged.
+# Superseded focused runs should not compete with the latest PR head.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -22,5 +23,3 @@ jobs:
         run: python -m pip install -e '.[dev,web]'
       - name: Focused Dynasty readiness regressions
         run: pytest -q tests/test_dynasty_presentation_handoff.py
-      - name: Stable merge gate full suite
-        run: pytest -q

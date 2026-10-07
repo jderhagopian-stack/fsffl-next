@@ -21,11 +21,12 @@ Each concept has one authoritative owner. Downstream layers consume rather than 
 
 ## Test, merge, and deploy method
 
-- During implementation, run focused tests for the changed contract and regressions. Do not use the full suite as an iterative development loop.
-- When the PR is stable and proposed for merge, run the affected focused regressions and exactly one full suite at that stable head. The generic PR CI is the merge gate.
-- A changed PR head supersedes prior results; obsolete in-flight CI runs are canceled. The required `CI / test` check remains intact. Never rename, remove, bypass, or weaken required merge checks to reduce test cost.
-- Do not repeat the full suite on the merge push. Generic CI runs on pull requests, not the merge push.
-- Merge only the reviewed stable head after required checks pass. Record exact PR/head/merge SHAs and validation results. Deploy only when the workstream requires it; verify and record the exact deployed commit and runtime evidence.
+- During implementation, run focused tests for the changed contract and regressions. Keep implementation PRs in draft while making code/checkpoint pushes; generic `CI` runs focused Dynasty readiness regressions only and cancels superseded in-flight runs.
+- When the exact PR head is stable and proposed for merge, mark the PR ready for review. `.github/workflows/stable-full-suite.yml` runs the full suite for a non-draft PR on open/reopen/ready/synchronize events. It checks out the event's exact head SHA and verifies that the PR head still equals that SHA before and after the suite.
+- If more development is needed after a stable run, return the PR to draft before pushing. When ready again, marking it ready runs the full suite on the new head. Before merge, confirm the latest PR head SHA exactly matches a successful `Stable full suite / full-suite` run. Do not repeat the suite for ordinary draft checkpoint pushes.
+- Do not repeat the full suite on the merge push. Generic CI runs focused tests on pull requests; the stable full-suite workflow runs only for a non-draft merge candidate.
+- Keep the existing `CI / test` check name unchanged. Do not claim a workflow is a GitHub-enforced required check unless authorized branch-protection/ruleset settings confirm it. If settings cannot be inspected, treat the successful stable-head run as a procedural pre-merge gate and record that enforcement is unverified.
+- Merge only the reviewed stable head after focused validation and the stable-head full-suite gate pass. Record exact PR/head/merge SHAs and validation results. Deploy only when the workstream requires it; verify and record the exact deployed commit and runtime evidence.
 - Documentation-only post-deploy checkpoint updates do not require a second full suite unless they change executable behavior or a governing gate.
 
 For every handoff, persist exact repository identity, branch/PR/head, tests, merge/deployment evidence when applicable, unresolved risks, and the next authorized action in the canonical operations/workstream record.

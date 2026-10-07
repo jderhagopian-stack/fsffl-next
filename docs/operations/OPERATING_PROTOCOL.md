@@ -175,8 +175,10 @@ The user should be able to understand the issue well enough to give informed pro
 
 ## Test, merge, and deploy convention
 
-- Run focused tests while implementing a bounded change.
-- At the stable PR head, run the affected focused regressions and exactly one full suite as the merge gate.
-- Do not repeat full suites at intermediate commits or on the merge push.
+- Run focused tests while implementing a bounded change. Keep implementation PRs in draft during code/checkpoint development; generic `CI` runs focused Dynasty readiness regressions only on PR heads.
+- At the stable merge candidate, mark the exact PR ready for review. The separate `Stable full suite` workflow runs `pytest -q` for non-draft PRs and verifies the suite's SHA equals the PR head before and after execution.
+- If development resumes after a stable run, convert the PR back to draft before pushing. Mark it ready again only when the new head is stable; that triggers the full suite for the new merge candidate. Before merge, verify that the current PR head SHA matches the latest successful `Stable full suite / full-suite` run. Ordinary draft checkpoint pushes do not launch the full suite.
+- Do not repeat full suites on the merge push.
+- Preserve existing check names. Do not describe any check as GitHub-required unless branch protection/ruleset settings have been inspected and confirm it. If settings are inaccessible or absent, this remains an explicit procedural merge gate; do not claim GitHub enforcement.
 - Merge only the reviewed, passing stable head. Record merge SHA and live deploy SHA separately.
 - Render auto-deploy is disabled. Trigger deployment after merge, verify the exact merged commit is live, and record deployment evidence.
