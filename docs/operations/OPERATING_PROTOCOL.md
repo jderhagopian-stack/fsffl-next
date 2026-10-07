@@ -47,12 +47,13 @@ All workstreams inherit:
 - Presentation communicates governed truth; it does not invent it.
 
 ## Worker startup
-A new worker should read:
+Every worker (including Management successors) starts with the repository-root `AGENTS.md` bootstrap. It requires the worker to verify the canonical repository and current main SHA, then read:
 1. `docs/operations/CURRENT_OPERATIONS.md` — sole current cross-workstream status;
-2. the named active checkpoint under `docs/operations/workstreams/`;
-3. applicable model/product authority documents referenced there.
+2. this protocol;
+3. the governing charter, North Star and architecture authority documents named in `AGENTS.md`;
+4. the named active checkpoint under `docs/operations/workstreams/` and its directly referenced authority/evidence files.
 
-Files under `docs/operations/archive/` are historical snapshots, not current status.
+Reconcile the request with the durable checkpoint and current GitHub/Render evidence before editing. Do not assume a cached local clone is current or restart completed work. Files under `docs/operations/archive/` are historical snapshots, not current status. The exact startup sequence and architecture philosophy are checkpointed in root `AGENTS.md`.
 
 
 ## Management-to-worker directive protocol
