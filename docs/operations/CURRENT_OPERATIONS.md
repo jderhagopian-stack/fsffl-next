@@ -5,6 +5,8 @@ Authority: sole current cross-workstream status. Historical snapshots are under 
 
 ## Current program
 
+- **Current Position & Depth correction:** ACTIVE under [Current Position & Depth Correction](workstreams/CURRENT_POSITION_DEPTH_CORRECTION.md). Management accepted the 2026-10-06 authority audit: Current must use governed completed actuals + ROS; Current aggregation/grid must follow configured lineup slots with FLEX/SUPERFLEX separated from fixed QB/RB/WR/TE, configured K/DST only at supported authority, Depth kept as separate drilldown evidence, and Dynasty/#370 unchanged. Follow P0.6 focused-test → one stable-head full-suite → merge/deploy/checkpoint protocol.
+
 - **P0.1–P0.4:** complete; do not reopen.
 - **P0.5:** lifecycle simplification architecturally complete. Final saved-session iPhone/Safari acceptance found a separate Career Intrinsic coverage blocker: the exact State/publication Dynasty surface was served correctly, while accepted #370 logic withheld ranks because rostered players were absent from the 335-estimate artifact.
 - **Dynasty truth correction:** this tranche reports explicit rank readiness and incomplete Career coverage. Global core-intelligence readiness is unchanged. No imputation and no #370 change.
