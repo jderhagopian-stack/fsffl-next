@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: ACTIVE — implementation authorized
+Status: MERGED + DEPLOYED — hosted runtime accepted; physical Current surface acceptance pending
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -243,3 +243,36 @@ Narrow testing correction only:
 - draft focused workflows at correction head `4b0068ede67f4682376ad0f3e15cca701bb53a88` all passed; the stable full suite remained correctly skipped while draft.
 
 Temporary diagnostic workflows were removed before the stable candidate. No Simulation production semantics were modified.
+
+
+### 2026-10-06 — #408 stable gate, merge and live deployment
+Final stable candidate:
+- PR #408 exact stable head: `8d13b6df888246b4c582021548eff1a8152c8170`;
+- all draft-head focused checks on that exact head were green, including `CI` run `37565765862`, `League Atlas North Star focused validation` run `37565765767`, Home `37565765800`, Franchise `37565767562`, Live Forecast corrective trace `37565765685`, PR164 corrective regression `37565765650`, Private-beta Intrinsic diagnostics `37565767858`, and corrective live-provider numerical trace `37565768216`;
+- both review findings were resolved before promotion: same-State Current cache freshness and terminal Week-18 completed-actuals-only handling.
+
+P0.6 stable merge gate:
+- marking exact head `8d13b6df888246b4c582021548eff1a8152c8170` ready triggered the one `Stable full suite` run `37566936822`;
+- the workflow verified the PR head matched that SHA before and after testing;
+- result: **2,211 passed / 1 warning** in 127.56s;
+- no executable change followed the green gate.
+
+Merge/deploy identity:
+- PR #408 squash-merged as `ca11ae3f485316c8936012af05bde96868d8f61c`;
+- Render deploy `dep-db2rr1id0e5s73e6o7fg` was triggered explicitly because auto-deploy is disabled;
+- deploy completed `live` at `2026-10-07T03:35:12.325987Z` on exact commit `ca11ae3f485316c8936012af05bde96868d8f61c`;
+- application startup completed cleanly at `2026-10-07T03:35:06.744526822Z`;
+- durable saved context restored to ready in `7,911.17 ms` (`restore_id=57888dc5-4137-4969-8f42-231e1dce7e04`);
+- startup evidence showed successful persisted reads for league snapshot, current Forecast evidence, Simulation analytics, Market value and publication generation; no startup error-level failure was observed.
+
+Accepted implementation now live:
+- Current uses governed completed actuals + ROS during the regular season;
+- after Week 18 it uses governed completed actuals + zero ROS with explicit `completed_actuals_only` provenance;
+- fixed QB/RB/WR/TE exclude FLEX/SUPERFLEX attribution;
+- configured FLEX and SUPERFLEX are independent Current columns;
+- configured K/DST remain explicit and rank only when supported by governed Current authority;
+- depth remains separate drilldown evidence;
+- same-State republication recomputes Current from fresh governed evidence rather than reusing a State-only cache;
+- Dynasty/#370, Career Intrinsic, provider-refresh lifecycle and Simulation production semantics are unchanged.
+
+**MANAGEMENT GATE — CURRENT POSITION & DEPTH:** code, exact-head validation, merge, static delivery identity and hosted startup/runtime deployment are accepted. A final authenticated iPhone/Safari Current-lens check remains the only unproven presentation layer: confirm the Current grid renders configured lineup-slot columns, fixed-position ranks do not absorb FLEX/SUPERFLEX contribution, and the displayed Current evidence copy reflects completed actuals + ROS. Do not reopen settled model/cache/terminal-season findings unless contradictory hosted or physical evidence appears.
