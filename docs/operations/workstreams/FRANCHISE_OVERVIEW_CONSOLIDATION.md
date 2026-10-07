@@ -1,7 +1,7 @@
 # Franchise Overview Consolidation
 
 Updated: 2026-10-07
-Status: ACTIVE — product contract checkpointed; implementation not yet started
+Status: ACTIVE — bounded implementation in draft; focused validation pending
 Authority: Management directive 2026-10-07, AGENTS.md, OPERATING_PROTOCOL.md, Project Charter, North Star Product Directive, architecture authority boundaries, CURRENT_OPERATIONS.md.
 
 ## Objective
@@ -189,3 +189,24 @@ The first implementation trace is complete; no executable file was changed befor
 - Slot drill-through navigates to League Atlas Position & Depth rather than recreating detailed Current room logic inside Franchise.
 - Roster and Assets & Picks renderers/data contracts are not changed.
 - Do not create a new server publication surface, new lifecycle negotiation, new Current calculation or new Simulation calculation.
+
+
+## 2026-10-07 — bounded implementation checkpoint
+
+Implementation has started only after the product contract and pre-code trace were durably checkpointed.
+
+Current draft implementation:
+- Franchise North Star state now attaches the already-published top-level `current_position_depth` contract from `/api/league/team-views`;
+- active Franchise Overview no longer reads legacy `view.position_strengths`;
+- Season Outlook reads the Franchise/team-view `utility.competitive_outcome` Simulation-derived coordinate and league-relative expected-wins rank from the existing league team views;
+- “What Matters Right Now” selects the weakest **canonical Current lineup slot** as a presentation highlight only; it shows the existing rank/index and links to League Atlas Position & Depth rather than inventing a recommendation or second room model;
+- compact Current slot rings are rendered from canonical `current_position_depth.slot_order/strengths`; slot drill-through goes to League Atlas;
+- approved Home identity/card/dial/color treatment has been carried into Franchise Overview;
+- Roster and Assets & Picks render functions are unchanged;
+- Franchise no longer reads `/api/home` for Overview composition;
+- managed `league` navigation is normalized to `my_team` once a managed team exists, so Franchise Overview becomes the managed-team landing experience while the no-team `league` route remains a connect/select bootstrap;
+- the bottom-navigation metadata is unchanged: Home / Franchise / League / Market remain structurally present pending the separate follow-on decision;
+- standalone Home JS is no longer delivered or installed, and the Home-only first-paint presentation guard is removed;
+- Franchise and Product Shell browser delivery keys are content-derived so Safari receives the consolidated bundles.
+
+No server/model/lifecycle contract has been added or changed. Focused Franchise/Home-routing/Current presentation validation is the next gate. Do not run the Stable full suite until the exact implementation head is focused-green and stable.
