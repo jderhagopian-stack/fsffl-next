@@ -359,10 +359,14 @@ def test_current_position_grid_uses_governed_slot_contract_and_dynasty_stays_fix
         source.index("function laPositionMatrix()"):
         source.index("function laValueDot(")
     ]
-    assert "positions=dynasty?['QB','RB','WR','TE']:laCurrentSlotOrder()" in matrix
+    assert "canonicalCurrent=['QB','RB','WR','TE','FLEX','SUPERFLEX','K','DST']" in matrix
+    assert "positions=dynasty?['QB','RB','WR','TE']:[...laCurrentSlotOrder()].sort" in matrix
     assert "FLEX/SF stay separate from fixed positions" in matrix
     assert "Current columns follow configured league starter slots" in matrix
-    assert "repeat(var(--league-position-columns,4)" in source
+    assert "grid-template-columns:150px repeat(var(--league-position-columns,4),86px)" in source
+    assert "width:var(--league-position-grid-width)" in source
+    assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
+    assert "grid-template-columns:minmax(125px,1.25fr)" not in source
 
 
 def test_current_position_cells_do_not_consume_legacy_actual_position_strengths() -> None:
