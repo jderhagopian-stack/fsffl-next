@@ -671,3 +671,32 @@ Static delivery remains content-bound:
 - Product Shell outer key matches the current `product_shell.js` blob.
 
 No data/model/lifecycle/Current/Dynasty behavior changed. This checkpoint push is documentation-only. Next: mark the exact documentation-final PR head ready for the normal one Stable full-suite gate; if green, merge/deploy/checkpoint.
+
+
+### 2026-10-07 — #415 portrait-grid polish merged and deployed
+Final exact PR head: `992617723ff5beaa161160f96aa133b25f9afbd1`.
+
+Validation:
+- focused League Atlas run `37663459740`: success, including JavaScript syntax, Atlas regressions, real-league composition sanity and live-provider authority audit;
+- CI `37663459787`: success;
+- Franchise focused validation `37663459665`: success;
+- PR164 focused corrective regression `37663459700`: success;
+- Live Forecast corrective trace `37663459716`: success;
+- Stable full-suite run `37663748208` tested the exact final head and finished **2,229 passed / 1 warning** in 142.06s; the PR-head fence passed before and after testing.
+
+Merge/deploy:
+- PR #415 squash-merged as `a55a592585050d866425f3601ab3da9e3812c393`;
+- Render deploy `dep-db38ksk9v7es73balsjg` completed `live` at `2026-10-07T18:09:29.265951Z` on that exact merge commit;
+- build succeeded; uvicorn launched at `18:08:42Z`; application startup completed at `18:09:18.590Z`;
+- durable saved context restored `ready` in 8,834.01 ms;
+- no startup error-level failure was observed.
+
+Live presentation change:
+- sticky Franchise track: **104px**;
+- every position track: **64px**, equalized across QB/RB/WR/TE/FLEX/SUPERFLEX;
+- all position headers centered;
+- `SUPERFLEX` renders visually as **SF** in the matrix header only;
+- one-row horizontal scrolling and sticky Franchise behavior remain unchanged;
+- the underlying slot key remains `SUPERFLEX`; Current/Dynasty data, ordering, drawers, model and lifecycle semantics are unchanged.
+
+**MANAGEMENT GATE — PORTRAIT POLISH:** code, exact-head validation, merge and hosted deployment are accepted. Remaining proof is visual iPhone/Safari acceptance of the compact grid itself: confirm the narrower Franchise column, equalized/tighter position columns, centered headers and SF label render as intended without breaking the existing one-row horizontal scroll.
