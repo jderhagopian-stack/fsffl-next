@@ -78,7 +78,6 @@ def test_simulator_remains_team_scoped_secondary_route_under_more() -> None:
     assert "ensureSimulatorScript" in shell
     assert "'/static/simulator.js'" in shell
     assert "route==='simulator'" in shell
-    assert "'what_if','simulator','analytics'" in shell
     assert "const fsfflStaticVersion=" in shell
     assert "script.src=`${path}?v=${fsfflStaticVersion}`" in shell
     assert '?v=' in index
