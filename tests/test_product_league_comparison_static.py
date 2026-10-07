@@ -367,7 +367,7 @@ def test_current_position_grid_uses_governed_slot_contract_and_dynasty_stays_fix
     assert "franchiseWidth=104,positionWidth=64" in matrix
     assert "width:'+gridWidth+'px!important;min-width:'+gridWidth+'px!important" in matrix
     assert "position==='SUPERFLEX'?'SF':position" in matrix
-    assert 'aria-label="'+laEsc(position)+'"' in matrix
+    assert "aria-label=\"'+laEsc(position)+'\"" in matrix
     assert "repeat(var(--league-position-columns" not in source
     assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
     assert "grid-template-columns:minmax(125px,1.25fr)" not in source
@@ -552,6 +552,6 @@ def test_position_grid_superflex_abbreviation_is_visual_only() -> None:
     ]
 
     assert "position==='SUPERFLEX'?'SF':position" in matrix
-    assert 'aria-label="'+laEsc(position)+'"' in matrix
+    assert "aria-label=\"'+laEsc(position)+'\"" in matrix
     assert "data-room-position="'+laEsc(position)+'"" in cell
     assert "laCurrentStrength(view.team_id,position)" in cell
