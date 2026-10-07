@@ -578,3 +578,27 @@ The corrective target is therefore explicit:
 - Franchise remains sticky.
 
 This is a layout-contract correction only; no Current semantics are being changed.
+
+
+### 2026-10-07 — #413 physical corrective implementation checkpoint
+Implemented on the corrective branch, not yet promoted:
+
+**Publication/evidence PIT repair**
+- the #413 Current-only FUMBLES_LOST adapter now advances the adapted ROS supplemental observation's `as_of` to the true mixed-vintage authority cutoff: the maximum of the current strict partial cutoff, original observation cutoff and the first-party supplement's `authority_valid_from`;
+- original provenance retrieval/effective timestamps and the accepted first-party point/uncertainty model remain unchanged;
+- the strict season roll-forward PIT guard is unchanged and now receives a self-consistent ROS row instead of a row whose provenance postdates its own cutoff;
+- focused regression reproduces the live failure shape (old canonical-State `as_of`, newer current-input retrieval) and proves the adapted scored ROS row can pass `compose_completed_actuals_with_ros()` without weakening the guard.
+
+**Physical Safari grid repair**
+- Current/Dynasty Position & Depth rows now emit a literal per-render track list and intrinsic width in the inline style (for Current FSFFL this is `150px repeat(6,86px)`) with inline `!important`, avoiding Safari's dependence on a CSS custom property inside `repeat()`;
+- legacy mobile Atlas CSS no longer hard-codes four position tracks or forces the canonical map to `overflow-x:visible`;
+- the compressed-app iPhone override now preserves horizontal touch scrolling with no vertical matrix cap;
+- Franchise remains sticky; canonical Current slot order is unchanged;
+- `league_atlas.css` now has its own content-derived delivery key in the Atlas bundle, and the Atlas JS / Product Shell outer fingerprints were refreshed so Safari must receive the corrected cascade.
+
+Static identities at this checkpoint:
+- `league_atlas.css` blob `6ee17dbc76baae93c68f9eb5031f55a548bab309` → `20261007-atlas-css-6ee17dbc76ba`;
+- `league_comparison.js` blob after CSS-key wiring: `5dab1b1f501ff9d328b06997b36d746508297aad` → Product Shell inner key `20261005-atlas-5dab1b1f501f`;
+- `product_shell.js` blob `190a01ee27f9d5ed5d1270e54a207a343d1984cb` → index outer key `git-190a01ee27f9`.
+
+No accepted Current/Dynasty/Simulation/P0 semantics changed. Focused validation is the next gate; no full suite is authorized until the exact corrective head is stable.
