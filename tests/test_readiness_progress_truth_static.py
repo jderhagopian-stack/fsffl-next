@@ -81,8 +81,11 @@ def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell
         f"const leagueAtlasStaticVersion='20261005-atlas-{_git_blob_prefix(Path('src/fsffl/product/static/league_comparison.js'))}';"
         in shell
     )
-    assert "const homeNorthStarStaticVersion='20261001-continuity2';" in shell
-    assert "const franchiseNorthStarStaticVersion='20261001-continuity2';" in shell
+    assert "homeNorthStarStaticVersion" not in shell
+    assert (
+        f"const franchiseNorthStarStaticVersion='20261007-franchise-{_git_blob_prefix(Path('src/fsffl/product/static/my_team_dashboard.js'))}';"
+        in shell
+    )
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
