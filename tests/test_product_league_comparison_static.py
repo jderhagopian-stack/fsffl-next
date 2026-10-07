@@ -352,6 +352,42 @@ def test_dynasty_client_generation_fence_precedes_status_consumption() -> None:
     assert "payload?.publication_generation_id==requestedGeneration" not in loader
 
 
+def test_current_position_grid_uses_governed_slot_contract_and_dynasty_stays_fixed() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    matrix = source[
+        source.index("function laPositionMatrix()"):
+        source.index("function laValueDot(")
+    ]
+    assert "positions=dynasty?['QB','RB','WR','TE']:laCurrentSlotOrder()" in matrix
+    assert "FLEX/SF stay separate from fixed positions" in matrix
+    assert "Current columns follow configured league starter slots" in matrix
+    assert "repeat(var(--league-position-columns,4)" in source
+
+
+def test_current_position_cells_do_not_consume_legacy_actual_position_strengths() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    cell = source[
+        source.index("function laPositionCell(view,position)"):
+        source.index("function laPositionMatrix()")
+    ]
+    assert "laCurrentStrength(view.team_id,position)" in cell
+    assert "laStrength(view,position)" not in cell
+    assert "row.status==='ready'" in cell
+
+
+def test_current_room_drawer_uses_actuals_plus_ros_and_slot_eligibility() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    drawer = source[
+        source.index("function laRoomDrawer()"):
+        source.index("function laPickDrawer()")
+    ]
+    assert "laCurrentEligiblePositions(room.position)" in drawer
+    assert "season_outlook_points" in drawer
+    assert "actuals + ROS pts" in drawer
+    assert "Current strength includes only players assigned to this configured lineup slot" in drawer
+    assert "FLEX/SUPERFLEX are separate columns" in drawer
+
+
 def test_open_atlas_reloads_when_publication_generation_advances() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "fsffl:intelligence-status-updated" in source
