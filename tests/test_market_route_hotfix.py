@@ -9,11 +9,11 @@ def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_market_route_is_not_navigation_locked_before_team_context() -> None:
+def test_explore_route_is_not_navigation_locked_before_team_context() -> None:
     source = _source(NAV)
-    market = "{route:'opportunities',label:'Market',short:'Market',question:'Where is there something worth doing?',icon:'market'}"
-    assert market in source
-    assert "{route:'opportunities',label:'Market',short:'Market',question:'Where is there something worth doing?',icon:'market',teamScoped:true}" not in source
+    explore = "{route:'opportunities',label:'Explore',short:'Explore',question:'Where is there something worth doing?',icon:'market'}"
+    assert explore in source
+    assert "{route:'opportunities',label:'Explore',short:'Explore',question:'Where is there something worth doing?',icon:'market',teamScoped:true}" not in source
 
 
 def test_north_star_market_does_not_shadow_global_route_state() -> None:
