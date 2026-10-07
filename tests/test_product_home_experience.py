@@ -5,6 +5,7 @@ from pathlib import Path
 STATIC = Path("src/fsffl/product/static")
 HOME = (STATIC / "home_dashboard.js").read_text(encoding="utf-8")
 FRANCHISE = (STATIC / "my_team_dashboard.js").read_text(encoding="utf-8")
+NORTH_STAR = FRANCHISE.split("/* Franchise North Star 2026-09-24.", 1)[1]
 SHELL = (STATIC / "product_shell.js").read_text(encoding="utf-8")
 INDEX = (STATIC / "index.html").read_text(encoding="utf-8")
 NAV = (STATIC / "product_navigation.js").read_text(encoding="utf-8")
@@ -67,14 +68,14 @@ def test_franchise_overview_preserves_approved_home_visual_language() -> None:
 
 
 def test_franchise_overview_uses_canonical_current_and_simulation_not_home_specific_current() -> None:
-    assert "current_position_depth" in FRANCHISE
-    assert "currentPositionDepth" in FRANCHISE
-    assert "view?.utility?.competitive_outcome" in FRANCHISE
-    assert "myTeamLeagueOutcomeRank('expected_wins')" in FRANCHISE
-    assert "api('/api/home')" not in FRANCHISE
-    assert "view?.position_strengths" not in FRANCHISE
-    assert "source:'franchise-overview-current'" in FRANCHISE
-    assert "acceptance_probability" not in FRANCHISE
+    assert "current_position_depth" in NORTH_STAR
+    assert "currentPositionDepth" in NORTH_STAR
+    assert "view?.utility?.competitive_outcome" in NORTH_STAR
+    assert "myTeamLeagueOutcomeRank('expected_wins')" in NORTH_STAR
+    assert "api('/api/home')" not in NORTH_STAR
+    assert "view?.position_strengths" not in NORTH_STAR
+    assert "source:'franchise-overview-current'" in NORTH_STAR
+    assert "acceptance_probability" not in NORTH_STAR
 
 
 def test_franchise_roster_and_assets_tabs_remain_primary_siblings() -> None:
