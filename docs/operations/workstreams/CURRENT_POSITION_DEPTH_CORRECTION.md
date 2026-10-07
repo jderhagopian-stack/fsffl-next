@@ -139,3 +139,15 @@ Focused revalidation after that executable change:
 - temporary workflow removed again at `7226acaf865863f5bf74a6e11e1903d9fb9b750e`.
 
 No production implementation changes remain planned before the stable merge-gate PR.
+
+
+### 2026-10-06 — latest-main reconciliation / stable PR candidate
+While this workstream was active, `main` advanced from `6b12cc349ac9f13ccfa00d644169382650310540` to `f58872782aa08a38b816517f2c9465439bda4820` through an operations/CI hygiene commit only; no product source overlapped this correction. The new root `AGENTS.md`, refreshed CURRENT_OPERATIONS/OPERATING_PROTOCOL, charter, North Star and architecture authority documents were read and reconciled before promotion.
+
+The branch CURRENT_OPERATIONS entry now starts from the new main wording plus this active workstream, avoiding a stale-status overwrite. The permanent League Atlas focused workflow now includes the new Current Position & Depth module and focused tests so future Atlas changes preserve this consumer contract.
+
+Product implementation remains unchanged from the final focused-green logic. Static delivery identities remain:
+- `league_comparison.js` Git blob `0c4d44ec1d671d526b06294406b3a078a2135375` → inner Atlas key `20261005-atlas-0c4d44ec1d67`;
+- `product_shell.js` Git blob `1625483baa5a506fbdf00d296768c8a95be83a0f` → outer index key `git-1625483baa5a`.
+
+The branch is now ready for the stable PR merge gate. No more executable changes are planned unless exact-head validation identifies a defect.
