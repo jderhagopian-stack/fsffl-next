@@ -53,6 +53,7 @@
 
 /* Live acceptance corrective pass: preserve identity, readable evidence, and touch targets. */
 .league-atlas-north-star .league-edge-cell{min-height:44px!important}
+.league-atlas-north-star .league-edge-row.header .league-edge-position-header{display:flex;align-items:center;justify-content:center;text-align:center!important}
 .league-atlas-north-star .league-index-detail{margin:10px 0 0;background:rgba(7,21,34,.55)}
 .league-atlas-north-star .league-index-detail>.league-edge-matrix{margin:0 14px 14px}
 .league-atlas-north-star .league-value-row{overflow:visible!important}
