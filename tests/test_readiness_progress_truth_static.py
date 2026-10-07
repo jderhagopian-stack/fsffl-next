@@ -72,10 +72,7 @@ def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell
         f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{_git_blob_prefix(Path('src/fsffl/product/static/product_shell.js'))}"
         in index
     )
-    assert (
-        f"/static/home_dashboard.js?v=20261004-safari-restore380&c=git-{_git_blob_prefix(Path('src/fsffl/product/static/home_dashboard.js'))}"
-        in index
-    )
+    assert "/static/home_dashboard.js" not in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
     assert "As of " in shell
@@ -259,10 +256,7 @@ def test_continuity_release_busts_recovery_presentation_assets() -> None:
     for script in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
         assert f"/static/{script}?v=20261004-safari-restore380" in index
     assert "/static/session_recovery.js?v=20261004-safari-restore380" in index
-    assert (
-        f"/static/home_dashboard.js?v=20261004-safari-restore380&c=git-{_git_blob_prefix(Path('src/fsffl/product/static/home_dashboard.js'))}"
-        in index
-    )
+    assert "/static/home_dashboard.js" not in index
     assert (
         f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{_git_blob_prefix(Path('src/fsffl/product/static/product_shell.js'))}"
         in index
