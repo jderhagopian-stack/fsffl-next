@@ -1,12 +1,12 @@
 # FSFFL NEXT — Architecture Recovery Workstream
 
-# CURRENT PROGRAM CHECKPOINT — 2026-10-06
+# CURRENT PROGRAM CHECKPOINT — 2026-10-07
 
 P0.1–P0.4 are closed. P0.5 lifecycle simplification is architecturally complete. The saved-session iPhone/Safari acceptance found a separate Career Intrinsic coverage blocker: the exact State/publication Dynasty surface was valid, but accepted #370 logic withheld ranks because rostered players are absent from the 335-estimate artifact. Exact State, generation, room and player evidence is in the latest root-cause entry below. Do not change #370, impute values, refresh/rebuild, or reopen P0.1–P0.5 plumbing.
 
-Management authorized the truthful Dynasty rank-readiness correction, a separate coverage follow-up, and P0.6. Preserve global core readiness and all State/team/generation/publication/hash/tenant fences. Issue #405 is outside this workstream. Management reports 22 missing players; the preserved player IDs enumerate 25 distinct people. Reconcile before deciding whether the Career artifact is intentionally bounded or must cover all State-rostered players.
+Management authorized the truthful Dynasty rank-readiness correction, a separate Career coverage follow-up, and P0.6. Preserve global core readiness and all State/team/generation/publication/hash/tenant fences. Issue #405 is outside this workstream; the preserved-State audit enumerates 25 distinct missing rostered players. Current issue status and disposition belong in `docs/operations/CURRENT_OPERATIONS.md` and the Career Coverage Extension checkpoint.
 
-P0.6 is active. `docs/operations/CURRENT_OPERATIONS.md` is the sole current cross-workstream status source; this remains the detailed architecture decision/evidence log. Old operations status files are archived under `docs/operations/archive/`. P0.6 acceptance comprises stale-status archival, focused regressions plus one stable-head full suite, merge/deploy checkpoint, and the five E2E journeys in Current Operations. The saved-session iPhone/Safari journey remains the final physical acceptance.
+P0.6 operational simplification is complete, merged and deployed; there is no active P0.6 implementation tranche. Its durable closeout includes a root `AGENTS.md` bootstrap that directs every worker to canonical operating state and architecture philosophy, a focused-development / one stable-head full-suite PR gate with obsolete run cancellation and required check preserved, and this correction of the stale active label. `docs/operations/CURRENT_OPERATIONS.md` remains the sole current cross-workstream status source; this file remains the detailed architecture decision/evidence log, while old status snapshots remain archived under `docs/operations/archive/`. The saved-session iPhone/Safari journey and any capability-specific follow-up remain recorded in Current Operations; they do not reopen completed publication/lifecycle architecture.
 
 ---
 
