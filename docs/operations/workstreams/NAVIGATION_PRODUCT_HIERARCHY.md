@@ -110,3 +110,23 @@ Delivery:
 Development syntax checks passed for `product_navigation.js`, `product_shell.js`, and `north_star_market.js`.
 
 The branch is ready for a **draft** implementation PR and focused shared-shell/navigation validation. No full suite is authorized until the exact corrective head is stable and marked ready under P0.6.
+
+
+### 2026-10-07 — focused validation green / stable-gate candidate
+Executable/navigation head `4a0fe56cc0be34e75cc7982707affef280d32ccc` is focused-green.
+
+Focused evidence:
+- `CI` run `37699753797`: success (**6 passed / 1 warning**);
+- `Franchise North Star focused validation` run `37699753865`: success; JavaScript checks passed and **65 tests passed**;
+- `Home North Star focused validation` run `37699753796`: success; contextual-navigation JavaScript checks passed and **82 tests passed / 1 warning**;
+- `League Atlas North Star focused validation` run `37699753816`: success; JavaScript checks, real-league Atlas composition sanity, live-provider authority audit and **126 tests passed / 1 warning**;
+- `PR164 focused corrective regression` run `37699754018`: success (**126 passed / 1 warning**);
+- `Live Forecast corrective trace` run `37699753788`: success;
+- Stable full suite correctly skipped while PR #421 remained draft.
+
+Two first-pass failures were stale tests that encoded the deliberately superseded navigation structure:
+- Opportunity workspace expected one old literal route sequence even though the destination routes remained present;
+- Home retirement expected the obsolete Home bottom-nav item to remain as a future follow-on.
+Both were corrected as test expectations only. No analytical or destination behavior was changed to satisfy them.
+
+Current PR #421 is clean against main `7bddbc392832cd4de68e318f184af1ad353462a6`. The product implementation is stable; no further executable changes are planned. The next exact PR head after this documentation-only checkpoint must receive its ordinary draft CI, then may be marked ready for the single P0.6 Stable full-suite merge gate.
