@@ -1,7 +1,7 @@
 # Franchise Overview Consolidation
 
 Updated: 2026-10-07
-Status: ACTIVE — bounded implementation in draft; focused validation pending
+Status: ACTIVE — bounded implementation focused-green; stable merge gate pending
 Authority: Management directive 2026-10-07, AGENTS.md, OPERATING_PROTOCOL.md, Project Charter, North Star Product Directive, architecture authority boundaries, CURRENT_OPERATIONS.md.
 
 ## Objective
@@ -210,3 +210,38 @@ Current draft implementation:
 - Franchise and Product Shell browser delivery keys are content-derived so Safari receives the consolidated bundles.
 
 No server/model/lifecycle contract has been added or changed. Focused Franchise/Home-routing/Current presentation validation is the next gate. Do not run the Stable full suite until the exact implementation head is focused-green and stable.
+
+
+## 2026-10-07 — focused implementation validation green
+
+Draft executable/test head `f568e385683f7d0ef809840bfc0e98732f1be181` is focused-green and clean against main `4a1d3147795ed37a149963754210fd63b80c7d25`.
+
+Focused evidence:
+- CI `37677132290`: success;
+- Franchise North Star `37677132339`: success (**61 passed**);
+- Home North Star / retirement + destination regression `37677132235`: success (**81 passed / 1 unrelated Starlette warning**); the historical Home real-league sanity step correctly used its checked-in environment-boundary evidence because CI has no production database secret;
+- League Atlas North Star `37677132354`: success;
+- PR164 focused corrective regression `37677132359`: success (**123 passed / 1 unrelated Starlette warning**);
+- Live Forecast corrective trace `37677132392`: success;
+- Stable full suite `37677132282`: correctly skipped while PR #418 remains draft.
+
+The first focused attempt exposed only stale static assertions from the old Home/Franchise routing wording; product behavior was not reverted. Those tests were reconciled to the accepted consolidation contract. Shared readiness/manual-refresh/mobile-delivery regressions were preserved rather than discarded when the Home UI tests were retired.
+
+Reviewed implementation boundaries at this checkpoint:
+- no backend/API/model/runtime/lifecycle file changed;
+- active Franchise Overview contains no `/api/home` read and no `view.position_strengths` Current consumer;
+- Roster and Assets & Picks active renderers remain intact;
+- bottom-navigation metadata is unchanged;
+- no-team `league` connect/bootstrap remains available;
+- managed `league` resolves to `my_team`;
+- standalone Home JS is no longer shipped by the document shell or dynamically installed by Product Shell;
+- Current Position & Depth drill-through delegates to League Atlas;
+- Trade Center dynamic navigation remains intact under the normalized-route variable.
+
+Current delivery identity:
+- consolidated `my_team_dashboard.js` blob `7844908b5c0bc09026dc143aa3812c8fc9f4a2a0`;
+- Franchise inner key `20261007-franchise-7844908b5c0b`;
+- `product_shell.js` blob `32ad2d78af0f34e61fcc2630d9d81478301bd68f`;
+- outer Product Shell key `git-32ad2d78af0f`.
+
+No executable work remains planned. After this documentation-only checkpoint head is stable, mark that exact PR head ready for the one P0.6 Stable full-suite gate; merge/deploy only if green.
