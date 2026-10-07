@@ -29,9 +29,14 @@ def load_preseason_season_forecasts(
     replaying raw preseason evidence without a required material coordinate.
     """
 
-    evidence = make_preseason_baseline_authority_loader(persistence_store)(
-        league_state
-    )
+    try:
+        evidence = make_preseason_baseline_authority_loader(persistence_store)(
+            league_state
+        )
+    except ValueError:
+        # The preserved prior is an optional fallback for Current. Its absence must
+        # not block sufficient live ROS or terminal completed-actual authority.
+        return ()
     return tuple(
         item
         for item in evidence.league_scored_forecasts
