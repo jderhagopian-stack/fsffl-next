@@ -394,6 +394,7 @@ def build_governed_in_season_outlook(
     stats_source: SleeperWeeklyStatsSource | None = None,
     history_writer: ProjectionHistoryWriter | None = None,
     clock: callable | None = None,
+    allow_governed_fumbles_ros_gap: bool = False,
 ) -> GovernedInSeasonResult:
     """Compose finalized actual weeks with current ROS, or a legitimate prior fallback."""
 
@@ -443,13 +444,17 @@ def build_governed_in_season_outlook(
             history_writer=history_writer,
             clock=lambda: now,
         )
-        current_ros, fumbles_player_count = fill_current_ros_fumbles_lost_gaps(
-            league_state,
-            current_runtime=current_runtime,
-            stats_source=source,
-            completed_through_week=completed,
-            as_of=now,
-        )
+        if allow_governed_fumbles_ros_gap:
+            current_ros, fumbles_player_count = fill_current_ros_fumbles_lost_gaps(
+                league_state,
+                current_runtime=current_runtime,
+                stats_source=source,
+                completed_through_week=completed,
+                as_of=now,
+            )
+        else:
+            current_ros = current_runtime.fantasy_point_forecasts
+            fumbles_player_count = 0
         forward, fallback_player_count = fill_current_ros_coverage_gaps(
             league_state,
             current_ros_forecasts=current_ros,
