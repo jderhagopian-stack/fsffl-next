@@ -157,3 +157,17 @@ Bounded correction:
 - do not expose secondary destinations as primary items and do not change model/data/lifecycle behavior.
 
 After the correction, run focused navigation/shared-shell validation while draft. Only the final exact green head may be marked ready for the one Stable full-suite gate.
+
+
+### 2026-10-07 — fallback-More Stable-gate result / final stale assertions
+After resolving the concrete fallback-More blocker, exact head `23cd1215910796c0ffced9692233bbb7a2b87c03` passed all focused workflows and was promoted to the Stable gate.
+
+Stable full-suite run `37704174787` finished **2,229 passed / 2 failed / 1 warning**. Both failures are residual stale test-shape assertions only:
+- the legacy `players_assets` test still split `product_navigation.js` on a removed `const DECISIONS=[...]` structure even though the approved compatibility contract is already proven by the preserved shell route/delegation and by the absence of `players_assets` from the new navigation architecture;
+- the Simulator test still required an obsolete shell grouping literal `'what_if','simulator','analytics'` even though the test now directly verifies Simulator's approved `More → Scenarios` placement, team scope, route, lazy loader and destination behavior.
+
+PR #421 was returned to draft before correcting these assertions. The correction is test-only:
+- assert `players_assets` is absent from `product_navigation.js` rather than requiring the superseded DECISIONS array shape;
+- remove the obsolete Simulator grouping literal while retaining the direct More/Scenarios assertions.
+
+No product/static/model/lifecycle behavior changes are authorized by this result. The failed Stable run is superseded and cannot be used for merge. Focused validation must pass on the new draft head, then that exact head may receive the fresh Stable full-suite gate.
