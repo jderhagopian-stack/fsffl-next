@@ -1,5 +1,28 @@
 # FSFFL NEXT — Living Product Development Priorities
 
+## 2026-10-07 current product-phase reconciliation
+
+The older phase text below remains useful as product intent and exit-gate history, but its chronology predates P0 Architecture Recovery, Simulation 2.0 completion, Career-forward Intrinsic, League Atlas / Current Position & Depth acceptance, and Home → Franchise consolidation.
+
+Current Management position:
+- private-beta lifecycle/publication architecture has completed the P0 recovery program;
+- Simulation 2.0 core semantics and runtime are accepted;
+- Franchise Overview now owns the managed-team landing job formerly split with Home;
+- the next bounded product step is navigation hierarchy: `Franchise | League | Explore | Trade | More`;
+- Career Coverage #405 follows as the remaining bounded Career-completeness gate;
+- primary development should then return to **Core Product Usefulness + Existing Intelligence Online**, especially Explore opportunity discovery and Trade decision quality, before broad historical/storytelling UI;
+- historical PIT/lineage/snapshot foundations, Owner Intelligence, generalized What-If, Record Book/history, Multiverse/publications, and commercialization remain active roadmap intent.
+
+Product-surface responsibility now:
+- **Franchise:** my managed team / what matters now / roster and asset diagnosis;
+- **League:** competitive landscape and League Atlas;
+- **Explore:** discovery/opportunities/search;
+- **Trade:** evaluate a specific deal and its consequences;
+- **More:** secondary surfaces and utilities.
+
+Standalone Home is retired as a destination. Preserve its successful visual language inside Franchise; do not restore a competing Home authority.
+
+
 This document is the canonical product-development roadmap for FSFFL NEXT. It is intended to survive across chats, branches, and workstreams so priorities, sequencing, and definitions of done do not get lost.
 
 ## Product goal
@@ -103,8 +126,8 @@ The current beta should become substantially more useful before the project open
 
 Every major surface must answer a distinct owner question and earn its place.
 
-## Home — “What should I care about right now?”
-Focus on prioritized, actionable changes rather than generic summary cards.
+## Franchise Overview — “What should I care about right now for my franchise?”
+Standalone Home has been retired. Franchise Overview owns this managed-team landing job while preserving the strongest Home visual language. Focus on prioritized, actionable managed-team context rather than generic summary cards.
 
 Candidate jobs:
 - strongest current opportunity;
@@ -113,7 +136,7 @@ Candidate jobs:
 - what materially changed since the last visit;
 - shortcuts into deeper surfaces.
 
-## My Team — “What is actually driving my franchise?”
+## Franchise Roster / Assets — “What is actually driving my franchise?”
 Focus on roster diagnosis:
 - optimized starting-lineup strengths and weaknesses;
 - bench/depth quality;
