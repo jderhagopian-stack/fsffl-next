@@ -126,36 +126,24 @@ _startup_restore_complete = Event()
 _startup_restore_state: dict[str, object] = {"status": "idle"}
 _heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
 
-_current_position_depth_lock = RLock()
-_current_position_depth_cache: dict[tuple[str, str], object] = {}
-
-
 def _current_position_depth_provider(league_state):
-    """Build/cache the accepted exact-State Current Position & Depth consumer."""
+    """Build Current from fresh governed evidence for each presentation build.
 
-    key = (league_state.league.league_id, league_state.state_id)
-    with _current_position_depth_lock:
-        cached = _current_position_depth_cache.get(key)
-    if cached is not None:
-        return cached
+    ROS and completed-week evidence can advance while canonical LeagueState identity
+    remains unchanged. Do not cache this consumer by State alone. Exact published
+    presentation surfaces already provide the reusable read cache after composition.
+    """
 
     baseline = (
         load_preseason_season_forecasts(_persistence_store, league_state)
         if _persistence_store is not None
         else ()
     )
-    result = build_governed_current_position_depth(
+    return build_governed_current_position_depth(
         league_state,
         preseason_season_forecasts=baseline,
         history_writer=_projection_history_store,
     )
-    with _current_position_depth_lock:
-        _current_position_depth_cache[key] = result
-        if len(_current_position_depth_cache) > 8:
-            oldest = next(iter(_current_position_depth_cache))
-            if oldest != key:
-                _current_position_depth_cache.pop(oldest, None)
-    return result
 
 
 
