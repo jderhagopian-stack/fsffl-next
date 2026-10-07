@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: PHYSICAL ACCEPTANCE REOPENED — #413 corrective focused-green; Stable full-suite gate pending
+Status: PHYSICAL ACCEPTANCE REOPENED — #413 test-only final-gate correction in draft
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -504,3 +504,18 @@ Static delivery on the focused-green executable head is content-bound:
 - focused regressions compute these identities from the actual bytes.
 
 No executable change is planned after `0d761668...`. This checkpoint-only docs update moves the PR head but does not change runtime behavior. Keep #413 draft until the resulting exact docs-final head is focused-green. Then mark that exact head ready once to trigger the single Stable full-suite merge gate. If the full suite is green and still matches the PR head, merge/deploy; authenticated iPhone/Safari physical acceptance remains mandatory afterward.
+
+
+### 2026-10-07 — #413 first Stable-gate result / test-only correction
+Ready-head Stable full-suite run `37648233077` tested exact PR head `8d0b071e596a55d4a6d637085623da464ab3cd08`. The suite reached **2,221 passed / 4 failed / 1 warning** in 169.92s. All four failures are stale regression assertions; none exercises a failed runtime/product behavior:
+
+1. `test_saved_session_restores_before_provider_refresh` still required the old comment phrase “Stale-while-revalidate” after the corrective deliberately renamed the contract to “Saved-session restore is read-first.”
+2. `test_saved_session_restore_retries_only_transient_cold_start_failures` still hard-coded the pre-corrective mobile recovery cache key instead of the new content-derived key.
+3. and 4. two readiness/static tests still hard-coded the pre-corrective Home cache key instead of the changed Home bundle's content-derived key.
+
+PR #413 was immediately returned to draft before changing the head. The correction is **test-only**:
+- preserve the same restore-order assertion but bind it to the accepted read-first wording;
+- compute the mobile recovery Git-blob delivery key from the actual bundle bytes;
+- compute the Home Git-blob delivery key from the actual bundle bytes.
+
+No runtime/product/model file changes are authorized by this gate result. The failed Stable run is superseded evidence and must not be used for merge. The new exact draft head must pass focused validation first; only then may it be marked ready for a fresh Stable full-suite gate.
