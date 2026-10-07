@@ -602,3 +602,28 @@ Static identities at this checkpoint:
 - `product_shell.js` blob `190a01ee27f9d5ed5d1270e54a207a343d1984cb` → index outer key `git-190a01ee27f9`.
 
 No accepted Current/Dynasty/Simulation/P0 semantics changed. Focused validation is the next gate; no full suite is authorized until the exact corrective head is stable.
+
+
+### 2026-10-07 — #414 physical-target focused validation green
+Draft PR #414 exact executable/test head `379d329f0ab3d8fd43b5064b5b154f05484997dd` is focused-green.
+
+Focused evidence:
+- `League Atlas North Star focused validation` `37654998452`: success; JavaScript syntax passed; **125 focused tests passed / 1 warning**; real 12-team Atlas composition sanity passed; final live-provider authority audit passed; evidence artifact `11498456092` uploaded.
+- `CI` `37654998546`: success.
+- `Home North Star focused validation` `37654998476`: success.
+- `Franchise North Star focused validation` `37654998444`: success.
+- `Live Forecast corrective trace` `37654998538`: success.
+- `Corrective live provider numerical trace` `37654998451`: success.
+- `PR164 focused corrective regression` `37654998484`: success.
+- `Stable full suite` `37654998440` correctly skipped while the PR remained draft.
+
+The first focused Atlas run on the earlier head failed only four stale physical-acceptance assertions that explicitly required the superseded four-column/overflow-visible iPhone behavior and old CSS cache key. Those tests were updated to the accepted one-row horizontal-scroll contract; no product behavior was reverted.
+
+Physical-target regressions now directly lock:
+- mixed-vintage FUMBLES_LOST current ROS rows advance their `as_of` to the real authority-valid cutoff, preserve provenance, and pass the unchanged season roll-forward PIT fence;
+- Atlas CSS delivery key matches the CSS Git blob;
+- Safari receives literal per-row track counts/widths rather than `repeat(var(...))`;
+- no mobile canonical-map rule can restore the legacy four-column template;
+- compressed iPhone Atlas retains `overflow-x:auto` / `overflow-y:hidden`, sticky Franchise and no vertical matrix cap.
+
+No executable work remains planned. After this documentation-only checkpoint head receives ordinary draft focused checks, mark that exact head ready for the single Stable full-suite gate.
