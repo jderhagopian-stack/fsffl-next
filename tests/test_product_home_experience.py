@@ -116,3 +116,70 @@ def test_franchise_and_shell_delivery_keys_are_content_bound() -> None:
         f"/static/product_shell.js?v=20261004-safari-restore380&c=git-{shell_prefix}"
         in INDEX
     )
+
+
+def test_shared_readiness_keeps_compact_governed_status_contract() -> None:
+    for label in (
+        "Preparing current intelligence…",
+        "Building projections…",
+        "Refreshing league state…",
+        "Running season outlook…",
+        "Building market values…",
+        "Attaching current intelligence…",
+        "Build lifecycle complete",
+        "Current core runtime fully available",
+    ):
+        assert label in SHELL
+    assert "min-height:32px" in SHELL
+    assert "height:2px" in SHELL
+    assert "function fsfflSharedReadinessHost()" in SHELL
+    assert "document.querySelector('#fsffl-sync-state')" in SHELL
+    assert "fsffl-shared-readiness-host" in SHELL
+    assert "display:block!important;pointer-events:auto;overflow:hidden" in SHELL
+    assert "white-space:normal" in SHELL
+    assert "overflow-wrap:anywhere" not in SHELL
+    assert "overflow-wrap:normal;word-break:normal" in SHELL
+
+
+def test_shared_readiness_tracks_status_on_every_route_without_starting_model_work() -> None:
+    readiness = SHELL.split("const FSFFL_SHARED_READINESS_STEPS=7;", 1)[1].split(
+        "function productSurfaceError", 1
+    )[0]
+    assert "fsffl:intelligence-status-updated" in SHELL
+    assert "fsffl:product-context-updated" in SHELL
+    assert "fsffl:sync-state" in SHELL
+    assert "setInterval(" in readiness
+    assert "2500" in readiness
+    assert "if(!status.connected" in readiness
+    assert "node.hidden=true" in readiness
+    assert "fsfflSharedReadinessJobActive" in readiness
+    for forbidden in (
+        "/api/intelligence/jobs",
+        "/api/intelligence/refresh-forecasts",
+        "/api/what-if",
+        "/api/opportunities/workspace",
+        "/api/trade-center/analyze",
+        "/api/trade-center/simulate",
+    ):
+        assert forbidden not in readiness
+
+
+def test_manual_readiness_refresh_still_invokes_governed_intelligence_lifecycle() -> None:
+    refresh = (STATIC / "forecast_refresh.js").read_text(encoding="utf-8")
+    assert "window.fsfflManualIntelligenceRefresh?.()" in SHELL
+    assert "window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh" in refresh
+
+
+def test_unrelated_static_delivery_keys_remain_intact_during_home_retirement() -> None:
+    assert "/static/app.js?v=20261004-safari-restore380" in INDEX
+    mobile_prefix = _git_blob_prefix(STATIC / "mobile_safari_recovery.js")
+    assert (
+        f"/static/mobile_safari_recovery.js?v=20261004-safari-restore380&c=git-{mobile_prefix}"
+        in INDEX
+    )
+
+
+def test_document_shell_contains_no_literal_escape_text() -> None:
+    assert r"\n" not in INDEX
+    head = INDEX.split("</head>", 1)[0]
+    assert r"\n" not in head
