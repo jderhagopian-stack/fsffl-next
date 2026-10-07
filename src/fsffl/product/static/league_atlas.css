@@ -273,11 +273,9 @@
   .league-atlas-north-star .league-position-section{padding:10px!important}
   .league-atlas-north-star .league-position-section .league-section-heading{gap:5px;margin-bottom:7px}
   .league-atlas-north-star .league-position-section .league-section-heading small{line-height:1.25}
-  .league-atlas-north-star .league-edge-map{overflow-x:visible!important}
+  .league-atlas-north-star .league-edge-map{overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;-webkit-overflow-scrolling:touch!important}
   .league-atlas-north-star .league-edge-map .league-edge-row{
-    min-width:0!important;
-    width:100%!important;
-    grid-template-columns:minmax(82px,1.32fr) repeat(4,minmax(0,1fr))!important;
+    min-height:0!important;
   }
   .league-atlas-north-star .league-edge-map .league-edge-row>span{padding:4px 5px!important}
   .league-atlas-north-star .league-edge-map .league-edge-team strong{
@@ -377,11 +375,9 @@
   .league-atlas-north-star .league-position-lens-wrap{width:100%;max-width:none;justify-items:start}
   .league-atlas-north-star .league-position-lens-wrap>small{text-align:left;font-size:7.5px}
   .league-atlas-north-star .league-position-lens button{min-height:30px;padding:5px 9px;font-size:8px}
-  .league-atlas-north-star .league-edge-map{overflow-x:visible!important}
+  .league-atlas-north-star .league-edge-map{overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;-webkit-overflow-scrolling:touch!important}
   .league-atlas-north-star .league-edge-map .league-edge-row{
-    min-width:0!important;
-    width:100%!important;
-    grid-template-columns:minmax(80px,1.25fr) repeat(4,minmax(0,1fr))!important;
+    min-height:0!important;
   }
   .league-atlas-north-star .league-edge-map .league-edge-row>span{padding:3px 4px!important}
   .league-atlas-north-star .league-edge-map .league-edge-cell{min-height:43px!important;padding:2px!important}
@@ -485,7 +481,6 @@
   .league-atlas-north-star .league-edge-map .league-edge-row{
     min-height:0!important;
     height:31px!important;
-    grid-template-columns:minmax(78px,1.22fr) repeat(4,minmax(0,1fr))!important;
   }
   .league-atlas-north-star .league-edge-map .league-edge-row.header{height:25px!important}
   .league-atlas-north-star .league-edge-map .league-edge-row>span{padding:2px 4px!important}
@@ -554,11 +549,10 @@
   .league-atlas-north-star.ns-app-compressed .league-edge-matrix{
     max-height:none!important;
     height:auto!important;
-    overflow:visible!important;
-    overflow-x:visible!important;
-    overflow-y:visible!important;
-    overscroll-behavior:auto!important;
-    -webkit-overflow-scrolling:auto!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-x:contain!important;
+    -webkit-overflow-scrolling:touch!important;
   }
   .league-atlas-north-star.ns-app-compressed .league-edge-map::-webkit-scrollbar,
   .league-atlas-north-star.ns-app-compressed .league-edge-matrix::-webkit-scrollbar{
