@@ -4,7 +4,10 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from fsffl.forecast.in_season_orchestration import build_governed_in_season_outlook
+from fsffl.forecast.in_season_orchestration import (
+    build_governed_in_season_outlook,
+    fill_current_ros_coverage_gaps,
+)
 from fsffl.forecast.in_season_runtime import (
     NamedInSeasonProjectionFetcher,
     build_in_season_forecasts,
@@ -427,3 +430,164 @@ def test_governed_outlook_uses_completed_actuals_only_after_week_18(monkeypatch)
     assert season.metric == ForecastMetric.FANTASY_POINTS
     assert season.distribution.mean == pytest.approx(18.0)
     assert season.distribution.stddev == 0.0
+
+
+def _fantasy_points_forecast(
+    *,
+    horizon: ForecastHorizon,
+    mean: float,
+    source: str,
+) -> ForecastObservation:
+    as_of = datetime(2026, 10, 7, 20, 0, tzinfo=UTC)
+    return ForecastObservation(
+        player_id="p1",
+        position=Position.RB,
+        horizon=horizon,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=(
+            datetime(2026, 9, 1, tzinfo=UTC)
+            if horizon == ForecastHorizon.SEASON
+            else datetime(2026, 10, 6, tzinfo=UTC)
+        ),
+        period_end=datetime(2027, 1, 5, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=mean, stddev=20.0),
+        source=source,
+        model_version="test-fantasy-points-v1",
+        as_of=as_of,
+        provenance=Provenance(
+            source=source,
+            retrieved_at=as_of,
+            effective_at=as_of,
+        ),
+    )
+
+
+def test_current_ros_gap_uses_governed_remaining_prior_without_zero_imputation():
+    preseason = _fantasy_points_forecast(
+        horizon=ForecastHorizon.SEASON,
+        mean=170.0,
+        source="fsffl:preseason-authority",
+    )
+
+    forward, fallback_count = fill_current_ros_coverage_gaps(
+        _state(),
+        current_ros_forecasts=(),
+        preseason_season_forecasts=(preseason,),
+        scoring_gap_positions={"p1": Position.RB},
+        completed_through_week=4,
+        as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
+    )
+
+    assert fallback_count == 1
+    assert len(forward) == 1
+    assert forward[0].player_id == "p1"
+    assert forward[0].source == "fsffl:preseason_remaining_prior"
+    assert forward[0].horizon == ForecastHorizon.REST_OF_SEASON
+    assert forward[0].distribution.mean > 0.0
+
+
+def test_current_ros_authority_wins_over_preseason_gap_fallback_for_supported_player():
+    current = _fantasy_points_forecast(
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        mean=123.0,
+        source="fsffl:current-ros-authority",
+    )
+    preseason = _fantasy_points_forecast(
+        horizon=ForecastHorizon.SEASON,
+        mean=170.0,
+        source="fsffl:preseason-authority",
+    )
+
+    forward, fallback_count = fill_current_ros_coverage_gaps(
+        _state(),
+        current_ros_forecasts=(current,),
+        preseason_season_forecasts=(preseason,),
+        scoring_gap_positions={"p1": Position.RB},
+        completed_through_week=4,
+        as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
+    )
+
+    assert fallback_count == 0
+    assert forward == (current,)
+
+
+def test_current_ros_does_not_backfill_player_without_proven_scoring_gap():
+    preseason = _fantasy_points_forecast(
+        horizon=ForecastHorizon.SEASON,
+        mean=170.0,
+        source="fsffl:preseason-authority",
+    )
+
+    forward, fallback_count = fill_current_ros_coverage_gaps(
+        _state(),
+        current_ros_forecasts=(),
+        preseason_season_forecasts=(preseason,),
+        scoring_gap_positions={},
+        completed_through_week=4,
+        as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
+    )
+
+    assert forward == ()
+    assert fallback_count == 0
+
+
+def test_in_season_runtime_retains_partial_scoring_rows_for_gap_eligibility():
+    state = _state()
+    rules = state.league.rules.model_copy(
+        update={
+            "scoring": state.league.rules.scoring
+            + (ScoringRule(stat="fum_lost", points=-1.0),)
+        }
+    )
+    state = state.model_copy(
+        update={"league": state.league.model_copy(update={"rules": rules})}
+    )
+    fetchers = (
+        NamedInSeasonProjectionFetcher(
+            source_id="one",
+            fetch=lambda season, week: _snapshot("one", rush_yards=700.0),
+        ),
+        NamedInSeasonProjectionFetcher(
+            source_id="two",
+            fetch=lambda season, week: _snapshot("two", rush_yards=900.0),
+        ),
+    )
+
+    result = build_in_season_forecasts(
+        state,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START,
+        period_end=PERIOD_END,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+    )
+
+    assert result.fantasy_point_forecasts == ()
+    assert len(result.partial_fantasy_point_forecasts) == 1
+    partial = result.partial_fantasy_point_forecasts[0]
+    assert partial.player_id == "p1"
+    assert partial.omitted_rule_stats == ("fum_lost",)
+
+
+def test_current_ros_gap_rebinds_preseason_position_to_current_partial_position():
+    preseason = _fantasy_points_forecast(
+        horizon=ForecastHorizon.SEASON,
+        mean=170.0,
+        source="fsffl:preseason-authority",
+    )
+    assert preseason.position == Position.RB
+
+    forward, fallback_count = fill_current_ros_coverage_gaps(
+        _state(),
+        current_ros_forecasts=(),
+        preseason_season_forecasts=(preseason,),
+        scoring_gap_positions={"p1": Position.WR},
+        completed_through_week=4,
+        as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
+    )
+
+    assert fallback_count == 1
+    assert len(forward) == 1
+    assert forward[0].player_id == "p1"
+    assert forward[0].position == Position.WR
+    assert forward[0].source == "fsffl:preseason_remaining_prior"

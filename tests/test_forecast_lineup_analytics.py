@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.product.intelligence_runtime import build_forecast_lineup_analytics
 from fsffl.state.models import League, LeagueRules, LeagueState, LineupRequirement, Player, PlayerState, Position, Provenance, RosterEntry, RosterSlot, Team, TeamState
+from fsffl.team_utility.lineup import optimize_team_lineup
 
 AS_OF = datetime(2026, 9, 5, 20, tzinfo=UTC)
 
@@ -69,3 +70,37 @@ def test_lineup_analytics_uses_next4_and_leaves_undercovered_team_missing() -> N
     alpha = next(view for view in result.team_views if view.team_id == "a")
     assert alpha.optimized_lineup is not None
     assert alpha.optimized_lineup.assignments[0].player_id == "p1"
+
+
+def test_equivalent_qb_superflex_assignment_puts_higher_outlook_in_fixed_qb() -> None:
+    base = _state()
+    league = base.league.model_copy(
+        update={
+            "rules": base.league.rules.model_copy(
+                update={
+                    "lineup": (
+                        LineupRequirement(slot=RosterSlot.QB, count=1),
+                        LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
+                    )
+                }
+            )
+        }
+    )
+    state = base.model_copy(update={"league": league})
+    forecasts = (
+        _forecast("p1", Position.QB, 327.1),
+        _forecast("p2", Position.QB, 321.4),
+    )
+
+    lineup = optimize_team_lineup(
+        state,
+        forecasts,
+        team_id="a",
+        as_of=AS_OF,
+        horizon=ForecastHorizon.SEASON,
+    )
+    by_slot = {assignment.slot: assignment for assignment in lineup.assignments}
+
+    assert by_slot[RosterSlot.QB].player_id == "p1"
+    assert by_slot[RosterSlot.SUPERFLEX].player_id == "p2"
+    assert lineup.expected_points == 648.5

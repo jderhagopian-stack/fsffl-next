@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: MERGED + DEPLOYED — hosted runtime accepted; physical Current surface acceptance pending
+Status: PHYSICAL ACCEPTANCE REOPENED — #408 core authority accepted; bounded Current presentation/coverage corrective active
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -276,3 +276,143 @@ Accepted implementation now live:
 - Dynasty/#370, Career Intrinsic, provider-refresh lifecycle and Simulation production semantics are unchanged.
 
 **MANAGEMENT GATE — CURRENT POSITION & DEPTH:** code, exact-head validation, merge, static delivery identity and hosted startup/runtime deployment are accepted. A final authenticated iPhone/Safari Current-lens check remains the only unproven presentation layer: confirm the Current grid renders configured lineup-slot columns, fixed-position ranks do not absorb FLEX/SUPERFLEX contribution, and the displayed Current evidence copy reflects completed actuals + ROS. Do not reopen settled model/cache/terminal-season findings unless contradictory hosted or physical evidence appears.
+
+
+### 2026-10-07 — physical iPhone/Safari acceptance failure after #408
+Management supplied authenticated iPhone/Safari physical evidence after live deploy `dep-db2rr1id0e5s73e6o7fg`. Contradictory evidence reopens only the affected Current Position & Depth acceptance layer under OPERATING_PROTOCOL.md; the lower-level #408 authority/slot-attribution work remains accepted where physically confirmed.
+
+Physical evidence / accepted observations:
+- the core fixed-slot vs FLEX/SUPERFLEX attribution is working;
+- Current physical acceptance still fails because FLEX/RB/WR/TE are league-wide unavailable;
+- Current column order is not the desired canonical scan order;
+- Current position-detail player ordering, starter/depth counts and summary evidence are not yet slot-specific/product-correct;
+- Current drawer still exposes team-wide fragility and Long-Term/Career Intrinsic shadow copy that do not belong in the Current positional summary;
+- portrait iPhone layout wraps the slot headers instead of keeping one horizontally scrollable grid.
+
+Management decisions for this corrective:
+1. Trace why FLEX/RB/WR/TE are league-wide unavailable. Correct the **underlying governed coverage issue** only if an already accepted fallback exists; do not weaken fail-closed semantics or convert missing evidence to zero.
+2. Current grid canonical order is `QB, RB, WR, TE, FLEX, SUPERFLEX, K, DST`, filtered to configured slots.
+3. Current position-detail players sort by **Current Intrinsic Value descending**. Role/assignment remains visible. This is presentation ordering only; Value authority remains upstream.
+4. Current drawer starter/depth counts are **specific to the selected slot**. A player assigned to SUPERFLEX does not count as a starter in the QB drawer merely because his actual position is QB.
+5. Remove team-wide fragility from positional summary unless governed slot-specific resilience evidence exists. No new resilience model is authorized in this tranche.
+6. Remove Long-Term/Career Intrinsic shadow copy from the **Current** drawer. Dynasty player/detail behavior remains unchanged.
+7. Portrait iPhone Current layout must retain one horizontally scrollable grid with all configured slot columns on the same row; headers must not wrap into a second line/row.
+8. Preserve lineup optimizer authority: maximize governed annual Current season-outlook points. Among equivalent optimal assignments, the higher season-outlook eligible player occupies the fixed position before FLEX/SUPERFLEX. Do not hard-code player-specific ordering.
+9. Management's live physical example is Dak Prescott `327.1` vs Lamar Jackson `321.4` actuals+ROS; Dak at QB and Lamar at SUPERFLEX is currently consistent with the accepted tie/assignment rule. Any disagreement with those underlying projections is a separate Forecast-evidence question and is outside this corrective.
+10. Preserve accepted actuals+ROS authority, Dynasty/#370, Simulation, and P0 architecture.
+
+Validation protocol:
+- keep implementation PR draft while correcting;
+- use focused Current/Atlas/lineup coverage validation during development;
+- mark one exact stable head ready only after focused evidence is green;
+- run exactly one stable full-suite merge gate for that corrective head;
+- merge/deploy/checkpoint only if green.
+
+**Do not broaden scope.** In particular, do not redesign Forecast, change Dynasty/#370, alter Simulation production semantics, add a new resilience model, or reopen P0 lifecycle/publication architecture.
+
+
+### 2026-10-07 — physical failure root-cause trace before corrective code
+Hosted persisted evidence localizes the league-wide unavailable columns to **Forecast coverage**, not the slot-attribution guard:
+
+- latest FSFFL `league_team_views` publication inspected: State `5ca7d09323d133ea927f142d4e2eceec56bfc885006f4b57d7df8ef16d2b9e3d`, generation `b9a5eefc00274c0c167c0701141e30919b1c5f84ebf47e6d2d325109af1d93c1`;
+- Current status is `partial`; QB and SUPERFLEX are `ready`, while RB/WR/TE/FLEX are `unavailable`;
+- for all 12 teams, the optimized Current contract recorded **zero** filled RB, WR, TE and FLEX slots, while QB/SUPERFLEX filled. The fail-closed league-wide guard is therefore reporting a real upstream absence rather than mis-ranking a partially filled slot.
+
+Projection-history evidence shows the exact missing coordinate:
+- current CBS ROS snapshot supplies `FUMBLES_LOST` for QB/RB/WR/TE;
+- current Razzball ROS snapshot supplies `FUMBLES_LOST` for QB but not RB/WR/TE;
+- the live ensemble correctly requires two independent sources per player/metric group;
+- league scoring correctly treats an active scored `fum_lost` coordinate as material and refuses to interpret an undercovered coordinate as zero;
+- result: the strict current ROS scorer can produce authoritative QB fantasy points but skill-position RB/WR/TE fantasy-point rows fall out of authoritative output. That in turn leaves the optimizer with no governed RB/WR/TE candidates.
+
+An **already accepted Forecast fallback exists** and will be reused rather than weakening that strictness:
+- the immutable preseason baseline is already the governed fallback when current provider output fails;
+- `remaining_prior_from_preseason()` already converts that accepted season prior to only the unplayed schedule before completed actuals are added;
+- the accepted preseason-baseline authority loader already applies Forecast's first-party `FUMBLES_LOST` supplement when the league scores that coordinate, preserving the existing strict scorer and provenance.
+
+Bounded corrective design:
+1. keep live current ROS authoritative wherever the strict scorer produces a player fantasy-point row;
+2. for a player missing from authoritative live ROS output, use that player's **already-governed preseason remaining prior** only when available;
+3. never replace a supported live player, never synthesize zero, and leave the player missing if neither authority can support him;
+4. label the mixed evidence basis explicitly so Presentation does not imply every player came from live ROS;
+5. keep the existing slot-level fail-closed rule unchanged.
+
+The preserved preseason raw baseline has enough historical subject coverage to fill the configured offensive starter counts for the current FSFFL rosters once its accepted scoring/supplement path is applied; this is not a player-specific exception.
+
+
+### 2026-10-07 — physical corrective focused validation green
+PR #411 remains draft. Executable corrective head `532568a790d0999aaca406ca3941f0c72d1d5b93` is focused-green after the physical acceptance correction.
+
+Implemented boundaries:
+- strict live ROS Forecast scoring remains unchanged; live rows remain authoritative wherever supported;
+- player-level holes in strict live ROS fantasy-point output may consume only the already-governed immutable preseason **remaining prior**, scored through the accepted preseason authority path (including the existing first-party FUMBLES_LOST supplement when required);
+- no missing coordinate or missing player is converted to zero; unsupported evidence remains absent and the existing slot-level fail-closed rule is unchanged;
+- Current slot order is canonical `QB, RB, WR, TE, FLEX, SUPERFLEX, K, DST`, filtered to configured lineup slots;
+- Current drawer rows sort by Current Intrinsic Value descending while preserving Current slot assignment/role and actuals+ROS evidence;
+- Current starter count is selected-slot-specific: a SUPERFLEX-assigned QB is eligible depth in the QB drawer but not a QB starter;
+- Current positional summary no longer displays team-wide resilience/fragility without governed slot-specific resilience evidence;
+- Long-Term/Career Intrinsic shadow evidence remains Dynasty-only and does not render in Current drawer rows/copy;
+- portrait Current matrix uses one non-wrapping horizontally scrollable row for all configured slot columns;
+- optimizer production code is unchanged. A generic regression locks the accepted equivalent-optimum preference that the higher season-outlook eligible QB occupies fixed QB before SUPERFLEX.
+
+Focused evidence on exact executable head:
+- `League Atlas North Star focused validation` `37571685957`: success; JavaScript syntax passed; **116 focused tests passed / 1 warning**; real 12-team Atlas composition sanity passed; final live-provider authority audit passed; evidence artifact uploaded;
+- `CI` `37571685915`: success;
+- `Home North Star focused validation` `37571685891`: success;
+- `Franchise North Star focused validation` `37571686004`: success;
+- `Live Forecast corrective trace` `37571685940`: success;
+- `Corrective live provider numerical trace` `37571685890`: success;
+- `PR164 focused corrective regression` `37571685914`: success;
+- `Stable full suite` remained correctly skipped while PR #411 was draft.
+
+The first draft attempt exposed only three stale static assertions from the superseded Current drawer semantics; they were corrected as tests, not by reverting the accepted product behavior. No unresolved executable finding remains.
+
+Static delivery identities:
+- `league_comparison.js` blob `2aed785d9c24b41590f6fc45e8496899f19abcde` → inner Atlas key `20261005-atlas-2aed785d9c24`;
+- `product_shell.js` blob `abd5ed4d63ee760fbf7ce3cc578d35305d199dab` → outer index key `git-abd5ed4d63ee`.
+
+No further executable changes are planned. After this durable checkpoint push receives the ordinary draft check, mark the exact PR head ready for the single P0.6 stable full-suite gate.
+
+
+### 2026-10-07 — #411 final-gate reconciliation after fallback review
+The earlier focused-green checkpoint at `532568a790d0999aaca406ca3941f0c72d1d5b93` was superseded before final promotion by two bounded Codex findings. Both are now addressed without broadening Current authority:
+
+1. **Scoring-gap-only fallback.** Current no longer fills every player absent from authoritative ROS output. `InSeasonForecastRuntimeResult` now retains strict scorer partial fantasy-point rows. The preseason remaining-prior substitution is eligible only for player IDs that have a current partial row with omitted active scoring coordinates. A player absent from current raw/scored evidence entirely is not backfilled. Live authoritative rows still win, missing evidence is never zero-imputed, and slot fail-closed semantics remain unchanged.
+2. **Optional preseason artifact.** The preserved preseason authority is now an optional Current fallback input. If neither the league preseason baseline nor governed annual preseason snapshot exists, Current receives an empty fallback input rather than failing before healthy live ROS or the Week-18 completed-actuals-only path can run.
+
+Review-thread reconciliation:
+- P1 scoring-gap finding was answered and resolved against exact corrective code;
+- P2 missing-preseason-artifact finding was answered and resolved against exact corrective code;
+- focused regressions cover positive scoring-gap substitution, no-proven-gap non-substitution, retained strict-scorer partial evidence, and missing-preserved-prior optionality.
+
+Validation after those executable corrections:
+- corrective executable head `46e8a8b77cff1d05a4c27301cadea7bff3375310` passed all draft focused workflows: CI `37572454202`, League Atlas `37572454223`, Home `37572454249`, Franchise `37572454168`, Live Forecast corrective trace `37572454146`, corrective live-provider numerical trace `37572454175`, and PR164 corrective regression `37572454214`;
+- marking that head ready correctly triggered Stable full-suite run `37609333773`. The gate exposed **one stale hosted-orchestration test double only**: it mocked the pre-correction runtime shape with `fantasy_point_forecasts` but omitted the new `partial_fantasy_point_forecasts` field, causing the mocked healthy-current path to raise `AttributeError` and fall into the preserved-prior branch. The result was **2,221 passed / 1 failed / 1 warning**; this was not a production behavior defect;
+- PR #411 was returned to draft before changing the head;
+- test-only head `3da42baa6983867d9e225c5a0f144b4e02f5cd23` updates that mock to the current runtime contract with `partial_fantasy_point_forecasts=()`. No runtime/product/model file changed after `46e8a8b7`;
+- all draft focused workflows on `3da42baa6983867d9e225c5a0f144b4e02f5cd23` are green: CI `37609891170`, League Atlas `37609891201`, Home `37609891195`, Franchise `37609891297`, Live Forecast corrective trace `37609891192`, PR164 corrective regression `37609891275`, and corrective live-provider numerical trace `37609891183` (green on retry after a transient one-source provider-health result).
+
+No executable work remains. The final PR-head movement after this section is documentation-only checkpointing. The next action is to mark that exact documentation-final PR head ready and run the Stable full suite once; if green, merge/deploy and record hosted identity. Physical authenticated iPhone/Safari re-acceptance remains required after deploy.
+
+
+### 2026-10-07 — #411 position-rebind review correction
+The documentation-final ready review surfaced one additional bounded P2 edge case in the new player-level preseason gap fallback: eligibility was keyed by current partial-evidence player ID, but the accepted preseason row could still carry a stale preseason position. Because completed actuals compose on `(player_id, position, metric)`, a real post-preseason position change could omit completed production from that player's Current season outlook.
+
+Narrow correction only:
+- player-level gap eligibility remains restricted to strict current scorer partial rows with omitted active scoring coordinates;
+- the eligibility evidence now carries `player_id -> current partial-row position`, not just a set of player IDs;
+- an eligible preseason remaining-prior row is rebound to that current canonical position before duplicate checking and completed-actuals + ROS composition;
+- no unsupported player is newly admitted, no value is zero-imputed, and full-current-ROS rows remain authoritative;
+- a focused regression proves an RB-labeled preseason row admitted by a current WR partial row is emitted as WR before season composition.
+
+Corrective executable head `60f12f8141ef31dcbbd864600a5587823b620865` passed all draft focused workflows:
+- CI `37611152491`: success;
+- League Atlas North Star `37611152545`: success;
+- Home North Star `37611152599`: success;
+- Franchise North Star `37611152461`: success;
+- Live Forecast corrective trace `37611152397`: success;
+- corrective live-provider numerical trace `37611152448`: success;
+- PR164 focused corrective regression `37611152451`: success;
+- Stable full suite remained correctly skipped while draft (`37611152427`).
+
+The previously green Stable full-suite run `37610536097` on documentation-final head `c6318a8b7e7ad0cec5d94f2f3c9f2b60ca882a8f` (**2,222 passed / 1 warning**) is superseded by this bounded executable correction and is not being used as merge evidence. No other runtime/product/model work was changed. After this checkpoint-only head movement, the exact final PR head must receive a fresh Stable full-suite gate before merge.

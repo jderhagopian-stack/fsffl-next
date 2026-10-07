@@ -29,7 +29,7 @@ def test_league_structure_visualization_does_not_create_model_authority() -> Non
 
     assert "no arbitrary pick-value master score" in source
     assert "not trade recommendations" in source
-    assert "does not invent a position fragility score" in source
+    assert "No team-wide fragility is shown without governed slot-specific resilience evidence" in source
     assert '"presentation_creates_model_truth": False' in contract
     assert '"team_intrinsic_total_created": False' in contract
     assert '"summed_market_percentiles_created": False' in contract

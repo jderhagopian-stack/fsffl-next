@@ -37,7 +37,7 @@ def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authorit
     assert "api(`/api/league/dynasty-position-rooms?${query}`)" in source
     assert "raw holistic career-forward reference" in source
     assert "rostered · breadth" in source
-    assert "dynasty?player.projected_starter:Boolean(currentAssigned(player))" in source
+    assert "dynasty?player.projected_starter:currentAssigned(player)===room.position" in source
     assert "peerRooms.filter(item=>item.room_raw===row.room_raw).length" in source
     assert "api('/api/value/long-term-intrinsic-shadow-v1')" in source
     assert "Array.isArray(longTerm?.uncertainty?.long_horizon_y4_y7)" in source
@@ -404,6 +404,46 @@ def test_current_room_drawer_uses_actuals_plus_ros_and_slot_eligibility() -> Non
     assert "actuals + ROS pts" in drawer
     assert "Current strength includes only players assigned to this configured lineup slot" in drawer
     assert "FLEX/SUPERFLEX are separate columns" in drawer
+
+
+def test_current_room_drawer_sorts_by_current_intrinsic_and_counts_selected_slot_only() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    drawer = source[
+        source.index("function laRoomDrawer()"):
+        source.index("function laPickDrawer()")
+    ]
+    assert "intrinsic_value_index" in drawer
+    assert "if(Math.abs(bv-av)>1e-12)return bv-av" in drawer
+    assert "currentAssigned(player)===room.position" in drawer
+    assert "selected-slot" in drawer
+    assert "Player rows are ordered by Current Intrinsic Value" in drawer
+
+
+def test_current_room_drawer_excludes_unowned_fragility_and_long_term_shadow() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    drawer = source[
+        source.index("function laRoomDrawer()"):
+        source.index("function laPickDrawer()")
+    ]
+    assert "const resilience=dynasty?laResilience(view):null" in drawer
+    assert "longTerm=dynasty?" in drawer
+    assert "longTermEvidence=dynasty?" in drawer
+    assert "No team-wide fragility is shown without governed slot-specific resilience evidence" in drawer
+
+
+def test_current_position_grid_stays_one_horizontal_scroll_row_on_portrait() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "Math.max(1,positions.length)*82" in source
+    assert ".league-edge-matrix{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch" in source
+    assert ".league-edge-row.header>span{white-space:nowrap}" in source
+    assert "repeat(var(--league-position-columns,4),minmax(82px,.7fr))" in source
+    assert "repeat(var(--league-position-columns,4),minmax(78px,.7fr))" in source
+
+
+def test_current_position_copy_discloses_governed_gap_fallback() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "current_rest_of_season_with_preseason_gap_fallback" in source
+    assert "current ROS with governed preseason gap fallback" in source
 
 
 def test_open_atlas_reloads_when_publication_generation_advances() -> None:

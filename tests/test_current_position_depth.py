@@ -12,10 +12,11 @@ from fsffl.forecast.models import (
     ForecastMetric,
     ForecastObservation,
 )
-from fsffl.product import current_position_depth
+from fsffl.product import current_position_depth, in_season_forecast_routes
 from fsffl.product.current_position_depth import (
     build_current_position_depth_from_outlook,
     build_governed_current_position_depth,
+    configured_current_slots,
 )
 from fsffl.product.runtime import PrivateBetaRuntimeStore
 from fsffl.product.webapp import create_app
@@ -359,3 +360,62 @@ def test_hosted_current_provider_does_not_cache_by_state_only() -> None:
     assert "_current_position_depth_lock" not in source
     assert "ROS and completed-week evidence can advance while canonical LeagueState identity" in source
     assert "return build_governed_current_position_depth(" in source
+
+
+def test_current_slots_use_canonical_scan_order_not_provider_lineup_order() -> None:
+    base = _state()
+    league = base.league.model_copy(
+        update={
+            "rules": base.league.rules.model_copy(
+                update={
+                    "lineup": (
+                        LineupRequirement(slot=RosterSlot.FLEX, count=1),
+                        LineupRequirement(slot=RosterSlot.DST, count=1),
+                        LineupRequirement(slot=RosterSlot.WR, count=3),
+                        LineupRequirement(slot=RosterSlot.QB, count=1),
+                        LineupRequirement(slot=RosterSlot.K, count=1),
+                        LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
+                        LineupRequirement(slot=RosterSlot.TE, count=1),
+                        LineupRequirement(slot=RosterSlot.RB, count=2),
+                    )
+                }
+            )
+        }
+    )
+    state = base.model_copy(update={"league": league})
+
+    configured = configured_current_slots(state)
+
+    assert [(slot.value, count) for slot, count in configured] == [
+        ("QB", 1),
+        ("RB", 2),
+        ("WR", 3),
+        ("TE", 1),
+        ("FLEX", 1),
+        ("SUPERFLEX", 1),
+        ("K", 1),
+        ("DST", 1),
+    ]
+
+
+def test_current_preseason_fallback_is_optional_when_preserved_artifact_is_missing(
+    monkeypatch,
+) -> None:
+    def unavailable_loader(_store):
+        def load(_state):
+            raise ValueError("preserved preseason Year-1 baseline is unavailable")
+        return load
+
+    monkeypatch.setattr(
+        in_season_forecast_routes,
+        "make_preseason_baseline_authority_loader",
+        unavailable_loader,
+    )
+
+    assert (
+        in_season_forecast_routes.load_preseason_season_forecasts(
+            object(),
+            _state(),
+        )
+        == ()
+    )

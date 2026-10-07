@@ -39,7 +39,7 @@ def test_league_atlas_composes_governed_contracts_without_team_value_fabrication
     assert "api('/api/values')" not in source
     assert "team_cardinal_portfolios" not in source
     assert "no arbitrary pick-value master score" in source
-    assert "does not invent a position fragility score" in source
+    assert "No team-wide fragility is shown without governed slot-specific resilience evidence" in source
     assert "acceptance_probability" not in source
 
 
