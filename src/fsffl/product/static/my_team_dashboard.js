@@ -128,6 +128,7 @@ Object.assign(fsfflMyTeamState,{
   franchiseAssetLens:'market',
   franchisePickLens:'count',
   franchiseExpandedPickSeason:null,
+  franchisePublicationGenerationId:null,
 });
 const FSFFL_FRANCHISE_GAME_BASIS=17;
 const FSFFL_FRANCHISE_POSITIONS=['QB','RB','WR','TE'];
@@ -135,12 +136,42 @@ const FSFFL_FRANCHISE_POSITIONS=['QB','RB','WR','TE'];
 function franchiseNSStateId(){
   return fsfflMyTeamState.view?.context?.league_state_id||null;
 }
+function franchiseNSResponseStateId(view,league){
+  return{
+    viewStateId:view?.context?.league_state_id||null,
+    leagueStateId:league?.league_state_id||null,
+    viewGenerationId:view?.publication_generation_id??null,
+    leagueGenerationId:league?.publication_generation_id??null,
+  };
+}
+function franchiseNSResponsesAligned(view,league,expectedStateId){
+  const identity=franchiseNSResponseStateId(view,league);
+  return identity.viewStateId===expectedStateId
+    && identity.leagueStateId===expectedStateId
+    && identity.viewGenerationId===identity.leagueGenerationId;
+}
+async function franchiseNSLoadAlignedPair(expectedStateId){
+  for(let attempt=0;attempt<4;attempt+=1){
+    const results=await Promise.all([
+      api('/api/my-team'),
+      api('/api/league/team-views'),
+    ]);
+    if(state?.context?.state_id!==expectedStateId)return null;
+    if(franchiseNSResponsesAligned(results[0],results[1],expectedStateId))return results;
+    if(attempt<3)await new Promise(resolve=>setTimeout(resolve,75));
+  }
+  throw new Error('Franchise publication changed while loading; keeping last-good view.');
+}
 function franchiseNSOutcome(){
   return fsfflMyTeamState.view?.utility?.competitive_outcome||null;
 }
 function franchiseNSCurrentContract(){
   const current=fsfflMyTeamState.currentPositionDepth;
-  return current&&current.league_state_id===franchiseNSStateId()?current:null;
+  const viewGeneration=fsfflMyTeamState.view?.publication_generation_id??null;
+  return current
+    && current.league_state_id===franchiseNSStateId()
+    && viewGeneration===fsfflMyTeamState.franchisePublicationGenerationId
+    ?current:null;
 }
 function franchiseNSPositionRows(){
   const current=franchiseNSCurrentContract(),teamId=state?.context?.team_id;
@@ -422,6 +453,8 @@ function renderFranchiseNorthStar(){
   panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchiseTab=button.dataset.franchiseTab;renderFranchiseNorthStar()}));
   panel.querySelectorAll('[data-franchise-position-lens]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchisePositionLens=button.dataset.franchisePositionLens==='index'?'index':'rank';renderFranchiseNorthStar()}));
   panel.querySelectorAll('[data-franchise-current-slot]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;const slot=button.dataset.franchiseCurrentSlot||null;const intent={route:'league_comparison',section:'positions',teamId:state?.context?.team_id||null,position:slot,source:'franchise-overview-current'};if(typeof window.fsfflNavigateTo==='function')window.fsfflNavigateTo(intent);else if(typeof setRoute==='function')setRoute('league_comparison')}));
+  panel.querySelectorAll('[data-franchise-tab-open]').forEach(button=>button.addEventListener('click',()=>{const tab=button.dataset.franchiseTabOpen;if(!['roster','assets'].includes(tab))return;fsfflMyTeamState.franchiseTab=tab;renderFranchiseNorthStar()}));
+  panel.querySelectorAll('[data-franchise-route]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;const route=button.dataset.franchiseRoute;if(!route)return;const intent={route,teamId:state?.context?.team_id||null,source:'franchise-overview'};if(typeof window.fsfflNavigateTo==='function')window.fsfflNavigateTo(intent);else if(typeof setRoute==='function')setRoute(route)}));
   panel.querySelectorAll('[data-franchise-roster-filter]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchiseRosterFilter=button.dataset.franchiseRosterFilter;renderFranchiseNorthStar()}));
   panel.querySelectorAll('[data-franchise-asset-lens]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;fsfflMyTeamState.franchiseAssetLens=button.dataset.franchiseAssetLens;renderFranchiseNorthStar()}));
   panel.querySelectorAll('[data-franchise-pick-lens]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;fsfflMyTeamState.franchisePickLens=button.dataset.franchisePickLens;renderFranchiseNorthStar()}));
@@ -470,12 +503,10 @@ async function loadFranchiseNorthStar(){
     panel.innerHTML='<div class="franchise-ns-shell"><aside class="franchise-ns-forecast-strip" role="status"><strong>Loading Franchise</strong><span>Checking current or last-good published intelligence…</span></aside></div>';
   }
   try{
-    const results=await Promise.all([
-      api('/api/my-team'),
-      api('/api/league/team-views').catch(()=>({team_views:[],source_level:'unavailable',current_position_depth:null})),
-    ]);
-    if(state?.context?.state_id!==expectedStateId)return;
+    const results=await franchiseNSLoadAlignedPair(expectedStateId);
+    if(!results||state?.context?.state_id!==expectedStateId)return;
     fsfflMyTeamState.view=results[0];
+    fsfflMyTeamState.franchisePublicationGenerationId=results[0]?.publication_generation_id??null;
     if(!results[0]?.forecast_authority?.evidence_basis){
       // Without Forecast authority there is no governed starter classification.
       // Show the complete canonical roster instead of an empty "Starters" filter.
