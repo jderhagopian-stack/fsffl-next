@@ -220,7 +220,7 @@ def test_franchise_pick_labels_preserve_original_team_attribution_and_fail_close
     assert "No pick Value evidence" in NORTH_STAR
 
 
-def test_franchise_parallel_reads_require_matching_state_and_publication_generation() -> None:
+def test_franchise_parallel_reads_require_matching_target_served_state_and_generation() -> None:
     helper = NORTH_STAR.split("function franchiseNSResponseStateId(view,league){", 1)[1].split(
         "function franchiseNSOutcome(){", 1
     )[0]
@@ -230,16 +230,45 @@ def test_franchise_parallel_reads_require_matching_state_and_publication_generat
 
     assert "view?.context?.league_state_id" in helper
     assert "league?.league_state_id" in helper
+    assert "target_league_state_id" in helper
+    assert "served_league_state_id" in helper
     assert "view?.publication_generation_id" in helper
     assert "league?.publication_generation_id" in helper
-    assert "identity.viewStateId===expectedStateId" in helper
-    assert "identity.leagueStateId===expectedStateId" in helper
+    assert "identity.viewTargetStateId===expectedStateId" in helper
+    assert "identity.leagueTargetStateId===expectedStateId" in helper
+    assert "identity.viewServedStateId===identity.leagueServedStateId" in helper
+    assert "Boolean(identity.viewGenerationId)" in helper
     assert "identity.viewGenerationId===identity.leagueGenerationId" in helper
+    assert "identity.viewStateId===expectedStateId" not in helper
+    assert "identity.leagueStateId===expectedStateId" not in helper
     assert "for(let attempt=0;attempt<4;attempt+=1)" in loader
+    assert "Promise.allSettled" in loader
     assert "api('/api/my-team')" in loader
     assert "api('/api/league/team-views')" in loader
     assert "Franchise publication changed while loading; keeping last-good view." in loader
     assert "franchisePublicationGenerationId" in NORTH_STAR
+
+
+def test_franchise_league_read_failure_preserves_managed_team_tabs() -> None:
+    helper = NORTH_STAR.split("function franchiseNSManagedViewTargetsState(view,expectedStateId){", 1)[1].split(
+        "function franchiseNSResponsesAligned", 1
+    )[0]
+    loader = NORTH_STAR.split("async function franchiseNSLoadAlignedPair(expectedStateId){", 1)[1].split(
+        "function franchiseNSOutcome(){", 1
+    )[0]
+    consumer = NORTH_STAR.split("async function loadFranchiseNorthStar(){", 1)[1].split(
+        "window.renderFsfflMyTeam=loadFranchiseNorthStar", 1
+    )[0]
+
+    assert "identity.viewTargetStateId===expectedStateId" in helper
+    assert "Boolean(identity.viewServedStateId)" in helper
+    assert "Boolean(identity.viewGenerationId)" in helper
+    assert "settled[0].status!=='fulfilled'" in loader
+    assert "settled[1].status!=='fulfilled'" in loader
+    assert "return[view,null]" in loader
+    assert "results[1]?.team_views||[]" in consumer
+    assert "results[1]?.current_position_depth||null" in consumer
+    assert "results[1]?.source_level||'unavailable'" in consumer
 
 
 def test_franchise_overview_inspect_next_controls_are_bound() -> None:
