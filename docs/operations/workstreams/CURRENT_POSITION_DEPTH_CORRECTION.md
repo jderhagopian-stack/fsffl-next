@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: PHYSICAL ACCEPTANCE REOPENED — #411 live; bounded saved-session / Current presentation corrective active
+Status: PHYSICAL ACCEPTANCE REOPENED — #413 corrective focused-green; Stable full-suite gate pending
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -477,3 +477,30 @@ Implemented:
 - Safari delivery keys were refreshed for the changed Atlas, Home and saved-session bundles, with content-derived regressions preventing another stale-key shipment.
 
 Focused validation is the next gate. The implementation remains draft-only until affected Current/Atlas/Home/saved-session/Forecast tests are green. One full suite remains reserved for the exact stable ready-for-review head.
+
+
+### 2026-10-07 — #413 focused development validation green
+The bounded physical corrective is now focused-green on executable head `0d761668fdfc1d39e079c50b50cd984dd966305b`.
+
+Exact draft-head validation:
+- CI `37647777017`: **success**;
+- League Atlas North Star focused validation `37647777142`: **success**;
+- Home North Star focused validation `37647776940`: **success**;
+- Franchise North Star focused validation `37647776998`: **success**;
+- Live Forecast corrective trace `37647776949`: **success**;
+- corrective live-provider numerical trace `37647776848`: **success**;
+- PR164 focused corrective regression `37647776987`: **success**;
+- Stable full suite `37647777027`: **skipped**, correctly, because PR #413 remains draft.
+
+Two superseded focused failures on earlier head `f103ce3f34a0bf82d71bf393d7dd2bd5ef9c51b9` were development-regression alignment only, not hosted/product evidence:
+- the Current consumer mock expected the pre-opt-in argument list and was updated to assert `allow_governed_fumbles_ros_gap=True`;
+- the portrait test still asserted the prior 82px/fractional grid, while the corrective deliberately replaced it with the accepted fixed 86px one-row grid;
+- Home's suppressed legacy position cards had dead CSS selectors left behind; those selectors were removed rather than retained as dormant contradictory UI.
+
+Static delivery on the focused-green executable head is content-bound:
+- League Atlas inner key tracks the corrected `league_comparison.js` Git blob;
+- the outer Product Shell key tracks the shell Git blob;
+- direct Home and saved-session script tags carry Git-blob-derived cache-busting keys;
+- focused regressions compute these identities from the actual bytes.
+
+No executable change is planned after `0d761668...`. This checkpoint-only docs update moves the PR head but does not change runtime behavior. Keep #413 draft until the resulting exact docs-final head is focused-green. Then mark that exact head ready once to trigger the single Stable full-suite merge gate. If the full suite is green and still matches the PR head, merge/deploy; authenticated iPhone/Safari physical acceptance remains mandatory afterward.
