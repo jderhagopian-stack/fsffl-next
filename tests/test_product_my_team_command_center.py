@@ -247,9 +247,9 @@ def test_franchise_overview_inspect_next_controls_are_bound() -> None:
         "async function loadFranchiseNorthStarValueLenses", 1
     )[0]
 
-    assert "data-franchise-route="what_if"" in NORTH_STAR
-    assert "data-franchise-tab-open="roster"" in NORTH_STAR
-    assert "data-franchise-tab-open="assets"" in NORTH_STAR
+    assert 'data-franchise-route="what_if"' in NORTH_STAR
+    assert 'data-franchise-tab-open="roster"' in NORTH_STAR
+    assert 'data-franchise-tab-open="assets"' in NORTH_STAR
     assert "panel.querySelectorAll('[data-franchise-tab-open]')" in renderer
     assert "fsfflMyTeamState.franchiseTab=tab" in renderer
     assert "panel.querySelectorAll('[data-franchise-route]')" in renderer
