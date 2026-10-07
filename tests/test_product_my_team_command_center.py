@@ -220,6 +220,44 @@ def test_franchise_pick_labels_preserve_original_team_attribution_and_fail_close
     assert "No pick Value evidence" in NORTH_STAR
 
 
+def test_franchise_parallel_reads_require_matching_state_and_publication_generation() -> None:
+    helper = NORTH_STAR.split("function franchiseNSResponseStateId(view,league){", 1)[1].split(
+        "function franchiseNSOutcome(){", 1
+    )[0]
+    loader = NORTH_STAR.split("async function franchiseNSLoadAlignedPair(expectedStateId){", 1)[1].split(
+        "function franchiseNSOutcome(){", 1
+    )[0]
+
+    assert "view?.context?.league_state_id" in helper
+    assert "league?.league_state_id" in helper
+    assert "view?.publication_generation_id" in helper
+    assert "league?.publication_generation_id" in helper
+    assert "identity.viewStateId===expectedStateId" in helper
+    assert "identity.leagueStateId===expectedStateId" in helper
+    assert "identity.viewGenerationId===identity.leagueGenerationId" in helper
+    assert "for(let attempt=0;attempt<4;attempt+=1)" in loader
+    assert "api('/api/my-team')" in loader
+    assert "api('/api/league/team-views')" in loader
+    assert "Franchise publication changed while loading; keeping last-good view." in loader
+    assert "franchisePublicationGenerationId" in NORTH_STAR
+
+
+def test_franchise_overview_inspect_next_controls_are_bound() -> None:
+    renderer = NORTH_STAR.split("function renderFranchiseNorthStar(){", 1)[1].split(
+        "async function loadFranchiseNorthStarValueLenses", 1
+    )[0]
+
+    assert "data-franchise-route="what_if"" in NORTH_STAR
+    assert "data-franchise-tab-open="roster"" in NORTH_STAR
+    assert "data-franchise-tab-open="assets"" in NORTH_STAR
+    assert "panel.querySelectorAll('[data-franchise-tab-open]')" in renderer
+    assert "fsfflMyTeamState.franchiseTab=tab" in renderer
+    assert "panel.querySelectorAll('[data-franchise-route]')" in renderer
+    assert "source:'franchise-overview'" in renderer
+    assert "window.fsfflNavigateTo(intent)" in renderer
+    assert "setRoute(route)" in renderer
+
+
 def test_franchise_state_only_mode_shows_complete_roster_instead_of_empty_starters() -> None:
     renderer = NORTH_STAR.split("function renderFranchiseNorthStar(){", 1)[1].split(
         "async function loadFranchiseNorthStarValueLenses", 1
