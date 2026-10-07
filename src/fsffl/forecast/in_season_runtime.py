@@ -14,7 +14,11 @@ from fsffl.providers.in_season_projection_sources import (
 from fsffl.state.models import FrozenModel, LeagueState
 
 from .current_normalization import current_snapshot_from_razzball, normalize_projection_snapshot
-from .league_scoring import derive_league_fantasy_point_forecasts
+from .league_scoring import (
+    PartialFantasyPointForecast,
+    ScoringCoverageStatus,
+    derive_league_scoring_result,
+)
 from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_authoritative_live_ensemble
 from .models import ForecastHorizon, ForecastObservation
 from .projection_history import ProjectionRevision, revision_from_forecast_observations
@@ -48,6 +52,7 @@ class InSeasonForecastRuntimeResult(FrozenModel):
     source_observations: tuple[ForecastObservation, ...]
     raw_ensemble: tuple[ForecastObservation, ...]
     fantasy_point_forecasts: tuple[ForecastObservation, ...]
+    partial_fantasy_point_forecasts: tuple[PartialFantasyPointForecast, ...] = ()
     coverage: LiveEnsembleCoverage
     successful_source_ids: tuple[str, ...]
     failed_sources: tuple[str, ...]
@@ -236,12 +241,18 @@ def build_in_season_forecasts(
         minimum_independent_sources=minimum_independent_sources,
         model_version="next2-in-season-equal-weight-v1",
     )
-    fantasy_points = derive_league_fantasy_point_forecasts(
+    scoring = derive_league_scoring_result(
         raw_ensemble,
         rules=league_state.league.rules,
         source="fsffl:in-season-league-scored",
         model_version="next2-in-season-runtime-v1",
     )
+    if scoring.coverage.status == ScoringCoverageStatus.INCOMPLETE:
+        raise ValueError(
+            "league player-offense scoring cannot be fully reproduced from current raw "
+            "forecast metrics; unsupported rules: "
+            f"{list(scoring.coverage.unsupported_rule_stats)}"
+        )
     return InSeasonForecastRuntimeResult(
         horizon=horizon,
         week=week,
@@ -252,7 +263,8 @@ def build_in_season_forecasts(
             )
         ),
         raw_ensemble=raw_ensemble,
-        fantasy_point_forecasts=fantasy_points,
+        fantasy_point_forecasts=scoring.authoritative_forecasts,
+        partial_fantasy_point_forecasts=scoring.partial_forecasts,
         coverage=coverage,
         successful_source_ids=tuple(sorted(successful)),
         failed_sources=tuple(sorted(failed)),
