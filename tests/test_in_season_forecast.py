@@ -473,6 +473,7 @@ def test_current_ros_gap_uses_governed_remaining_prior_without_zero_imputation()
         _state(),
         current_ros_forecasts=(),
         preseason_season_forecasts=(preseason,),
+        scoring_gap_player_ids=frozenset({"p1"}),
         completed_through_week=4,
         as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
     )
@@ -501,9 +502,30 @@ def test_current_ros_authority_wins_over_preseason_gap_fallback_for_supported_pl
         _state(),
         current_ros_forecasts=(current,),
         preseason_season_forecasts=(preseason,),
+        scoring_gap_player_ids=frozenset({"p1"}),
         completed_through_week=4,
         as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
     )
 
     assert fallback_count == 0
     assert forward == (current,)
+
+
+def test_current_ros_does_not_backfill_player_without_proven_scoring_gap():
+    preseason = _fantasy_points_forecast(
+        horizon=ForecastHorizon.SEASON,
+        mean=170.0,
+        source="fsffl:preseason-authority",
+    )
+
+    forward, fallback_count = fill_current_ros_coverage_gaps(
+        _state(),
+        current_ros_forecasts=(),
+        preseason_season_forecasts=(preseason,),
+        scoring_gap_player_ids=frozenset(),
+        completed_through_week=4,
+        as_of=datetime(2026, 10, 7, 20, 0, tzinfo=UTC),
+    )
+
+    assert forward == ()
+    assert fallback_count == 0
