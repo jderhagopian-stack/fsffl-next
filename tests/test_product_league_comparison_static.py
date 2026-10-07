@@ -375,6 +375,16 @@ def test_current_position_cells_do_not_consume_legacy_actual_position_strengths(
     assert "row.status==='ready'" in cell
 
 
+def test_switching_dynamic_current_and_fixed_dynasty_lenses_closes_room_drawer() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    actions = source[
+        source.index("function bindLeagueActions()"):
+        source.index("function renderLeagueComparison()")
+    ]
+    assert "fsfflLeagueStructureState.selectedRoom=null;renderLeagueComparison()" in actions
+    assert "if(fsfflLeagueStructureState.positionLens==='dynasty')void laLoadDynastyRooms()" in actions
+
+
 def test_current_room_drawer_uses_actuals_plus_ros_and_slot_eligibility() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     drawer = source[
