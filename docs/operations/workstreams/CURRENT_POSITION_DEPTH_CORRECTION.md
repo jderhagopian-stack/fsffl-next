@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: PHYSICAL ACCEPTANCE REOPENED — #413 test-only final-gate correction in draft
+Status: DIRECTIVE COMPLETE — #415 live and authenticated iPhone/Safari physical acceptance complete
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -700,3 +700,23 @@ Live presentation change:
 - the underlying slot key remains `SUPERFLEX`; Current/Dynasty data, ordering, drawers, model and lifecycle semantics are unchanged.
 
 **MANAGEMENT GATE — PORTRAIT POLISH:** code, exact-head validation, merge and hosted deployment are accepted. Remaining proof is visual iPhone/Safari acceptance of the compact grid itself: confirm the narrower Franchise column, equalized/tighter position columns, centered headers and SF label render as intended without breaking the existing one-row horizontal scroll.
+
+
+### 2026-10-07 — Management physical acceptance / directive complete
+Management has now supplied and accepted authenticated iPhone/Safari evidence against live #415 and closes the final physical gate.
+
+Accepted live identity remains:
+- PR #415 final head: `992617723ff5beaa161160f96aa133b25f9afbd1`;
+- Stable full-suite run: `37663748208` — **2,229 passed / 1 warning**;
+- merge: `a55a592585050d866425f3601ab3da9e3812c393`;
+- Render deploy: `dep-db38ksk9v7es73balsjg`.
+
+Management confirms the compact portrait grid is accepted on iPhone/Safari:
+- Franchise identity column is appropriately tightened and remains sticky;
+- QB/RB/WR/TE/FLEX/SUPERFLEX columns are compact/equalized;
+- position headers are centered;
+- SUPERFLEX displays as `SF` in the grid header only;
+- one-row horizontal scrolling is preserved;
+- accepted Current and Dynasty semantics remain intact.
+
+This closes the Current Position & Depth corrective program. No further code or deployment is required for this acceptance. Future changes must be opened under their own product/workstream authority rather than reopening this completed corrective without contradictory evidence.
