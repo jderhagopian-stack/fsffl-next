@@ -4,7 +4,7 @@ const fsfflProductRoutes=[
   {route:'players_assets',label:'Players & Assets',legacy:true,navigation:false},
   {route:'league_comparison',label:'League',primary:true},
   {route:'trade_center',label:'Trade',teamScoped:true,primary:true},
-  {route:'opportunities',label:'Explore',teamScoped:true,primary:true},
+  {route:'opportunities',label:'Explore',primary:true},
   {route:'behavioral_intelligence',label:'Owners',navigation:false},
   {route:'what_if',label:'What-If',teamScoped:true,navigation:false},
   {route:'simulator',label:'Simulator',teamScoped:true,navigation:false},
