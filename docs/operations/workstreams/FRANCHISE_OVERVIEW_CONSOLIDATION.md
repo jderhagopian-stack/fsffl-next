@@ -245,3 +245,21 @@ Current delivery identity:
 - outer Product Shell key `git-32ad2d78af0f`.
 
 No executable work remains planned. After this documentation-only checkpoint head is stable, mark that exact PR head ready for the one P0.6 Stable full-suite gate; merge/deploy only if green.
+
+
+## 2026-10-07 — first stable-gate result / test-only correction
+
+Exact candidate `a8988aee5af75d0e0efa11e74a8c9564c74314c1` was marked ready only after all focused workflows were green and the checkpoint showed no planned executable work.
+
+Stable full-suite run `37681492299` correctly verified that exact PR head before testing. The suite completed **2,224 passed / 2 failed / 1 warning**. Both failures were stale test expectations in `tests/test_readiness_progress_truth_static.py` that still required the retired standalone `home_dashboard.js` bundle to be shipped from `index.html`:
+- `test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell`;
+- `test_continuity_release_busts_recovery_presentation_assets`.
+
+This is a test-contract mismatch, not a product/runtime regression. The accepted Franchise consolidation explicitly removes standalone Home delivery, and focused Home/Franchise retirement validation had already proven that behavior.
+
+PR #418 was returned to draft before changing the head. The only correction is test-only: those two readiness/static assertions now require `/static/home_dashboard.js` to be **absent** from the document shell while preserving the existing checks for forecast-refresh, Product Shell, Safari recovery and session-recovery asset identity. No executable file changed after the focused-green implementation head.
+
+Next gate:
+- allow ordinary draft focused validation to complete on the corrected head;
+- if green and no new executable finding appears, checkpoint the exact head and mark it ready for a fresh Stable full-suite run;
+- merge/deploy only that exact successful head.
