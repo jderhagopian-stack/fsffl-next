@@ -645,3 +645,29 @@ Preserve:
 - all model, data, lifecycle, restore, refresh, Forecast, Simulation and P0 behavior.
 
 Validation: focused League Atlas/browser/static validation while draft, then the normal exact stable-head full-suite gate before merge/deploy. No broader UI work or Home→Franchise consolidation is authorized.
+
+
+### 2026-10-07 — portrait-grid polish focused validation green
+Draft PR #415 implements only the authorized Position & Depth density/readability polish. Executable/test head `ff7644e96aa04a1f9593ef514f2edfdff06bdab8` is focused-green.
+
+Presentation changes only:
+- sticky Franchise track reduced from 150px to **104px**;
+- every position track reduced/equalized from 86px to **64px**;
+- position headers are centered;
+- `SUPERFLEX` renders visually as **SF** in the matrix header only; the underlying slot, aria label, cell key, drawer contract, Current/Dynasty calculations and canonical ordering remain `SUPERFLEX`;
+- the existing one-row horizontal-scroll and sticky-Franchise behavior is preserved.
+
+Focused evidence on the exact executable head:
+- League Atlas North Star focused validation `37663459740`: success, including JavaScript syntax, focused Atlas/Player Intelligence regressions, real-league Atlas composition sanity, live-provider authority audit and evidence upload;
+- CI `37663459787`: success;
+- Franchise North Star `37663459665`: success;
+- PR164 focused corrective regression `37663459700`: success;
+- Live Forecast corrective trace `37663459716`: success;
+- the first Atlas run on the prior head failed only two newly-added Python static assertions that accidentally evaluated JavaScript identifiers as Python names; those test assertions were corrected without changing product code.
+
+Static delivery remains content-bound:
+- Atlas CSS key matches the current `league_atlas.css` blob;
+- League Atlas JS inner key matches the current `league_comparison.js` blob;
+- Product Shell outer key matches the current `product_shell.js` blob.
+
+No data/model/lifecycle/Current/Dynasty behavior changed. This checkpoint push is documentation-only. Next: mark the exact documentation-final PR head ready for the normal one Stable full-suite gate; if green, merge/deploy/checkpoint.
