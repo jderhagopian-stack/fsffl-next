@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: PHYSICAL ACCEPTANCE REOPENED — #408 core authority accepted; bounded Current presentation/coverage corrective active
+Status: PHYSICAL ACCEPTANCE REOPENED — #411 live; bounded saved-session / Current presentation corrective active
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -416,3 +416,30 @@ Corrective executable head `60f12f8141ef31dcbbd864600a5587823b620865` passed all
 - Stable full suite remained correctly skipped while draft (`37611152427`).
 
 The previously green Stable full-suite run `37610536097` on documentation-final head `c6318a8b7e7ad0cec5d94f2f3c9f2b60ca882a8f` (**2,222 passed / 1 warning**) is superseded by this bounded executable correction and is not being used as merge evidence. No other runtime/product/model work was changed. After this checkpoint-only head movement, the exact final PR head must receive a fresh Stable full-suite gate before merge.
+
+
+### 2026-10-07 — #411 live physical acceptance failure / second corrective start
+Management supplied authenticated iPhone/Safari physical evidence against live #411 and explicitly confirmed **Refresh Intelligence was not tapped**. The accepted #411 Current semantics remain the governing model contract; only the contradictory physical layer is reopened.
+
+Physical acceptance failures now in scope:
+- the browser issued a heavy background refresh around **07:23:40 ET** without an explicit Refresh Intelligence action;
+- RB and FLEX remain unavailable after the approved governed fallback;
+- portrait Position & Depth still wraps/overlaps instead of remaining one non-wrapping horizontal scroll grid;
+- Home continues to expose legacy `position_strengths` / pressure-point output that contradicts the new Current lineup-slot authority.
+
+Management decisions:
+1. Restore the accepted saved-session **read-first / no-silent-heavy-refresh** policy unless a proven State change requires rebuild. Do not convert normal restore/background reads into provider refreshes.
+2. Preserve #411 Current semantics. Trace why approved fallback still leaves RB/FLEX unavailable; correct the bounded consumer/evidence plumbing, not Forecast authority, Dynasty/#370, Simulation, or P0 architecture.
+3. Portrait Current must remain one non-wrapping horizontally scrollable grid in canonical `QB, RB, WR, TE, FLEX, SUPERFLEX` order, followed by configured K/DST, with Franchise layout fixed.
+4. Home must not present a second contradictory Current definition. Pending Management's separate Home → Franchise consolidation decision, minimally suppress legacy Current position ranks / pressure-point output rather than redesigning Home.
+5. Focused validation during correction; one Stable full-suite gate only at the final exact corrective head.
+
+Hosted trace already captured before code change:
+- live runtime remains #411 merge `babfdc52ca7a86968e46bde912fb7559fc098865`, Render deploy `dep-db32huqd0e5s73et7s30`;
+- saved-session browser journey ID `413c90c1-5796-4c25-97e3-1ea3026dd134`;
+- `GET /api/connect/sleeper/background/current` returned 200 at `11:23:39.650Z`;
+- immediately afterward the browser issued **`POST /api/connect/sleeper/background/refresh`**, beginning at `11:23:39.743Z` and returning 200 at `11:23:40.147Z`;
+- this occurred during ordinary saved-session reads (`/api/product-context`, `/api/intelligence/status`, team/home/league reads) and Management confirms no refresh tap;
+- therefore a real client-side silent-refresh trigger exists and must be removed or gated by proven State change.
+
+PR #412 was closed unmerged because its hosted-closeout snapshot was superseded by this physical failure. No corrective code changed before this checkpoint.
