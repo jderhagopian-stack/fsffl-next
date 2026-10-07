@@ -294,3 +294,13 @@ PR #418 was returned to draft before the head changed. The correction remains te
 - assert the Franchise version equals `20261007-franchise-<current my_team_dashboard.js git blob prefix>`.
 
 No executable behavior changed. Re-run ordinary draft focused validation, then mark the exact corrected head ready for a fresh Stable full-suite gate. Do not merge a superseded head.
+
+
+## 2026-10-07 — ready-review findings before final promotion
+
+Automated ready-head review surfaced two bounded product defects on the consolidated Franchise implementation. Both are inside this tranche and must be corrected before another Stable gate:
+
+1. **Publication-generation alignment (P1).** Franchise loads `/api/my-team` and `/api/league/team-views` in parallel. Both responses already carry response-level `publication_generation_id`, but the client only checked the State ID after both reads. A same-State publication promotion between the two reads could therefore combine Simulation/team evidence from generation A with Current/league evidence from generation B. Corrective contract: validate both State identity and response publication generation across the pair; retry a bounded number of times, then keep/fail closed to last-good instead of mixing generations. No new lifecycle negotiation or backend contract is authorized.
+2. **Overview action controls (P2).** The new Overview renders `data-franchise-route` and `data-franchise-tab-open` actions, but the active North Star render path did not bind those selectors. Corrective contract: bind the existing route actions and internal Roster / Assets & Picks tab openers. Do not change navigation composition or add new destinations.
+
+The separate readiness-test finding from the prior Stable run has already been corrected. PR #418 remains draft while these two executable defects are fixed and focused-tested. A new Stable full-suite gate is required after the exact corrective head is focused-green.
