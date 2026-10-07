@@ -558,3 +558,23 @@ Bounded fix: when the accepted first-party observation is adapted into the **cur
 The #413 markup uses CSS custom properties inside `repeat(var(--league-position-columns), 86px)` and relies on those computed variables for every row. The physical Safari evidence still wraps/overlaps FLEX/SUPERFLEX despite the outer horizontal overflow container. The correction will remove that parsing/layout dependency: each rendered row/header will receive an explicit literal grid track list from the already-known configured column count (for example `150px repeat(6, 86px)`) plus an explicit intrinsic width. CSS will keep one grid row, no mobile track override, no label wrapping, horizontal overflow, and sticky Franchise. No semantic or column-order change is authorized.
 
 No executable code changed before this localization checkpoint.
+
+
+### 2026-10-07 — iPhone cascade trace refinement
+The external Atlas stylesheet explains why #413's inline grid change did not control physical Safari layout.
+
+At multiple mobile breakpoints, `league_atlas.css` still contains legacy `!important` rules that override the runtime grid:
+- `overflow-x:visible!important` on `.league-edge-map`;
+- `width:100%!important; min-width:0!important`;
+- hard-coded `grid-template-columns: ... repeat(4, ...)!important` despite six configured offensive Current columns;
+- the `.ns-app-compressed` physical-iPhone block later forces the canonical map/matrix back to `overflow:visible!important`.
+
+Those author-`!important` declarations outrank #413's normal inline width/track declarations, so Safari is instructed to squeeze a six-slot Current row into a four-slot responsive template and to disable the horizontal scroll container. The observed FLEX/SUPERFLEX wrap/overlap follows directly from the delivered CSS cascade.
+
+The corrective target is therefore explicit:
+- runtime rows emit a literal Safari-safe track list and intrinsic width with inline `!important`;
+- the final mobile Atlas CSS restores `overflow-x:auto!important`, `overflow-y:hidden!important`, touch momentum scrolling and no vertical matrix cap;
+- legacy hard-coded four-column mobile templates must no longer control the canonical Position & Depth map;
+- Franchise remains sticky.
+
+This is a layout-contract correction only; no Current semantics are being changed.
