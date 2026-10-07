@@ -281,3 +281,16 @@ Exact corrected draft head `b72e85f6054d7e81176d774d7b8fb5f9325526db` is focused
 The only executable implementation remains the previously reviewed focused-green Franchise consolidation. No executable, server, model, Current, Simulation, lifecycle, Roster, Assets & Picks, or bottom-navigation behavior changed after implementation head `f568e385683f7d0ef809840bfc0e98732f1be181`.
 
 No further executable or test work remains planned. After this documentation-only checkpoint push, mark the exact final PR head ready for the fresh Stable full-suite merge gate. If that exact head is green, merge/deploy/checkpoint; do not broaden scope.
+
+
+## 2026-10-07 — second stable-gate stale assertion
+
+Fresh Stable full-suite run `37683206596` on documentation-final head `088c54af77423270021e1520e458cc09aa52f711` again reached the exact-head gate correctly. Result: **2,225 passed / 1 failed / 1 warning**.
+
+The sole failure was another stale assertion in the same readiness/static regression: it still required the removed `homeNorthStarStaticVersion` and the old fixed Franchise version string `20261001-continuity2`. The active Product Shell correctly has no Home static-version constant and uses the content-derived Franchise key tied to `my_team_dashboard.js`.
+
+PR #418 was returned to draft before the head changed. The correction remains test-only:
+- assert `homeNorthStarStaticVersion` is absent from Product Shell;
+- assert the Franchise version equals `20261007-franchise-<current my_team_dashboard.js git blob prefix>`.
+
+No executable behavior changed. Re-run ordinary draft focused validation, then mark the exact corrected head ready for a fresh Stable full-suite gate. Do not merge a superseded head.
