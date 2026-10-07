@@ -260,7 +260,14 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }catch(error){
         console.info('FSFFL post-freshness context check unavailable; preserving current State',error);
       }
-      if(freshness?.refresh_due===true)void refreshStoredLeague(leagueId,latestStateId);
+      if(freshness?.refresh_due===true){
+        // A cheap provider probe can prove that provider-visible inputs changed, but it
+        // cannot prove the canonical material State changed. Saved-session restore is
+        // read-first and must never originate heavyweight provider work. Keep the
+        // published context in place; explicit Refresh Intelligence remains the
+        // authority to materialize/compare provider State.
+        publishSyncState('stale','League changes are available. Use Refresh Intelligence to rebuild.');
+      }
     }catch(error){
       console.info('FSFFL saved-session freshness check unavailable; preserving current State',error);
     }
@@ -273,9 +280,10 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     const started=now();
     restoreInFlight=true;
     try{
-      // Stale-while-revalidate is now read-first: restore durable State first. A
-      // lightweight governed freshness read may schedule a provider refresh,
-      // but ordinary restore itself is not a provider refresh.
+      // Saved-session restore is read-first: restore durable State first. A
+      // lightweight governed freshness read may attach to work already in progress
+      // or report that provider-visible inputs changed, but ordinary restore never
+      // originates a heavyweight provider refresh.
       let context=null;
       const restoreDeadline=Date.now()+90000;
       while(Date.now()<restoreDeadline){

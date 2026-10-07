@@ -359,10 +359,14 @@ def test_current_position_grid_uses_governed_slot_contract_and_dynasty_stays_fix
         source.index("function laPositionMatrix()"):
         source.index("function laValueDot(")
     ]
-    assert "positions=dynasty?['QB','RB','WR','TE']:laCurrentSlotOrder()" in matrix
+    assert "canonicalCurrent=['QB','RB','WR','TE','FLEX','SUPERFLEX','K','DST']" in matrix
+    assert "positions=dynasty?['QB','RB','WR','TE']:[...laCurrentSlotOrder()].sort" in matrix
     assert "FLEX/SF stay separate from fixed positions" in matrix
     assert "Current columns follow configured league starter slots" in matrix
-    assert "repeat(var(--league-position-columns,4)" in source
+    assert "grid-template-columns:150px repeat(var(--league-position-columns,4),86px)" in source
+    assert "width:var(--league-position-grid-width)" in source
+    assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
+    assert "grid-template-columns:minmax(125px,1.25fr)" not in source
 
 
 def test_current_position_cells_do_not_consume_legacy_actual_position_strengths() -> None:
@@ -433,11 +437,13 @@ def test_current_room_drawer_excludes_unowned_fragility_and_long_term_shadow() -
 
 def test_current_position_grid_stays_one_horizontal_scroll_row_on_portrait() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
-    assert "Math.max(1,positions.length)*82" in source
+    assert "Math.max(1,positions.length)*86" in source
     assert ".league-edge-matrix{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch" in source
     assert ".league-edge-row.header>span{white-space:nowrap}" in source
-    assert "repeat(var(--league-position-columns,4),minmax(82px,.7fr))" in source
-    assert "repeat(var(--league-position-columns,4),minmax(78px,.7fr))" in source
+    assert "grid-template-columns:150px repeat(var(--league-position-columns,4),86px)" in source
+    assert "width:var(--league-position-grid-width);min-width:var(--league-position-grid-width)" in source
+    assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
+    assert "repeat(var(--league-position-columns,4),minmax(78px,.7fr))" not in source
 
 
 def test_current_position_copy_discloses_governed_gap_fallback() -> None:

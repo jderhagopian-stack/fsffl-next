@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: PHYSICAL ACCEPTANCE REOPENED — #408 core authority accepted; bounded Current presentation/coverage corrective active
+Status: PHYSICAL ACCEPTANCE REOPENED — #413 test-only final-gate correction in draft
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -416,3 +416,106 @@ Corrective executable head `60f12f8141ef31dcbbd864600a5587823b620865` passed all
 - Stable full suite remained correctly skipped while draft (`37611152427`).
 
 The previously green Stable full-suite run `37610536097` on documentation-final head `c6318a8b7e7ad0cec5d94f2f3c9f2b60ca882a8f` (**2,222 passed / 1 warning**) is superseded by this bounded executable correction and is not being used as merge evidence. No other runtime/product/model work was changed. After this checkpoint-only head movement, the exact final PR head must receive a fresh Stable full-suite gate before merge.
+
+
+### 2026-10-07 — #411 live physical acceptance failure / second corrective start
+Management supplied authenticated iPhone/Safari physical evidence against live #411 and explicitly confirmed **Refresh Intelligence was not tapped**. The accepted #411 Current semantics remain the governing model contract; only the contradictory physical layer is reopened.
+
+Physical acceptance failures now in scope:
+- the browser issued a heavy background refresh around **07:23:40 ET** without an explicit Refresh Intelligence action;
+- RB and FLEX remain unavailable after the approved governed fallback;
+- portrait Position & Depth still wraps/overlaps instead of remaining one non-wrapping horizontal scroll grid;
+- Home continues to expose legacy `position_strengths` / pressure-point output that contradicts the new Current lineup-slot authority.
+
+Management decisions:
+1. Restore the accepted saved-session **read-first / no-silent-heavy-refresh** policy unless a proven State change requires rebuild. Do not convert normal restore/background reads into provider refreshes.
+2. Preserve #411 Current semantics. Trace why approved fallback still leaves RB/FLEX unavailable; correct the bounded consumer/evidence plumbing, not Forecast authority, Dynasty/#370, Simulation, or P0 architecture.
+3. Portrait Current must remain one non-wrapping horizontally scrollable grid in canonical `QB, RB, WR, TE, FLEX, SUPERFLEX` order, followed by configured K/DST, with Franchise layout fixed.
+4. Home must not present a second contradictory Current definition. Pending Management's separate Home → Franchise consolidation decision, minimally suppress legacy Current position ranks / pressure-point output rather than redesigning Home.
+5. Focused validation during correction; one Stable full-suite gate only at the final exact corrective head.
+
+Hosted trace already captured before code change:
+- live runtime remains #411 merge `babfdc52ca7a86968e46bde912fb7559fc098865`, Render deploy `dep-db32huqd0e5s73et7s30`;
+- saved-session browser journey ID `413c90c1-5796-4c25-97e3-1ea3026dd134`;
+- `GET /api/connect/sleeper/background/current` returned 200 at `11:23:39.650Z`;
+- immediately afterward the browser issued **`POST /api/connect/sleeper/background/refresh`**, beginning at `11:23:39.743Z` and returning 200 at `11:23:40.147Z`;
+- this occurred during ordinary saved-session reads (`/api/product-context`, `/api/intelligence/status`, team/home/league reads) and Management confirms no refresh tap;
+- therefore a real client-side silent-refresh trigger exists and must be removed or gated by proven State change.
+
+PR #412 was closed unmerged because its hosted-closeout snapshot was superseded by this physical failure. No corrective code changed before this checkpoint.
+
+
+### 2026-10-07 — second corrective root-cause trace before executable changes
+The physical failures are now localized without changing executable code.
+
+**Saved-session heavy refresh.** The browser is the originator. After restoring durable `/api/product-context`, `restoreSavedSession()` calls `refreshStoredLeagueIfDue()`. That helper performs the accepted cheap freshness read, but when the probe reports `refresh_due=true` it currently calls `refreshStoredLeague()`, which starts a new `POST /api/connect/sleeper/background/refresh`. The server freshness route itself states that elapsed age is not permission to refresh; its cheap Sleeper probe only detects a fingerprint mismatch. A full provider materialization is still required to prove a material canonical State change. Therefore saved-session restore must remain read-first: it may attach to already-running connect/refresh work and adopt an already-published newer context, but it must not originate new heavyweight provider work from `refresh_due` alone. Explicit manual Refresh Intelligence and missing-State connect recovery remain authorized.
+
+**RB/FLEX availability.** Latest hosted `current_position_depth` is `partial`: QB/WR/TE/SUPERFLEX are ready; only RB/FLEX are unavailable. Eleven teams fill every configured offensive slot. The sole incomplete roster is `sleeper:1312071960615731200:team:1`, which fills QB1/RB1/WR3/TE1/SUPERFLEX1 but RB2 and FLEX0. This is not a league-wide optimizer defect.
+
+That roster contains current ROS subjects that can fill the missing slots, including Kaleb Johnson (RB) and Eli Raridon (TE). Projection history proves both current ROS providers carry ordinary offensive evidence for them: CBS and Razzball each report the supported RB/TE production coordinates, while only Razzball omits FUMBLES_LOST. They therefore fail strict scoring at the exact FUMBLES_LOST coordinate rather than being absent from current provider evidence. The #411 preseason remaining-prior fallback cannot repair these two subjects because the preserved preseason baseline contains no raw rows for either player.
+
+The first candidate was Forecast's accepted FUMBLES_LOST `NON_MATERIAL_PARTIAL` gate, but it is intentionally too strict to restore these rows: the missing FUMBLES_LOST coordinate remains material relative to the supported-subtotal uncertainty, so that path must stay fail-closed.
+
+A different **already accepted Forecast point authority** is available: the first-party rolling FUMBLES_LOST model used by the current Forecast runtime. The corrective reuses that existing State/cutoff-bound coordinate only when FUMBLES_LOST is the sole omitted active scoring coordinate for a current strict-scorer ROS partial. It converts the accepted 17-game point estimate to the player's remaining schedule with the same remaining-games fraction already used by the accepted preseason remaining-prior fallback, then reruns the existing strict scorer. No provider coordinate is relabeled, no two-source requirement is lowered, and a player absent from current raw/partial evidence is not admitted. If accepted first-party point authority is unavailable, the path stays fail-closed and #411's preserved preseason remaining-prior fallback remains next.
+
+To keep blast radius local, this ROS repair is opt-in from `build_governed_current_position_depth()`; the general governed in-season outlook path preserves its prior behavior unless that Current consumer explicitly requests the accepted FUMBLES_LOST gap repair.
+
+**Portrait grid.** Current uses an overflow container, but each row still combines fractional `minmax(..., fr)` tracks, competing inline/min-width rules and a separate mobile grid override. That permits portrait compression/wrapping and does not keep the Franchise column fixed. The corrective will give the Current matrix a single intrinsic fixed-width track definition inside one horizontal overflow container and make the Franchise column sticky while scrolling; Current slot order remains canonical.
+
+**Home contradiction.** Home still reads legacy `team_view.position_strengths` directly for both “What matters right now” pressure-point output and “Your roster at a glance” position ranks/Strength Index. Those are a second, superseded Current definition. Pending Management's separate Home → Franchise consolidation decision, the corrective will suppress those two legacy position-rank surfaces rather than derive a new Home Current model.
+
+
+### 2026-10-07 — second corrective implementation checkpoint
+Executable work is now bounded on branch `fix/current-position-depth-physical-followup-20261007` from exact live/main #411 merge `babfdc52ca7a86968e46bde912fb7559fc098865`.
+
+Implemented:
+- saved-session restore still performs the cheap freshness read and still attaches to already-running connect/refresh work, but a mere provider-probe mismatch no longer originates `POST /api/connect/sleeper/background/refresh`; it surfaces that changes are available and leaves explicit Refresh Intelligence as the rebuild action;
+- Current alone opts into the existing first-party FUMBLES_LOST point authority for current ROS partials where `fum_lost` is the sole omitted active scoring coordinate, then #411's preserved preseason remaining-prior gap fallback remains available for eligible older subjects;
+- the new FUMBLES_LOST ROS bridge reuses the existing remaining-games schedule fraction and existing strict scorer; no zero imputation, source-count weakening, named-player exception, Simulation change, Dynasty/#370 change, or general in-season consumer change;
+- Current matrix explicitly canonicalizes configured slots as `QB, RB, WR, TE, FLEX, SUPERFLEX, K, DST`, uses one fixed intrinsic grid width inside horizontal overflow, removes the portrait fractional-grid override, and keeps Franchise sticky at the left edge;
+- Home no longer reads or renders legacy `position_strengths` for pressure-point or position-rank/Strength Index output. Other Home sections remain intact; the separate Home → Franchise consolidation has **not** begun;
+- Safari delivery keys were refreshed for the changed Atlas, Home and saved-session bundles, with content-derived regressions preventing another stale-key shipment.
+
+Focused validation is the next gate. The implementation remains draft-only until affected Current/Atlas/Home/saved-session/Forecast tests are green. One full suite remains reserved for the exact stable ready-for-review head.
+
+
+### 2026-10-07 — #413 focused development validation green
+The bounded physical corrective is now focused-green on executable head `0d761668fdfc1d39e079c50b50cd984dd966305b`.
+
+Exact draft-head validation:
+- CI `37647777017`: **success**;
+- League Atlas North Star focused validation `37647777142`: **success**;
+- Home North Star focused validation `37647776940`: **success**;
+- Franchise North Star focused validation `37647776998`: **success**;
+- Live Forecast corrective trace `37647776949`: **success**;
+- corrective live-provider numerical trace `37647776848`: **success**;
+- PR164 focused corrective regression `37647776987`: **success**;
+- Stable full suite `37647777027`: **skipped**, correctly, because PR #413 remains draft.
+
+Two superseded focused failures on earlier head `f103ce3f34a0bf82d71bf393d7dd2bd5ef9c51b9` were development-regression alignment only, not hosted/product evidence:
+- the Current consumer mock expected the pre-opt-in argument list and was updated to assert `allow_governed_fumbles_ros_gap=True`;
+- the portrait test still asserted the prior 82px/fractional grid, while the corrective deliberately replaced it with the accepted fixed 86px one-row grid;
+- Home's suppressed legacy position cards had dead CSS selectors left behind; those selectors were removed rather than retained as dormant contradictory UI.
+
+Static delivery on the focused-green executable head is content-bound:
+- League Atlas inner key tracks the corrected `league_comparison.js` Git blob;
+- the outer Product Shell key tracks the shell Git blob;
+- direct Home and saved-session script tags carry Git-blob-derived cache-busting keys;
+- focused regressions compute these identities from the actual bytes.
+
+No executable change is planned after `0d761668...`. This checkpoint-only docs update moves the PR head but does not change runtime behavior. Keep #413 draft until the resulting exact docs-final head is focused-green. Then mark that exact head ready once to trigger the single Stable full-suite merge gate. If the full suite is green and still matches the PR head, merge/deploy; authenticated iPhone/Safari physical acceptance remains mandatory afterward.
+
+
+### 2026-10-07 — #413 first Stable-gate result / test-only correction
+Ready-head Stable full-suite run `37648233077` tested exact PR head `8d0b071e596a55d4a6d637085623da464ab3cd08`. The suite reached **2,221 passed / 4 failed / 1 warning** in 169.92s. All four failures are stale regression assertions; none exercises a failed runtime/product behavior:
+
+1. `test_saved_session_restores_before_provider_refresh` still required the old comment phrase “Stale-while-revalidate” after the corrective deliberately renamed the contract to “Saved-session restore is read-first.”
+2. `test_saved_session_restore_retries_only_transient_cold_start_failures` still hard-coded the pre-corrective mobile recovery cache key instead of the new content-derived key.
+3. and 4. two readiness/static tests still hard-coded the pre-corrective Home cache key instead of the changed Home bundle's content-derived key.
+
+PR #413 was immediately returned to draft before changing the head. The correction is **test-only**:
+- preserve the same restore-order assertion but bind it to the accepted read-first wording;
+- compute the mobile recovery Git-blob delivery key from the actual bundle bytes;
+- compute the Home Git-blob delivery key from the actual bundle bytes.
+
+No runtime/product/model file changes are authorized by this gate result. The failed Stable run is superseded evidence and must not be used for merge. The new exact draft head must pass focused validation first; only then may it be marked ready for a fresh Stable full-suite gate.

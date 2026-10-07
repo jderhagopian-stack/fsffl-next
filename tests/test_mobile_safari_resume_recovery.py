@@ -1,7 +1,15 @@
+import hashlib
 from pathlib import Path
 
 
 STATIC = Path(__file__).parents[1] / "src" / "fsffl" / "product" / "static"
+
+
+def _git_blob_prefix(path: Path) -> str:
+    blob = path.read_bytes()
+    return hashlib.sha1(
+        b"blob " + str(len(blob)).encode() + bytes([0]) + blob
+    ).hexdigest()[:12]
 
 
 def test_mobile_safari_resume_module_keeps_lifecycle_recovery_disabled():
@@ -71,5 +79,5 @@ def test_saved_session_restore_retries_only_transient_cold_start_failures():
     index = (STATIC / "index.html").read_text()
     assert (
         "/static/mobile_safari_recovery.js?v=20261004-safari-restore380"
-        "&c=20261005-cold-start-restore387"
+        f"&c=git-{_git_blob_prefix(STATIC / 'mobile_safari_recovery.js')}"
     ) in index

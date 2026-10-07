@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 
 from fsffl.forecast.in_season_orchestration import (
     build_governed_in_season_outlook,
     fill_current_ros_coverage_gaps,
+    fill_current_ros_fumbles_lost_gaps,
 )
 from fsffl.forecast.in_season_runtime import (
     NamedInSeasonProjectionFetcher,
@@ -591,3 +593,133 @@ def test_current_ros_gap_rebinds_preseason_position_to_current_partial_position(
     assert forward[0].player_id == "p1"
     assert forward[0].position == Position.WR
     assert forward[0].source == "fsffl:preseason_remaining_prior"
+
+
+def test_current_ros_fumbles_gap_reuses_governed_first_party_coordinate(monkeypatch):
+    state = _state()
+    rules = state.league.rules.model_copy(
+        update={
+            "scoring": state.league.rules.scoring
+            + (ScoringRule(stat="fum_lost", points=-1.0),)
+        }
+    )
+    state = state.model_copy(
+        update={"league": state.league.model_copy(update={"rules": rules})}
+    )
+    runtime = build_in_season_forecasts(
+        state,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START,
+        period_end=PERIOD_END,
+        fetchers=(
+            NamedInSeasonProjectionFetcher(
+                source_id="one",
+                fetch=lambda season, week: _snapshot("one", rush_yards=700.0),
+            ),
+            NamedInSeasonProjectionFetcher(
+                source_id="two",
+                fetch=lambda season, week: _snapshot("two", rush_yards=900.0),
+            ),
+        ),
+        clock=lambda: NOW,
+    )
+    assert runtime.fantasy_point_forecasts == ()
+    assert runtime.partial_fantasy_point_forecasts[0].omitted_rule_stats == ("fum_lost",)
+
+    full_season_fumbles = ForecastObservation(
+        player_id="p1",
+        position=Position.RB,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=datetime(2026, 9, 1, tzinfo=UTC),
+        period_end=datetime(2027, 1, 5, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=1.7, stddev=1.0),
+        source="fsffl:first_party:fumbles_lost",
+        model_version="accepted-fumbles-v1",
+        as_of=NOW,
+        provenance=Provenance(
+            source="fsffl:first_party:fumbles_lost",
+            retrieved_at=NOW,
+            effective_at=NOW,
+            source_version="accepted-fumbles-v1",
+        ),
+    )
+    monkeypatch.setattr(
+        "fsffl.forecast.in_season_orchestration.build_first_party_fumbles_lost_supplement",
+        lambda *args, **kwargs: SimpleNamespace(observations=(full_season_fumbles,)),
+    )
+
+    forward, filled = fill_current_ros_fumbles_lost_gaps(
+        state,
+        current_runtime=runtime,
+        stats_source=SimpleNamespace(),
+        completed_through_week=4,
+        as_of=NOW,
+    )
+
+    assert filled == 1
+    assert len(forward) == 1
+    assert forward[0].player_id == "p1"
+    assert forward[0].horizon == ForecastHorizon.REST_OF_SEASON
+    assert forward[0].metric == ForecastMetric.FANTASY_POINTS
+    assert "supplemental_mixed_vintage_current" in forward[0].model_version
+    assert forward[0].distribution.mean < runtime.partial_fantasy_point_forecasts[0].distribution.mean
+
+
+def test_current_ros_fumbles_gap_stays_fail_closed_for_multi_coordinate_partial(monkeypatch):
+    state = _state()
+    rules = state.league.rules.model_copy(
+        update={
+            "scoring": state.league.rules.scoring
+            + (ScoringRule(stat="fum_lost", points=-1.0),)
+        }
+    )
+    state = state.model_copy(
+        update={"league": state.league.model_copy(update={"rules": rules})}
+    )
+    runtime = build_in_season_forecasts(
+        state,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START,
+        period_end=PERIOD_END,
+        fetchers=(
+            NamedInSeasonProjectionFetcher(
+                source_id="one",
+                fetch=lambda season, week: _snapshot("one", rush_yards=700.0),
+            ),
+            NamedInSeasonProjectionFetcher(
+                source_id="two",
+                fetch=lambda season, week: _snapshot("two", rush_yards=900.0),
+            ),
+        ),
+        clock=lambda: NOW,
+    )
+    widened_partial = runtime.partial_fantasy_point_forecasts[0].model_copy(
+        update={"omitted_rule_stats": ("fum_lost", "rush_td")}
+    )
+    runtime = runtime.model_copy(
+        update={"partial_fantasy_point_forecasts": (widened_partial,)}
+    )
+    called = False
+
+    def should_not_build(*args, **kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("supplement must not run for a multi-coordinate partial")
+
+    monkeypatch.setattr(
+        "fsffl.forecast.in_season_orchestration.build_first_party_fumbles_lost_supplement",
+        should_not_build,
+    )
+
+    forward, filled = fill_current_ros_fumbles_lost_gaps(
+        state,
+        current_runtime=runtime,
+        stats_source=SimpleNamespace(),
+        completed_through_week=4,
+        as_of=NOW,
+    )
+
+    assert forward == ()
+    assert filled == 0
+    assert called is False

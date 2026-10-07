@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 
 
@@ -11,9 +12,7 @@ APP = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
 
 def test_home_matches_north_star_single_screen_information_architecture() -> None:
     for label in (
-        "What matters right now",
         "Season outlook · current Simulation",
-        "Your roster at a glance",
         "Also worth knowing",
         "Around the league",
         "Projected final wins",
@@ -24,7 +23,9 @@ def test_home_matches_north_star_single_screen_information_architecture() -> Non
     ):
         assert label in HOME
     assert "home-north-star" in HOME
-    assert "home-position-grid" in HOME
+    assert "home-position-grid" not in HOME
+    assert "What matters right now" not in HOME
+    assert "Your roster at a glance" not in HOME
     assert "home-outlook-grid" in HOME
     assert "home-secondary-row" in HOME
     assert "home-workflows" not in HOME
@@ -32,12 +33,13 @@ def test_home_matches_north_star_single_screen_information_architecture() -> Non
     assert "Best next action" not in HOME
 
 
-def test_home_pressure_point_uses_only_governed_position_strength_family() -> None:
-    assert "function homePressurePoint()" in HOME
-    assert "position_strengths" in HOME
-    assert "league_rank" in HOME
-    assert "strength_index" in HOME
-    assert "Explore '+homeEscape(pressure.position)+' options" in HOME
+def test_home_does_not_publish_legacy_position_strength_as_current_authority() -> None:
+    assert "function homePressurePoint()" not in HOME
+    assert "position_strengths" not in HOME
+    assert "data-home-action=\"pressure\"" not in HOME
+    assert "data-home-action=\"position\"" not in HOME
+    assert "Roster position lens" not in HOME
+    assert "Strength Index" not in HOME
     for forbidden in (
         "recommendation_authority",
         "acceptance_probability",
@@ -80,7 +82,6 @@ def test_home_contextual_navigation_contract_is_presentation_owned() -> None:
     assert "fsfflSetDeepLinkIntent" in SHELL
     assert "fsfflConsumeDeepLinkIntent" in SHELL
     assert "route:'my_team'" in HOME
-    assert "route:'opportunities'" in HOME
     assert "route:'league_comparison'" in HOME
     assert "section:'positions'" in HOME
     assert "section:'overview'" in HOME
@@ -92,7 +93,8 @@ def test_home_contextual_navigation_contract_is_presentation_owned() -> None:
 
 def test_home_is_mobile_first_without_horizontal_scrolling() -> None:
     assert "@media(max-width:760px)" in HOME
-    assert "grid-template-columns:repeat(4,minmax(0,1fr))" in HOME
+    assert "home-position-grid" not in HOME
+    assert "home-pressure" not in HOME
     assert "padding:4px 10px calc(76px + env(safe-area-inset-bottom,0px))" in HOME
     assert "touch-action:manipulation" in HOME
     assert "overflow-x:auto" not in HOME
@@ -124,18 +126,14 @@ def test_home_north_star_has_no_literal_escape_text_in_document_shell() -> None:
 
 def test_home_north_star_accepted_sections_and_drill_ins_remain_intact_after_cleanup() -> None:
     for label in (
-        "What matters right now",
         "Season outlook · current Simulation",
-        "Your roster at a glance",
         "Also worth knowing",
         "Around the league",
     ):
         assert label in HOME
     for action in (
         "data-home-action=\"franchise\"",
-        "data-home-action=\"pressure\"",
         "data-home-action=\"outlook\"",
-        "data-home-action=\"position\"",
         "data-home-action=\"exposure\"",
     ):
         assert action in HOME
@@ -202,6 +200,22 @@ def test_first_load_hotfix_busts_changed_assets_without_churning_other_surfaces(
     assert f"/static/app.js?v=20261004-safari-restore380" in INDEX
     assert f"/static/home_dashboard.js?v=20261004-safari-restore380" in INDEX
     assert f"/static/product_shell.js?v=20261004-safari-restore380" in INDEX
+    home_blob = Path("src/fsffl/product/static/home_dashboard.js").read_bytes()
+    home_git_sha = hashlib.sha1(
+        b"blob " + str(len(home_blob)).encode() + bytes([0]) + home_blob
+    ).hexdigest()[:12]
+    mobile_blob = Path("src/fsffl/product/static/mobile_safari_recovery.js").read_bytes()
+    mobile_git_sha = hashlib.sha1(
+        b"blob " + str(len(mobile_blob)).encode() + bytes([0]) + mobile_blob
+    ).hexdigest()[:12]
+    assert (
+        f"/static/home_dashboard.js?v=20261004-safari-restore380&c=git-{home_git_sha}"
+        in INDEX
+    )
+    assert (
+        f"/static/mobile_safari_recovery.js?v=20261004-safari-restore380&c=git-{mobile_git_sha}"
+        in INDEX
+    )
     assert "const homeNorthStarStaticVersion='20261001-continuity2';" in SHELL
     assert "const franchiseNorthStarStaticVersion='20261001-continuity2';" in SHELL
 
