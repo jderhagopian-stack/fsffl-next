@@ -137,27 +137,50 @@ function franchiseNSStateId(){
   return fsfflMyTeamState.view?.context?.league_state_id||null;
 }
 function franchiseNSResponseStateId(view,league){
+  const viewStateId=view?.context?.league_state_id||null,leagueStateId=league?.league_state_id||null;
+  const viewContinuity=view?.presentation_continuity||{},leagueContinuity=league?.presentation_continuity||{};
   return{
-    viewStateId:view?.context?.league_state_id||null,
-    leagueStateId:league?.league_state_id||null,
+    viewStateId,
+    leagueStateId,
+    viewTargetStateId:viewContinuity.target_league_state_id||viewStateId,
+    leagueTargetStateId:leagueContinuity.target_league_state_id||leagueStateId,
+    viewServedStateId:viewContinuity.served_league_state_id||viewStateId,
+    leagueServedStateId:leagueContinuity.served_league_state_id||leagueStateId,
     viewGenerationId:view?.publication_generation_id??null,
     leagueGenerationId:league?.publication_generation_id??null,
   };
 }
+function franchiseNSManagedViewTargetsState(view,expectedStateId){
+  const identity=franchiseNSResponseStateId(view,null);
+  return identity.viewTargetStateId===expectedStateId
+    && Boolean(identity.viewServedStateId)
+    && Boolean(identity.viewGenerationId);
+}
 function franchiseNSResponsesAligned(view,league,expectedStateId){
   const identity=franchiseNSResponseStateId(view,league);
-  return identity.viewStateId===expectedStateId
-    && identity.leagueStateId===expectedStateId
+  return identity.viewTargetStateId===expectedStateId
+    && identity.leagueTargetStateId===expectedStateId
+    && Boolean(identity.viewServedStateId)
+    && identity.viewServedStateId===identity.leagueServedStateId
+    && Boolean(identity.viewGenerationId)
     && identity.viewGenerationId===identity.leagueGenerationId;
 }
 async function franchiseNSLoadAlignedPair(expectedStateId){
   for(let attempt=0;attempt<4;attempt+=1){
-    const results=await Promise.all([
+    const settled=await Promise.allSettled([
       api('/api/my-team'),
       api('/api/league/team-views'),
     ]);
     if(state?.context?.state_id!==expectedStateId)return null;
-    if(franchiseNSResponsesAligned(results[0],results[1],expectedStateId))return results;
+    if(settled[0].status!=='fulfilled')throw settled[0].reason;
+    const view=settled[0].value;
+    if(settled[1].status!=='fulfilled'){
+      if(franchiseNSManagedViewTargetsState(view,expectedStateId))return[view,null];
+      if(attempt<3){await new Promise(resolve=>setTimeout(resolve,75));continue}
+      throw settled[1].reason;
+    }
+    const league=settled[1].value;
+    if(franchiseNSResponsesAligned(view,league,expectedStateId))return[view,league];
     if(attempt<3)await new Promise(resolve=>setTimeout(resolve,75));
   }
   throw new Error('Franchise publication changed while loading; keeping last-good view.');
@@ -514,7 +537,7 @@ async function loadFranchiseNorthStar(){
       fsfflMyTeamState.franchiseRosterFilter='all';
     }
     fsfflMyTeamState.leagueViews=results[1]?.team_views||[];
-    fsfflMyTeamState.leagueSource=results[1]?.source_level||'';
+    fsfflMyTeamState.leagueSource=results[1]?.source_level||'unavailable';
     fsfflMyTeamState.currentPositionDepth=results[1]?.current_position_depth||null;
     renderFranchiseNorthStar();
     void loadFranchiseNorthStarValueLenses(expectedStateId);
