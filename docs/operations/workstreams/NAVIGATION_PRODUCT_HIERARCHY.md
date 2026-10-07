@@ -86,3 +86,27 @@ After Management physically accepts this navigation tranche, resume **Career Cov
 - Reconciled AGENTS.md, CURRENT_OPERATIONS.md, MANAGEMENT_CONTINUITY.md, PRODUCT_ROADMAP.md, FSFFL_NEXT_PRODUCT_PRIORITIES.md, OPERATING_PROTOCOL.md, charter, North Star, architecture overview and authority boundaries.
 - Management continuity already names this exact navigation tranche as next and Career Coverage #405 immediately after it.
 - No executable/product code changed before this checkpoint.
+
+
+### 2026-10-07 — implementation trace / draft candidate
+Navigation implementation is intentionally route-preserving:
+
+- the authoritative browser route IDs are unchanged: `my_team`, `league_comparison`, `opportunities`, `trade_center`, `behavioral_intelligence`, `what_if`, `simulator`, `reports`, `analytics`;
+- the retired compatibility route `league` remains internally available for connect/restore normalization but is explicitly non-navigation and still resolves managed users to Franchise;
+- primary product navigation is now exactly `Franchise | League | Explore | Trade | More` on both mobile and desktop;
+- `Explore` is the existing `opportunities`/Market route with presentation-label changes only; its Search/Value/Decision behavior is unchanged;
+- `Trade` is the existing `trade_center` route promoted to primary navigation; Trade Center logic and screen remain unchanged;
+- `More` exposes Owners, What-If, Simulator, Reports and Analytics without duplicating Trade;
+- the static pre-JavaScript sidebar fallback no longer renders Home or Market labels;
+- the shell's temporary/fallback navigation also filters to primary destinations only so context updates cannot briefly repopulate retired/secondary primary items;
+- desktop More reuses the existing accessible modal/sheet interaction; mobile retains the accepted five-cell bottom navigation and safe-area hardening;
+- the Explore surface's top-level consumer label is updated from Market to Explore while domain terms such as Broad Market and market-match evidence remain unchanged;
+- no API path, destination renderer, route identifier, model/economic code, State/publication behavior, or lifecycle code was changed.
+
+Delivery:
+- Product Shell outer cache identity was refreshed to match the modified shell blob;
+- other changed static assets remain protected by the accepted content-fingerprint static-file redirect/immutable-cache mechanism.
+
+Development syntax checks passed for `product_navigation.js`, `product_shell.js`, and `north_star_market.js`.
+
+The branch is ready for a **draft** implementation PR and focused shared-shell/navigation validation. No full suite is authorized until the exact corrective head is stable and marked ready under P0.6.
