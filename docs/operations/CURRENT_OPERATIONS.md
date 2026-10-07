@@ -13,6 +13,8 @@ Authority: sole current cross-workstream status. Historical snapshots are under 
 
 - **P0.6 closeout record:** PR #407 merged as `f58872782aa08a38b816517f2c9465439bda4820` from stable head `cdfd88ddc25c86a26069cc56a41e0cddac62fea2`. PR CI run `37556542579` passed focused Dynasty readiness regressions and the one stable-head full suite (**2,197 passed, 1 warning**). This was process/docs/CI-only; no Render deployment was required. Root `AGENTS.md` contains the exact worker startup, architecture philosophy, and test/merge/deploy method.
 
+- **Final CI methodology correction:** PR #409 merged as `b18195e1ddcc84d321cdf4379dd956279ac9037e` from stable head `c08951991b98781755e8eb9e86174386e556aa76`. Draft-head focused CI run `37558978884` passed. After marking ready, stable full-suite run `37559055898` passed its pre/post exact-head checks and **2,197 tests (1 warning)**. Its first attempt (`37558882264`) failed before pytest because the reserved `GITHUB_SHA` resolved to the synthetic PR merge commit; the workflow now uses `EXPECTED_HEAD_SHA`. No suite executed in that failed attempt. The repository rulesets query returned no rulesets; branch-protection reads returned 403, so required-check enforcement remains unverified and is not claimed. No Render deployment was needed.
+
 ## Operational source
 
 Read this page for current cross-workstream status and Architecture Recovery for P0 decisions, exact evidence and tranche history. Former CURRENT_STATE, ACTIVE_WORKSTREAMS, ACCEPTANCE_GATES, MANAGEMENT_CONTINUITY, MANAGEMENT_HANDOFF and workstreams/IMPLEMENTATION contents are archived under `archive/`; old status is historical.
