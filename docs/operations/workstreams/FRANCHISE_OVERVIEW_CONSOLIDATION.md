@@ -314,3 +314,27 @@ Exact ready head `a746e577e2813acd71bb689f4e787843e2186964` passed Stable full-s
 2. **Independent Franchise tabs on league-read failure.** The pair loader uses an uncaught `Promise.all`, so a transient `/api/league/team-views` failure prevents the otherwise healthy `/api/my-team` response from rendering. Roster and Assets & Picks are owned by the managed-team contract and must remain usable. Correct behavior: fail closed only for league-relative Overview/Current evidence when the league read is unavailable; retain the managed-team response and intact tabs.
 
 These corrections do not change the product contract, Current semantics, Simulation, Roster, Assets & Picks, bottom navigation, lifecycle architecture, or server APIs. After focused Franchise validation is green, a new exact-head Stable full-suite gate is required before merge.
+
+
+## 2026-10-07 — final review corrective focused-green
+
+The two exact-head review blockers from `a746e577e2813acd71bb689f4e787843e2186964` were corrected narrowly in Franchise presentation only.
+
+Executable corrective head: `000ffe4ac7821d599a9112f97f17dca8765ff248`.
+
+Corrections:
+- Franchise response alignment now distinguishes **target State** from **served State**. Both responses must target the canonical expected State, agree on the same served State, and carry the same non-null publication generation. This preserves exact-generation safety while accepting governed `stale_last_good` continuity.
+- Franchise reads now settle independently. A failed `/api/my-team` read still fails the Franchise load, but a transient `/api/league/team-views` failure preserves the valid managed-team response. League-relative Overview/Current evidence becomes unavailable; Roster and Assets & Picks remain usable.
+- No backend, model, Current, Simulation, Roster, Assets & Picks, bottom-nav, publication or lifecycle contract changed.
+- Safari delivery fingerprints were refreshed: `my_team_dashboard.js` blob `5531858fec44723044023453ec891e780e40c881` → Franchise key `20261007-franchise-5531858fec44`; `product_shell.js` blob `a390c91094697fc74ad2885d7115f0a351f34ab5` → outer Product Shell key `git-a390c9109469`.
+
+Focused validation on the executable head is green:
+- Franchise North Star `37688553389`: success;
+- Home North Star `37688553370`: success;
+- League Atlas North Star `37688553401`: success;
+- CI `37688553429`: success;
+- PR164 focused corrective regression `37688553416`: success;
+- Live Forecast corrective trace `37688553510`: success;
+- Stable full suite `37688553376`: correctly skipped while PR #418 remained draft.
+
+Both final review threads were answered and resolved after this evidence. No executable work remains. The next PR-head movement is documentation-only checkpointing; mark that exact final head ready for one fresh Stable full-suite gate, then merge/deploy only if the successful gate still matches the PR head exactly.
