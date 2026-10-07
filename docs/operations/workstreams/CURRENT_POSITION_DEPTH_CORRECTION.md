@@ -627,3 +627,21 @@ Physical-target regressions now directly lock:
 - compressed iPhone Atlas retains `overflow-x:auto` / `overflow-y:hidden`, sticky Franchise and no vertical matrix cap.
 
 No executable work remains planned. After this documentation-only checkpoint head receives ordinary draft focused checks, mark that exact head ready for the single Stable full-suite gate.
+
+
+### 2026-10-07 — quick portrait-grid polish
+Management authorized one **presentation-only** polish pass after #414. Scope is limited to Position & Depth grid density/readability:
+- substantially tighten the sticky Franchise column;
+- tighten and equalize QB/RB/WR/TE/FLEX/SUPERFLEX grid columns;
+- center all position headers;
+- render `SUPERFLEX` as `SF` **in the grid header only**.
+
+Preserve:
+- one-row horizontal scrolling;
+- sticky Franchise identity;
+- canonical Current slot order and all Current evidence/rank semantics;
+- Dynasty/#370 semantics and data contracts;
+- drawer labels/data keys (the underlying slot remains `SUPERFLEX`);
+- all model, data, lifecycle, restore, refresh, Forecast, Simulation and P0 behavior.
+
+Validation: focused League Atlas/browser/static validation while draft, then the normal exact stable-head full-suite gate before merge/deploy. No broader UI work or Home→Franchise consolidation is authorized.
