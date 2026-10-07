@@ -191,7 +191,7 @@ def fill_current_ros_coverage_gaps(
     *,
     current_ros_forecasts: tuple[ForecastObservation, ...],
     preseason_season_forecasts: tuple[ForecastObservation, ...],
-    scoring_gap_player_ids: frozenset[str],
+    scoring_gap_positions: dict[str, Position],
     completed_through_week: int,
     as_of: datetime,
 ) -> tuple[tuple[ForecastObservation, ...], int]:
@@ -199,13 +199,15 @@ def fill_current_ros_coverage_gaps(
 
     Current ROS remains authoritative for every player it supports. The immutable
     preseason fallback is used only when strict current scoring retained a partial
-    player row with omitted active scoring coordinates. A player absent from current
-    raw/scored evidence entirely is not backfilled. Missing evidence is never
+    player row with omitted active scoring coordinates. Any eligible fallback row is
+    rebound to that strict current row's canonical position before season composition,
+    so completed actuals and ROS share the same player/position key. A player absent
+    from current raw/scored evidence entirely is not backfilled. Missing evidence is never
     converted to zero and a player remains absent if the governed prior cannot
     support him.
     """
 
-    if not preseason_season_forecasts or not scoring_gap_player_ids:
+    if not preseason_season_forecasts or not scoring_gap_positions:
         return current_ros_forecasts, 0
 
     fallback = remaining_prior_from_preseason(
@@ -220,12 +222,20 @@ def fill_current_ros_coverage_gaps(
         if item.horizon == ForecastHorizon.REST_OF_SEASON
         and item.metric == ForecastMetric.FANTASY_POINTS
     }
-    additions = tuple(
-        item
-        for item in fallback
-        if item.player_id in scoring_gap_player_ids
-        and (item.player_id, item.position, item.metric) not in current_keys
-    )
+    additions_list: list[ForecastObservation] = []
+    for item in fallback:
+        current_position = scoring_gap_positions.get(item.player_id)
+        if current_position is None:
+            continue
+        candidate = (
+            item
+            if item.position == current_position
+            else item.model_copy(update={"position": current_position})
+        )
+        if (candidate.player_id, candidate.position, candidate.metric) in current_keys:
+            continue
+        additions_list.append(candidate)
+    additions = tuple(additions_list)
     return (
         tuple(
             sorted(
@@ -321,11 +331,11 @@ def build_governed_in_season_outlook(
             league_state,
             current_ros_forecasts=current_runtime.fantasy_point_forecasts,
             preseason_season_forecasts=preseason_season_forecasts,
-            scoring_gap_player_ids=frozenset(
-                item.player_id
+            scoring_gap_positions={
+                item.player_id: item.position
                 for item in current_runtime.partial_fantasy_point_forecasts
                 if item.omitted_rule_stats
-            ),
+            },
             completed_through_week=completed,
             as_of=now,
         )
