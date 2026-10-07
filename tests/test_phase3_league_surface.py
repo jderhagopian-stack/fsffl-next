@@ -93,12 +93,16 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league_sha = hashlib.sha1(
         b"blob " + str(len(league_blob)).encode() + bytes([0]) + league_blob
     ).hexdigest()[:12]
+    css_blob = ATLAS_CSS.read_bytes()
+    css_sha = hashlib.sha1(
+        b"blob " + str(len(css_blob)).encode() + bytes([0]) + css_blob
+    ).hexdigest()[:12]
     shell_blob = PRODUCT_SHELL.read_bytes()
     shell_sha = hashlib.sha1(
         b"blob " + str(len(shell_blob)).encode() + bytes([0]) + shell_blob
     ).hexdigest()[:12]
 
-    assert "/static/league_atlas.css?v=20261005-dynasty-handoff383a" in league
+    assert f"/static/league_atlas.css?v=20261007-atlas-css-{css_sha}" in league
     assert f"const leagueAtlasStaticVersion='20261005-atlas-{league_sha}';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
     assert (
@@ -193,7 +197,9 @@ def test_final_iphone_polish_uses_one_tappable_rank_strength_map_and_valid_value
     assert '<div class="league-value-row ' in source
     assert "league-edge-map .league-edge-cell>b" in css
     assert "width:36px" in css
-    assert "grid-template-columns:minmax(80px,1.25fr) repeat(4,minmax(0,1fr))!important" in css
+    assert "grid-template-columns:150px repeat('+columnCount+',86px)!important" in source
+    assert "grid-template-columns:minmax(80px,1.25fr) repeat(4,minmax(0,1fr))!important" not in css
+    assert ".league-atlas-north-star .league-edge-map{overflow-x:auto!important;overflow-y:hidden!important" in css
 
 
 def test_final_iphone_polish_race_has_two_tier_synced_sticky_header_dock() -> None:
@@ -224,7 +230,9 @@ def test_physical_iphone_acceptance_hides_legacy_duplicate_map_and_fits_retained
     assert ".league-structure-panel .ns-league-atlas{display:none!important}" in css
     assert "height:31px!important" in css
     assert "width:27px!important" in css
-    assert "grid-template-columns:minmax(78px,1.22fr) repeat(4,minmax(0,1fr))!important" in css
+    assert "grid-template-columns:150px repeat('+columnCount+',86px)!important" in source
+    assert "grid-template-columns:minmax(78px,1.22fr) repeat(4,minmax(0,1fr))!important" not in css
+    assert ".league-edge-row>span:first-child{position:sticky;left:0" in source
 
 
 def test_physical_iphone_acceptance_race_identity_is_compact_and_header_does_not_cover_first_row() -> None:
@@ -249,7 +257,13 @@ def test_physical_iphone_acceptance_3_reveals_rank_one_identity_and_removes_map_
     assert "tbody tr:first-child .atlas-race-team-sticky{z-index:6!important}" in css
     assert ".league-atlas-north-star.ns-app-compressed .league-edge-map" in css
     assert "max-height:none!important" in css
-    assert "overflow-y:visible!important" in css
+    compressed = css[
+        css.index(".league-atlas-north-star.ns-app-compressed .league-edge-map,"):
+        css.index("/* Final density/value acceptance")
+    ]
+    assert "overflow-x:auto!important" in compressed
+    assert "overflow-y:hidden!important" in compressed
+    assert "overflow-y:visible!important" not in compressed
     assert "::-webkit-scrollbar" in css
 
 
