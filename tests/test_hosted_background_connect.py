@@ -338,7 +338,8 @@ def test_saved_session_restores_before_provider_refresh() -> None:
     refresh_index = restore.index("void refreshStoredLeague")
     assert product_context_index < apply_index < refresh_index
     assert "waitForBackgroundImport(leagueId,null,'connect')" in restore
-    assert "Stale-while-revalidate" in restore
+    assert "Saved-session restore is read-first" in restore
+    assert "ordinary restore never" in restore
 
 
 def test_session_startup_hands_durable_context_to_hosted_revalidation() -> None:
