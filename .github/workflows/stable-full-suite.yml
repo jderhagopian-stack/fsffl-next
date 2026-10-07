@@ -1,39 +1,38 @@
 name: Stable full suite
 
 on:
-  push:
-    branches:
-      - 'merge-gate/**'
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
 
 permissions:
   contents: read
   pull-requests: read
 
-# Moving the gate ref to a newer PR head cancels a run for the old candidate.
+# A new stable PR head supersedes any in-flight full-suite candidate.
 concurrency:
-  group: stable-full-suite-${{ github.ref }}
+  group: stable-full-suite-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   full-suite:
     name: full-suite
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
-      - name: Verify gate ref matches current PR head
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify PR head before testing
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ github.sha }}
-          GATE_REF: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          pr_number="${GATE_REF##*/}"
-          actual_head="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" --jq '.head.sha')"
+          actual_head="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
           if [ "$actual_head" != "$GITHUB_SHA" ]; then
-            echo "::error::Gate SHA $GITHUB_SHA is not current PR #$pr_number head $actual_head"
+            echo "::error::Stable suite SHA $GITHUB_SHA is not current PR head $actual_head"
             exit 1
           fi
       - uses: actions/setup-python@v5
@@ -43,16 +42,15 @@ jobs:
         run: python -m pip install -e '.[dev,web]'
       - name: Stable-head full suite
         run: pytest -q
-      - name: Verify PR head did not change during the suite
+      - name: Verify PR head after testing
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ github.sha }}
-          GATE_REF: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          pr_number="${GATE_REF##*/}"
-          actual_head="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" --jq '.head.sha')"
+          actual_head="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
           if [ "$actual_head" != "$GITHUB_SHA" ]; then
-            echo "::error::PR #$pr_number moved from gate SHA $GITHUB_SHA to $actual_head during the suite"
+            echo "::error::PR head moved from tested SHA $GITHUB_SHA to $actual_head during the full suite"
             exit 1
           fi
