@@ -192,3 +192,20 @@ PR #408 draft head `477b17d9981effd2d65397fdab02d123019c7b06` completed the post
 - `Stable full suite` correctly skipped while the PR remained draft.
 
 The cache-freshness review thread was answered and resolved after this evidence. PR #408 is mergeable/clean against current main `4f49106676b98d39ab7d43fa5fa241368bb7b55c`. No executable changes remain planned. After this documentation-only checkpoint push receives its ordinary draft focused check, the exact head may be marked ready for the **single** stable full-suite gate.
+
+
+### 2026-10-06 — first stable-head gate returned to draft
+PR #408 stable candidate `e45deb15298cdd255565d8ddb56a0ccb8cebdf34` was marked ready only after all draft focused workflows were green. Stable full-suite run `37563840095` verified that exact head before testing, then completed **2,207 passing tests / 1 failure / 1 warning**. The only failure was the existing 50,000-trial Simulation replay digest guard:
+
+- test: `tests/test_simulation_hot_loop_equivalence.py::test_50000_run_output_matches_governed_settings_derived_postseason_baseline`;
+- Python 3.11 expected digest: `ab42d84f680f82467c3088842019788cad0b375783b0aed5b37113e694678a65`;
+- observed digest on #408: `8a2c44b86d81ef48f36345f1cd243f1007328eedab1b3a6d40fb6f01193808ff`;
+- #408 changes no Simulation implementation or accepted Simulation semantics;
+- current main's immediately preceding accepted P0.6 stable full-suite run `37559055898` passed all 2,197 tests under the same Python 3.11.16 / NumPy 2.4.6 environment.
+
+PR #408 was returned to **draft before any further push**. Do not update the governed replay digest merely to make this unrelated failure pass. Diagnose the branch-local cause with focused test-order/isolation runs and correct only proven pollution or integration coupling.
+
+### 2026-10-06 — terminal regular-season review finding
+The exact-head ready review identified a second bounded Current defect: when Sleeper reports the NFL regular season complete at Week 18, the shared in-season orchestration clamps the ROS start to Week 18 while also loading Week 18 as completed actuals. The normal completed-actuals + ROS composer correctly rejects that overlap, which would make every Current rank unavailable after the regular season.
+
+Accepted interpretation for this consumer: terminal regular season is the degenerate **completed actuals + zero ROS** case. Use governed completed actuals only, with no invented future projection or uncertainty, and preserve explicit provenance/evidence-basis labeling. Correct this narrowly in the Current authority path or a reusable Forecast helper if one already exists; do not alter Simulation, Dynasty/#370, or general provider lifecycle semantics.
