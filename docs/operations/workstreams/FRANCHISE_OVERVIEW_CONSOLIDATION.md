@@ -376,3 +376,27 @@ Hosted consolidated behavior now live:
 - no backend, Current, Simulation, Value, lifecycle or publication architecture was changed.
 
 **MANAGEMENT GATE — FRANCHISE OVERVIEW CONSOLIDATION:** implementation, exact-head validation, merge and hosted startup/deployment are accepted. The remaining layer is authenticated iPhone/Safari physical acceptance of the consolidated managed-team landing experience. Confirm that managed navigation lands on Franchise Overview, the consolidated Overview is compact/readable/useful, Roster and Assets & Picks remain usable, Current drill-through reaches League Atlas, and no standalone Home experience reappears. Bottom-navigation composition remains the separate follow-on and is not reopened here.
+
+
+## 2026-10-07 — Management physical acceptance
+
+Management physically accepted the live consolidated Franchise Overview on authenticated iPhone/Safari after PR #418 deployment.
+
+Accepted:
+- Franchise Overview is useful/readable as the managed-team landing experience;
+- the approved Home visual language has been successfully carried into Franchise;
+- Roster and Assets & Picks remain available;
+- no new Franchise semantic defect was reported in this acceptance pass.
+
+Observed follow-on:
+- the legacy **Home** item is still present in the bottom navigation but appears inert.
+- this does **not** reopen #418 because bottom-navigation composition was explicitly excluded from this tranche.
+- remove/replace that obsolete Home navigation slot in the separately governed navigation/product-hierarchy tranche.
+
+Final implementation identity remains:
+- PR #418 final head `eed81a01c1b39a03351cf4a933ab0a2ab0acf9f1`;
+- Stable full suite `37690556503` — 2,229 passed / 1 warning;
+- merge `ba66f906bde49bd7c956a5e495bc6e33a07ae9e6`;
+- Render deploy `dep-db3bpn67bikc73cahdkg`.
+
+**Directive status: COMPLETE / PHYSICALLY ACCEPTED.**
