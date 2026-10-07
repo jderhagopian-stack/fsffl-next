@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -349,3 +350,12 @@ def test_governed_current_builder_consumes_existing_in_season_outlook(monkeypatc
     ]
     assert contract.evidence_basis == "current_rest_of_season"
     assert contract.completed_through_week == 4
+
+
+def test_hosted_current_provider_does_not_cache_by_state_only() -> None:
+    source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
+
+    assert "_current_position_depth_cache" not in source
+    assert "_current_position_depth_lock" not in source
+    assert "ROS and completed-week evidence can advance while canonical LeagueState identity" in source
+    assert "return build_governed_current_position_depth(" in source
