@@ -142,3 +142,18 @@ Stable full-suite run `37700252118` tested exact ready head `b0f2119dd7390b9380d
 PR #421 was returned to **draft before these test-only corrections were pushed**. No product/static/model/lifecycle code changed. The failed Stable run is superseded and cannot be used for merge.
 
 Next gate: run focused navigation/shared-shell validation on the corrected draft head. If green and no executable work remains, mark that exact head ready once for a fresh Stable full-suite gate; if exact-head green, merge/deploy and stop for authenticated iPhone/Safari physical acceptance.
+
+
+### 2026-10-07 — concrete gate blocker discovered after stale-test correction
+Before merge, Codex review surfaced one real P2 navigation-contract defect on the corrected branch: if `product_navigation.js` fails to install, `product_shell.js::rebuildProductNavigation()` is the surviving browser fallback, but it currently renders only `item.primary` routes. That leaves Owners, What-If, Simulator, Reports and Analytics unreachable through the UI in the fallback state, violating the accepted secondary-destination preservation contract.
+
+This is a **concrete navigation-only gate blocker**, so the earlier ready/full-suite attempt is superseded. PR #421 has been returned to draft before any product change.
+
+Bounded correction:
+- preserve the approved primary hierarchy `Franchise | League | Explore | Trade | More`;
+- keep all route IDs and destination behavior unchanged;
+- keep legacy `players_assets` compatibility/delegation unchanged;
+- add a functional shell-level fallback **More** control that exposes the existing secondary routes when `product_navigation.js` is unavailable;
+- do not expose secondary destinations as primary items and do not change model/data/lifecycle behavior.
+
+After the correction, run focused navigation/shared-shell validation while draft. Only the final exact green head may be marked ready for the one Stable full-suite gate.
