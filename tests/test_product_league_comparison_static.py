@@ -386,6 +386,13 @@ def test_switching_dynamic_current_and_fixed_dynasty_lenses_closes_room_drawer()
     assert "if(fsfflLeagueStructureState.positionLens==='dynasty')void laLoadDynastyRooms()" in actions
 
 
+def test_current_position_copy_labels_completed_regular_season_without_ros() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "evidence_basis==='completed_actuals_only'" in source
+    assert "completed regular-season actuals" in source
+    assert "no ROS games remain" in source
+
+
 def test_current_room_drawer_uses_actuals_plus_ros_and_slot_eligibility() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     drawer = source[
