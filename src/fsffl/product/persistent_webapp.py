@@ -38,7 +38,11 @@ from .foundation4_career_forward_runtime import (
 )
 from .foundation4_shadow_routes import install_career_intrinsic_routes
 from .hosted_connect import install_hosted_connect_routes
-from .in_season_forecast_routes import install_in_season_forecast_routes
+from .current_position_depth import build_governed_current_position_depth
+from .in_season_forecast_routes import (
+    install_in_season_forecast_routes,
+    load_preseason_season_forecasts,
+)
 from .intrinsic_background import (
     IntrinsicBuildStatus,
     IntrinsicBuildSuperseded,
@@ -121,6 +125,26 @@ _presentation_continuity = PresentationContinuityStore(_persistence_store)
 _startup_restore_complete = Event()
 _startup_restore_state: dict[str, object] = {"status": "idle"}
 _heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
+
+def _current_position_depth_provider(league_state):
+    """Build Current from fresh governed evidence for each presentation build.
+
+    ROS and completed-week evidence can advance while canonical LeagueState identity
+    remains unchanged. Do not cache this consumer by State alone. Exact published
+    presentation surfaces already provide the reusable read cache after composition.
+    """
+
+    baseline = (
+        load_preseason_season_forecasts(_persistence_store, league_state)
+        if _persistence_store is not None
+        else ()
+    )
+    return build_governed_current_position_depth(
+        league_state,
+        preseason_season_forecasts=baseline,
+        history_writer=_projection_history_store,
+    )
+
 
 
 def _load_sleeper_state_under_heavy_claim(league_external_id: str):
@@ -677,6 +701,7 @@ app = _webapp.create_app(
     product_capability_reconciler=_reconcile_hosted_intrinsic,
     heavy_work_coordinator=_heavy_work_coordinator,
     presentation_payload_loader=_presentation_payload_loader,
+    current_position_depth_provider=_current_position_depth_provider,
     state_resource_boundary=_apply_runtime_resource_boundary,
     phase_memory_reclaimer=_reclaim_runtime_phase_memory,
 )

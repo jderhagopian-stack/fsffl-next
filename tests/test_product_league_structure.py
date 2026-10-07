@@ -15,10 +15,12 @@ def test_league_structure_surface_uses_governed_race_position_value_pick_and_for
     ):
         assert label in source
     assert "calculated_competitive_state" in source
-    assert "position_strengths" in source
+    assert "currentPositionDepth" in source
+    assert "laCurrentStrength" in source
     assert "strength_index" in source
     assert "league_rank" in source
-    assert "100 = league-average optimized starter production" in source
+    assert "finalized actuals" in source
+    assert "configured league starter slots" in source
 
 
 def test_league_structure_visualization_does_not_create_model_authority() -> None:

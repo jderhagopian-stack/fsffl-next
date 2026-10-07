@@ -9,7 +9,7 @@ from fsffl.state.models import LeagueState, Position, Provenance
 from .backtest import RealizedOutcome
 from .in_season_runtime import InSeasonForecastRuntimeResult, ProjectionHistoryWriter, build_in_season_forecasts
 from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
-from .season_rollforward import compose_completed_actuals_with_ros
+from .season_rollforward import compose_completed_actuals_only, compose_completed_actuals_with_ros
 
 
 NFL_REGULAR_SEASON_WEEKS = 18
@@ -225,7 +225,25 @@ def build_governed_in_season_outlook(
         source=source,
         completed_through_week=completed,
     )
-    next_week = min(completed + 1, NFL_REGULAR_SEASON_WEEKS)
+    if completed == NFL_REGULAR_SEASON_WEEKS:
+        season_start = canonical_week_window(league_state.league.season, 1)[0]
+        season_end = canonical_week_window(
+            league_state.league.season, NFL_REGULAR_SEASON_WEEKS
+        )[1]
+        return GovernedInSeasonResult(
+            completed_through_week=completed,
+            season_outlook=compose_completed_actuals_only(
+                completed_actuals=actuals,
+                season_start=season_start,
+                season_end=season_end,
+            ),
+            forward_forecasts=(),
+            evidence_basis="completed_actuals_only",
+            current_runtime=None,
+            current_failure=None,
+        )
+
+    next_week = completed + 1
     period_start, _ = canonical_week_window(league_state.league.season, next_week)
     _, period_end = canonical_week_window(league_state.league.season, NFL_REGULAR_SEASON_WEEKS)
     now = (clock or (lambda: datetime.now(UTC)))()

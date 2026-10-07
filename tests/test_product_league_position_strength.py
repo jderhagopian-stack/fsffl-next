@@ -11,7 +11,8 @@ def test_league_position_strength_is_owned_by_the_atlas_surface() -> None:
     assert "position_strengths" in source
     assert "strength_index" in source
     assert "league_rank" in source
-    assert "100 = league-average optimized starter production" in source
+    assert "100 = league-average production for that slot" in source
+    assert "Fixed QB/RB/WR/TE exclude FLEX/SUPERFLEX contribution" in source
     assert "build_league_relative_position_strengths" not in source
 
 
