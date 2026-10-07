@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "src/fsffl/product/what_if_runtime.py"
 UI = ROOT / "src/fsffl/product/static/simulator.js"
 SHELL = ROOT / "src/fsffl/product/static/product_shell.js"
+NAV = ROOT / "src/fsffl/product/static/product_navigation.js"
 INDEX = ROOT / "src/fsffl/product/static/index.html"
 
 
@@ -65,10 +66,15 @@ def test_simulator_compares_only_server_returned_scenarios_without_new_score() -
     assert "master_score" not in ui
 
 
-def test_simulator_is_first_class_team_scoped_product_route() -> None:
+def test_simulator_remains_team_scoped_secondary_route_under_more() -> None:
     shell = SHELL.read_text(encoding="utf-8")
+    navigation = NAV.read_text(encoding="utf-8")
     index = INDEX.read_text(encoding="utf-8")
-    assert "{route:'simulator',label:'Simulator',teamScoped:true}" in shell
+    assert "{route:'simulator',label:'Simulator',teamScoped:true,navigation:false}" in shell
+    scenarios = navigation.split("const SCENARIOS=[", 1)[1].split("];", 1)[0]
+    assert "{route:'simulator',label:'Simulator',description:'Test multiple roster shocks together.',icon:'simulation',teamScoped:true}" in scenarios
+    assert "const SECONDARY=[...LEAGUE_INTELLIGENCE,...SCENARIOS,...ANALYSIS]" in navigation
+    assert "${SCENARIOS.map(moreRow).join('')}" in navigation
     assert "ensureSimulatorScript" in shell
     assert "'/static/simulator.js'" in shell
     assert "route==='simulator'" in shell
