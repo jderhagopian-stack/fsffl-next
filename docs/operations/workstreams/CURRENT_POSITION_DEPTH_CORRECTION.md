@@ -201,7 +201,7 @@ PR #408 stable candidate `e45deb15298cdd255565d8ddb56a0ccb8cebdf34` was marked r
 - Python 3.11 expected digest: `ab42d84f680f82467c3088842019788cad0b375783b0aed5b37113e694678a65`;
 - observed digest on #408: `8a2c44b86d81ef48f36345f1cd243f1007328eedab1b3a6d40fb6f01193808ff`;
 - #408 changes no Simulation implementation or accepted Simulation semantics;
-- current main's immediately preceding accepted P0.6 stable full-suite run `37559055898` passed all 2,197 tests under the same Python 3.11.16 / NumPy 2.4.6 environment.
+- current main's immediately preceding accepted P0.6 stable full-suite run `37559055898` passed all 2,197 tests on Python 3.11.16 / NumPy 2.4.6; the failed #408 gate had silently moved to Python 3.11.17 / NumPy 2.4.6 because Actions specifies the `3.11` minor rather than a patch.
 
 PR #408 was returned to **draft before any further push**. Do not update the governed replay digest merely to make this unrelated failure pass. Diagnose the branch-local cause with focused test-order/isolation runs and correct only proven pollution or integration coupling.
 
@@ -209,3 +209,37 @@ PR #408 was returned to **draft before any further push**. Do not update the gov
 The exact-head ready review identified a second bounded Current defect: when Sleeper reports the NFL regular season complete at Week 18, the shared in-season orchestration clamps the ROS start to Week 18 while also loading Week 18 as completed actuals. The normal completed-actuals + ROS composer correctly rejects that overlap, which would make every Current rank unavailable after the regular season.
 
 Accepted interpretation for this consumer: terminal regular season is the degenerate **completed actuals + zero ROS** case. Use governed completed actuals only, with no invented future projection or uncertainty, and preserve explicit provenance/evidence-basis labeling. Correct this narrowly in the Current authority path or a reusable Forecast helper if one already exists; do not alter Simulation, Dynasty/#370, or general provider lifecycle semantics.
+
+
+### 2026-10-06 — terminal-season correction and focused acceptance
+The Week-18 review finding is corrected within Forecast authority:
+- `compose_completed_actuals_only()` now represents the terminal regular season as factual SEASON observations with zero remaining uncertainty;
+- `build_governed_in_season_outlook()` uses that path only when `completed_through_week == 18`, returns no forward forecasts, labels the basis `completed_actuals_only`, and never requests an overlapping ROS period;
+- League Atlas explicitly says “completed regular-season actuals … no ROS games remain” for this basis;
+- K/DST authority remains unchanged: standard completed-actuals acquisition still covers offensive QB/RB/WR/TE only, so configured K/DST continue to fail explicitly when unsupported.
+
+Draft focused evidence on the terminal correction:
+- League Atlas run `37564796042`: success, **108 focused tests passed / 1 warning**, JavaScript syntax, real-league Atlas composition sanity, live-provider authority audit and evidence upload;
+- all other triggered focused workflows at the terminal-correction head were green;
+- the Week-18 review thread was answered and resolved.
+
+Final static delivery identities after the terminal copy correction:
+- `league_comparison.js` blob `f8041ee367c4b1144128ac9538f3cf2f12607f72` → Atlas key `20261005-atlas-f8041ee367c4`;
+- `product_shell.js` blob `1a77b171b49f20f41ed1171eb5a97d90d2e11de6` → index key `git-1a77b171b49f`.
+
+### 2026-10-06 — stable-gate Simulation blocker root cause
+Focused isolation proved the failed Simulation replay digest was not caused by #408 product code:
+- diagnostic run `37564690642` passed the 50,000-trial replay guard on the branch in isolation, after the new Current tests, after the changed Current/Atlas tests, and on current main;
+- the Simulation test, Simulation implementation, benchmark request and pyproject blobs are byte-identical between current main and #408;
+- runner evidence then exposed the real difference: the accepted P0.6 main gate used Python **3.11.16**, while the failed #408 stable gate had automatically advanced to **3.11.17** under `actions/setup-python` with `python-version: "3.11"`.
+
+The replay test already intended to normalize exact Python patch identity because its governed output baseline is per Python minor, but it normalized only the visible `rng_runtime_version` fields. Multiverse `simulation_id` and `world_id` are derived from the exact runtime string, so the patch version still leaked into the supposedly patch-normalized digest.
+
+Narrow testing correction only:
+- Simulation implementation, RNG protocol, seeds, football outputs, selected worlds, world indexes and production replay identity are unchanged;
+- the test now recomputes only those two derived Multiverse IDs against the reviewed baseline patch identity for the current Python minor, while continuing to hash all football outputs and replay coordinates;
+- the existing governed expected digest is unchanged;
+- post-correction hash-seed sweep `37565403757` passed the replay guard for `PYTHONHASHSEED=0..31` on Python 3.11.17;
+- draft focused workflows at correction head `4b0068ede67f4682376ad0f3e15cca701bb53a88` all passed; the stable full suite remained correctly skipped while draft.
+
+Temporary diagnostic workflows were removed before the stable candidate. No Simulation production semantics were modified.
