@@ -99,12 +99,12 @@
   }
   function statusPill(row){const a=authority(row);return"<span class='market-ns-status "+a.key+"'>"+esc(a.label)+"</span>"}
   function tabNav(){
-    return "<nav class='market-ns-tabs' role='tablist' aria-label='Market views'>"+TABS.map(([key,label,question])=>"<button type='button' data-market-tab='"+key+"' class='"+(market.tab===key?"active":"")+"' aria-selected='"+(market.tab===key?"true":"false")+"'><strong>"+label+"</strong><small>"+question+"</small></button>").join("")+"</nav>";
+    return "<nav class='market-ns-tabs' role='tablist' aria-label='Explore views'>"+TABS.map(([key,label,question])=>"<button type='button' data-market-tab='"+key+"' class='"+(market.tab===key?"active":"")+"' aria-selected='"+(market.tab===key?"true":"false")+"'><strong>"+label+"</strong><small>"+question+"</small></button>").join("")+"</nav>";
   }
   function shell(payload=null){
     const host=panel();if(!host)return;
     host.classList.add("market-ns-v2");
-    host.innerHTML="<header class='market-ns-head'><div><p class='eyebrow'>Market</p><h1>Find something worth doing.</h1><p>FSFFL can surface relevant opportunities, or you can explore the league on your own terms.</p></div><span class='status-chip'>"+(market.readOnly?"Read-only discovery":"Governed discovery")+"</span></header>"+tabNav()+"<div id='market-ns-body'></div><details class='market-ns-authority'><summary>Authority & evidence</summary><p>Search discovers candidate structures. Trade Center owns bilateral Decision, package consequences and exact Simulation. Broad Market and FSFFL Intrinsic remain separate. Missing evidence stays unavailable; acceptance probability is not estimated.</p></details>";
+    host.innerHTML="<header class='market-ns-head'><div><p class='eyebrow'>Explore</p><h1>Find something worth doing.</h1><p>FSFFL can surface relevant opportunities, or you can explore the league on your own terms.</p></div><span class='status-chip'>"+(market.readOnly?"Read-only discovery":"Governed discovery")+"</span></header>"+tabNav()+"<div id='market-ns-body'></div><details class='market-ns-authority'><summary>Authority & evidence</summary><p>Search discovers candidate structures. Trade Center owns bilateral Decision, package consequences and exact Simulation. Broad Market and FSFFL Intrinsic remain separate. Missing evidence stays unavailable; acceptance probability is not estimated.</p></details>";
     wireTabs();
     renderBody(payload||opp()?.payload||null);
   }
