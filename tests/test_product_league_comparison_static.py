@@ -28,15 +28,16 @@ def test_league_comparison_consumes_authoritative_atlas_analytics_and_value_cont
 
 def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authority() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
-    assert "Current ranks optimized-starter production for winning now" in source
+    assert "Current = finalized actuals" in source
+    assert "configured league starter slots" in source
     assert "Career-forward room rank; roster counts are breadth only." in source
     assert "data-position-view=\"current\"" in source
     assert "data-position-view=\"dynasty\"" in source
-    assert "dynasty?laDynastyRoom(view.team_id,position):laStrength(view,position)" in source
+    assert "dynasty?laDynastyRoom(view.team_id,position):laCurrentStrength(view.team_id,position)" in source
     assert "api(`/api/league/dynasty-position-rooms?${query}`)" in source
     assert "raw holistic career-forward reference" in source
     assert "rostered · breadth" in source
-    assert "depthBucket=player=>player.roster_slot==='IR'?'IR':player.roster_slot==='TAXI'?'TAXI':player.projected_starter?'STARTER':'BENCH'" in source
+    assert "dynasty?player.projected_starter:Boolean(currentAssigned(player))" in source
     assert "peerRooms.filter(item=>item.room_raw===row.room_raw).length" in source
     assert "api('/api/value/long-term-intrinsic-shadow-v1')" in source
     assert "Array.isArray(longTerm?.uncertainty?.long_horizon_y4_y7)" in source
