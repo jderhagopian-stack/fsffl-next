@@ -1,5 +1,32 @@
 # FSFFL NEXT — Product Roadmap
 
+## 2026-10-07 Management reconciliation — current roadmap position
+
+This section is the controlling current-position overlay for the roadmap below. Older chronology is retained because it records accepted design decisions and capability intent, but historical `NEXT` / active-PR language below must not override this section or [MANAGEMENT_CONTINUITY.md](MANAGEMENT_CONTINUITY.md).
+
+### Completed / absorbed foundations
+
+The following major programs are no longer future roadmap gates:
+- P0 Architecture Recovery and published-reader/lifecycle simplification;
+- core Simulation 2.0 program and production 50,000-run authority;
+- Foundation 4 / Career-forward Intrinsic foundation (with coverage completeness still open);
+- League Atlas North Star foundation;
+- Current Position & Depth correction and physical acceptance;
+- Home → Franchise Overview consolidation / standalone Home retirement.
+
+### Immediate Management sequence
+
+1. **Navigation / product hierarchy:** remove the obsolete inert Home nav slot and target `Franchise | League | Explore | Trade | More`. Market becomes Explore; Trade Center becomes primary-nav Trade. Product navigation only; no analytical-authority changes.
+2. **Career Coverage #405:** resolve exact Career scorer reconstruction / rostered-asset completeness under the existing accepted model before any fitting/retraining or PR2.
+3. **Resume forward product roadmap:** prioritize coherent core usefulness (Explore discovery + Trade decisions), then historical PIT/lineage/snapshot foundations, then Decision uncertainty + Owner Intelligence, then league-history / What-If / Multiverse / publications, while commercialization/league-agnostic hardening continues as an explicit pre-launch track.
+
+### Standing roadmap ordering principle
+
+`reliable governed core → coherent useful product → historical shared foundations → Owner/Decision intelligence → league memory/counterfactual/storytelling → broader commercialization`
+
+Recent corrective work is prerequisite closure, not a replacement roadmap.
+
+
 ## Current parallel critical paths
 
 ### Foundation / league-agnostic path
