@@ -5,13 +5,12 @@ Authority: sole current cross-workstream status. Historical snapshots are under 
 
 ## Current program
 
-- **Current Position & Depth correction:** ACTIVE under [Current Position & Depth Correction](workstreams/CURRENT_POSITION_DEPTH_CORRECTION.md). Management accepted the 2026-10-06 authority audit: Current must use governed completed actuals + ROS; Current aggregation/grid must follow configured lineup slots with FLEX/SUPERFLEX separated from fixed QB/RB/WR/TE, configured K/DST only at supported authority, Depth kept as separate drilldown evidence, and Dynasty/#370 unchanged. Follow P0.6 focused-test → one stable-head full-suite → merge/deploy/checkpoint protocol.
-
+- **Current Position & Depth correction:** ACTIVE under [Current Position & Depth Correction](workstreams/CURRENT_POSITION_DEPTH_CORRECTION.md). Management accepted the 2026-10-06 authority audit: Current uses governed completed actuals + ROS; Current grid follows configured lineup slots with FLEX/SUPERFLEX separated from fixed QB/RB/WR/TE, configured K/DST only at supported authority, Depth kept separate as drilldown evidence, and Dynasty/#370 unchanged. P0.6 focused → single stable-head full-suite → merge/deploy/checkpoint protocol applies.
 - **P0.1–P0.4:** complete; do not reopen.
 - **P0.5:** lifecycle simplification architecturally complete. Final saved-session iPhone/Safari acceptance found a separate Career Intrinsic coverage blocker: the exact State/publication Dynasty surface was served correctly, while accepted #370 logic withheld ranks because rostered players were absent from the 335-estimate artifact.
 - **Dynasty truth correction:** this tranche reports explicit rank readiness and incomplete Career coverage. Global core-intelligence readiness is unchanged. No imputation and no #370 change.
 - **Career coverage follow-up:** [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405), outside Architecture Recovery. The read-only audit verified **25** distinct missing rostered IDs in the exact preserved State (QB 8/12, RB 7/12, WR 4/12, TE 10/12); “22” was a summary-count error. Management has approved the coverage principle. [Career Coverage Extension checkpoint](workstreams/CAREER_COVERAGE_EXTENSION.md) contains the exact boundary trace, extension contract, evidence tiers, on-demand free-agent semantics, limitations and bounded PR sequence. PR1 stopped before code: retained Y4–Y7 evidence has predictions and residual bands but no inference scorer/model objects, and reproducing candidate scores would call the accepted fitting routine. Do not fit or begin PR2 without Management disposition. Exact artifact IDs, hashes, archive contents and expiry dates are in the checkpoint.
-- **P0.6:** operational simplification is implemented, merged and deployed: one current-status source, stale status snapshots archived, a focused + single stable-head full-suite merge gate, explicit merge/deploy verification, and five authoritative E2E journeys. No new product breadth. The final physical iPhone/Safari replay remains the required post-simplification acceptance gate.
+- **P0.6:** operational simplification is implemented, merged and deployed: one current-status source, stale status snapshots archived, a focused + single stable-head full-suite merge gate, explicit merge/deploy verification, and five authoritative E2E journeys. The closeout hygiene adds a root `AGENTS.md` worker bootstrap, makes this exact startup/test method discoverable, cancels superseded PR CI runs, and closes stale active wording in Architecture Recovery. No product/runtime scope is reopened.
 
 ## Operational source
 
@@ -21,8 +20,9 @@ GitHub main at P0.6 tranche start: `65fbf0b272f1f856df1424116050d6c7f4e44f6d`. P
 
 ## Test, merge, deploy
 
-- Focused tests during development.
+- Focused tests during development; do not use the full suite as an iterative development loop.
 - At stable PR head, affected focused regressions then **one full suite** as merge gate. No intermediate full-suite repeats.
+- Generic CI runs on pull requests only. A newer PR head supersedes older runs and cancels any obsolete in-flight run; the required `CI / test` check and its focused-then-full-suite sequence remain intact.
 - Pull-request CI is the gate; no redundant full suite on merge push.
 - Render auto-deploy is disabled. Trigger deploy after merge, verify the exact merged commit is live, record deploy ID/completion/startup evidence.
 - Documentation-only post-deploy updates need no second full suite.
