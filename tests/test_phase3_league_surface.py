@@ -183,7 +183,7 @@ def test_final_iphone_polish_uses_one_tappable_rank_strength_map_and_valid_value
     assert "positionLensMode:'rank'" in source
     assert 'data-position-lens="rank"' in source
     assert 'data-position-lens="strength"' in source
-    assert "100 = league-average optimized starter production." in source
+    assert "100 = league-average production for that slot." in source
     assert "Team order does not change between lenses." in source
     assert "data-room-team" in source
     assert "data-room-position" in source
