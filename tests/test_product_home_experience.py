@@ -11,9 +11,7 @@ APP = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
 
 def test_home_matches_north_star_single_screen_information_architecture() -> None:
     for label in (
-        "What matters right now",
         "Season outlook · current Simulation",
-        "Your roster at a glance",
         "Also worth knowing",
         "Around the league",
         "Projected final wins",
@@ -24,7 +22,9 @@ def test_home_matches_north_star_single_screen_information_architecture() -> Non
     ):
         assert label in HOME
     assert "home-north-star" in HOME
-    assert "home-position-grid" in HOME
+    assert "home-position-grid" not in HOME
+    assert "What matters right now" not in HOME
+    assert "Your roster at a glance" not in HOME
     assert "home-outlook-grid" in HOME
     assert "home-secondary-row" in HOME
     assert "home-workflows" not in HOME
@@ -32,12 +32,13 @@ def test_home_matches_north_star_single_screen_information_architecture() -> Non
     assert "Best next action" not in HOME
 
 
-def test_home_pressure_point_uses_only_governed_position_strength_family() -> None:
-    assert "function homePressurePoint()" in HOME
-    assert "position_strengths" in HOME
-    assert "league_rank" in HOME
-    assert "strength_index" in HOME
-    assert "Explore '+homeEscape(pressure.position)+' options" in HOME
+def test_home_does_not_publish_legacy_position_strength_as_current_authority() -> None:
+    assert "function homePressurePoint()" not in HOME
+    assert "position_strengths" not in HOME
+    assert "data-home-action=\"pressure\"" not in HOME
+    assert "data-home-action=\"position\"" not in HOME
+    assert "Roster position lens" not in HOME
+    assert "Strength Index" not in HOME
     for forbidden in (
         "recommendation_authority",
         "acceptance_probability",
@@ -80,7 +81,6 @@ def test_home_contextual_navigation_contract_is_presentation_owned() -> None:
     assert "fsfflSetDeepLinkIntent" in SHELL
     assert "fsfflConsumeDeepLinkIntent" in SHELL
     assert "route:'my_team'" in HOME
-    assert "route:'opportunities'" in HOME
     assert "route:'league_comparison'" in HOME
     assert "section:'positions'" in HOME
     assert "section:'overview'" in HOME
@@ -124,18 +124,14 @@ def test_home_north_star_has_no_literal_escape_text_in_document_shell() -> None:
 
 def test_home_north_star_accepted_sections_and_drill_ins_remain_intact_after_cleanup() -> None:
     for label in (
-        "What matters right now",
         "Season outlook · current Simulation",
-        "Your roster at a glance",
         "Also worth knowing",
         "Around the league",
     ):
         assert label in HOME
     for action in (
         "data-home-action=\"franchise\"",
-        "data-home-action=\"pressure\"",
         "data-home-action=\"outlook\"",
-        "data-home-action=\"position\"",
         "data-home-action=\"exposure\"",
     ):
         assert action in HOME
