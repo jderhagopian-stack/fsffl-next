@@ -553,5 +553,5 @@ def test_position_grid_superflex_abbreviation_is_visual_only() -> None:
 
     assert "position==='SUPERFLEX'?'SF':position" in matrix
     assert "aria-label=\"'+laEsc(position)+'\"" in matrix
-    assert "data-room-position="'+laEsc(position)+'"" in cell
+    assert "data-room-position=\"'+laEsc(position)+'\"" in cell
     assert "laCurrentStrength(view.team_id,position)" in cell
