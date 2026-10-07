@@ -388,10 +388,51 @@ def test_50000_run_output_matches_governed_settings_derived_postseason_baseline(
     # copy of that same runtime coordinate while leaving all football outputs,
     # world selections, world indexes and other replay fields in the digest.
     dumped = result.model_dump(mode="json")
+    python_minor = sys.version_info[:2]
     normalized_runtime = f"python-{sys.version_info.major}.{sys.version_info.minor}"
+    # Replay identity intentionally records the exact Python patch version, but this
+    # cross-run football-output baseline is governed per Python minor. The original
+    # normalization updated the visible runtime fields while leaving Multiverse
+    # simulation_id/world_id values derived from the patch-specific runtime. Rebuild
+    # those derived IDs against the reviewed baseline patch for each supported minor
+    # so a GitHub runner patch update cannot masquerade as a football-output change.
+    baseline_identity_runtime_by_python_minor = {
+        (3, 11): "python-3.11.16",
+        (3, 12): "python-3.12.10",
+    }
+    baseline_identity_runtime = baseline_identity_runtime_by_python_minor.get(
+        python_minor
+    )
+    assert baseline_identity_runtime is not None, (
+        "add a reviewed replay-identity normalization runtime for Python "
+        f"{sys.version_info.major}.{sys.version_info.minor} before validating this runtime"
+    )
+    normalized_simulation_id = hashlib.sha256(
+        json.dumps(
+            {
+                "simulation_input_fingerprint": dumped["simulation_input_fingerprint"],
+                "model_version": dumped["model_version"],
+                "simulation_count": dumped["simulation_count"],
+                "seed": dumped["seed"],
+                "rng_protocol": dumped["rng_protocol"],
+                "rng_runtime_version": baseline_identity_runtime,
+                "rng_bit_generator": dumped["rng_bit_generator"],
+                "rng_batch_size": dumped["rng_batch_size"],
+                "rng_draw_layout": dumped["rng_draw_layout"],
+                "rng_seed_derivation": dumped["rng_seed_derivation"],
+                "multiverse_model_version": dumped["multiverse_model_version"],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
     dumped["rng_runtime_version"] = normalized_runtime
     for world in dumped.get("multiverse_worlds", ()):
         world["rng_runtime_version"] = normalized_runtime
+        world["simulation_id"] = normalized_simulation_id
+        world["world_id"] = hashlib.sha256(
+            f"{normalized_simulation_id}:{world['world_index']}".encode()
+        ).hexdigest()
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
         (3, 11): "ab42d84f680f82467c3088842019788cad0b375783b0aed5b37113e694678a65",
