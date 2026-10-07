@@ -127,3 +127,15 @@ The focused run confirmed:
 - browser Current consumes the new slot contract while Dynasty keeps its fixed QB/RB/WR/TE contract.
 
 The temporary workflow was deleted at branch commit `bfe3a6e193c4c7eba0f2ffbfa8726e291309a802`. No full suite has been run for this correction yet. The next step is a bounded exact-head review, then the stable PR merge gate with affected focused workflows plus one full CI suite.
+
+
+### 2026-10-06 — post-review focused revalidation
+The bounded review refinement narrowed exception handling so only failure to obtain the governed in-season authority is converted to an explicit unavailable Current contract; implementation defects in slot composition are no longer mislabeled as missing Forecast authority.
+
+Focused revalidation after that executable change:
+- temporary branch-only workflow run `37556763122`: success;
+- JavaScript syntax: success;
+- 122 focused tests passed / 1 unrelated Starlette TestClient deprecation warning;
+- temporary workflow removed again at `7226acaf865863f5bf74a6e11e1903d9fb9b750e`.
+
+No production implementation changes remain planned before the stable merge-gate PR.
