@@ -36,6 +36,18 @@ def test_legacy_players_route_is_compatibility_only_and_delegates_to_market() ->
     assert "fsfflProductRoutes.filter(item=>item.primary)" in source
 
 
+def test_shell_fallback_more_preserves_secondary_destinations() -> None:
+    source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
+    assert "function fsfflFallbackSecondaryRoutes()" in source
+    assert "!item.primary&&!item.legacy&&item.route!=='league'" in source
+    assert "function fsfflAppendFallbackMore(nav,hasTeam,direct=false)" in source
+    assert "more.textContent='More'" in source
+    assert "fsfflAppendFallbackMore(nav,hasTeam,false)" in source
+    assert "fsfflAppendFallbackMore(nav,hasTeam,true)" in source
+    for route in ("behavioral_intelligence", "what_if", "simulator", "reports", "analytics"):
+        assert f"route:'{route}'" in source
+
+
 def test_product_surfaces_explain_authoritative_reuse_not_frontend_model_logic() -> None:
     source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
     assert "rerun authoritative Simulation" in source
