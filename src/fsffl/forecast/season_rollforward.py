@@ -10,6 +10,7 @@ from .models import ForecastDistribution, ForecastHorizon, ForecastObservation
 
 
 ROLL_FORWARD_MODEL_VERSION = "next2-completed-actuals-plus-ros-v1"
+COMPLETED_ACTUALS_ONLY_MODEL_VERSION = "next2-completed-actuals-only-v1"
 
 
 def _validated_actuals_by_key(
@@ -32,6 +33,79 @@ def _validated_actuals_by_key(
         grouped[key] = ordered
     return grouped
 
+
+
+def compose_completed_actuals_only(
+    *,
+    completed_actuals: tuple[RealizedOutcome, ...],
+    season_start: datetime,
+    season_end: datetime,
+) -> tuple[ForecastObservation, ...]:
+    """Represent a completed regular season as factual season-outlook observations.
+
+    This is the terminal form of completed-actuals + ROS: once no regular-season
+    games remain, forward production and uncertainty are exactly zero. The result
+    preserves Forecast's season-outlook contract without inventing an overlapping
+    REST_OF_SEASON period.
+    """
+
+    if season_start.tzinfo is None or season_end.tzinfo is None:
+        raise ValueError("completed season window must be timezone-aware")
+    season_start = season_start.astimezone(UTC)
+    season_end = season_end.astimezone(UTC)
+    if season_end <= season_start:
+        raise ValueError("completed season_end must follow season_start")
+
+    actuals_by_key = _validated_actuals_by_key(completed_actuals)
+    output: list[ForecastObservation] = []
+    for (player_id, position, metric), rows in actuals_by_key.items():
+        used = [
+            item
+            for item in rows
+            if item.period_start >= season_start and item.period_end <= season_end
+        ]
+        if not used:
+            continue
+        total = sum(item.actual for item in used)
+        as_of = max(
+            max(item.finalized_at, item.provenance.retrieved_at, item.provenance.effective_at)
+            for item in used
+        ).astimezone(UTC)
+        retrieved_at = max(item.provenance.retrieved_at for item in used).astimezone(UTC)
+        effective_at = max(item.provenance.effective_at for item in used).astimezone(UTC)
+        output.append(
+            ForecastObservation(
+                player_id=player_id,
+                position=position,
+                horizon=ForecastHorizon.SEASON,
+                metric=metric,
+                period_start=season_start,
+                period_end=season_end,
+                distribution=ForecastDistribution(
+                    mean=total,
+                    stddev=0.0,
+                    p10=total,
+                    p50=total,
+                    p90=total,
+                ),
+                source="fsffl:completed-actuals-only",
+                model_version=COMPLETED_ACTUALS_ONLY_MODEL_VERSION,
+                as_of=as_of,
+                provenance=Provenance(
+                    source="fsffl:completed-actuals-only",
+                    retrieved_at=retrieved_at,
+                    effective_at=effective_at,
+                    source_version=COMPLETED_ACTUALS_ONLY_MODEL_VERSION,
+                ),
+            )
+        )
+
+    return tuple(
+        sorted(
+            output,
+            key=lambda item: (item.player_id, item.metric.value, item.source),
+        )
+    )
 
 def compose_completed_actuals_with_ros(
     *,
