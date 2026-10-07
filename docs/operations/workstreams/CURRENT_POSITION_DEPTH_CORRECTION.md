@@ -393,3 +393,26 @@ Validation after those executable corrections:
 - all draft focused workflows on `3da42baa6983867d9e225c5a0f144b4e02f5cd23` are green: CI `37609891170`, League Atlas `37609891201`, Home `37609891195`, Franchise `37609891297`, Live Forecast corrective trace `37609891192`, PR164 corrective regression `37609891275`, and corrective live-provider numerical trace `37609891183` (green on retry after a transient one-source provider-health result).
 
 No executable work remains. The final PR-head movement after this section is documentation-only checkpointing. The next action is to mark that exact documentation-final PR head ready and run the Stable full suite once; if green, merge/deploy and record hosted identity. Physical authenticated iPhone/Safari re-acceptance remains required after deploy.
+
+
+### 2026-10-07 — #411 position-rebind review correction
+The documentation-final ready review surfaced one additional bounded P2 edge case in the new player-level preseason gap fallback: eligibility was keyed by current partial-evidence player ID, but the accepted preseason row could still carry a stale preseason position. Because completed actuals compose on `(player_id, position, metric)`, a real post-preseason position change could omit completed production from that player's Current season outlook.
+
+Narrow correction only:
+- player-level gap eligibility remains restricted to strict current scorer partial rows with omitted active scoring coordinates;
+- the eligibility evidence now carries `player_id -> current partial-row position`, not just a set of player IDs;
+- an eligible preseason remaining-prior row is rebound to that current canonical position before duplicate checking and completed-actuals + ROS composition;
+- no unsupported player is newly admitted, no value is zero-imputed, and full-current-ROS rows remain authoritative;
+- a focused regression proves an RB-labeled preseason row admitted by a current WR partial row is emitted as WR before season composition.
+
+Corrective executable head `60f12f8141ef31dcbbd864600a5587823b620865` passed all draft focused workflows:
+- CI `37611152491`: success;
+- League Atlas North Star `37611152545`: success;
+- Home North Star `37611152599`: success;
+- Franchise North Star `37611152461`: success;
+- Live Forecast corrective trace `37611152397`: success;
+- corrective live-provider numerical trace `37611152448`: success;
+- PR164 focused corrective regression `37611152451`: success;
+- Stable full suite remained correctly skipped while draft (`37611152427`).
+
+The previously green Stable full-suite run `37610536097` on documentation-final head `c6318a8b7e7ad0cec5d94f2f3c9f2b60ca882a8f` (**2,222 passed / 1 warning**) is superseded by this bounded executable correction and is not being used as merge evidence. No other runtime/product/model work was changed. After this checkpoint-only head movement, the exact final PR head must receive a fresh Stable full-suite gate before merge.
