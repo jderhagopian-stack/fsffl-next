@@ -38,6 +38,10 @@ from .background_jobs import (
 )
 from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeStatus
 from .dashboard import build_league_metric_chart
+from .current_position_depth import (
+    CurrentPositionDepthContract,
+    unavailable_current_position_depth,
+)
 from .frontier_runtime import build_negotiation_frontier
 from .league_atlas import build_league_atlas_payload
 from .league_atlas_preseason import (
@@ -97,6 +101,7 @@ SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationA
 CapabilityReadinessReader = Callable[[object], dict[str, object]]
 ProductCapabilityReconciler = Callable[[object], dict[str, object]]
 PresentationPayloadLoader = Callable[[str, UserRuntimeContext, str], dict[str, object] | None]
+CurrentPositionDepthProvider = Callable[[LeagueState], CurrentPositionDepthContract]
 RuntimeMemoryReclaimer = Callable[[str], object]
 StateResourceBoundaryHandler = Callable[[ResourceTransition], object]
 
@@ -903,6 +908,7 @@ def create_app(
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     presentation_payload_loader: PresentationPayloadLoader | None = None,
+    current_position_depth_provider: CurrentPositionDepthProvider | None = None,
     state_resource_boundary: StateResourceBoundaryHandler | None = None,
     state_transition_reclaimer: RuntimeMemoryReclaimer | None = None,
     phase_memory_reclaimer: RuntimeMemoryReclaimer | None = None,
@@ -2479,6 +2485,26 @@ def create_app(
                 )
                 source_level = "state_only"
 
+        if current_position_depth_provider is None:
+            current_position_depth = unavailable_current_position_depth(
+                league_state,
+                reason=(
+                    "Governed completed-actuals + ROS Current Position & Depth "
+                    "authority is not configured in this runtime."
+                ),
+            )
+        else:
+            try:
+                current_position_depth = current_position_depth_provider(league_state)
+            except Exception as exc:
+                current_position_depth = unavailable_current_position_depth(
+                    league_state,
+                    reason=(
+                        "Governed completed-actuals + ROS Current Position & Depth "
+                        f"authority failed: {type(exc).__name__}: {exc}"
+                    ),
+                )
+
         enriched = tuple(
             _attach_live_value_profiles(view, runtime.value_evidence)
             for view in views
@@ -2492,6 +2518,7 @@ def create_app(
             "intelligence_freshness": freshness,
             "as_of": league_state.as_of.isoformat(),
             "source_level": source_level,
+            "current_position_depth": current_position_depth.model_dump(mode="json"),
             "team_market_value_portfolios": (
                 [portfolio.model_dump(mode="json") for portfolio in runtime.value_evidence.team_market_value_portfolios]
                 if runtime.value_evidence is not None
