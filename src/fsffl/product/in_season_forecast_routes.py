@@ -27,7 +27,7 @@ from .runtime import PrivateBetaRuntimeStore
 from .webapp import require_beta_user
 
 
-def _baseline_season_forecasts(persistence_store: PersistenceStore, league_state):
+def load_preseason_season_forecasts(persistence_store: PersistenceStore, league_state):
     record = persistence_store.get_latest_reusable_artifact(
         artifact_kind=PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND,
         scope_kind=LEAGUE_SEASON_SCOPE_KIND,
@@ -73,7 +73,7 @@ def install_in_season_forecast_routes(
         if state is None:
             raise HTTPException(status_code=409, detail="Connect a league before requesting Forecast")
         baseline = (
-            _baseline_season_forecasts(persistence_store, state)
+            load_preseason_season_forecasts(persistence_store, state)
             if persistence_store is not None
             else ()
         )
