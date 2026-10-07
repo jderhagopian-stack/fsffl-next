@@ -519,3 +519,20 @@ PR #413 was immediately returned to draft before changing the head. The correcti
 - compute the Home Git-blob delivery key from the actual bundle bytes.
 
 No runtime/product/model file changes are authorized by this gate result. The failed Stable run is superseded evidence and must not be used for merge. The new exact draft head must pass focused validation first; only then may it be marked ready for a fresh Stable full-suite gate.
+
+
+### 2026-10-07 — #413 live physical acceptance failure / trace-before-code gate
+Management supplied authenticated iPhone/Safari evidence at approximately **12:32 ET** against live #413 merge `cb7f5f9e96bc3704196222bd2017fa713579fc1a`. Safari loaded the new fingerprinted #413 JavaScript/CSS, so this failure is **not** stale browser cache.
+
+Confirmed physical failures:
+- Current Position & Depth now renders **all Current ranks unavailable** rather than merely the previously incomplete RB/FLEX columns;
+- portrait still wraps/overlaps FLEX/SUPERFLEX instead of preserving one non-wrapping horizontal grid;
+- this evidence is against the new delivered bundle, so static delivery/cache-busting is not the failure class.
+
+Management directive:
+1. Trace the **live publication/evidence regression** and the **actual iPhone layout** before changing executable code.
+2. Do not reopen or reinterpret accepted #411/#413 semantics: actuals+ROS authority, strict fail-closed evidence boundaries, configured lineup-slot attribution, canonical QB/RB/WR/TE/FLEX/SUPERFLEX order, Dynasty/#370, Simulation, and P0 architecture remain accepted.
+3. Correct only the proven live publication/evidence and portrait implementation defects.
+4. Use focused validation first; run one Stable full-suite gate only after physical-target behavior is demonstrably correct at the final corrective head.
+
+No executable code changed before this checkpoint.
