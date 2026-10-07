@@ -428,6 +428,7 @@ def build_governed_current_position_depth(
             league_state,
             preseason_season_forecasts=preseason_season_forecasts,
             history_writer=history_writer,
+            allow_governed_fumbles_ros_gap=True,
         )
     except Exception as exc:
         return _unavailable_contract(
