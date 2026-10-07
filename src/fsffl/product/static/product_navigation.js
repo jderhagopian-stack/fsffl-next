@@ -77,7 +77,7 @@
     let nav=document.querySelector('#product-mobile-nav');if(!nav){nav=document.createElement('nav');nav.id='product-mobile-nav';nav.className='product-mobile-nav';nav.setAttribute('aria-label','Primary product navigation');document.body.appendChild(nav)}
     const current=state?.route;
     nav.innerHTML=PRIMARY.map(item=>{const isActive=current===item.route,isLocked=locked(item);return `<button type="button" data-product-mobile-route="${esc(item.route)}" ${isLocked?'disabled':''} ${isActive?'aria-current="page"':''}>${icon(item.icon)}<span>${esc(item.short)}</span></button>`}).join('')+`<button type="button" data-product-more ${secondaryActive()?'aria-current="page"':''}>${icon('more')}<span>More</span></button>`;
-    nav.querySelectorAll('[data-product-mobile-route]').forEach(button=>button.addEventListener('click',()=>{if(!button.disabled)go(button.datasetProductMobileRoute||button.dataset.productMobileRoute)}));
+    nav.querySelectorAll('[data-product-mobile-route]').forEach(button=>button.addEventListener('click',()=>{if(!button.disabled)go(button.dataset.productMobileRoute)}));
     const moreButton=nav.querySelector('[data-product-more]');moreButton?.addEventListener('click',()=>openMore(moreButton));
     ensureMore();
   }
