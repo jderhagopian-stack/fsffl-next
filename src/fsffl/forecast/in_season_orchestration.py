@@ -191,18 +191,21 @@ def fill_current_ros_coverage_gaps(
     *,
     current_ros_forecasts: tuple[ForecastObservation, ...],
     preseason_season_forecasts: tuple[ForecastObservation, ...],
+    scoring_gap_player_ids: frozenset[str],
     completed_through_week: int,
     as_of: datetime,
 ) -> tuple[tuple[ForecastObservation, ...], int]:
     """Fill only strict-scorer player gaps from the accepted remaining preseason prior.
 
     Current ROS remains authoritative for every player it supports. The immutable
-    preseason fallback is used only for players absent from authoritative current
-    fantasy-point output. Missing evidence is never converted to zero and an
-    unsupported player remains absent if the governed prior cannot support him.
+    preseason fallback is used only when strict current scoring retained a partial
+    player row with omitted active scoring coordinates. A player absent from current
+    raw/scored evidence entirely is not backfilled. Missing evidence is never
+    converted to zero and a player remains absent if the governed prior cannot
+    support him.
     """
 
-    if not preseason_season_forecasts:
+    if not preseason_season_forecasts or not scoring_gap_player_ids:
         return current_ros_forecasts, 0
 
     fallback = remaining_prior_from_preseason(
@@ -220,7 +223,8 @@ def fill_current_ros_coverage_gaps(
     additions = tuple(
         item
         for item in fallback
-        if (item.player_id, item.position, item.metric) not in current_keys
+        if item.player_id in scoring_gap_player_ids
+        and (item.player_id, item.position, item.metric) not in current_keys
     )
     return (
         tuple(
@@ -317,6 +321,11 @@ def build_governed_in_season_outlook(
             league_state,
             current_ros_forecasts=current_runtime.fantasy_point_forecasts,
             preseason_season_forecasts=preseason_season_forecasts,
+            scoring_gap_player_ids=frozenset(
+                item.player_id
+                for item in current_runtime.partial_fantasy_point_forecasts
+                if item.omitted_rule_stats
+            ),
             completed_through_week=completed,
             as_of=now,
         )
