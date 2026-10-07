@@ -91,3 +91,19 @@ Implementation acceptance requires direct evidence that:
 - K/DST boundary: the standard governed completed-actuals + ROS path currently supplies offensive QB/RB/WR/TE fantasy-point authority, while the accepted 2026 K/DST path is explicitly provisional/partial-rule evidence and is not Team Utility authority. This correction will **show configured K/DST columns but leave rank/index explicitly unavailable unless the governed Current season-outlook input itself contains supported K/DST fantasy-point evidence.** It will not silently promote partial provisional K/DST evidence into a league-relative rank.
 - A slot is rankable only when every team can fill that configured slot count from governed Current outlook evidence. Otherwise the slot remains visible but unavailable league-wide; missing evidence is not converted to zero. Deeper missing bench forecasts remain explicit player evidence and do not by themselves invalidate a legally filled optimized slot.
 - Current drilldown will use the new completed-actuals + ROS player evidence and current optimized slot assignments. Dynasty drilldown remains on its accepted career-forward room contract.
+
+
+### 2026-10-06 — implementation checkpoint
+Implemented on the work branch, not yet promoted:
+- added a separate `current_position_depth` product contract backed by the existing governed in-season outlook; no change to Forecast model/runtime fitting;
+- Current lineups reuse the existing joint optimizer but aggregate strength by configured `assignment.slot` rather than actual player position;
+- configured slot presence/order/count now comes from `LeagueRules.lineup`; FLEX/SUPERFLEX are independent columns and fixed slots cannot receive their contribution;
+- configured K/DST remain visible but fail closed league-wide when governed Current season-outlook evidence cannot fill the slot;
+- player/depth rows carry completed-actuals + ROS season-outlook evidence and optimized slot assignment separately from the strength numerator;
+- `/api/league/team-views` now carries the Current contract as part of the already-governed atomic presentation surface; no new presentation surface/generation mechanism was added;
+- hosted runtime caches the exact-State Current contract and obtains preseason fallback evidence through the existing governed in-season loader;
+- League Atlas Current browser grid now consumes the new contract and derives columns dynamically; Dynasty continues to hard-code its accepted QB/RB/WR/TE room lens and uses the unchanged Dynasty endpoint/room contract;
+- Current Overview pressure-point/position takeaway no longer reads the old full-season/actual-position strength rows;
+- focused regressions added for FLEX isolation, SUPERFLEX isolation, configured K/DST unavailable behavior, depth separation, endpoint exposure and client contract selection.
+
+Development validation has not yet been declared complete. The final static delivery fingerprints must be refreshed only after the implementation head is otherwise stable, then the P0.6 merge gate will run affected focused validation plus one full suite.
