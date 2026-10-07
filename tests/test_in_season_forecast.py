@@ -529,3 +529,41 @@ def test_current_ros_does_not_backfill_player_without_proven_scoring_gap():
 
     assert forward == ()
     assert fallback_count == 0
+
+
+def test_in_season_runtime_retains_partial_scoring_rows_for_gap_eligibility():
+    state = _state()
+    rules = state.league.rules.model_copy(
+        update={
+            "scoring": state.league.rules.scoring
+            + (ScoringRule(stat="fum_lost", points=-1.0),)
+        }
+    )
+    state = state.model_copy(
+        update={"league": state.league.model_copy(update={"rules": rules})}
+    )
+    fetchers = (
+        NamedInSeasonProjectionFetcher(
+            source_id="one",
+            fetch=lambda season, week: _snapshot("one", rush_yards=700.0),
+        ),
+        NamedInSeasonProjectionFetcher(
+            source_id="two",
+            fetch=lambda season, week: _snapshot("two", rush_yards=900.0),
+        ),
+    )
+
+    result = build_in_season_forecasts(
+        state,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START,
+        period_end=PERIOD_END,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+    )
+
+    assert result.fantasy_point_forecasts == ()
+    assert len(result.partial_fantasy_point_forecasts) == 1
+    partial = result.partial_fantasy_point_forecasts[0]
+    assert partial.player_id == "p1"
+    assert partial.omitted_rule_stats == ("fum_lost",)
