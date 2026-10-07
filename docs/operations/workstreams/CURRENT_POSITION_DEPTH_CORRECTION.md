@@ -1,7 +1,7 @@
 # Current Position & Depth Correction
 
 Updated: 2026-10-06
-Status: PHYSICAL ACCEPTANCE REOPENED — #408 core authority accepted; bounded Current presentation/coverage corrective active
+Status: MERGED + DEPLOYED — #411 hosted corrective accepted; final authenticated iPhone/Safari re-acceptance pending
 Authority: Management directive 2026-10-06, accepted Current Position & Depth / Forecast Authority Audit, Issue #369 history, OPERATING_PROTOCOL.md, CURRENT_OPERATIONS.md.
 
 ## Outcome
@@ -416,3 +416,40 @@ Corrective executable head `60f12f8141ef31dcbbd864600a5587823b620865` passed all
 - Stable full suite remained correctly skipped while draft (`37611152427`).
 
 The previously green Stable full-suite run `37610536097` on documentation-final head `c6318a8b7e7ad0cec5d94f2f3c9f2b60ca882a8f` (**2,222 passed / 1 warning**) is superseded by this bounded executable correction and is not being used as merge evidence. No other runtime/product/model work was changed. After this checkpoint-only head movement, the exact final PR head must receive a fresh Stable full-suite gate before merge.
+
+
+### 2026-10-07 — #411 final merge, deploy and hosted acceptance
+Final merge candidate:
+- PR #411 exact final head: `ae875f071672bd5975416604a0d29e1e2413e18d`;
+- all focused workflows on that exact head were green before final promotion, including CI `37611528313`, League Atlas `37611528203`, Home `37611528148`, Franchise `37611528213`, Live Forecast corrective trace `37611528186`, corrective live-provider numerical trace `37611528251`, and PR164 corrective regression `37611528204`;
+- all review threads were resolved; the final Codex ready-head review returned a `+1` reaction at `2026-10-07T11:09:33Z` with no new blocking thread.
+
+Final P0.6 Stable full-suite merge gate:
+- readying exact head `ae875f071672bd5975416604a0d29e1e2413e18d` triggered Stable full-suite run `37611802047`;
+- the workflow verified the PR head before and after testing;
+- result: **2,223 passed / 1 warning** in `171.68s`;
+- no executable or test change followed that green gate.
+
+Merge/deploy identity:
+- PR #411 squash-merged as `babfdc52ca7a86968e46bde912fb7559fc098865`;
+- Render deploy `dep-db32huqd0e5s73et7s30` was triggered explicitly because auto-deploy is disabled;
+- deploy completed `live` at `2026-10-07T11:13:37.594532Z` on exact commit `babfdc52ca7a86968e46bde912fb7559fc098865`;
+- build completed successfully; uvicorn started at `11:12:53Z`, server process started at `11:13:27.748Z`, and application startup completed at `11:13:27.751Z`;
+- durable saved context restored to `ready` in `7,399.52 ms` (`restore_id=07c7e919-e840-49aa-9462-3672407b6760`);
+- startup persistence evidence included hits for league snapshot, current Forecast evidence, current Market value, published generation, last-good bundle, and preseason forecast baseline;
+- no startup error-level failure was observed.
+
+Hosted corrective now live:
+- Current configured columns render in canonical order `QB, RB, WR, TE, FLEX, SUPERFLEX`, followed by configured K/DST;
+- fixed positions continue to exclude FLEX/SUPERFLEX attribution;
+- Current drawers sort by Current Intrinsic Value descending while preserving role/assignment;
+- starter/depth counts are selected-slot-specific, so a SUPERFLEX-assigned QB is not a QB starter;
+- Current positional summary does not display team-wide fragility without governed slot-specific resilience evidence;
+- Long-Term/Career Intrinsic shadow evidence is Dynasty-only and is removed from the Current drawer;
+- portrait Current matrix is a single horizontally scrollable non-wrapping slot grid;
+- strict current ROS scoring remains fail-closed. The accepted preseason remaining-prior fallback is used only for players with explicit current strict-scorer partial rows caused by omitted active scoring coordinates, never for a player absent from current evidence;
+- a missing preserved preseason artifact is optional and does not block healthy live ROS or Week-18 completed-actuals-only authority;
+- an admitted preseason gap row is rebound to the current partial row's canonical position before completed actuals + ROS composition;
+- optimizer production code remains unchanged: it maximizes governed annual Current season-outlook points and, among equivalent optimal assignments, gives the higher-outlook eligible player the fixed position before FLEX/SUPERFLEX.
+
+**MANAGEMENT GATE — CURRENT POSITION & DEPTH:** implementation, exact-head validation, merge, static delivery identity and hosted startup/deployment are accepted. The remaining acceptance layer is authenticated iPhone/Safari physical verification on the live Current lens. Confirm: (1) RB/WR/TE/FLEX are populated rather than league-wide unavailable when governed fallback evidence exists, (2) columns scan left-to-right in the approved order and remain one horizontal portrait grid, (3) Current drawers are Intrinsic-descending with slot-specific starter counts and no Current fragility/Long-Term shadow copy, and (4) fixed-slot vs FLEX/SUPERFLEX attribution remains correct. Do not reopen Forecast, Dynasty/#370, Simulation or P0 architecture unless contradictory hosted/physical evidence appears.
