@@ -338,3 +338,37 @@ Bounded corrective design:
 5. keep the existing slot-level fail-closed rule unchanged.
 
 The preserved preseason raw baseline has enough historical subject coverage to fill the configured offensive starter counts for the current FSFFL rosters once its accepted scoring/supplement path is applied; this is not a player-specific exception.
+
+
+### 2026-10-07 — physical corrective focused validation green
+PR #411 remains draft. Executable corrective head `532568a790d0999aaca406ca3941f0c72d1d5b93` is focused-green after the physical acceptance correction.
+
+Implemented boundaries:
+- strict live ROS Forecast scoring remains unchanged; live rows remain authoritative wherever supported;
+- player-level holes in strict live ROS fantasy-point output may consume only the already-governed immutable preseason **remaining prior**, scored through the accepted preseason authority path (including the existing first-party FUMBLES_LOST supplement when required);
+- no missing coordinate or missing player is converted to zero; unsupported evidence remains absent and the existing slot-level fail-closed rule is unchanged;
+- Current slot order is canonical `QB, RB, WR, TE, FLEX, SUPERFLEX, K, DST`, filtered to configured lineup slots;
+- Current drawer rows sort by Current Intrinsic Value descending while preserving Current slot assignment/role and actuals+ROS evidence;
+- Current starter count is selected-slot-specific: a SUPERFLEX-assigned QB is eligible depth in the QB drawer but not a QB starter;
+- Current positional summary no longer displays team-wide resilience/fragility without governed slot-specific resilience evidence;
+- Long-Term/Career Intrinsic shadow evidence remains Dynasty-only and does not render in Current drawer rows/copy;
+- portrait Current matrix uses one non-wrapping horizontally scrollable row for all configured slot columns;
+- optimizer production code is unchanged. A generic regression locks the accepted equivalent-optimum preference that the higher season-outlook eligible QB occupies fixed QB before SUPERFLEX.
+
+Focused evidence on exact executable head:
+- `League Atlas North Star focused validation` `37571685957`: success; JavaScript syntax passed; **116 focused tests passed / 1 warning**; real 12-team Atlas composition sanity passed; final live-provider authority audit passed; evidence artifact uploaded;
+- `CI` `37571685915`: success;
+- `Home North Star focused validation` `37571685891`: success;
+- `Franchise North Star focused validation` `37571686004`: success;
+- `Live Forecast corrective trace` `37571685940`: success;
+- `Corrective live provider numerical trace` `37571685890`: success;
+- `PR164 focused corrective regression` `37571685914`: success;
+- `Stable full suite` remained correctly skipped while PR #411 was draft.
+
+The first draft attempt exposed only three stale static assertions from the superseded Current drawer semantics; they were corrected as tests, not by reverting the accepted product behavior. No unresolved executable finding remains.
+
+Static delivery identities:
+- `league_comparison.js` blob `2aed785d9c24b41590f6fc45e8496899f19abcde` → inner Atlas key `20261005-atlas-2aed785d9c24`;
+- `product_shell.js` blob `abd5ed4d63ee760fbf7ce3cc578d35305d199dab` → outer index key `git-abd5ed4d63ee`.
+
+No further executable changes are planned. After this durable checkpoint push receives the ordinary draft check, mark the exact PR head ready for the single P0.6 stable full-suite gate.
