@@ -130,3 +130,15 @@ Two first-pass failures were stale tests that encoded the deliberately supersede
 Both were corrected as test expectations only. No analytical or destination behavior was changed to satisfy them.
 
 Current PR #421 is clean against main `7bddbc392832cd4de68e318f184af1ad353462a6`. The product implementation is stable; no further executable changes are planned. The next exact PR head after this documentation-only checkpoint must receive its ordinary draft CI, then may be marked ready for the single P0.6 Stable full-suite merge gate.
+
+
+### 2026-10-07 — #421 first Stable-gate result / stale navigation assertions only
+Stable full-suite run `37700252118` tested exact ready head `b0f2119dd7390b9380d9056b54efacd8a8e7c133` and finished **2,227 passed / 3 failed / 1 warning**. The three failures are superseded navigation assertions only; product behavior matched the approved contract:
+
+1. `test_legacy_players_route_delegates_to_market_player_board` required the old exact `players_assets` route literal and old generic nav filtering shape. The legacy route/delegation remains intact: `players_assets` is still present, marked `legacy:true,navigation:false`, and still delegates to `opportunities` with `marketTab:'player_board'`. The stale assertions were updated to that preserved compatibility route plus the new primary-only navigation filter.
+2. `test_market_route_is_not_navigation_locked_before_team_context` still required the obsolete consumer label `Market`. The approved navigation label is `Explore`; route ID `opportunities`, icon/domain semantics, and non-team-scoped availability remain unchanged. The test now asserts `Explore`.
+3. `test_simulator_is_first_class_team_scoped_product_route` still required Simulator to be first-class primary navigation. The approved hierarchy places Simulator under **More → Scenarios** while preserving the same `simulator` route, team-scoped behavior, lazy script loading and destination functionality. The test now verifies that secondary placement instead of restoring the superseded primary-nav contract.
+
+PR #421 was returned to **draft before these test-only corrections were pushed**. No product/static/model/lifecycle code changed. The failed Stable run is superseded and cannot be used for merge.
+
+Next gate: run focused navigation/shared-shell validation on the corrected draft head. If green and no executable work remains, mark that exact head ready once for a fresh Stable full-suite gate; if exact-head green, merge/deploy and stop for authenticated iPhone/Safari physical acceptance.
