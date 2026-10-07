@@ -31,7 +31,7 @@ def test_full_product_navigation_shell_preserves_routes_under_new_labels() -> No
 
 def test_legacy_players_route_is_compatibility_only_and_delegates_to_market() -> None:
     source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
-    assert "{route:'players_assets',label:'Players & Assets',legacy:true}" in source
+    assert "{route:'players_assets',label:'Players & Assets',legacy:true,navigation:false}" in source
     assert "marketTab:'player_board'" in source
     assert "fsfflProductRoutes.filter(item=>item.primary)" in source
 
