@@ -151,3 +151,41 @@ The tranche is accepted only when:
 Management closed Current Position & Depth after authenticated #415 iPhone/Safari acceptance and immediately authorized this bounded consolidation.
 
 This document is the **pre-implementation product contract**. No executable Franchise/Home code is changed before this checkpoint is merged to the durable operations record.
+
+
+## 2026-10-07 — pre-code surface/authority trace
+
+The first implementation trace is complete; no executable file was changed before this checkpoint.
+
+### Existing Home surface
+- Base app route defaults to `league`.
+- Standalone Home is rendered by `home_dashboard.js` into `#league-screen/#home-attention`.
+- Home currently reads `/api/home` and owns its own presentation shell/styles.
+- Product Shell eagerly/lazily installs Home on initial load and whenever route `league` is opened.
+- The main HTML still carries a Home-specific presentation guard and direct Home script delivery.
+- Home's approved visual language is identifiable and reusable: circular team identity mark, compact dark cards, cyan/green dial treatment, Season Outlook rings and compact “what matters”/secondary-row visual hierarchy.
+- Legacy Home positional ranks were already suppressed during the completed Current Position & Depth corrective, so no accepted Current logic needs to be preserved from Home.
+
+### Existing Franchise surface
+- `my_team_dashboard.js` already owns three tabs: **Overview / Roster / Assets & Picks**.
+- Roster and Assets & Picks are already separable render functions and can remain unchanged.
+- Franchise already reads canonical `/api/my-team`, `/api/league/team-views` and Value lenses.
+- It additionally reads `/api/home` solely to populate standings/Simulation helpers.
+- Active Franchise Overview still reads legacy `view.position_strengths` for its position rings, strongest/weakest diagnosis and pressure action. This is now a superseded Current definition and must be replaced rather than cosmetically retained.
+- `/api/league/team-views` already publishes the accepted top-level `current_position_depth` contract from the completed Current program. No new Current API or formula is required.
+- Franchise's own team view already exposes Simulation-derived competitive outcome fields, and league team views expose the same governed outcome coordinate for league-relative comparison. Season Outlook therefore does not need a Home-specific Simulation interpretation.
+
+### Routing / landing boundary
+- Current initial route is `league`; Product Shell separately handles `my_team`.
+- The bottom-navigation metadata still contains both Home and Franchise and is explicitly out of scope.
+- Minimum consolidation path: preserve `league` as the unselected-team/connect bootstrap, but once a managed team exists normalize managed `league` navigation to `my_team` and make `my_team` Overview the landing destination. This retires the managed standalone Home surface without deciding the later bottom-nav composition.
+- Standalone Home JS no longer needs to load/install for a managed session.
+
+### Bounded implementation decision
+- Recompose **Franchise Overview only**.
+- Carry Home's approved identity/dial/card visual language into the existing Franchise Overview tab.
+- Season Outlook reads the existing governed Simulation-derived outcome on the Franchise/team-view contract.
+- Position summary / “What Matters Right Now” reads only the published `current_position_depth` slot-strength rows for the managed team.
+- Slot drill-through navigates to League Atlas Position & Depth rather than recreating detailed Current room logic inside Franchise.
+- Roster and Assets & Picks renderers/data contracts are not changed.
+- Do not create a new server publication surface, new lifecycle negotiation, new Current calculation or new Simulation calculation.
