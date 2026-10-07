@@ -186,6 +186,58 @@ def remaining_prior_from_preseason(
     return tuple(sorted(output, key=lambda item: item.player_id))
 
 
+def fill_current_ros_coverage_gaps(
+    league_state: LeagueState,
+    *,
+    current_ros_forecasts: tuple[ForecastObservation, ...],
+    preseason_season_forecasts: tuple[ForecastObservation, ...],
+    completed_through_week: int,
+    as_of: datetime,
+) -> tuple[tuple[ForecastObservation, ...], int]:
+    """Fill only strict-scorer player gaps from the accepted remaining preseason prior.
+
+    Current ROS remains authoritative for every player it supports. The immutable
+    preseason fallback is used only for players absent from authoritative current
+    fantasy-point output. Missing evidence is never converted to zero and an
+    unsupported player remains absent if the governed prior cannot support him.
+    """
+
+    if not preseason_season_forecasts:
+        return current_ros_forecasts, 0
+
+    fallback = remaining_prior_from_preseason(
+        league_state,
+        preseason_season_forecasts=preseason_season_forecasts,
+        completed_through_week=completed_through_week,
+        as_of=as_of,
+    )
+    current_keys = {
+        (item.player_id, item.position, item.metric)
+        for item in current_ros_forecasts
+        if item.horizon == ForecastHorizon.REST_OF_SEASON
+        and item.metric == ForecastMetric.FANTASY_POINTS
+    }
+    additions = tuple(
+        item
+        for item in fallback
+        if (item.player_id, item.position, item.metric) not in current_keys
+    )
+    return (
+        tuple(
+            sorted(
+                current_ros_forecasts + additions,
+                key=lambda item: (
+                    item.player_id,
+                    item.position.value,
+                    item.metric.value,
+                    item.source,
+                ),
+            )
+        ),
+        len(additions),
+    )
+
+
 class GovernedInSeasonResult:
     def __init__(
         self,
@@ -261,8 +313,18 @@ def build_governed_in_season_outlook(
             history_writer=history_writer,
             clock=lambda: now,
         )
-        forward = current_runtime.fantasy_point_forecasts
-        basis = "current_rest_of_season"
+        forward, fallback_player_count = fill_current_ros_coverage_gaps(
+            league_state,
+            current_ros_forecasts=current_runtime.fantasy_point_forecasts,
+            preseason_season_forecasts=preseason_season_forecasts,
+            completed_through_week=completed,
+            as_of=now,
+        )
+        basis = (
+            "current_rest_of_season_with_preseason_gap_fallback"
+            if fallback_player_count
+            else "current_rest_of_season"
+        )
     except Exception as exc:
         current_failure = f"{type(exc).__name__}: {exc}"
         forward = remaining_prior_from_preseason(
