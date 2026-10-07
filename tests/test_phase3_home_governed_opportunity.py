@@ -17,19 +17,19 @@ def test_home_does_not_reuse_or_promote_market_recommendations() -> None:
         assert forbidden not in HOME
 
 
-def test_home_pressure_cta_navigates_to_market_without_running_search_on_home() -> None:
-    assert "data-home-action=\"pressure\"" in HOME
-    assert "route:'opportunities'" in HOME
-    assert "source:'home-pressure'" in HOME
+def test_home_suppresses_legacy_position_pressure_output_pending_consolidation() -> None:
+    assert "data-home-action=\"pressure\"" not in HOME
+    assert "source:'home-pressure'" not in HOME
+    assert "position_strengths" not in HOME
+    assert "homePressurePoint" not in HOME
     assert "/api/opportunities/workspace" not in HOME
     assert "oppConsumeHomeIntent" in MARKET
-    assert "fsfflOpportunityState.query=position" in MARKET
     assert "Market owns discovery and evaluation from here." in MARKET
 
 
 def test_home_has_no_cross_family_master_priority_score() -> None:
-    assert "homePressurePoint" in HOME
-    assert "position_strengths" in HOME
+    assert "homePressurePoint" not in HOME
+    assert "position_strengths" not in HOME
     for forbidden in (
         "master score",
         "priority score",
