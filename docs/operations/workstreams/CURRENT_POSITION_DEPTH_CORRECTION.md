@@ -536,3 +536,25 @@ Management directive:
 4. Use focused validation first; run one Stable full-suite gate only after physical-target behavior is demonstrably correct at the final corrective head.
 
 No executable code changed before this checkpoint.
+
+
+### 2026-10-07 — #413 live regression localized before code
+The trace-before-code gate is complete.
+
+**Live publication regression.**
+- #413 is live on Render deploy `dep-db36tp3tqb8s73fpvcd0`, exact commit `cb7f5f9e96bc3704196222bd2017fa713579fc1a`.
+- The publication visible to the 12:32 ET physical test was written at `2026-10-07T16:29:37.56605Z`, generation `7101b3ac6abe7807d58984e9d641db55ba748ff0c47c7e046061311067c116dc`, State `d62d1fa57f39540eb41d6dc67f699cf2ee7e962f18d76003ab8c78cae3134c19`.
+- The persisted `current_position_depth` payload itself is `status=unavailable`; every configured Current slot carries the same reason: `ValueError: season roll-forward evidence postdates ROS forecast cutoff`. The browser is faithfully rendering a bad publication; this is not a client rank-selection defect.
+
+The failure is in the #413 current-only FUMBLES_LOST adapter's point-in-time timestamps, not in the accepted FUMBLES_LOST authority or Current formula:
+- the accepted first-party FUMBLES_LOST observation deliberately retains its canonical-State `as_of`, while its provenance `retrieved_at` records the newer current-input capture time;
+- #413 converts that observation to a current ROS supplemental coordinate but leaves the older `as_of` unchanged;
+- mixed-vintage rescoring therefore can emit a ROS fantasy-point row whose provenance retrieval time is newer than its own `as_of`;
+- `compose_completed_actuals_with_ros()` correctly fails closed on exactly that PIT contradiction.
+
+Bounded fix: when the accepted first-party observation is adapted into the **current ROS supplemental lane**, set the adapted coordinate's `as_of` to the supplement's real `authority_valid_from` (or later current partial cutoff), while preserving the original provenance retrieval/effective timestamps and all value/uncertainty semantics. This does not move evidence backward, change the point model, or weaken the season roll-forward guard; it makes the mixed-vintage current coordinate truthfully state when all consumed evidence was available.
+
+**Actual iPhone layout.**
+The #413 markup uses CSS custom properties inside `repeat(var(--league-position-columns), 86px)` and relies on those computed variables for every row. The physical Safari evidence still wraps/overlaps FLEX/SUPERFLEX despite the outer horizontal overflow container. The correction will remove that parsing/layout dependency: each rendered row/header will receive an explicit literal grid track list from the already-known configured column count (for example `150px repeat(6, 86px)`) plus an explicit intrinsic width. CSS will keep one grid row, no mobile track override, no label wrapping, horizontal overflow, and sticky Franchise. No semantic or column-order change is authorized.
+
+No executable code changed before this localization checkpoint.
