@@ -1144,12 +1144,15 @@ def test_saved_session_restore_is_read_first_and_keeps_missing_state_fallback() 
     assert "refreshStoredLeagueIfDue(leagueId,context.state_id)" in restore
     assert "waitForBackgroundImport(leagueId,null,'connect')" in restore
     assert "if(freshness?.refresh_in_progress===true)" in source
-    assert "if(freshness?.refresh_due===true)void refreshStoredLeague(leagueId,latestStateId)" in source
+    assert "if(freshness?.refresh_due===true){" in source
+    assert "Saved-session restore is read-first" in source
+    assert "Use Refresh Intelligence to rebuild." in source
+    assert "if(freshness?.refresh_due===true)void refreshStoredLeague" not in source
     assert "waitForBackgroundImport(leagueId,null,'refresh')" in source
     assert "function refreshStoredLeagueIfDue" in source
 
 
-def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due() -> None:
+def test_saved_session_restore_never_originates_provider_refresh_from_freshness_probe() -> None:
     script = r"""
       const fs=require('fs'),vm=require('vm'),assert=require('assert');
       const condition=process.argv[1],due=condition==='due',inProgress=condition==='in-progress',completedBeforeCheck=condition==='completed-before-check',attachCompleted=condition==='attach-completed',attachFailed=condition==='attach-failed',connectThenDue=condition==='connect-in-progress-then-due',dueConnectActive=condition==='due-connect-active',dueConnectFailed=condition==='due-connect-failed',storage=new Map([['fsffl:last-sleeper-league','123']]),calls=[];
@@ -1173,15 +1176,14 @@ def test_saved_session_restore_only_posts_provider_refresh_when_freshness_is_due
         assert.strictEqual(await window.fsfflRestoreSession(),true);
         await new Promise(resolve=>setTimeout(resolve,inProgress||connectThenDue||dueConnectActive||dueConnectFailed?1000:20));
         const refreshPosts=calls.filter(([path,method])=>path==='/api/connect/sleeper/background/refresh'&&method==='POST');
-        assert.strictEqual(refreshPosts.length,due||connectThenDue||dueConnectActive||dueConnectFailed?1:0,'only governed due freshness may launch a new provider POST');
+        assert.strictEqual(refreshPosts.length,0,'saved-session restore must never originate a heavyweight provider refresh');
         assert.strictEqual(calls.some(([path])=>path==='/api/connect/sleeper/background/freshness?league_external_id=123'),true);
-        if(!attachFailed)assert.strictEqual(calls.filter(([path])=>path==='/api/product-context').length>=2,true,'a bounded post-freshness or job-completion context read reconciles State');
+        if(!attachFailed)assert.strictEqual(calls.filter(([path])=>path==='/api/product-context').length>=2,true,'a bounded post-freshness or job-completion context read reconciles already-published State');
         if(inProgress||attachCompleted||connectThenDue)assert.strictEqual(state.context.state_id,'state-2','restored session attaches to active or just-completed work and adopts the new context');
-        if(connectThenDue){assert.strictEqual(freshnessReads,3,'connect completion receives bounded due checks before provider handoff');assert.strictEqual(currentReads>=2,true,'attach-only connect waits for terminal job status before rechecking freshness');}
-        if(dueConnectActive){assert.strictEqual(freshnessReads,2,'due provider refresh is rechecked after competing connect completion');assert.strictEqual(currentReads>=3,true,'due refresh waits for competing connect terminal status');assert.strictEqual(state.context.state_id,'state-2');}
+        if(connectThenDue){assert.strictEqual(freshnessReads,2,'connect completion receives one bounded freshness recheck without provider handoff');assert.strictEqual(currentReads>=2,true,'attach-only connect waits for terminal job status before rechecking freshness');}
         if(completedBeforeCheck)assert.strictEqual(state.context.state_id,'state-2','restored session reconciles an already-completed refresh without reposting');
         if(attachFailed)assert.strictEqual(syncStates.includes('stale'),true,'failed attached refresh remains visible as stale');
-        if(dueConnectFailed){assert.strictEqual(refreshPosts.length,1,'a failed competing connect does not suppress an independently due provider refresh');assert.strictEqual(freshnessReads,2,'failed connect receives one bounded freshness recheck');}
+        if(due||connectThenDue||dueConnectActive||dueConnectFailed)assert.strictEqual(syncStates.includes('stale'),true,'probe change is surfaced without silently starting provider work');
       })().catch(error=>{console.error(error);process.exitCode=1});
     """
     for condition in ("current", "due", "in-progress", "completed-before-check", "attach-completed", "attach-failed", "connect-in-progress-then-due", "due-connect-active", "due-connect-failed"):
