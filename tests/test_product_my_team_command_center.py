@@ -152,7 +152,7 @@ def test_franchise_missing_evidence_fails_visibly_without_substitute_metrics() -
         "Current position pressure is unavailable",
         "No substitute position ranking is invented.",
         "Roster-resilience evidence unavailable",
-        "Broad Market pick Value evidence is unavailable",
+        "No pick Value evidence",
         "Selected-lens player Value evidence is unavailable.",
         "Intrinsic unavailable",
     ):
@@ -217,7 +217,7 @@ def test_franchise_pick_labels_preserve_original_team_attribution_and_fail_close
     assert "pick.original_team_id" in SOURCE
     assert "myTeamTeamName(pick.original_team_id)" in SOURCE
     assert "Value unavailable" in NORTH_STAR
-    assert "Broad Market pick Value evidence is unavailable" in NORTH_STAR
+    assert "No pick Value evidence" in NORTH_STAR
 
 
 def test_franchise_state_only_mode_shows_complete_roster_instead_of_empty_starters() -> None:
