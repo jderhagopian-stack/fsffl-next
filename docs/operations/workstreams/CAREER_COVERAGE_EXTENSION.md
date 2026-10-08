@@ -198,9 +198,9 @@ Each regression should assert values are finite and provenance/uncertainty are p
 | Sparse-evidence player | Coverage indicators and explicit evidence tier; wider supported uncertainty or player-specific failure, never silent zero. |
 | Acquisition-relevant free agent | Candidate valuation available on request but absent from team room/accounting until State shows acquisition. |
 
-## PR1 authority/parity gate — stopped 2026-10-07
+## Historical PR1 no-fit interpretation (superseded 2026-10-07)
 
-**Outcome: not reconstructable from retained artifacts without fitting.** No scorer was packaged, no model was fit or retrained, and no parity test was run. Stop here for Management; PR2 remains blocked.
+**Historical outcome, no longer the governing PR1 disposition:** this read-only attempt stopped because it interpreted the absence of a serialized scorer as a prohibition on rerunning the accepted deterministic fit-on-materialization pipeline. Management has explicitly corrected that interpretation. Its artifact provenance and hashes remain valid, but its no-fit blocker and resume gate are superseded by the approved reuse/replay requirement above.
 
 Verified from the exact accepted workflow and downloaded artifact manifests:
 
@@ -224,3 +224,20 @@ Artifact-retention note: the routing artifact expires 2026-10-10 and current-boa
 ## Resume instructions
 
 Resume from current GitHub main and read [Current Operations](../CURRENT_OPERATIONS.md), this checkpoint, Issue #405, and the referenced accepted Forecast/Foundation 4 artifacts. Do not inspect or modify stale local clones. Start with PR 1's accepted-artifact/scorer provenance gate—not code changes to #370 or publication/lifecycle. No full suite is needed for this documentation checkpoint. At the PR 1 stable merge gate, use focused validation during development and one full suite only once.
+
+## PR1 resumed execution checkpoint — 2026-10-07 21:40 ET
+
+Status: **ACTIVE — PR1 accepted-artifact preservation and deterministic frozen-335 replay; parity not yet established.** This checkpoint supersedes the prior no-fit stopping conclusion, **not** its factual artifact/source evidence. Model-family/route selection remains closed. Rerunning the accepted frozen historical fit is authorized solely to materialize the accepted 2026 reference pipeline; missing rostered/waiver players never enter training/route tuning.
+
+- Verified GitHub main at start: `6649d9d547a3d424580588233c3b2d1774b4d938` (2026-10-07 21:26 ET), including global multi-league scale invariant #428.
+- Execution branch: `work/career-coverage-pr1-parity-20261007` from that exact main.
+- Draft PR: [#429](https://github.com/jderhagopian-stack/fsffl-next/pull/429); first replay workflow head `9ef844ff33f40b977742c77276f4f9bb222c19a3`.
+- Dedicated once-per-PR1-code-change [replay run 37714107824](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/37714107824) is queued/running at checkpoint time. It does **not** run for documentation-only pushes.
+- Artifacts reacquired from GitHub before expiration: terminal/historical package `10899387479` (ZIP SHA-256 `ea72f312148f01b8066419e8f12cb3a04a4dbbd99fd6e0b7dc975c65cc2446b5`), panel `10912862252` (`6dd664b632f4897f286a99794e10df29be21bf8c6cae70e526ea807470fdcb0e`), route `10916355135` (`63520ddb60a8ed12724fa21e8d276c4e3e7d5587162aade92ba7afaa3796ced2`), and reference board `11263913850` (`6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22`). All four downloaded ZIP hashes locally verified; workflow independently re-verifies before preservation.
+- Durable archive plan: workflow creates GitHub release tag `career-405-accepted-research-evidence-20261007` at the frozen pre-work main SHA and attaches **all four exact ZIPs and SHA256SUMS**. **Do not claim durable release completion until the release/assets are verified live.**
+- Accepted source pins: development blob `ebb472514ece122bbdbabfe60cca991e5941ae1b`, route blob `f932f07c9cb29b3c07352d48a928d0b190562a29`, FSFFL materializer blob `2b31040b2c38215636981ac7ad0744aaf759acee`, policy blob `beded6dd776719c19c7323d4e8fa5e4d4d81b0c0`. Replay is the accepted run `37096263982` workflow command, Python 3.11, same declared dependencies, frozen 2026 board and unchanged FSFFL scoring transform.
+- Comparison: 5,360 row-keyed policy×year predictions covering **335** exact players across Y4–Y7, central forecasts plus q80/q90, every per-cell uncertainty metric, **335** terminal feature rows, and exact board metadata. Fail-closed numeric replay tolerance proposed at `abs_tol=1e-8, rel_tol=1e-10` (strict deterministic float tolerance, not model-recalibration permission); categorical provenance must be exact. Report includes maximum numeric residual and replay peak RSS/runtime.
+- No model/scoring/runtime/page/State changes are in this PR; #370 remains untouched. PR2–PR5 **remain blocked** pending a genuinely successful replay, immutable input archive verification, stable-head acceptance and final PR1 checkpoint.
+- After accepted parity: identify the smallest reusable fitted scorer and point-in-time evidence/materialization seam; downstream dynamic evidence, waiver/long-tail, shared model fingerprints, cross-league deduplication and 1k/10k bounded resource projections remain the **approved #405 gates**, not optional future research. Never fit the 25 missing or broad waiver player rows, select routes anew, or force a guess on an ungovernable player.
+
+Next action: inspect run `37714107824` and release asset verification; if replay fails, diagnose only environment/pipeline fidelity and preserve exact evidence, then stop for Management if accepted-parity cannot be met without changing frozen authority. Do not promote PR2 on a queued or failed parity check.
