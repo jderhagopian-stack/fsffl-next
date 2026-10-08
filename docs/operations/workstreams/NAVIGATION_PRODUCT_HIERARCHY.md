@@ -1,7 +1,7 @@
 # Navigation / Product Hierarchy
 
 Updated: 2026-10-07  
-Status: ACTIVE — implementation authorized  
+Status: **COMPLETE — physically accepted**  
 Authority: Management directive 2026-10-07, MANAGEMENT_CONTINUITY.md, PRODUCT_ROADMAP.md, FSFFL_NEXT_PRODUCT_PRIORITIES.md, AGENTS.md, OPERATING_PROTOCOL.md.
 
 ## Outcome
@@ -171,3 +171,10 @@ PR #421 was returned to draft before correcting these assertions. The correction
 - remove the obsolete Simulator grouping literal while retaining the direct More/Scenarios assertions.
 
 No product/static/model/lifecycle behavior changes are authorized by this result. The failed Stable run is superseded and cannot be used for merge. Focused validation must pass on the new draft head, then that exact head may receive the fresh Stable full-suite gate.
+
+
+### 2026-10-07 — Management physical acceptance
+- PR #421 merged as `b43fa8690fb6fe3dc4c28e9b203c51fd5a860480` and deployed live as Render `dep-db3dp1d9fdbs73dbo7eg`.
+- Management accepted the live hierarchy on authenticated iPhone/Safari: `Franchise | League | Explore | Trade | More` works as intended.
+- Navigation tranche is closed. Resume Career Coverage #405.
+- Non-blocking follow-on preference: preserve for a future Franchise visual-polish pass the original Home styling where the “What Matters Most” card was red. This does not reopen navigation or Franchise semantics.
