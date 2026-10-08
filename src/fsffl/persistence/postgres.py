@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from time import perf_counter
 from datetime import datetime
 from threading import Lock
 from typing import Sequence
@@ -13,6 +14,7 @@ from .contracts import (
     ArtifactKey,
     LeagueSnapshotRecord,
     PersistenceStore,
+    MarketValueSnapshotRecord,
     ReusableArtifactMetadataRecord,
     ReusableArtifactReadBundle,
     ReusableArtifactRecord,
@@ -537,6 +539,65 @@ class PostgresPersistenceStore(PersistenceStore):
                     value,
                     json.dumps(source_lineage),
                 ),
+            )
+
+    def append_market_value_snapshots(
+        self, records: Sequence[MarketValueSnapshotRecord]
+    ) -> None:
+        """Append bounded multirow SQL with original first-writer conflict policy.
+
+        One committed transaction per <=300-row chunk. Earlier chunks remain
+        durable if a later chunk fails, matching the legacy forward-progress
+        behavior; the failing chunk rolls back atomically. No write is retried.
+        """
+        if not records:
+            return
+        chunk_size = 300
+        row_template = "(%s,%s,%s,%s,%s,%s,%s,%s::jsonb)"
+        sql_prefix = (
+            "insert into fsffl.market_value_snapshot "
+            "(asset_ref, asset_kind, scale_id, market_context_id, estimate_as_of, "
+            "recorded_at, value, source_lineage) values "
+        )
+        conflict_clause = (
+            " on conflict "
+            "(asset_ref, asset_kind, scale_id, market_context_id, estimate_as_of) "
+            "do nothing"
+        )
+        logger = logging.getLogger("fsffl.product.persistence")
+        for start in range(0, len(records), chunk_size):
+            chunk = records[start : start + chunk_size]
+            # Collapse repeated conflict coordinates within this statement,
+            # keeping ONLY the earliest observation, including its original
+            # recorded_at and lineage. Earlier committed chunks/database rows
+            # still win under ON CONFLICT DO NOTHING.
+            unique: list[MarketValueSnapshotRecord] = []
+            seen: set[tuple[str, str, str, str, datetime]] = set()
+            for row in chunk:
+                key = (
+                    row.asset_ref, row.asset_kind, row.scale_id,
+                    row.market_context_id, row.estimate_as_of,
+                )
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(row)
+            params: list[object] = []
+            for row in unique:
+                params.extend((
+                    row.asset_ref, row.asset_kind, row.scale_id,
+                    row.market_context_id, row.estimate_as_of,
+                    row.recorded_at, row.value, json.dumps(row.source_lineage),
+                ))
+            sql = sql_prefix + ",".join([row_template] * len(unique)) + conflict_clause
+            t0 = perf_counter()
+            with self._connect() as connection, connection.cursor() as cursor:
+                cursor.execute(sql, tuple(params))
+            # This log is emitted AFTER commit, never as proof for an
+            # uncommitted transaction. SQL and pool counters are not conflated.
+            logger.info(
+                "FSFFL market snapshot batch committed input_rows=%d "
+                "statement_rows=%d chunk_index=%d elapsed_ms=%.2f",
+                len(chunk), len(unique), start // chunk_size, (perf_counter() - t0) * 1000,
             )
 
     def append_user_perceived_latency(self, record: UserPerceivedLatencyRecord) -> None:
