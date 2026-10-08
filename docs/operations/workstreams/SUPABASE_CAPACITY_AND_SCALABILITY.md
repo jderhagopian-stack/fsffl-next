@@ -1,5 +1,16 @@
 # Supabase Capacity & Scalability Recovery
 
+## 2026-10-08 — Tranche A implementation start (Management-authorized, NOT DEPLOYED)
+
+- **Management scope:** bounded PostgreSQL connection ownership/reuse ONLY. Supabase stays Free; B-F and Career #405 PR2 remain paused. No SQL, migrations, retention, refresh, value, model, or lifecycle changes.
+- **Starting main:** `55f9ce5da494466a107f4664f06385935c7b2ff7`. **Branch:** `work/supabase-tranche-a-pooled-connections-20261008`. Draft PR/testing/deployment status: not yet started.
+- **Live before:** Render `srv-dae6k7vqj5pc73af7bt0` on `dep-db3dp1d9fdbs73dbo7eg` / `b43fa8690fb6fe3dc4c28e9b203c51fd5a860480`, one free instance; Uvicorn start command has no `--workers` (one worker per instance). PostgreSQL `max_connections=60`, three reserved and six observed active at the read-only check. Historical and recent Supavisor logs show `mode: :session` for role `postgres`, but the exact encrypted `FSFFL_DATABASE_URL` transport endpoint from Render has not been directly inspected; verify at hosted acceptance, don't claim it is proven by log strings alone.
+- **Verified transport mechanism:** `src/fsffl/persistence/postgres.py` currently calls `psycopg.connect` for every individual `with self._connect()` SQL operation. Existing `psycopg_pool.ConnectionPool.connection()` API commits on success, rolls back on exception and returns the connection; connection health-check can discard stale connections before caller SQL.
+- **Proposed bounded parameters:** lazy per-adapter/process pool, min_size=0, max_size=3, timeout=5s, max_idle=75s, max_lifetime=720s; explicit shutdown; session/transaction-compatible disabled prepared statements; legacy mode escape `FSFFL_PERSISTENCE_CONNECTION_MODE=legacy`.
+- **Pre-deploy gates:** focused concurrency/isolation/rollback/timeouts/disconnect/shutdown tests, stable-head full-suite on ready PR, exact dependency and pooler mode compatibility, RSS and connection headroom; deploy only after stable candidate acceptance. Hosted rollback-only telemetry test and measured comparable windows must pass before marking tranche accepted. If credentials/observability inaccessible or risk elevated, stop and report to Management without claiming production acceptance.
+- **Frozen:** every existing SQL statement, publication/pointer ordering and tenancy, PIT lineage, replay, last-good, model authority, and explicit no-silent-heavy-refresh saved-session policy. Baselines: Gate A forensic and Minimal Write-Capability PDFs; Gate B design (15 pages).
+
+
 Updated: 2026-10-08  
 Status: **P0 OPERATIONAL PRIORITY — GATE A AUTHORIZED; PRODUCTION REMEDIATION NOT YET AUTHORIZED EXCEPT SEPARATE NARROW EMERGENCY BRIDGE**
 
