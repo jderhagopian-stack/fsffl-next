@@ -8,6 +8,12 @@ For **what is happening right now**, read [CURRENT_OPERATIONS.md](CURRENT_OPERAT
 For exact tranche implementation evidence, read the linked workstream checkpoint.  
 For the broad long-range capability plan, read [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and [../FSFFL_NEXT_PRODUCT_PRIORITIES.md](../FSFFL_NEXT_PRODUCT_PRIORITIES.md).
 
+## 2026-10-08 — Tranche A accepted; Tranche B alone authorized
+
+Management has **ACCEPTED Tranche A** transport on existing hosted write + matched restore evidence, with manual Gate 2 telemetry probe waived as unnecessary. Its exact live code stays `1c5b5325791cddaf49d35d372270a9aba0586afb` on Render `dep-db3qq4vlk1mc73cj3910`. This supersedes the earlier *recommended acceptance* and *B not authorized* checkpoint, which remains below as historical evidence.
+
+Management authorized only **Tranche B idempotent 300-row set-oriented market-value persistence**, with original PIT/first-writer identity and publication semantics preserved. Active draft PR [#434](https://github.com/jderhagopian-stack/fsffl-next/pull/434) on `work/supabase-tranche-b-market-batching-20261008` starts from main `29d2395c213829ed9fbcbf648d552c96089f0c05`. Do not deploy until focused parity, one stable-head full suite, and governable hosted equivalence acceptance plan. No automatic transition to C-F. Career #405 PR2 remains paused, as do paid Supabase, deletion, retention, migration, refresh policy, provider experiments, and model/analytics work. Supabase database allocation ~585 MB exceeds Free quota; batching will not reclaim physical bytes.
+
 ## 2026-10-08 — Supabase Tranche A production write/read evidence (Management review)
 
 **Durable regression rule:** Tranche A's bounded pooled connection ownership is now an architectural/runtime invariant, not a temporary incident patch. Future persistence, restore, publication, and background-work changes must preserve bounded reuse or return to Management with a measured replacement design. Connect-per-operation behavior, bypass adapters, unbounded pool/waiter growth, or material matched-workload regression in connection churn automatically reopens the narrow Supabase resource gate. Keep legacy mode only as emergency rollback. Add low-volume pool counters in a later relevant tranche if useful; do not create a new telemetry-volume problem to observe the old one.

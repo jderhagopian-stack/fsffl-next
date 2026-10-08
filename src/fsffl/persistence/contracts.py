@@ -95,6 +95,27 @@ class UserRuntimeContextRecord:
 
 
 @dataclass(frozen=True)
+class MarketValueSnapshotRecord:
+    """Exact market observation row; publication order is owned by the caller.
+
+    No user identity is added to the existing governed conflict coordinate.
+    """
+
+    asset_ref: str
+    asset_kind: str
+    scale_id: str
+    market_context_id: str
+    estimate_as_of: datetime
+    value: float
+    source_lineage: JsonMapping
+    recorded_at: datetime
+
+    def __post_init__(self) -> None:
+        _require_aware(self.estimate_as_of, field="estimate_as_of")
+        _require_aware(self.recorded_at, field="recorded_at")
+
+
+@dataclass(frozen=True)
 class UserPerceivedLatencyRecord:
     user_id: str
     operation: str
@@ -251,6 +272,12 @@ class PersistenceStore(Protocol):
         source_lineage: JsonMapping,
         recorded_at: datetime | None = None,
     ) -> None: ...
+
+    def append_market_value_snapshots(
+        self, records: Sequence[MarketValueSnapshotRecord]
+    ) -> None:
+        """Append ordered observations in bounded first-writer-wins chunks."""
+        ...
 
     def append_user_perceived_latency(self, record: UserPerceivedLatencyRecord) -> None: ...
 
