@@ -22,6 +22,23 @@ A new Management chat must, before issuing new scope:
 
 Do not recreate priority order from chat memory alone.
 
+## 2026-10-08 Supabase P0 priority change
+
+Management has elevated **Supabase Capacity & Scalability Recovery** above Career #405 PR2 as the immediate operational priority. The database is over the Free Plan quota (568.16 MB vs 0.5 GB) and Management reports it locked/read-only. Egress and log-ingestion charts show a major late-September step-change centered around **2026-09-26/27**; subsequent plumbing rewrites appear to have reduced usage somewhat but not restored the pre-inflection baseline. Treat that as evidence that some waste may already have been removed while a deeper mechanism remains.
+
+A temporary paid Supabase tier may be used to regain access/headroom, but only as an **emergency bridge**. It must not become the architectural answer or hide ongoing growth. The permanent goal is to restore efficient behavior that remains viable at thousands/tens of thousands of leagues.
+
+Immediate sequence:
+1. Phase 0 containment and before-state evidence;
+2. Phase 1 targeted read-only audit using 2026-09-24..29 and the 09-26/27 inflection as the first forensic window;
+3. Phase 2 semantic-sharing/retention architecture;
+4. mandatory Management Gate B before production cleanup/remediation;
+5. controlled stabilization and resource-proportionate scale validation.
+
+Career PR1 remains complete. Career PR2 is still approved conceptually but is **paused from implementation/promotion** until the Supabase audit/design establishes safe persistence/materialization boundaries. Do not allow dynamic Career work to compound an unclassified egress/storage problem.
+
+Canonical checkpoint: [Supabase Capacity & Scalability Recovery](workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md).
+
 ## 2026-10-07 Management reconciliation
 
 The larger FSFFL NEXT roadmap has **not** been replaced by the recent corrective program.
