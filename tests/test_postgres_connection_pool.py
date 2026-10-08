@@ -173,6 +173,29 @@ def test_parallel_checkouts_reuse_one_bounded_pool_without_cross_user_leaks(pool
     assert all(c.pending == [] for c in pool.idle)
 
 
+
+def test_concurrent_real_adapter_read_and_write_methods_keep_user_parameters_separate(pooled):
+    def worker(index):
+        if index % 2:
+            pooled.append_user_perceived_latency(_latency(f"writer-{index}"))
+        else:
+            assert pooled.get_user_runtime_context(user_id=f"reader-{index}") is None
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        list(ex.map(worker, range(10)))
+
+    statements = FakePool.instances[0].backend["committed"]
+    assert len(statements) == 10
+    assert len({params[0] for _, params in statements}) == 10
+    for sql, params in statements:
+        if "from fsffl.user_runtime_context" in sql:
+            assert params[0].startswith("reader-")
+        else:
+            assert "insert into fsffl.user_perceived_latency" in sql
+            assert params[0].startswith("writer-")
+
+
+
 def test_exception_rolls_back_and_next_checkout_has_no_prior_transaction(pooled):
     with pytest.raises(RuntimeError, match="intentional"):
         with pooled._connect() as conn, conn.cursor() as cur:
