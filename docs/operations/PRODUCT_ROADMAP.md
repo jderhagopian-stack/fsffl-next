@@ -1,5 +1,14 @@
 # FSFFL NEXT — Product Roadmap
 
+## 2026-10-08 Storage Architecture Foundation overlay — commercialization prerequisite
+
+The product roadmap remains intact; Management has added a **bounded commercial-scale storage prerequisite**, not a replacement for Explore/Trade, Career coverage or future Decision/Owner/league-history products. The prior fixed PostgreSQL-heavy derived-artifact design is inadequate for unconstrained multi-league growth. Accepted Supabase A pooling and B market-write batching remain; C whole-publication coalescing is closed.
+
+**Selected design candidate (Management acceptance pending):** hybrid authoritative PostgreSQL metadata/PIT and atomic publication + compressed immutable object storage for large analytical payloads, behind one existing persistence interface. Nonproduction executable POC exists in draft [PR #439](https://github.com/jderhagopian-stack/fsffl-next/pull/439), unmerged, with hash/identity/restart/legacy fallback tests; live cloud and full-real zlib compatibility are NOT established. Canonical evidence, 1/10/50/100-league assumptions, pricing and 4-phase migration/physical-recovery plan in [Supabase workstream](workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md).
+
+**Sequenced gated milestones:** P1 preserve A/B, monitor physical bytes and separately assess the nonunique Market index only if worthwhile; P2 prove private unmodified full Forecast/Simulation Pydantic reconstructibility and real object backend reliability before authorizing production adapter; P3 copy historic bytes into immutable objects in shadow with old PostgreSQL serving/rollback and exact publication authority intact; P4 only after explicit approval physically reclaim TOAST/disk and validate bounded multi-league scale. PIT State, first-writer Market and last-good remain protected and themselves have scaling economics. No migration, schema change, paid tier or deployment authorized by this roadmap update. Career #405 PR2, D-F and Player Intelligence #436 remain separately controlled; do not reopen Tranche C.
+
+
 ## 2026-10-07 Management reconciliation — current roadmap position
 
 This section is the controlling current-position overlay for the roadmap below. Older chronology is retained because it records accepted design decisions and capability intent, but historical `NEXT` / active-PR language below must not override this section or [MANAGEMENT_CONTINUITY.md](MANAGEMENT_CONTINUITY.md).
