@@ -1,7 +1,7 @@
 # Career Coverage Extension — Issue #405 implementation checkpoint
 
 Updated: 2026-10-07  
-Status: **MANAGEMENT AUTHORIZED — reuse accepted deterministic Y4–Y7 pipeline + dynamic production-universe extension; implementation not yet resumed**  
+Status: **PR1 COMPLETE / MERGED — PR2 AUTHORIZED: dynamic subject/evidence materialization + rostered coverage**  
 Authority: [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405) and [Current Operations](../CURRENT_OPERATIONS.md). This is a separate Career/Foundation 4 workstream, not Architecture Recovery.
 
 ## Decision and scope
@@ -348,3 +348,6 @@ Both accepted 5,360-row board and previously captured deterministic replay board
 **Management acceptance — 2026-10-07 ET:** **PR1 ACCEPTED.** Management adopts the proposed three-tier reproducibility rule for this pipeline: Tier A exact authority/provenance/identity/route/policy/scoring/terminal invariants are nonnegotiable; Tier B requires explicit downstream semantic stability under the unchanged governed Career/Shapley/#370 path for fully covered cohorts; Tier C keeps raw numerical drift measured and visible and does not replace the historical strict comparator with an outcome-tailored epsilon. The existing `1e-8 / 1e-10` frozen-board comparator therefore remains red as historical numerical evidence, but it is no longer by itself a blocker when Tier A is exact and Tier B proves unchanged governed conclusions. The one-of-351 QB/Y4 soft-stack coverage90 threshold crossing remains a separately disclosed diagnostic and is not rounded away. This acceptance is specific to the preserved #405 PR1 evidence; it does not grant a generic tolerance for future model changes.
 
 PR1 may now advance through the repository's normal exact-head stable full-suite gate and merge if green. No Render deployment is required for PR1 because this tranche changes evidence-preservation/replay tooling and operations documentation, not hosted production semantics. **PR2 becomes authorized only after PR1 is merged and checkpointed on main.** PR2 must follow the existing dynamic-evidence, season-rollover, multi-league reuse, bounded-resource and no-retuning contracts already recorded above.
+
+
+**PR1 merge closeout:** stable head `223241edcccf44af6e1c236cbab84751820c6ddf`; Stable full suite run `37723655257` attempt 2 **2,231 passed / 1 warning** with exact-head verification; squash merge `9141c12f3d69e8fa012b4e4db664f96e54f94aec`. Attempt 1's lone absolute-process-RSS failure on the same head was retried unchanged and passed; no memory ceiling or product/runtime code was changed. PR1 requires no Render deploy. **PR2 is authorized from merged main.**
