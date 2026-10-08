@@ -22,6 +22,10 @@ A new Management chat must, before issuing new scope:
 
 Do not recreate priority order from chat memory alone.
 
+## 2026-10-08 Supabase Gate B / Tranche A authorization
+
+Management authorized **Tranche A alone**: one bounded lazy psycopg connection pool for the existing hosted PostgreSQL persistence adapter, initially min 0 / max 3 connections, 5s checkout wait, 75s idle lifetime and 720s lifetime, plus a legacy transport escape. Exact SQL, PIT/history, publication/last-good, tenant and model semantics are frozen. Do not deploy without focused validation, one stable-head full-suite gate, connection/pooler/resource checks, and bounded hosted Render-credential acceptance. Tranches B-F remain **not authorized**. Paid Supabase, deletion, migration, provider-refresh experiments, refresh policy changes and Career #405 PR2 stay blocked. The management-approved Gate B design and Gate A / minimal-write PDFs are read-only evidence. Work in draft PR [#433](https://github.com/jderhagopian-stack/fsffl-next/pull/433), NOT yet promoted. An app-specific credential write has not been verified. See `docs/operations/workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md` for live checkpoint.
+
 ## 2026-10-08 Supabase P0 priority change
 
 Management has elevated **Supabase Capacity & Scalability Recovery** above Career #405 PR2 as the immediate operational priority. The database is over the Free Plan quota (568.16 MB vs 0.5 GB) and Management reports it locked/read-only. Egress and log-ingestion charts show a major late-September step-change centered around **2026-09-26/27**; subsequent plumbing rewrites appear to have reduced usage somewhat but not restored the pre-inflection baseline. Treat that as evidence that some waste may already have been removed while a deeper mechanism remains.
