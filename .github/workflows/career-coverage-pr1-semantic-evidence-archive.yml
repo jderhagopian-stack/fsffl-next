@@ -1,0 +1,42 @@
+name: Career #405 semantic evidence durable archive
+on:
+  push:
+    branches:
+      - work/career-coverage-pr1-parity-20261007
+    paths:
+      - .github/workflows/career-coverage-pr1-semantic-evidence-archive.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  archive-existing-results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Preserve completed run's exact artifact without fitting or Shapley recalculation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/semantic-result /tmp/semantic-unpacked
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/11526021872/zip" > /tmp/semantic-result/career-405-pr1-semantic-11526021872.zip
+          sha256sum /tmp/semantic-result/career-405-pr1-semantic-11526021872.zip | tee /tmp/semantic-result/SEMANTIC_SHA256SUMS
+          unzip -oq /tmp/semantic-result/career-405-pr1-semantic-11526021872.zip -d /tmp/semantic-unpacked
+          test -s /tmp/semantic-unpacked/semantic_parity_summary.json
+          test -s /tmp/semantic-unpacked/career_335_player_differences.csv
+          test -s /tmp/semantic-unpacked/longterm_335_player_differences.csv
+          test -s /tmp/semantic-unpacked/shapley_policy_contributions_differences.csv
+          test -s /tmp/semantic-unpacked/dynasty_48_room_differences_SYNTHETIC.csv
+          test -s /tmp/semantic-unpacked/terminal_parity.json
+          echo '=== COMPLETE SEMANTIC PARITY SUMMARY ==='
+          cat /tmp/semantic-unpacked/semantic_parity_summary.json
+          echo '=== ARCHIVE UPLOAD ==='
+          gh release upload career-405-accepted-research-evidence-20261007 \
+            /tmp/semantic-result/career-405-pr1-semantic-11526021872.zip \
+            /tmp/semantic-result/SEMANTIC_SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          gh release view career-405-accepted-research-evidence-20261007 \
+            --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '[.assets[].name]'
