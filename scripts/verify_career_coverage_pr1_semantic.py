@@ -153,7 +153,7 @@ def compare_terminal(reference: Path, regenerated: Path):
 
 def forecast_contract(csv_path: Path) -> LongHorizonForecastAuthorityContract:
     raw = read(csv_path)
-    rows = tuple(LongHorizonPolicyForecast.model_validate(item) for item in raw)
+    rows = tuple(LongHorizonPolicyForecast.model_validate({**item, "year_index": int(item["year_index"])}) for item in raw)
     return LongHorizonForecastAuthorityContract(
         evaluation_season=2026,
         scoring_coordinate="connected_league_fantasy_points",
