@@ -49,6 +49,10 @@ Keep the set small and rerun the journey whose boundary changed:
 
 The saved-session physical journey remains pending; exact evidence is in Architecture Recovery. Other workstreams remain governed by their named checkpoint and Management gate.
 
+## Career Coverage #405 — PR1 Management acceptance
+
+**PR1 ACCEPTED by Management on 2026-10-07 ET, pending only the normal exact-head stable full-suite merge gate.** Acceptance preserves the still-red historical strict numerical comparator and adopts the documented exact-authority + downstream-semantic reproducibility rule; no ad-hoc numeric tolerance was introduced. Terminal 335 parity is byte-identical; Career/Long-Term ranks and 0–10,000 indexes are unchanged across all 335; bounded synthetic #370 sensitivity shows 0/48 rank changes; the one-of-351 QB/Y4 soft-stack coverage90 crossing remains separately disclosed. Draft PR #429 may be marked ready and merged only after the successful stable-head full-suite matches its exact head. No Render deployment is required for PR1. PR2 is authorized only after that merge/checkpoint and must implement the already-governed dynamic, season-aware, multi-league-scalable subject/evidence/materialization architecture without retuning accepted model authority.
+
 ## Career Coverage #405 — PR1 semantic parity acceptance dossier (2026-10-08 UTC / 2026-10-07 ET)
 
 **EVIDENCE COMPLETE — RETURNED FOR MANAGEMENT ACCEPTANCE, NOT PROMOTED.** Draft PR #429 remains open/unmerged/undeployed. Original strict numeric board comparator still **fails 10,227 / 16,080** scalar comparisons; no tolerance was relaxed, no new fit or route selection, and backend drift is not conclusively attributed. Management authorized a bounded downstream sensitivity closeout without environment archaeology.
