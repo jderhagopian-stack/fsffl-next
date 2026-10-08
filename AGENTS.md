@@ -20,6 +20,8 @@ Build governed intelligence once for an exact State, publish it coherently, reus
 
 Each concept has one authoritative owner. Downstream layers consume rather than recreate upstream truth. Presentation explains governed results; it does not invent or silently alter model conclusions. Prefer small, modular, auditable changes and deterministic tests over duplicated lifecycle/orchestration paths. Escalate validation in proportion to the boundary and blast radius changed.
 
+Design every capability for multi-league reuse by construction. Before introducing expensive work or a cache/persistence key, identify its widest safe semantic dependency scope instead of defaulting to league/user ID. Shared provider/model/rules work should be reused across leagues when mathematically valid; tenant-private State remains isolated. Do not require brute-force 1,000/10,000-league tests in the constrained beta environment: validate with measured unit costs, bounded synthetic tests, reuse/cardinality assertions, and explicit scale projections unless larger execution is specifically justified and resource-safe.
+
 ## Test, merge, and deploy method
 
 - During implementation, run focused tests for the changed contract and regressions. Keep implementation PRs in draft while making code/checkpoint pushes; generic `CI` runs focused Dynasty readiness regressions only and cancels superseded in-flight runs.
