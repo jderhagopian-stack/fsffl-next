@@ -1,5 +1,9 @@
 # FSFFL NEXT — Product Roadmap
 
+## 2026-10-08 — Phase 2 private data-gate update
+
+Commercialization storage direction remains hybrid PostgreSQL metadata plus compressed immutable objects, but it is **NOT accepted for production**. The bounded Phase 2 validation was halted at a necessary privacy/integration gate: full real Forecast and Simulation payloads can be inspected in the connected Supabase tool but cannot yet be securely copied into the isolated Python zlib/Pydantic and genuine local S3 backend harness. Anonymized fixture tests and previous LZW32 real roundtrips do not satisfy the accepted Phase 2 requirement. Until a private two-artifact export/test environment is specifically arranged, the production adapter, migration, reclaim and 1/10/50/100 commercial readiness remain unproven. Do not authorize deployment, billing change, new lifecycle, refresh changes or resumption of Career #405, unrelated Supabase D-F and #436 from this update. Original product roadmap remains intact.
+
 ## 2026-10-08 Storage Architecture Foundation overlay — commercialization prerequisite
 
 The product roadmap remains intact; Management has added a **bounded commercial-scale storage prerequisite**, not a replacement for Explore/Trade, Career coverage or future Decision/Owner/league-history products. The prior fixed PostgreSQL-heavy derived-artifact design is inadequate for unconstrained multi-league growth. Accepted Supabase A pooling and B market-write batching remain; C whole-publication coalescing is closed.
