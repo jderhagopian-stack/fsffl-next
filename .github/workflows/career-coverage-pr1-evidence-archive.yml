@@ -33,12 +33,12 @@ jobs:
           836e092d9249738340d2353f49240cc48ef8c07073d58baa83e1d4a473ec2b12  career-405-replay-11524051845.zip
           EOF
           sha256sum -c CAREER405_PR1_REPLAY_SHA256SUMS
-          gh release upload "$EVIDENCE_TAG" career-405-replay-{11523486083,11523786224,11524051845}.zip CAREER405_PR1_REPLAY_SHA256SUMS --clobber
+          gh release upload "$EVIDENCE_TAG" career-405-replay-{11523486083,11523786224,11524051845}.zip CAREER405_PR1_REPLAY_SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"
       - name: Verify durable asset inventory
         shell: bash
         run: |
           set -euo pipefail
-          gh release view "$EVIDENCE_TAG" --json assets --jq '.assets[].name' | sort > /tmp/names
+          gh release view "$EVIDENCE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | sort > /tmp/names
           for name in 10899387479.zip 10912862252.zip 10916355135.zip 11263913850.zip SHA256SUMS CAREER405_PR1_REPLAY_SHA256SUMS career-405-replay-11523486083.zip career-405-replay-11523786224.zip career-405-replay-11524051845.zip; do
             grep -Fx "$name" /tmp/names >/dev/null || { echo "missing release evidence: $name"; exit 1; }
           done
