@@ -1,0 +1,67 @@
+name: Career Coverage PR1 semantic parity closeout
+on:
+  push:
+    branches:
+      - work/career-coverage-pr1-parity-20261007
+    paths:
+      - .github/workflows/career-coverage-pr1-semantic.yml
+      - scripts/verify_career_coverage_pr1_semantic.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: career-405-pr1-semantic
+  cancel-in-progress: false
+jobs:
+  frozen-downstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EVIDENCE_TAG: career-405-accepted-research-evidence-20261007
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install original numerical stack, no new fitting
+        run: python -m pip install -e . pandas==3.0.6 numpy==2.4.6 scipy==1.17.1 scikit-learn==1.9.1
+      - name: Restore immutable accepted inputs and already captured deterministic replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/career405semantic/{archive,reference,replay,panel,work,report}
+          for filename in 10899387479.zip 10912862252.zip 11263913850.zip career-405-replay-11524051845.zip; do
+            gh release download "$EVIDENCE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$filename" --dir /tmp/career405semantic/archive
+          done
+          cd /tmp/career405semantic/archive
+          echo 'ea72f312148f01b8066419e8f12cb3a04a4dbbd99fd6e0b7dc975c65cc2446b5  10899387479.zip' > VERIFIED_SUMS
+          echo '6dd664b632f4897f286a99794e10df29be21bf8c6cae70e526ea807470fdcb0e  10912862252.zip' >> VERIFIED_SUMS
+          echo '6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22  11263913850.zip' >> VERIFIED_SUMS
+          sha256sum -c VERIFIED_SUMS
+          unzip -oq 10912862252.zip -d /tmp/career405semantic/panel
+          unzip -oq 11263913850.zip -d /tmp/career405semantic/reference
+          unzip -oq career-405-replay-11524051845.zip -d /tmp/career405semantic/replay
+          sha256sum /tmp/career405semantic/reference/f4/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.csv
+          sha256sum /tmp/career405semantic/replay/replay/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.csv
+      - name: Regenerate terminal directly and execute unchanged Shapley Career and #370 consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/time -v -o /tmp/career405semantic/report/time.txt \
+          python -u -m scripts.verify_career_coverage_pr1_semantic \
+            --reference /tmp/career405semantic/reference/f4 \
+            --replay /tmp/career405semantic/replay/replay \
+            --panel /tmp/career405semantic/panel/RAW_PLAYER_SEASONS_RICH.csv \
+            --source-board artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_CONNECTED_LEAGUE_BOARD_335.csv \
+            --out /tmp/career405semantic/report
+      - name: Upload all terminal/Career/Shapley/economic/position-room evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: career-405-pr1-semantic-parity-diagnostics
+          retention-days: 90
+          if-no-files-found: warn
+          path: |
+            /tmp/career405semantic/report/
