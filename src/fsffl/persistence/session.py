@@ -24,6 +24,7 @@ from .contracts import (
     LeagueSnapshotRecord,
     canonical_fingerprint,
     PersistenceStore,
+    MarketValueSnapshotRecord,
     ReusableArtifactRecord,
     TeamSnapshotRecord,
     UserRuntimeContextRecord,
@@ -468,8 +469,12 @@ def persist_runtime_snapshot(
         )
         store.put_artifact(value_record)
         if publish_context:
-            for estimate in value_evidence.estimates:
-                store.append_market_value_snapshot(
+            # Preserve the exact legacy estimate identity, lineage, timestamp,
+            # ordering and publish-context gate. The hosted adapter batches;
+            # older/custom PersistenceStore implementations retain the original
+            # per-row API until they implement the new optional batch boundary.
+            snapshots = tuple(
+                MarketValueSnapshotRecord(
                     asset_ref=estimate.asset_id,
                     asset_kind=estimate.asset_kind.value,
                     scale_id=estimate.scale.scale_id,
@@ -482,6 +487,23 @@ def persist_runtime_snapshot(
                     },
                     recorded_at=now,
                 )
+                for estimate in value_evidence.estimates
+            )
+            batch_writer = getattr(store, "append_market_value_snapshots", None)
+            if callable(batch_writer):
+                batch_writer(snapshots)
+            else:
+                for row in snapshots:
+                    store.append_market_value_snapshot(
+                        asset_ref=row.asset_ref,
+                        asset_kind=row.asset_kind,
+                        scale_id=row.scale_id,
+                        market_context_id=row.market_context_id,
+                        estimate_as_of=row.estimate_as_of,
+                        value=row.value,
+                        source_lineage=row.source_lineage,
+                        recorded_at=row.recorded_at,
+                    )
 
     # Stable governed terminal bundles get durable presentation identities.
     # Keep the legacy user-scoped record for compatibility and also retain one
