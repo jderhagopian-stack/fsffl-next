@@ -1,7 +1,7 @@
 # Career Coverage Extension — Issue #405 implementation checkpoint
 
 Updated: 2026-10-07  
-Status: **PR1 stopped at scorer-authority gate; no code changed**  
+Status: **MANAGEMENT AUTHORIZED — bounded scorer recovery + production-universe extension; implementation not yet resumed**  
 Authority: [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405) and [Current Operations](../CURRENT_OPERATIONS.md). This is a separate Career/Foundation 4 workstream, not Architecture Recovery.
 
 ## Decision and scope
@@ -10,9 +10,17 @@ The frozen 335-player cohort remains the validated calibration/reference cohort,
 
 For an exact evaluated League State, the accounting population is every rostered QB/RB/WR/TE, regardless of starter, bench, IR or taxi slot. Each must produce a governed Career-forward estimate or a player-specific model-authority failure. A failure remains visible and keeps #370's existing completeness gate closed; it is never converted to zero or hidden by a slot filter.
 
-The valuation population is the 335-player reference cohort, plus the exact-State rostered offensive population, plus only individually requested/discovery-relevant out-of-core players. An unrostered candidate can be valued before acquisition but is not inserted into any team's roster/room accounting. Broad Sleeper-database materialization is explicitly out of scope.
+The 335-player set remains the frozen calibration/reference cohort, but production coverage is broader.
 
-Market/Search/Waiver/Opportunity/Trade/What-If/explicit lookup may identify a candidate. Market remains a separate coordinate and is not a numeric Career Intrinsic input.
+The production populations are:
+- **reference cohort:** the accepted frozen 335 used for parity, normalization and model governance;
+- **accounting population:** every exact-State rostered QB/RB/WR/TE, regardless of starter/bench/IR/taxi;
+- **league decision universe:** the accounting population plus a broad, precomputed fantasy-relevant waiver/free-agent cohort so Career evidence is present before a user makes an add/waiver decision;
+- **extended universe:** unusual/deep candidates scored on demand when identified by Explore/Search/Waiver/Trade/What-If/explicit lookup.
+
+An unrostered candidate may be valued without being inserted into any team's room/accounting. The waiver cohort must be selected by an explicit governed football/eligibility contract rather than an arbitrary top-N cutoff. Whole-provider-database materialization remains unnecessary: the goal is comprehensive **fantasy-relevant decision coverage**, not scoring every Sleeper identity.
+
+Market/Search/Waiver/Opportunity/Trade/What-If/explicit lookup may identify a candidate or help establish decision relevance. Market remains a separate coordinate and is not a numeric Career Intrinsic input.
 
 ## Reconciled preserved-State evidence
 
@@ -40,11 +48,24 @@ The complete 25-player list remains in Issue #405; this checkpoint intentionally
 | Y8+ terminal/tail | `src/fsffl/product/foundation4_shadow_inputs.py` requires exactly 335 terminal rows. `src/fsffl/value/career_tail.py` already exposes a fitted scorer over age, experience, current points, prior points and prior-missingness, with two supported model families, residual bands, and an exact lineup-capacity-signature check. | Reuse `CareerTailFeatures`/the fitted runtime only after producing point-in-time, scoring-coordinate-correct features for a candidate. Keep model-family spread separate from outcome bands. A missing current/prior value must remain missing with provenance, never be silently converted into an invented zero. |
 | Career Forward aggregation | `src/fsffl/product/foundation4_career_forward_runtime.py` requires the component player-ID sets to equal Current's set and terminal features to have that same set. `src/fsffl/value/career_forward_intrinsic.py` independently enforces identical Current/Y4–Y7/tail cohorts and the accepted raw annual aggregation. | Extend coverage/status metadata and fingerprints, not the aggregation formula. Emit per-player estimate or typed authority failure; never publish a complete accounting status when any rostered player lacks authority. |
 
+## Management-authorized scorer recovery gate
+
+Management authorizes a **reproducibility-only recovery fit** for the accepted Y4–Y7 scorer. This is not a new model-development program.
+
+Required constraints:
+1. Use only the exact accepted historical evidence, feature transforms, route/model-selection policy, seeds/settings and fitting routine necessary to reproduce the previously accepted scorer.
+2. The 25 missing rostered players, waiver candidates and other out-of-core subjects must not participate in fitting, model selection or threshold tuning.
+3. Do not search alternative model families, optimize for improved results, or change Career economics.
+4. Reproduce the frozen 335 reference outputs first. Require parity within the accepted/frozen tolerance across the full reference cohort before any out-of-core inference is authorized.
+5. If parity fails, stop and return to Management. Do not compensate with coefficient guessing, interpolation, Market values or a replacement model.
+6. If parity succeeds, package/freeze the recovered scorer, transforms, routing and residual-band authority as a durable reusable inference artifact with provenance.
+7. Preserve/copy the remaining exact accepted route/board provenance artifacts before their current retention windows expire.
+
 ## Smallest reusable mechanism
 
 Implement one **Career Coverage Subject Resolver + evidence/materialization adapter** at the Forecast/Foundation boundary, not a Dynasty-specific value model:
 
-1. Resolve the deduplicated, position-checked subject set as frozen reference IDs ∪ exact-State rostered QB/RB/WR/TE IDs ∪ specifically requested acquisition candidates. Preserve canonical player ID, position, exact State, league/rules, team ownership where applicable, and request purpose.
+1. Resolve the deduplicated, position-checked subject set as frozen reference IDs ∪ exact-State rostered QB/RB/WR/TE IDs ∪ governed fantasy-relevant waiver/free-agent IDs ∪ specifically requested long-tail acquisition candidates. Preserve canonical player ID, position, exact State, league/rules, team ownership where applicable, waiver-universe eligibility/provenance, and request purpose.
 2. Materialize a typed evidence packet from existing, point-in-time-authoritative sources: Y1 Forecast and scoring coordinate; prior seasons/history; age/experience; opportunity/participation; NFL attachment/status and injury/availability; prospect/career-trajectory evidence when governed; source/model/version and per-family coverage. Roster slot is not a feature or eligibility gate.
 3. Score with unchanged, versioned accepted model parameters and existing Current, Y2/Y3, Y4–Y7, Y8+ and Shapley economics. Feature transforms, thresholds, missingness handling, reference percentiles, and calibration bands must be explicit and replayable. A coverage adapter may construct inputs, but may not learn coefficients from new candidates or use Market values.
 4. Return a per-player authority record: `ready` with estimate, source/model provenance, evidence tier, confidence, and separate ordinary/model-authority uncertainty; or `unavailable` with a stable player-specific reason and missing evidence families. No silent omissions and no arbitrary-zero fallback.
@@ -63,21 +84,31 @@ Current model limitations that must remain explicit:
 - Intrinsic v1 can label conservative Y2/Y3 carry-forward as low strength, but that alone is not the required governed wider uncertainty for every sparse candidate.
 - Current Y1 and the Y4–Y7 board are existing cohort/materialization boundaries. Y4–Y7 inference is the key feasibility gate; no user-facing extension starts before exact scorer provenance and parity are established.
 
-## On-demand free-agent semantics
+## Waiver/free-agent semantics
 
-A free-agent candidate enters valuation only through an identified Market/Search/Waiver/Opportunity/Trade/What-If or explicit lookup request. Discovery context may identify its player ID; Market value, percentile or rank is not a Career feature. The resolver then uses canonical State/player identity and the same upstream scoring/evidence requirements. The output is candidate-scoped, exact-State/fingerprint-bound, and does not write a roster entry, team-room row, or team asset count. If later acquired, roster membership comes only from a new/exact League State and deduplicates the player into accounting coverage. Unknown/unresolved Sleeper IDs fail per player; no full-database materialization.
+The user must not need to identify a player manually before Career evidence exists for ordinary waiver decisions.
+
+At each applicable league publication, materialize Career coverage for a **broad governed fantasy-relevant waiver/free-agent cohort** in addition to every rostered QB/RB/WR/TE. Define this cohort through explicit football/eligibility evidence supported by existing authority (for example canonical identity/position, NFL attachment/status, usable Forecast/current-or-prior participation/opportunity, or governed prospect evidence) rather than an arbitrary top-N rank. The exact eligibility rule must be documented, deterministic, State/as-of aware, and testable before activation.
+
+Explore/Search/Waiver/Opportunity may expose these precomputed candidates. Market value, percentile or rank may help identify decision relevance but is not a Career feature.
+
+The long tail remains on demand: Trade/What-If/explicit lookup or other discovery may request an eligible out-of-cohort player through the same scorer and evidence adapter. Neither precomputed nor on-demand free agents write a roster entry, team-room row or team asset count. If later acquired, roster membership comes only from the new/exact League State and the already-scored player deduplicates into accounting coverage. Unknown/unresolved identities fail per player.
+
+Whole-Sleeper-database materialization is not required; broad fantasy-relevant waiver coverage is.
 
 ## Bounded PR sequence
 
 **PR 0 — this checkpoint (complete).** Correct the issue's 22-vs-25 error and store this trace/plan in operations docs. Documentation-only; no model/test/deploy change.
 
-**PR 1 — scorer authority and parity gate (attempted; blocked).** Exact retained evidence is recorded above. The Y4–Y7 scorer cannot be reconstructed without fitting. No implementation or parity test was attempted; do not proceed without a Management authority decision.
+**PR 1 — scorer recovery, artifact preservation and parity gate (authorized).** Preserve the remaining accepted route/board provenance before retention expiry. Re-run only the exact accepted historical fitting path necessary to reproduce the previously accepted Y4–Y7 scorer; no out-of-core player may enter fitting/model selection. Package the recovered scorer only if all 335 reference outputs replay within frozen tolerance. If parity fails, stop for Management.
 
 **PR 2 — subject resolver + rostered coverage.** Add the typed resolver/feature packet, candidate coverage reports, per-player provenance/confidence/uncertainty/failure contract, and same-State model scoring through unchanged authorities. Integrate Current, Y2/Y3, Y4–Y7 and terminal as supported. Keep #370 untouched and fail closed on player failures. Add rostered archetype regressions: veteran, injured established, incumbent-blocked young, taxi rookie, low-production developmental, older/no-current-NFL-team, sparse-evidence. Audit the exact preserved 25 as a regression fixture, not as current production truth.
 
-**PR 3 — on-demand acquisition candidates.** Reuse the same resolver/scorers for explicit relevant free-agent IDs; expose candidate valuation to the existing discovery/lookup consumer boundary. Verify no room/accounting insertion before acquisition, no tenant/State leakage, and Market-only discovery does not feed Career numbers.
+**PR 3 — broad league waiver decision universe.** Define and document the deterministic governed fantasy-relevant free-agent eligibility contract; precompute/materialize Career coverage for that waiver universe alongside rostered coverage. Verify that ordinary waiver candidates surface Career evidence before acquisition, that Market signals do not enter Career scoring, and that no free agent is inserted into team accounting before the exact State shows acquisition.
 
-**PR 4 — integration and stable merge gate.** Validate Current + Career Forward exact cohort semantics and #370's roster completeness invariant, focused tests first, then one full suite at stable PR head per the current operating protocol. Merge/deploy only after scorer parity, all archetype/failure regressions, exact-State/tenant isolation, preserved economics and output status are verified.
+**PR 4 — long-tail on-demand candidates.** Reuse the same resolver/scorers for unusual/deep explicitly relevant free-agent IDs outside the precomputed waiver cohort. Verify exact-State/tenant fencing, cache/fingerprint correctness, player-specific authority failures, and deduplication when a later State shows acquisition.
+
+**PR 5 — integration and stable merge gate.** Validate Current + Career Forward cohort semantics, broad waiver coverage and #370's roster completeness invariant, focused tests first, then one full suite at the stable PR head per the current operating protocol. Merge/deploy only after scorer parity, roster + waiver-universe archetype/failure regressions, exact-State/tenant isolation, preserved economics and output status are verified.
 
 ## Regression matrix / acceptance
 
