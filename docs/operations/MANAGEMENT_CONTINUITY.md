@@ -8,6 +8,24 @@ For **what is happening right now**, read [CURRENT_OPERATIONS.md](CURRENT_OPERAT
 For exact tranche implementation evidence, read the linked workstream checkpoint.  
 For the broad long-range capability plan, read [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and [../FSFFL_NEXT_PRODUCT_PRIORITIES.md](../FSFFL_NEXT_PRODUCT_PRIORITIES.md).
 
+## 2026-10-08 — Management handoff: Tranche B accepted; C evidence gate is next
+
+Management **ACCEPTS Supabase Tranche B** and closes its implementation/production gate. Accepted runtime remains PR #434 merge `3f079ca6df48fbae3e6adb83fa3df877dc05f1b1` on Render `dep-db3ruiqjnfac738ibiag`; later docs commits are not runtime changes. The stable candidate passed `37805666770` with 2,248 tests / 1 warning. B's governed contract is now permanent: Market publication uses bounded deterministic set-oriented writes while preserving exact conflict identity, PIT history, timestamps/context, first-writer lineage, publication order and tenant/model authority. Do not permit future code to regress to one INSERT per observation without reopening this gate.
+
+Management also physically exercised one ordinary **Refresh Intelligence** on iPhone/Safari. That journey completed through publication and produced live PostgreSQL evidence of **1,070 observation attempts in four batch statements (2x300 + 2x235)** with zero new retained rows because existing exact identities correctly conflicted. This reinforces B's real hosted-path acceptance. The same refresh exposed a separate transient Player Intelligence bug: `IntrinsicBuildSuperseded` surfaced as HTTP 500 during State handoff, while history stayed available and Player Intelligence worked normally after publication. Track/fix this narrowly under **issue #436**; do not reopen P0 architecture or B because of it.
+
+The explicit refresh also peaked at ~440,963,072 bytes RSS: above the 429,496,720 internal heavy-work budget but below the 536,870,900 hard Render limit. Preserve this as capacity evidence. It is not currently attributed to Tranche B and does not undo B acceptance.
+
+**Immediate authorized sequence from this handoff:**
+1. **Supabase Tranche C evidence gate only** — instrument/trace current A+B behavior enough to count unnecessary same-semantic republish/materialization attempts, identify exact fingerprints/invalidation coordinates, and distinguish unchanged repetitions from same-State genuinely changed evidence. No skip/coalescing behavior yet; return to Management with measured evidence and a bounded proposal.
+2. Keep **D-F, physical retention/reclamation, paid Supabase, migrations, refresh-policy/model changes and Career #405 PR2 paused** until separately authorized.
+3. Preserve A and B as regression boundaries in every relevant persistence/publication change.
+4. Resolve issue #436 narrowly when scheduled: expected State supersession must return a governed non-500 response/last-good-or-rebuilding state, not stale evidence.
+
+Physical database allocation is still above the Supabase Free 0.5GB quota (~586MB at the B closeout). A and B slow future resource burn; neither reclaims existing bytes. Storage reclamation remains a later evidence/reachability gate, not an emergency deletion authorization.
+
+A new Management chat should start from `AGENTS.md`, `CURRENT_OPERATIONS.md`, `OPERATING_PROTOCOL.md`, this file, and `workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md`. The first decision/execution target is **Tranche C evidence**, not Career PR2 or storage deletion.
+
 ## 2026-10-08 — Tranche B live; worker acceptance recommendation
 
 The Management-authorized Tranche B market batching correction passed focused parity tests and the single stable full suite `37805666770` (2,248 passed, one warning) on head `48d78375cce957dca5faee71a8c39108c3e006a2`; merged `3f079ca6df48fbae3e6adb83fa3df877dc05f1b1` and is live on Render `dep-db3ruiqjnfac738ibiag`. Hosted natural publication used 2 idempotent multirow INSERTs for **535** market observations; preserved 169,384 historical rows, original first-writer provenance, stable PIT State count and accepted model/publication contracts. Same 25 restore reads, read p95 improved, no inspected warning/error, and peak RSS below Render limit. Full measured ledger and limitations live in `docs/operations/workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md`.

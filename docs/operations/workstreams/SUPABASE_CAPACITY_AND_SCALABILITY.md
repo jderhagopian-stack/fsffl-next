@@ -1,5 +1,23 @@
 # Supabase Capacity & Scalability Recovery
 
+## 2026-10-08 — Management ACCEPTS Tranche B; authorizes Tranche C evidence gate only
+
+**Management disposition:** ACCEPT Tranche B. PR #434 stable-tested head `48d78375cce957dca5faee71a8c39108c3e006a2` passed the one stable full suite `37805666770` (**2,248 passed / 1 warning**), squash-merged as `3f079ca6df48fbae3e6adb83fa3df877dc05f1b1`, and is live on Render `dep-db3ruiqjnfac738ibiag`. The accepted set-oriented writer preserves the original five-part conflict key, first-writer lineage, PIT history, publication ordering and tenant/model authority.
+
+**Live end-to-end confirmation:** Management intentionally invoked one normal Refresh Intelligence action from authenticated iPhone/Safari. The refresh completed through Forecast, Simulation, Value, Intrinsic reconciliation and `publication_complete` at ~16:25:55 UTC. PostgreSQL cumulative statement evidence after that journey showed the Tranche B multirow INSERT shapes executed as **2x 300-row + 2x 235-row statements = 1,070 market observations attempted in 4 SQL statements**, while `ON CONFLICT DO NOTHING` retained **0 new rows** because the exact market identities already existed. The legacy one-row INSERT shape did not need to execute once per observation. This is real hosted-path evidence and reinforces the previously measured ~99.6% SQL-attempt reduction without changing retained market history.
+
+**Standing Tranche B regression boundary:** future Market persistence must not silently return to one SQL INSERT per market observation under comparable publication work. Preserve bounded deterministic chunking, exact idempotent conflict semantics and first-writer lineage. A material regression in statements-per-observation, transaction/RSS behavior, or bypass of the batch PersistenceStore boundary reopens this narrow gate before promotion.
+
+**Physical side finding, separate from B:** during the same refresh, Player Intelligence briefly returned HTTP 500 because `IntrinsicBuildSuperseded` escaped the route while execution State ownership advanced. History remained 200, the refresh itself completed, and the same Player Intelligence surface worked after publication. GitHub issue **#436** tracks the required graceful supersession handling. Do not conflate this lifecycle/UI defect with Tranche B persistence correctness.
+
+**Resource note:** the explicit full refresh reached observed process peak RSS **440,963,072 bytes**, above the internal heavy-work budget **429,496,720** but below the Render hard limit **536,870,900**. This does not invalidate B's narrow persistence semantics, but it remains a current capacity signal and must not be erased from later scale claims.
+
+**Next authorized work — Tranche C evidence gate only.** Do not implement skip/coalescing behavior yet. First measure and classify redundant materialization under current A+B production behavior: counts of same-State/same-evidence republish attempts, exact semantic fingerprints/invalidation coordinates, changed-evidence-with-same-State cases, artifact encode/UPSERT attempts, publication chronology, and affected bytes/RSS/latency. Use existing hashes/metadata where possible; do not add a second lifecycle controller or heavy foreground hashing. Return to Management with evidence and a bounded C implementation proposal. **Tranches D-F, deletion/retention, paid Supabase, migrations, refresh-policy changes, and Career #405 PR2 remain paused.**
+
+**Capacity remains unresolved:** PostgreSQL physical allocation remains above the Free 0.5GB quota (latest B closeout ~586.4MB before the explicit refresh). A and B reduce ongoing waste; they do not physically reclaim historical bytes. No cleanup or reclaim action is authorized here.
+
+
+
 
 ## 2026-10-08 — Tranche B live acceptance closeout; Management review
 
