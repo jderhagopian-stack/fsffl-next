@@ -37,11 +37,12 @@ Management intent remains to return to forward product development once the boun
 - **Foundation 4 / Career Intrinsic:** career-forward model foundation is live. The remaining material gap is **coverage/completeness**, tracked in Issue #405 and the Career Coverage checkpoint.
 - **League Atlas / Current Position & Depth:** physically accepted. Current follows the lineup; Dynasty follows the assets. Do not create another Current positional authority.
 - **Home → Franchise Overview:** PR #418 is merged/deployed and physically accepted by Management on authenticated iPhone/Safari. Franchise is now the managed-team landing experience. Standalone Home is retired as a product surface.
-- **Known navigation debt after #418:** the old Home bottom-nav item is still visible but inert. This was explicitly outside #418 scope and is the first item of the next navigation/product-hierarchy tranche; it is not a reason to reopen Franchise Overview semantics.
+- **Navigation / product hierarchy:** PR #421 is merged, deployed and physically accepted on authenticated iPhone/Safari. Primary navigation is now `Franchise | League | Explore | Trade | More`. The former Home item is removed; this tranche is closed.
+- **Franchise visual-polish note:** Management preferred the original Home treatment where the “What Matters Most” card was red. This is a non-blocking presentation preference for a future Franchise polish pass, not a reason to reopen navigation or change Franchise semantics.
 
 ## Immediate approved development sequence
 
-### 1. Navigation / product hierarchy tranche
+### 1. Navigation / product hierarchy tranche — COMPLETE
 
 Target primary product hierarchy:
 
@@ -57,7 +58,7 @@ Management direction:
 
 This is a bounded information-architecture/product-navigation tranche. It does **not** authorize changes to Forecast, Value, Decision, Search economics, Simulation semantics, Current/Dynasty authority, lifecycle/publication plumbing, or Career Intrinsic.
 
-Physical iPhone/Safari acceptance remains required.
+Authenticated iPhone/Safari physical acceptance completed on 2026-10-07.
 
 ### 2. Career Coverage #405
 
@@ -171,6 +172,6 @@ Management-specific guardrails:
 
 As of this reconciliation, the clean handoff is:
 
-**Franchise Overview accepted → navigation/product hierarchy next → Career Coverage #405 → resume broader roadmap from the reconciled position.**
+**Franchise Overview accepted → navigation/product hierarchy accepted → Career Coverage #405 active decision gate → resume broader roadmap from the reconciled position.**
 
 The next Management chat should verify live repository/runtime state first, but should not invent a different sequence merely because older roadmap sections contain stale historical “NEXT” language.
