@@ -297,6 +297,15 @@ def main():
     audit.OUT = args.out / "unchanged_current"
     audit.main()
     cur_rows = read(audit.OUT / "SHAPLEY_CURRENT_BOARD_335.csv")
+    # The older Current diagnostic uses the provider adapter's sleeper:NNN IDs;
+    # the accepted 335 Career board uses canonical sleeper:player:NNN IDs.
+    # Apply the ORIGINAL frozen source's explicit exact-ID mapping (no name match).
+    source_id_rows = read(audit.SOURCE)
+    source_id_crosswalk = {row["current_player_id"]: row["player_id"] for row in source_id_rows}
+    assert len(source_id_rows) == len(source_id_crosswalk) == 335
+    assert set(row["player_id"] for row in cur_rows) == set(source_id_crosswalk)
+    cur_rows = [{**row, "player_id": source_id_crosswalk[row["player_id"]]} for row in cur_rows]
+    assert len({row["player_id"] for row in cur_rows}) == 335
     current = current_intrinsic(cur_rows)
     assert len(cur_rows) == len(current.estimates) == 335
     fixed_tail = tails(accepted_term, rr)
