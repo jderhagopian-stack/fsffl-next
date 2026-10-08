@@ -1,5 +1,11 @@
 # FSFFL NEXT Architecture Overview
 
+## Storage architecture direction and production gate (2026-10-08)
+
+The existing PostgreSQL `PersistenceStore` owns all active and accepted runtime persistence, including bounded pooled connections (Tranche A) and idempotent batched Market first-writer writes (Tranche B). Tranche C whole-publication skipping was closed. A hybrid design—authoritative PostgreSQL metadata/PIT/publication and immutable compressed large object payloads through the same adapter—is a **nonproduction architectural candidate only**.
+
+The isolated Foundation prototype remains draft [PR #439](https://github.com/jderhagopian-stack/fsffl-next/pull/439), unmerged and not deployed. In Phase 2, complete real Forecast and Simulation records were identifiable read-only through the connected Supabase tool but could not be transferred safely into the private Python zlib/Pydantic runner. A local genuine S3-compatible service was unavailable. Therefore exact full-real codec/model decoding, transport p95/RSS, storage-byte economics and complete failure-mode reliability have **NOT been validated**; production integration/migration must not commence. Resume this gate only within a private test environment capable of securely reading complete real artifacts and running their governed decoders against a genuine isolated object backend. Never commit raw production user payloads to the public repo. See the canonical [Supabase workstream](../operations/workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md) for the current blocked status.
+
 ## Purpose
 
 FSFFL NEXT is organized around one-directional authority:
