@@ -145,3 +145,39 @@ class HybridPrototype:
                     return old
             raise IntegrityError("missing/corrupt object") from exc
         return {"identity": identity, "computed_at": computed, "payload": payload}
+
+
+class PersistenceContractBridge:
+    """Existing ReusableArtifactRecord boundary; storage is an implementation detail.
+
+    Not production-wired. Explicit tenant comes from authenticated caller and
+    is NEVER inferred from mutable artifact payload content.
+    """
+    def __init__(self, prototype: HybridPrototype, tenant: str):
+        if not tenant.strip():
+            raise ValueError("authenticated tenant is required")
+        self.prototype = prototype
+        self.tenant = tenant
+
+    def _identity(self, key, at: str) -> ArtifactIdentity:
+        return ArtifactIdentity(self.tenant, key.artifact_kind, key.scope_kind,
+            key.scope_id, key.input_fingerprint, key.model_version, at)
+
+    def put_artifact(self, record):
+        return self.prototype.put(
+            self._identity(record.key, record.computed_at.isoformat()), dict(record.payload))
+
+    def get_reusable_artifact(self, key):
+        from datetime import datetime
+        from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
+        ident = self._identity(key, "1970-01-01T00:00:00+00:00")
+        row = self.prototype.get(ident)
+        if row is None:
+            return None
+        return ReusableArtifactRecord(
+            key=ArtifactKey(artifact_kind=key.artifact_kind,
+                scope_kind=key.scope_kind,scope_id=key.scope_id,
+                input_fingerprint=key.input_fingerprint,
+                model_version=key.model_version),
+            payload=row["payload"], computed_at=datetime.fromisoformat(row["computed_at"]))
+
