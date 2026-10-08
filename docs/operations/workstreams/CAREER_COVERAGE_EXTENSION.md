@@ -1,7 +1,7 @@
 # Career Coverage Extension — Issue #405 implementation checkpoint
 
 Updated: 2026-10-07  
-Status: **MANAGEMENT AUTHORIZED — reuse accepted deterministic Y4–Y7 pipeline + production-universe extension; implementation not yet resumed**  
+Status: **MANAGEMENT AUTHORIZED — reuse accepted deterministic Y4–Y7 pipeline + dynamic production-universe extension; implementation not yet resumed**  
 Authority: [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405) and [Current Operations](../CURRENT_OPERATIONS.md). This is a separate Career/Foundation 4 workstream, not Architecture Recovery.
 
 ## Decision and scope
@@ -21,6 +21,16 @@ The production populations are:
 An unrostered candidate may be valued without being inserted into any team's room/accounting. The waiver cohort must be selected by an explicit governed football/eligibility contract rather than an arbitrary top-N cutoff. Whole-provider-database materialization remains unnecessary: the goal is comprehensive **fantasy-relevant decision coverage**, not scoring every Sleeper identity.
 
 Market/Search/Waiver/Opportunity/Trade/What-If/explicit lookup may identify a candidate or help establish decision relevance. Market remains a separate coordinate and is not a numeric Career Intrinsic input.
+
+### Dynamic point-in-time requirement
+Coverage and freshness are one production contract. Career Intrinsic must not become a season-long static table merely because its model/policy is frozen.
+
+- The **model/policy authority** may be frozen, versioned and changed only through governance.
+- The **player evidence coordinate** is point-in-time and may change as governed football evidence changes: current Forecast, production/participation/opportunity, attachment/status, injury/availability where supported, age/experience at the appropriate boundary, and other accepted model inputs.
+- Material evidence changes must change the relevant dependency fingerprint and permit selective rematerialization of affected Career outputs under the same accepted authority.
+- A new season must establish a new evaluation-season coordinate and rematerialize Career evidence; a 2026 board may never silently answer a 2027 request.
+- Prior materializations should remain durable as historical point-in-time snapshots rather than being overwritten as though they had never existed.
+- This does not require request-time fitting or a full rebuild on every browser visit. Refresh should be driven by governed evidence change / explicit intelligence refresh and reuse unchanged artifacts when fingerprints remain compatible.
 
 ## Reconciled preserved-State evidence
 
@@ -72,7 +82,7 @@ Required constraints:
 6. If parity fails, stop and return to Management. Do not compensate with coefficient guessing, interpolation, Market values or a replacement model.
 7. After parity, make the existing pipeline reusable for the broader subject/evidence boundary; whether implementation chooses durable packaged fitted objects or deterministic batch fitting is an engineering choice only if outputs/authority remain identical.
 
-The current production assets are explicitly 2026-season scoped. Future annual rematerialization and any desired in-season long-horizon refresh cadence are separate operational/product-authority questions; they should not be conflated with the coverage defect.
+The current production assets are explicitly 2026-season scoped. That is a current implementation boundary, not the intended product semantics. The #405 architecture must make annual rollover and evidence-driven in-season rematerialization possible now; only the exact cadence/trigger optimization may remain an operational follow-up.
 
 
 ## Smallest reusable mechanism
@@ -116,13 +126,23 @@ Whole-Sleeper-database materialization is not required; broad fantasy-relevant w
 
 **PR 1 — accepted-pipeline preservation and parity gate (authorized).** Preserve the remaining historical/route evidence before retention expiry. Reuse the exact accepted Git-pinned development/route programs and governed historical inputs to reproduce the frozen 335 Y4–Y7 board through the existing fit-on-materialization path. No out-of-core player may enter model-family/route selection or tuning. If all 335 reference outputs replay within governed tolerance, checkpoint the exact pipeline identity/provenance and the smallest reusable production seam for broader subjects. If parity fails, stop for Management.
 
-**PR 2 — subject resolver + rostered coverage.** Add the typed resolver/feature packet, candidate coverage reports, per-player provenance/confidence/uncertainty/failure contract, and same-State model scoring through unchanged authorities. Integrate Current, Y2/Y3, Y4–Y7 and terminal as supported. Keep #370 untouched and fail closed on player failures. Add rostered archetype regressions: veteran, injured established, incumbent-blocked young, taxi rookie, low-production developmental, older/no-current-NFL-team, sparse-evidence. Audit the exact preserved 25 as a regression fixture, not as current production truth.
+**PR 2 — subject resolver + dynamic evidence/materialization contract + rostered coverage.** Add the typed resolver/feature packet, candidate coverage reports, per-player provenance/confidence/uncertainty/failure contract, and same-State model scoring through unchanged authorities. Make the subject/evidence fingerprint include every material accepted player-evidence dependency so a changed football input invalidates/rematerializes the affected Career output while unchanged evidence remains reusable. Establish an evaluation-season boundary that cannot reuse a prior-season board. Integrate Current, Y2/Y3, Y4–Y7 and terminal as supported. Keep #370 untouched and fail closed on player failures. Add rostered archetype regressions: veteran, injured established, incumbent-blocked young, taxi rookie, low-production developmental, older/no-current-NFL-team, sparse-evidence. Audit the exact preserved 25 as a regression fixture, not as current production truth.
 
 **PR 3 — broad league waiver decision universe.** Define and document the deterministic governed fantasy-relevant free-agent eligibility contract; precompute/materialize Career coverage for that waiver universe alongside rostered coverage. Verify that ordinary waiver candidates surface Career evidence before acquisition, that Market signals do not enter Career scoring, and that no free agent is inserted into team accounting before the exact State shows acquisition.
 
 **PR 4 — long-tail on-demand candidates.** Reuse the same resolver/scorers for unusual/deep explicitly relevant free-agent IDs outside the precomputed waiver cohort. Verify exact-State/tenant fencing, cache/fingerprint correctness, player-specific authority failures, and deduplication when a later State shows acquisition.
 
 **PR 5 — integration and stable merge gate.** Validate Current + Career Forward cohort semantics, broad waiver coverage and #370's roster completeness invariant, focused tests first, then one full suite at the stable PR head per the current operating protocol. Merge/deploy only after scorer parity, roster + waiver-universe archetype/failure regressions, exact-State/tenant isolation, preserved economics and output status are verified.
+
+## Dynamic freshness acceptance
+
+Before #405 is complete:
+- a material governed player-evidence change must produce a new relevant input fingerprint and a new Career materialization for that subject/universe;
+- an unchanged evidence coordinate must reuse the compatible artifact rather than recomputing solely because a page was opened;
+- a season change must reject prior-season Career materialization and build/require the new evaluation-season coordinate;
+- prior point-in-time Career outputs must remain auditable/preservable for historical reconstruction;
+- broad waiver candidates and rostered players must follow the same freshness/season semantics;
+- refresh behavior must preserve the accepted model/policy authority and may not turn changing evidence into model retuning.
 
 ## Regression matrix / acceptance
 
