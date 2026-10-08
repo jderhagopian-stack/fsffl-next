@@ -111,6 +111,14 @@ If any answer is no, do not promote.
 
 ## Scale-by-construction and resource-proportionate validation
 
+### Persistence resource regression guard
+
+Accepted infrastructure-efficiency gains are product contracts, not disposable implementation details. The Tranche A hosted PostgreSQL pool is the current accepted connection-ownership boundary. Future work that touches persistence, publication, restore, refresh, background jobs, or new database consumers must preserve bounded connection reuse unless Management explicitly approves a replacement based on measured evidence.
+
+Before promotion of a resource-relevant change, compare the affected workload against the current accepted baseline or a newer accepted successor. At minimum, inspect where applicable: app-created connection/session count or a defensible proxy, Supavisor authentication/termination/log volume, SQL statement attempts by family, payload bytes read/written, publication/materialization count, peak RSS, p95 affected latency, retries/timeouts/errors, and retained/physical database growth. Do not require every metric for unrelated changes; require the metrics the changed boundary can materially affect.
+
+Regression triggers include: reintroducing connect-per-operation behavior; bypassing the bounded persistence adapter; unbounded pool/worker/waiter growth; materially higher connection/log churn under comparable work; repeated identical persistence or payload reads without governed need; or resource growth that scales with raw league count where semantic reuse is valid. A triggered regression reopens the narrow resource gate before further promotion.
+
 Multi-league scalability is a standing architecture requirement across workstreams, not a commercialization cleanup phase.
 
 Before adding material compute, persistence, refresh, polling, or derived-artifact work:
