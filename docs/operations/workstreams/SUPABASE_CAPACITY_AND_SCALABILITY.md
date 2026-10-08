@@ -1,5 +1,14 @@
 # Supabase Capacity & Scalability Recovery
 
+## 2026-10-08 — Read-only post-acceptance SQL reconciliation; correction to the B refresh counters
+
+**Management evidence correction (Tranche C baseline, no B reversal):** A read-only production check at 2026-10-08 ~16:39 UTC found the cumulative normalized PostgreSQL Market INSERT shapes at **300 VALUES: 3 calls / 300 inserted rows; 235 VALUES: 2 calls / 0 inserted rows; 239 VALUES: 1 call / 239 inserted rows**. The legacy single-row INSERT shape remains at **329,447 calls**, unchanged from the B gate. Subtracting the documented pre-refresh hosted B baseline of 1x300 and 1x235, both with zero inserts, gives **four additional batched statements: 2x300 + 1x235 + 1x239 = 1,074 attempted observations, 539 inserted rows (300+239)**. Thus the earlier handoff's **1,070 attempted / zero retained** claim for the explicit refresh was inaccurate or incomplete. Do **not** repeat those figures as verified.
+
+The exact retained Market table count is **169,923**, up **539** from the documented prior **169,384**. Precisely 539 market records have `recorded_at = 2026-10-08 16:25:47.737449+00`, matching the observed completed refresh window. PostgreSQL allocated **590,605,459 bytes**; `fsffl.derived_artifact` total relation allocation was **400,146,432 bytes** and `fsffl.market_value_snapshot` **119,693,312 bytes**. The Supabase project reported `ACTIVE_HEALTHY`, despite its physical size remaining above the Free quota. These aggregate observations are read-only; no refresh or data mutation was performed for this reconciliation.
+
+**Authority/uncertainty:** Tranche B's accepted bounded batch SQL, no regression to per-row INSERTs, original first-writer conflict key, and publication/PIT safeguards remain accepted. Cumulative statement counters and retained timestamps do **not** alone prove which batch belongs to which State/evidence/publication or whether one same-State rebuild was semantically redundant. **Tranche C must reconcile exact State, evidence fingerprints, invalidation coordinates and publication chronology** before proposing any skip/coalescing change. No C implementation, Career PR2, D–F, retention, migration or paid tier is authorized.
+
+
 ## 2026-10-08 — Management ACCEPTS Tranche B; authorizes Tranche C evidence gate only
 
 **Management disposition:** ACCEPT Tranche B. PR #434 stable-tested head `48d78375cce957dca5faee71a8c39108c3e006a2` passed the one stable full suite `37805666770` (**2,248 passed / 1 warning**), squash-merged as `3f079ca6df48fbae3e6adb83fa3df877dc05f1b1`, and is live on Render `dep-db3ruiqjnfac738ibiag`. The accepted set-oriented writer preserves the original five-part conflict key, first-writer lineage, PIT history, publication ordering and tenant/model authority.
