@@ -60,19 +60,29 @@ This is a bounded information-architecture/product-navigation tranche. It does *
 
 Authenticated iPhone/Safari physical acceptance completed on 2026-10-07.
 
-### 2. Career Coverage #405
+### 2. Career Coverage #405 — ACTIVE
 
-Resume the already-approved coverage/completeness problem after navigation closes.
+The preserved 25-player roster gap is evidence of a broader production-universe defect. Management does **not** authorize a one-time patch for those 25 players.
 
-Current preserved finding: the exact audited State contained **25 distinct missing rostered QB/RB/WR/TE assets** from the accepted Career artifact.
+Approved production populations:
+- **Reference cohort:** the frozen 335-player accepted calibration/parity cohort.
+- **League accounting population:** every rostered QB/RB/WR/TE in the exact League State.
+- **League decision universe:** the accounting population plus a broad, precomputed fantasy-relevant waiver/free-agent cohort so users can see Career information *before* making a waiver claim.
+- **Extended universe:** unusual/deep candidates scored on demand through the same frozen scorer when they become relevant.
 
-First required Management question:
-- can the accepted Career scorer/inference function be reconstructed exactly from retained evidence so missing assets can be scored under the already-accepted model?
+The broad waiver cohort must be governed by football/eligibility evidence rather than an arbitrary top-N list. Market/Search/waiver signals may identify which players belong in the decision universe, but Market value/rank/percentile must not become a Career Intrinsic model feature.
 
-Boundary:
-- no model fitting/retraining merely to fill coverage;
-- no PR2 or new-model promotion until Management explicitly decides that exact scorer reconstruction is impossible or insufficient and authorizes the next evidence/model step;
-- preserve #370 Dynasty formula and current Career economics.
+Management authorizes a **bounded reproducibility-only Y4–Y7 scorer recovery**:
+- use the exact accepted historical evidence, feature transforms, route/model-selection policy, seeds/settings and fitting procedure needed to reproduce the previously accepted scorer;
+- do **not** fit on the 25 missing rostered players or waiver candidates;
+- do **not** search for a better model or change model family/economics;
+- first replay all 335 accepted reference players and require parity within frozen tolerance;
+- if parity fails, stop for Management rather than promoting a new model;
+- if parity succeeds, freeze/package the recovered scorer as the reusable inference authority for rostered, waiver-universe and on-demand candidates.
+
+Acceptance for #405 now requires durable coverage mechanics, not merely repair of the audited snapshot: a waiver claim must not be able to introduce a previously unscorable roster asset simply because that player sat outside the original 335.
+
+Preserve #370 Dynasty formula and current Career economics. Preserve the remaining exact scorer/board evidence before current retention windows expire.
 
 Checkpoint: [Career Coverage Extension](workstreams/CAREER_COVERAGE_EXTENSION.md).
 
