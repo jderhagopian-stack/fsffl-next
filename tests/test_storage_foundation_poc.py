@@ -148,3 +148,22 @@ def test_real_artifact_copy_optional_local_only(repo):
     assert repo.get(i) is None
     repo.put(i,obj["payload"])
     assert repo.get(i)["payload"] == obj["payload"]
+
+
+def test_existing_reusable_artifact_record_boundary(repo):
+    from datetime import datetime, timezone
+    from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
+    from hybrid_adapter import PersistenceContractBridge
+    bridge = PersistenceContractBridge(repo, tenant="authenticated-tenant")
+    record = ReusableArtifactRecord(
+        key=ArtifactKey(artifact_kind="current_forecast_evidence",
+                        scope_kind="league_state",scope_id="state-1",
+                        input_fingerprint="exact-fp",model_version="accepted-v1"),
+        payload=sample(), computed_at=datetime(2026,10,8,15,tzinfo=timezone.utc))
+    bridge.put_artifact(record)
+    assert bridge.get_reusable_artifact(record.key) == record
+    # Identity mismatch never reads another State or model version.
+    wrong=replace(record.key, input_fingerprint="different-evidence")
+    assert bridge.get_reusable_artifact(wrong) is None
+    other=PersistenceContractBridge(repo,tenant="another-authenticated-tenant")
+    assert other.get_reusable_artifact(record.key) is None
