@@ -62,27 +62,31 @@ Authenticated iPhone/Safari physical acceptance completed on 2026-10-07.
 
 ### 2. Career Coverage #405 — ACTIVE
 
-The preserved 25-player roster gap is evidence of a broader production-universe defect. Management does **not** authorize a one-time patch for those 25 players.
+The preserved 25-player roster gap is evidence of a broader production-universe boundary, not evidence that the accepted Y4–Y7 methodology was lost.
+
+Management correction:
+- the accepted Y4–Y7 authority is a deterministic **fit-on-materialization pipeline**;
+- exact research code is durably preserved at commit `be2541a496227b33c12c755f576843dc4ab5a0bb`;
+- accepted workflow `37096263982` restores that exact development/route code plus governed historical inputs and frozen route policy, then calls the preserved fitting path to produce the season board;
+- no standalone serialized Y4–Y7 scorer was required by the accepted design, so Implementation must not reverse-engineer or “rediscover” one.
 
 Approved production populations:
 - **Reference cohort:** the frozen 335-player accepted calibration/parity cohort.
 - **League accounting population:** every rostered QB/RB/WR/TE in the exact League State.
 - **League decision universe:** the accounting population plus a broad, precomputed fantasy-relevant waiver/free-agent cohort so users can see Career information *before* making a waiver claim.
-- **Extended universe:** unusual/deep candidates scored on demand through the same frozen scorer when they become relevant.
+- **Extended universe:** unusual/deep candidates scored/materialized on demand through the same accepted pipeline when they become relevant.
 
 The broad waiver cohort must be governed by football/eligibility evidence rather than an arbitrary top-N list. Market/Search/waiver signals may identify which players belong in the decision universe, but Market value/rank/percentile must not become a Career Intrinsic model feature.
 
-Management authorizes a **bounded reproducibility-only Y4–Y7 scorer recovery**:
-- use the exact accepted historical evidence, feature transforms, route/model-selection policy, seeds/settings and fitting procedure needed to reproduce the previously accepted scorer;
-- do **not** fit on the 25 missing rostered players or waiver candidates;
-- do **not** search for a better model or change model family/economics;
-- first replay all 335 accepted reference players and require parity within frozen tolerance;
-- if parity fails, stop for Management rather than promoting a new model;
-- if parity succeeds, freeze/package the recovered scorer as the reusable inference authority for rostered, waiver-universe and on-demand candidates.
+Implementation authority:
+- preserve remaining accepted historical artifacts/provenance before retention expiry;
+- reuse the exact accepted Y4–Y7 code, historical evidence, frozen feature/model/route policy, seeds/settings and normalization;
+- first reproduce the frozen 335 reference outputs within governed tolerance as a parity check;
+- do **not** use the 25 missing rostered players or waiver candidates for model/route selection or tuning;
+- do **not** reopen model-family research or change Career economics/#370;
+- after parity, generalize only the subject/evidence/materialization boundary for rostered + waiver decision-universe + long-tail candidates.
 
-Acceptance for #405 now requires durable coverage mechanics, not merely repair of the audited snapshot: a waiver claim must not be able to introduce a previously unscorable roster asset simply because that player sat outside the original 335.
-
-Preserve #370 Dynasty formula and current Career economics. Preserve the remaining exact scorer/board evidence before current retention windows expire.
+The existing runtime is explicitly 2026-season scoped and carries frozen Y4–Y7/terminal assets. That is an implementation/refresh-cadence boundary, not a missing-methodology problem. How often long-horizon Career inputs should rematerialize within a season, and how the annual rollover should be operationalized, should be treated explicitly after coverage rather than inferred from the old 335 freeze.
 
 Checkpoint: [Career Coverage Extension](workstreams/CAREER_COVERAGE_EXTENSION.md).
 
