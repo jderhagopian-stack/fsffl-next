@@ -39,6 +39,28 @@ The target refresh design is:
 
 This contract deliberately avoids a fixed weekly/nightly recomputation requirement. Freshness is tied to materially changed governed evidence and successful publication. A low-priority periodic integrity sweep may be added later as an operational backstop, but it is not the source of truth.
 
+### Multi-league / commercial-scale requirement
+The current private beta is validation evidence, not the computational unit of the future product. #405 must avoid an architecture where 1,000 or 10,000 leagues cause 1,000 or 10,000 copies of work whose inputs are actually shared.
+
+Before implementation chooses cache/materialization boundaries, classify each Career dependency by the **widest safe semantic scope**:
+- **provider/global evidence:** canonical NFL/player facts that are identical across leagues;
+- **model/training authority:** accepted fitted model/policy objects and historical-training fingerprints that must be reused rather than fitted per league;
+- **scoring/rules signature:** derived player projections/materializations that may be shareable by leagues with identical relevant scoring semantics;
+- **lineup/team-count signature:** Value/Shapley inputs that depend on lineup-capacity economics but not on a particular owner's roster;
+- **exact league State:** only facts that truly vary with league membership/rules/availability/ownership;
+- **team/user context:** downstream Decision/Search/Presentation context, never folded back into universal Career authority.
+
+Required properties:
+1. No per-league historical model fitting when model/training inputs are identical.
+2. No duplicate provider ingest or canonical player-evidence construction per league.
+3. Cache/artifact keys must use semantic dependency fingerprints, not league ID as an unnecessary partition key. Tenant-private State must still remain isolated.
+4. Leagues sharing the same safe dependency signature should reuse the same upstream artifact; league-specific downstream artifacts may reference it.
+5. Provider-wide evidence changes should be coalesced into shared upstream refresh work, then fan out only to affected league-specific downstream publications.
+6. Background work needs bounded concurrency/backpressure so a Sunday/waiver/news burst cannot create an unbounded thundering herd across leagues.
+7. Last-good intelligence remains available while queued refresh work catches up; freshness age/status must remain truthful.
+8. Acceptance must include a scale model/load test that projects work at **1,000 and 10,000 leagues** from measured per-scope costs and demonstrates that expensive shared stages grow primarily with unique evidence/rules signatures and changed subjects—not linearly with raw league count when reuse is mathematically valid.
+
+
 ### Dynamic point-in-time requirement
 Coverage and freshness are one production contract. Career Intrinsic must not become a season-long static table merely because its model/policy is frozen.
 
