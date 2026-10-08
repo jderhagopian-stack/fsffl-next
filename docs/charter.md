@@ -161,6 +161,14 @@ Large Monte Carlo samples, including approximately 50,000 simulations where usef
 
 ## Product Architecture
 
+### Scale-by-construction principle
+
+NEXT is not being designed for one league. Every authoritative capability should be architected so it can plausibly support thousands to tens of thousands of leagues without multiplying shared work by raw league count.
+
+For each expensive computation, identify the widest mathematically and privacy-safe reuse scope before choosing persistence/cache boundaries: global/provider evidence, model/training authority, rules/scoring signature, lineup-capacity signature, exact league State, or team/user context. Shared inputs should produce shared reusable artifacts; league/user-specific work should exist only where the underlying math or private State actually differs.
+
+Commercial-scale design does **not** require brute-force commercial-scale execution during the resource-constrained private beta. Validation should be proportional to available compute/memory: measure real per-stage cost, use bounded synthetic/cardinality tests where useful, verify asymptotic/reuse behavior, and project 1,000/10,000-league load from measured dependency scopes. Never exhaust the current environment merely to simulate a future customer count.
+
 NEXT should be designed from inception for:
 
 - multiple users;
