@@ -109,6 +109,19 @@ Before telling the user or another worker that a gate is complete, Management mu
 
 If any answer is no, do not promote.
 
+## Scale-by-construction and resource-proportionate validation
+
+Multi-league scalability is a standing architecture requirement across workstreams, not a commercialization cleanup phase.
+
+Before adding material compute, persistence, refresh, polling, or derived-artifact work:
+- identify whether the dependency is global/provider, model/training, rules/scoring, lineup-capacity, league-State, team, or user scoped;
+- key reuse/persistence at the widest safe semantic scope rather than duplicating work per league by default;
+- preserve tenant isolation for private State even when upstream computation is shared;
+- design burst handling with coalescing, bounded concurrency and backpressure where many leagues can be affected by one upstream event;
+- preserve last-good outputs while downstream work catches up when authority permits.
+
+Validation must respect the current environment's compute and memory limits. “Designed for 10,000 leagues” does not mean executing 10,000 full league workloads during private beta. Prefer measured stage costs, bounded representative/synthetic fan-out tests, cache-hit/deduplication assertions, complexity/cardinality analysis, and projected 1k/10k resource envelopes. Run larger load tests only when they add evidence not obtainable more cheaply and remain inside explicit resource budgets.
+
 ## Risk-proportionate promotion
 The acceptance burden must be proportional to the actual blast radius of a change. Architectural importance alone does not make every change a whole-platform event.
 
