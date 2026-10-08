@@ -87,8 +87,11 @@ class FakePool:
         if not self.capacity.acquire(timeout=0.1):
             raise TimeoutError("pool checkout timeout")
         with self.lock:
-            conn = self.idle.pop() if self.idle else FakeConnection(self.backend)
-            self.created += 0 if conn in self.idle else 0  # tracked below by instances
+            if self.idle:
+                conn = self.idle.pop()
+            else:
+                conn = FakeConnection(self.backend)
+                self.created += 1
             self.checked_out += 1
             self.highwater = max(self.highwater, self.checked_out)
         try:
