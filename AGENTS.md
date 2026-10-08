@@ -22,6 +22,8 @@ Each concept has one authoritative owner. Downstream layers consume rather than 
 
 Design every capability for multi-league reuse by construction. Before introducing expensive work or a cache/persistence key, identify its widest safe semantic dependency scope instead of defaulting to league/user ID. Shared provider/model/rules work should be reused across leagues when mathematically valid; tenant-private State remains isolated. Do not require brute-force 1,000/10,000-league tests in the constrained beta environment: validate with measured unit costs, bounded synthetic tests, reuse/cardinality assertions, and explicit scale projections unless larger execution is specifically justified and resource-safe.
 
+Persistence-efficiency regression invariant: the accepted bounded pooled PostgreSQL transport is now a standing runtime contract for hosted persistence. New persistence code must reuse the existing bounded ownership path or present explicit Management evidence for a different bounded design; do not introduce per-operation connection establishment, unbounded pools/waiters, or hidden secondary adapters that bypass this contract. Any change that can materially increase DB connection churn, write amplification, repeated full-payload reads, publication count, or retained bytes must surface its expected resource effect and focused regression evidence before promotion.
+
 ## Test, merge, and deploy method
 
 - During implementation, run focused tests for the changed contract and regressions. Keep implementation PRs in draft while making code/checkpoint pushes; generic `CI` runs focused Dynasty readiness regressions only and cancels superseded in-flight runs.

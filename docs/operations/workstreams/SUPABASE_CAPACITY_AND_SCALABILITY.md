@@ -14,6 +14,11 @@
 
 **Management gate disposition:** Recommend **ACCEPT** Tranche A as a bounded transport correction that has exercised actual hosted writes and matched restore reads, with a measured >98% reduction in startup-window Supavisor auth/log churn and no observed memory or persistence regression. Before extending this improvement to sustained traffic or marking physical saved-session acceptance, obtain a single no-refresh authenticated Safari saved-session confirmation and/or future counters where proportionate; these are residual observability/physical-acceptance notes, not grounds to repeat artificial Gate 2 POST. **Tranche B is NOT AUTOMATICALLY AUTHORIZED**. Management may separately evaluate row-wise idempotent market-write batching next using the Gate B design, while preserving PIT/lineage. No new code/deploy, billing upgrade, retention cleanup, migration, refresh policy, Career #405 PR2, or B-F work performed in this reconciliation.
 
+**Standing regression boundary after Tranche A acceptance:** bounded connection reuse is now the accepted hosted persistence transport contract. Future persistence, publication, restore, or background work must not reintroduce one-connection-per-operation behavior or silently bypass the pooled adapter. Preserve the focused pool regressions in CI. For future changes that can affect this boundary, compare matched-workload connection/authentication/termination/log behavior, pool waits/timeouts where observable, affected persistence latency, errors/retries, and peak RSS against the latest accepted baseline. If connection churn materially regresses under comparable work, reopen this narrow resource gate before promotion. The legacy transport flag remains an emergency rollback path, not an alternate normal operating mode.
+
+**Observability follow-up:** current acceptance does not export app-only pool opens/checkouts/waits/timeouts. Add low-volume aggregate counters only when proportionate to an authorized tranche; do not create high-volume per-operation logging merely to observe the pool.
+
+
 
 ## 2026-10-08 — Tranche A draft implementation checkpoint / pre-stable-head gate
 
