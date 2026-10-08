@@ -232,3 +232,102 @@ def test_market_batch_records_require_aware_pit_and_recorded_time():
         MarketValueSnapshotRecord(**{**row.__dict__, "estimate_as_of": datetime(2026, 10, 8)})
     with pytest.raises(ValueError, match="recorded_at"):
         MarketValueSnapshotRecord(**{**row.__dict__, "recorded_at": datetime(2026, 10, 8)})
+
+
+def test_runtime_checkpoint_batches_only_publish_context_and_preserves_write_order(monkeypatch):
+    from types import SimpleNamespace
+    import fsffl.persistence.session as session
+
+    when = datetime(2026, 10, 8, 13, tzinfo=UTC)
+    state = SimpleNamespace(
+        league=SimpleNamespace(league_id="league-1", season=2026, provider_refs=()),
+        as_of=when,
+        state_id="exact-league-state",
+        model_dump=lambda mode: {"state_id": "exact-league-state"},
+        team_states=(),
+        teams=(),
+    )
+    estimates = tuple(SimpleNamespace(
+        asset_id=f"player:{i}", asset_kind=SimpleNamespace(value="player"),
+        scale=SimpleNamespace(scale_id="dynasty-market-v2"),
+        market_context_id="12t:sf:0.5ppr", as_of=when,
+        distribution=SimpleNamespace(mean=100.0 + i),
+        model_version="frozen-market-v1", evidence_sources=("forecast", "rules"),
+    ) for i in range(540))
+    value = SimpleNamespace(estimates=estimates)
+    monkeypatch.setattr(session, "value_artifact", lambda **_: "value-artifact")
+
+    class Store:
+        def __init__(self):
+            self.events = []
+            self.batches = []
+        def put_league_snapshot(self, record):
+            self.events.append("state")
+        def put_user_runtime_context(self, record):
+            self.events.append("context")
+        def put_artifact(self, record):
+            self.events.append(record)
+        def append_market_value_snapshots(self, snapshots):
+            self.events.append("market-batch")
+            self.batches.append(snapshots)
+
+    store = Store()
+    session.persist_runtime_snapshot(
+        store, user_id="owner-1", league_state=state,
+        selected_team_id=None, value_evidence=value, publish_context=True,
+    )
+    assert store.events == ["state", "context", "value-artifact", "market-batch"]
+    assert len(store.batches) == 1 and len(store.batches[0]) == 540
+    assert {s.market_context_id for s in store.batches[0]} == {"12t:sf:0.5ppr"}
+    assert all(s.recorded_at == store.batches[0][0].recorded_at for s in store.batches[0])
+    assert all(s.source_lineage == {"model_version": "frozen-market-v1", "evidence_sources": ["forecast", "rules"]} for s in store.batches[0])
+    store2 = Store()
+    session.persist_runtime_snapshot(
+        store2, user_id="owner-1", league_state=state,
+        selected_team_id=None, value_evidence=value, publish_context=False,
+    )
+    assert store2.events == ["state", "value-artifact"]
+    assert store2.batches == []
+
+
+def test_legacy_custom_store_fallback_preserves_exact_individual_rows(monkeypatch):
+    from types import SimpleNamespace
+    import fsffl.persistence.session as session
+
+    when = datetime(2026, 10, 8, 13, tzinfo=UTC)
+    state = SimpleNamespace(
+        league=SimpleNamespace(league_id="league-1", season=2026, provider_refs=()),
+        as_of=when, state_id="exact-league-state",
+        model_dump=lambda mode: {"state_id": "exact-league-state"},
+        team_states=(), teams=(),
+    )
+    estimate = SimpleNamespace(
+        asset_id="player:1", asset_kind=SimpleNamespace(value="player"),
+        scale=SimpleNamespace(scale_id="v2"), market_context_id="12t:sf",
+        as_of=when, distribution=SimpleNamespace(mean=42.0),
+        model_version="source-v1", evidence_sources=("A", "B"),
+    )
+    value = SimpleNamespace(estimates=(estimate,))
+    monkeypatch.setattr(session, "value_artifact", lambda **_: "value-artifact")
+
+    class Legacy:
+        def __init__(self):
+            self.snapshots = []
+        def put_league_snapshot(self, _):
+            pass
+        def put_user_runtime_context(self, _):
+            pass
+        def put_artifact(self, _):
+            pass
+        def append_market_value_snapshot(self, **kwargs):
+            self.snapshots.append(kwargs)
+
+    store = Legacy()
+    session.persist_runtime_snapshot(
+        store, user_id="u", league_state=state,
+        selected_team_id=None, value_evidence=value, publish_context=True,
+    )
+    assert len(store.snapshots) == 1
+    assert store.snapshots[0]["asset_ref"] == "player:1"
+    assert store.snapshots[0]["source_lineage"] == {"model_version": "source-v1", "evidence_sources": ["A", "B"]}
+    assert store.snapshots[0]["estimate_as_of"] == when
