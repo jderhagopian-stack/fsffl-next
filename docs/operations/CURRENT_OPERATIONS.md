@@ -49,9 +49,13 @@ Keep the set small and rerun the journey whose boundary changed:
 
 The saved-session physical journey remains pending; exact evidence is in Architecture Recovery. Other workstreams remain governed by their named checkpoint and Management gate.
 
-## Career Coverage #405 — PR1 Management acceptance
+## Career Coverage #405 — PR1 COMPLETE / PR2 AUTHORIZED
 
-**PR1 ACCEPTED by Management on 2026-10-07 ET, pending only the normal exact-head stable full-suite merge gate.** Acceptance preserves the still-red historical strict numerical comparator and adopts the documented exact-authority + downstream-semantic reproducibility rule; no ad-hoc numeric tolerance was introduced. Terminal 335 parity is byte-identical; Career/Long-Term ranks and 0–10,000 indexes are unchanged across all 335; bounded synthetic #370 sensitivity shows 0/48 rank changes; the one-of-351 QB/Y4 soft-stack coverage90 crossing remains separately disclosed. Draft PR #429 may be marked ready and merged only after the successful stable-head full-suite matches its exact head. No Render deployment is required for PR1. PR2 is authorized only after that merge/checkpoint and must implement the already-governed dynamic, season-aware, multi-league-scalable subject/evidence/materialization architecture without retuning accepted model authority.
+**PR1 is accepted and merged.** PR #429 stable head `223241edcccf44af6e1c236cbab84751820c6ddf` passed Stable full suite run `37723655257`, attempt 2, with **2,231 passed / 1 warning**, including successful pre/post exact-head verification, and squash-merged as `9141c12f3d69e8fa012b4e4db664f96e54f94aec`. Attempt 1 on the identical head had one unrelated resource-boundary assertion fail because GitHub-runner process RSS measured 539,430,912 bytes against the unchanged 536,870,900-byte test ceiling; #429 touched no production runtime/test files. The exact same job/head was retried without code, tolerance or memory-limit changes and passed completely. The hard memory guardrail remains unchanged.
+
+Management accepts PR1 on the documented exact-authority + downstream-semantic reproducibility standard while preserving the still-red historical strict numerical comparator and the disclosed one-of-351 QB/Y4 soft-stack coverage90 crossing. All original/replay/semantic evidence remains permanently archived in the Career #405 GitHub release. No Render deployment is required for PR1 because the merged tranche is evidence/replay tooling and operations documentation, not hosted product behavior.
+
+**PR2 is now authorized:** implement the Career subject resolver + dynamic evidence/materialization contract + complete rostered QB/RB/WR/TE coverage using unchanged accepted model/economic authority. Preserve season rollover, selective invalidation, broad future waiver integration seams, widest-safe multi-league reuse scope, bounded concurrency/backpressure, last-good behavior, and resource-proportionate validation. Do not retune models, alter #370 economics, or begin PR3 waiver-universe promotion before PR2's own gate.
 
 ## Career Coverage #405 — PR1 semantic parity acceptance dossier (2026-10-08 UTC / 2026-10-07 ET)
 
