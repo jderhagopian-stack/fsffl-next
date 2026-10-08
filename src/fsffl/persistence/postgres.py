@@ -599,6 +599,20 @@ class PostgresPersistenceStore(PersistenceStore):
                 "statement_rows=%d chunk_index=%d elapsed_ms=%.2f",
                 len(chunk), len(unique), start // chunk_size, (perf_counter() - t0) * 1000,
             )
+        # Cumulative pool statistics are observability, not publication truth:
+        # never reset them or expose the private connection string.
+        if self._pool is not None:
+            counters = self._pool.get_stats()
+            logger.info(
+                "FSFFL market snapshot pooled transport stats connections_num=%s "
+                "requests_num=%s requests_queued=%s requests_wait_ms=%s "
+                "requests_errors=%s",
+                counters.get("connections_num"),
+                counters.get("requests_num"),
+                counters.get("requests_queued"),
+                counters.get("requests_wait_ms"),
+                counters.get("requests_errors"),
+            )
 
     def append_user_perceived_latency(self, record: UserPerceivedLatencyRecord) -> None:
         with self._connect() as connection, connection.cursor() as cursor:
