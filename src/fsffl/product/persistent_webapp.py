@@ -2126,6 +2126,10 @@ def _start_lightweight_startup_restore() -> None:
     ).start()
 
 
+# Shutdown closes only the process-owned runtime persistence pool; no new
+# provider, publication, or model lifecycle owner is introduced.
+if _persistence_store is not None:
+    app.router.add_event_handler("shutdown", _persistence_store.close)
 app.router.add_event_handler("startup", _start_lightweight_startup_restore)
 app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)
 app.router.add_event_handler("startup", _maybe_start_foundation4_shadow_acceptance)

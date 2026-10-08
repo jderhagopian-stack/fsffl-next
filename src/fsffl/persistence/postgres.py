@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime
+from threading import Lock
 from typing import Sequence
 
 from fsffl.journey_telemetry import trace_persistence_read
@@ -33,6 +35,15 @@ class PostgresPersistenceStore(PersistenceStore):
         if not database_url.strip():
             raise ValueError("database_url cannot be blank")
         self._database_url = database_url
+        # Transport only. A store is shared by one hosted Uvicorn process; pool
+        # checkouts never share a transaction between concurrent callers.
+        mode = os.getenv("FSFFL_PERSISTENCE_CONNECTION_MODE", "pool").strip().lower()
+        if mode not in {"pool", "legacy"}:
+            raise ValueError("FSFFL_PERSISTENCE_CONNECTION_MODE must be pool or legacy")
+        self._connection_mode = mode
+        self._pool_lock = Lock()
+        self._pool = None
+        self._closed = False
 
     def _connect(self):
         try:
@@ -40,7 +51,64 @@ class PostgresPersistenceStore(PersistenceStore):
             from psycopg.rows import dict_row
         except ImportError as exc:  # pragma: no cover - deployment dependency guard
             raise RuntimeError("PostgreSQL persistence requires psycopg") from exc
-        return psycopg.connect(self._database_url, row_factory=dict_row)
+
+        if self._connection_mode == "legacy":
+            with self._pool_lock:
+                if self._closed:
+                    raise RuntimeError("PostgreSQL persistence store is closed")
+            # Exact pre-Tranche-A single-connection behavior and rollback escape.
+            return psycopg.connect(self._database_url, row_factory=dict_row)
+
+        with self._pool_lock:
+            if self._closed:
+                raise RuntimeError("PostgreSQL persistence store is closed")
+            if self._pool is None:
+                try:
+                    from psycopg_pool import ConnectionPool
+                except ImportError as exc:
+                    raise RuntimeError("Pooled PostgreSQL persistence requires psycopg-pool") from exc
+                # Explicitly disable automatic server PREPARE so the same adapter
+                # remains compatible with Supavisor session or transaction mode.
+                # Every checkout is tested BEFORE any caller statement executes:
+                # never retry a potentially committed write.
+                pool = ConnectionPool(
+                    self._database_url,
+                    kwargs={"row_factory": dict_row, "prepare_threshold": None},
+                    min_size=0,
+                    max_size=3,
+                    timeout=5.0,
+                    max_waiting=12,
+                    max_idle=75.0,
+                    max_lifetime=720.0,
+                    reconnect_timeout=5.0,
+                    num_workers=1,
+                    check=ConnectionPool.check_connection,
+                    open=False,
+                    name="fsffl-persistence",
+                )
+                pool.open(wait=False)
+                self._pool = pool
+                logging.getLogger("fsffl.product.persistence").info(
+                    "FSFFL persistence pool opened min_idle=0 max_active=3 "
+                    "checkout_timeout_seconds=5 max_idle_seconds=75 "
+                    "max_lifetime_seconds=720"
+                )
+            pool = self._pool
+        # pool.connection() has the same commit/rollback context semantics as
+        # psycopg.Connection, but returns healthy connections to bounded reuse.
+        return pool.connection()
+
+    def close(self) -> None:
+        """Close this process-owned pool during hosted application shutdown."""
+        with self._pool_lock:
+            self._closed = True
+            pool = self._pool
+            self._pool = None
+        if pool is not None:
+            pool.close(timeout=5.0)
+            logging.getLogger("fsffl.product.persistence").info(
+                "FSFFL persistence pool closed stats=%s", pool.get_stats()
+            )
 
     @trace_persistence_read("get_user_runtime_context")
     def get_user_runtime_context(self, *, user_id: str) -> UserRuntimeContextRecord | None:
