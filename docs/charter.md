@@ -135,6 +135,8 @@ NEXT should distinguish concepts such as:
 
 These should not collapse into one universal asset number when the underlying concepts are different.
 
+Current Forecast and Value outputs are **point-in-time derived intelligence**, not season-long constants. Freezing or versioning a model, parameter set, routing policy, or reference cohort does not freeze a player's current value. When governed football evidence materially changes, the affected Forecast and downstream Value artifacts should be invalidated and recomputed through the same accepted authority, while prior outputs remain preserved as historical point-in-time snapshots. Season rollover must establish a new current-season evidence coordinate rather than silently reusing the prior season's player-value table.
+
 Team competitive state and owner strategic preference should remain separate concepts.
 
 ## Trade Architecture

@@ -39,6 +39,7 @@ Management intent remains to return to forward product development once the boun
 - **Home → Franchise Overview:** PR #418 is merged/deployed and physically accepted by Management on authenticated iPhone/Safari. Franchise is now the managed-team landing experience. Standalone Home is retired as a product surface.
 - **Navigation / product hierarchy:** PR #421 is merged, deployed and physically accepted on authenticated iPhone/Safari. Primary navigation is now `Franchise | League | Explore | Trade | More`. The former Home item is removed; this tranche is closed.
 - **Franchise visual-polish note:** Management preferred the original Home treatment where the “What Matters Most” card was red. This is a non-blocking presentation preference for a future Franchise polish pass, not a reason to reopen navigation or change Franchise semantics.
+- **Dynamic Career Intrinsic invariant:** Career Intrinsic is current point-in-time intelligence, not a hard annual player-value table. The accepted model family/policy may be frozen and versioned, but player inputs and resulting Career values must respond to materially changing governed football evidence during the season and must rematerialize for each new season. Prior values should remain preserved as historical point-in-time snapshots. Selective invalidation/recomputation should follow dependency fingerprints; this does not authorize request-time model fitting or unnecessary whole-platform refreshes.
 
 ## Immediate approved development sequence
 
@@ -86,7 +87,7 @@ Implementation authority:
 - do **not** reopen model-family research or change Career economics/#370;
 - after parity, generalize only the subject/evidence/materialization boundary for rostered + waiver decision-universe + long-tail candidates.
 
-The existing runtime is explicitly 2026-season scoped and carries frozen Y4–Y7/terminal assets. That is an implementation/refresh-cadence boundary, not a missing-methodology problem. How often long-horizon Career inputs should rematerialize within a season, and how the annual rollover should be operationalized, should be treated explicitly after coverage rather than inferred from the old 335 freeze.
+The existing runtime is explicitly 2026-season scoped and carries frozen Y4–Y7/terminal assets. That is now recognized as an implementation limitation relative to the broader charter, not the intended end-state. #405 must not entrench that limitation: the reusable coverage/materialization design must be evidence-updating and season-rollover capable. Exact scheduling can remain bounded and selective, but materially changed governed football evidence must be able to invalidate/rematerialize the affected Career outputs under the same accepted model authority.
 
 Checkpoint: [Career Coverage Extension](workstreams/CAREER_COVERAGE_EXTENSION.md).
 

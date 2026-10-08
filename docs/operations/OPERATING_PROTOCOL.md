@@ -55,6 +55,15 @@ Every worker (including Management successors) starts with the repository-root `
 
 Reconcile the request with the durable checkpoint and current GitHub/Render evidence before editing. Do not assume a cached local clone is current or restart completed work. Files under `docs/operations/archive/` are historical snapshots, not current status. The exact startup sequence and architecture philosophy are checkpointed in root `AGENTS.md`.
 
+### Original-authority trace for model/semantic decisions
+A current workstream checkpoint is a navigation aid, not permission to reinterpret an accepted model in isolation. Before Management or a worker concludes that a model/methodology is missing, static by design, requires reconstruction, or should be replaced, trace the relevant concept through:
+1. the charter / North Star principle;
+2. the original accepted research or production decision;
+3. the exact accepted code/workflow/artifact identities;
+4. the current runtime consumer contract.
+
+If those layers disagree, document and resolve the contradiction before implementation. Do not infer “lost scorer,” “frozen value,” or similar architectural conclusions merely because a downstream artifact contains predictions rather than a serialized estimator.
+
 
 ## Management-to-worker directive protocol
 Management decisions, scope changes, acceptance clarifications, and cross-workstream architectural rules must be persisted in the canonical `docs/operations/` state **before** a worker chat is instructed to act on them.
