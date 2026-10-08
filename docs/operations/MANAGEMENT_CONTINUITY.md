@@ -1,12 +1,18 @@
 # FSFFL NEXT — Management Continuity
 
-Updated: 2026-10-07  
+Updated: 2026-10-08  
 Authority: canonical durable record of Management direction, sequencing, deferred work, and roadmap changes across Management chats.
 
 This document answers **where Management is going and why**.  
 For **what is happening right now**, read [CURRENT_OPERATIONS.md](CURRENT_OPERATIONS.md).  
 For exact tranche implementation evidence, read the linked workstream checkpoint.  
 For the broad long-range capability plan, read [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and [../FSFFL_NEXT_PRODUCT_PRIORITIES.md](../FSFFL_NEXT_PRODUCT_PRIORITIES.md).
+
+## 2026-10-08 — Supabase Tranche A production write/read evidence (Management review)
+
+The earlier operator-assisted Gate 2 telemetry probe was **not required** because independent Supabase artifact records aligned with the actual Render-hosted publication write phases. This is a management-acceptance recommendation, not an implicit authorization of the subsequent workstream. PR #433 stable-tested at `8d3c17cdf0f9f81cc4360f3c85f76845c151cbe8` (2,240 tests), merged to `1c5b5325791cddaf49d35d372270a9aba0586afb`, live on Render `dep-db3qq4vlk1mc73cj3910`. Authentications 468 -> 5 in comparable 10-minute startup windows, total Supavisor events 1,078 -> 14, same 25 persisted restore reads, successful readiness and safe peak RSS. Full ledger and limitations: `docs/operations/workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md`. **Recommendation: ACCEPT Tranche A transport, without interpreting the total project-wide auth decrease as a direct app-only connection count.** Direct authenticated browser saved-session GET and internal pool checkout/wait counters remain unverified and should not be invented.
+
+Supabase Free Plan remains in force and allocated size exceeds its quota. **Tranches B-F, paid tier, retention cleanup, migration, refresh-policy and model changes and Career Coverage #405 PR2 remain paused pending separate Management direction.** Tranche B market-write batching may be evaluated next, but this checkpoint does not authorize it. Repository-only checkpoint commits after `1c5b... ` do not change the exact Render-deployed runtime commit.
 
 ## Management handoff rule
 
