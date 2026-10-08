@@ -1,7 +1,7 @@
 # Career Coverage Extension — Issue #405 implementation checkpoint
 
 Updated: 2026-10-07  
-Status: **MANAGEMENT AUTHORIZED — bounded scorer recovery + production-universe extension; implementation not yet resumed**  
+Status: **MANAGEMENT AUTHORIZED — reuse accepted deterministic Y4–Y7 pipeline + production-universe extension; implementation not yet resumed**  
 Authority: [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405) and [Current Operations](../CURRENT_OPERATIONS.md). This is a separate Career/Foundation 4 workstream, not Architecture Recovery.
 
 ## Decision and scope
@@ -48,18 +48,32 @@ The complete 25-player list remains in Issue #405; this checkpoint intentionally
 | Y8+ terminal/tail | `src/fsffl/product/foundation4_shadow_inputs.py` requires exactly 335 terminal rows. `src/fsffl/value/career_tail.py` already exposes a fitted scorer over age, experience, current points, prior points and prior-missingness, with two supported model families, residual bands, and an exact lineup-capacity-signature check. | Reuse `CareerTailFeatures`/the fitted runtime only after producing point-in-time, scoring-coordinate-correct features for a candidate. Keep model-family spread separate from outcome bands. A missing current/prior value must remain missing with provenance, never be silently converted into an invented zero. |
 | Career Forward aggregation | `src/fsffl/product/foundation4_career_forward_runtime.py` requires the component player-ID sets to equal Current's set and terminal features to have that same set. `src/fsffl/value/career_forward_intrinsic.py` independently enforces identical Current/Y4–Y7/tail cohorts and the accepted raw annual aggregation. | Extend coverage/status metadata and fingerprints, not the aggregation formula. Emit per-player estimate or typed authority failure; never publish a complete accounting status when any rostered player lacks authority. |
 
-## Management-authorized scorer recovery gate
+## Management correction — accepted Y4–Y7 authority is pipeline-defined
 
-Management authorizes a **reproducibility-only recovery fit** for the accepted Y4–Y7 scorer. This is not a new model-development program.
+The earlier audit correctly observed that the retained route artifact contains predictions/metrics/route decisions rather than a standalone serialized fitted estimator. It was incorrect to infer from that fact that the accepted scorer methodology was lost.
+
+The accepted design is reproducible and pipeline-defined:
+
+- corrected research code is durably preserved at Git commit `be2541a496227b33c12c755f576843dc4ab5a0bb`;
+- `scripts/run_intrinsic_cell_routing_validation.py` defines `fit_candidate(...)`, which selects the frozen candidate architecture and fits it against governed historical rows prior to the evaluation season;
+- `scripts/run_intrinsic_comprehensive_development.py` contains the frozen feature sets/model implementations and deterministic seed `20260926`;
+- accepted Foundation 4 workflow run `37096263982` / workflow `.github/workflows/foundation4-current-long-horizon-board.yml` explicitly restores those two programs from the accepted commit, restores governed historical and route artifacts, and runs the materializer;
+- the materializer calls `route.fit_candidate(...)` for the frozen policy candidates and current evaluation rows, then freezes the resulting season board;
+- runtime intentionally consumes that frozen season board rather than fitting on HTTP requests.
+
+Therefore no reverse-engineering or invention of a replacement scorer is authorized or needed. The required gate is to **reuse the exact accepted deterministic pipeline** and prove it reproduces the frozen 335 reference board within governed tolerance before broadening its subject universe.
 
 Required constraints:
-1. Use only the exact accepted historical evidence, feature transforms, route/model-selection policy, seeds/settings and fitting routine necessary to reproduce the previously accepted scorer.
-2. The 25 missing rostered players, waiver candidates and other out-of-core subjects must not participate in fitting, model selection or threshold tuning.
-3. Do not search alternative model families, optimize for improved results, or change Career economics.
-4. Reproduce the frozen 335 reference outputs first. Require parity within the accepted/frozen tolerance across the full reference cohort before any out-of-core inference is authorized.
-5. If parity fails, stop and return to Management. Do not compensate with coefficient guessing, interpolation, Market values or a replacement model.
-6. If parity succeeds, package/freeze the recovered scorer, transforms, routing and residual-band authority as a durable reusable inference artifact with provenance.
-7. Preserve/copy the remaining exact accepted route/board provenance artifacts before their current retention windows expire.
+1. Preserve the remaining accepted historical/route artifacts and their hashes/provenance before retention expiry.
+2. Reuse the exact accepted code, historical evidence, frozen candidate/route policy, seeds/settings, feature transforms and scoring coordinate.
+3. The 25 missing rostered players, waiver candidates and other out-of-core subjects must not participate in model-family selection, route selection or tuning.
+4. Do not search alternative model families, optimize for improved results, or change Career economics.
+5. Reproduce the frozen 335 reference outputs within the governed/frozen tolerance before any out-of-core materialization is promoted.
+6. If parity fails, stop and return to Management. Do not compensate with coefficient guessing, interpolation, Market values or a replacement model.
+7. After parity, make the existing pipeline reusable for the broader subject/evidence boundary; whether implementation chooses durable packaged fitted objects or deterministic batch fitting is an engineering choice only if outputs/authority remain identical.
+
+The current production assets are explicitly 2026-season scoped. Future annual rematerialization and any desired in-season long-horizon refresh cadence are separate operational/product-authority questions; they should not be conflated with the coverage defect.
+
 
 ## Smallest reusable mechanism
 
@@ -100,7 +114,7 @@ Whole-Sleeper-database materialization is not required; broad fantasy-relevant w
 
 **PR 0 — this checkpoint (complete).** Correct the issue's 22-vs-25 error and store this trace/plan in operations docs. Documentation-only; no model/test/deploy change.
 
-**PR 1 — scorer recovery, artifact preservation and parity gate (authorized).** Preserve the remaining accepted route/board provenance before retention expiry. Re-run only the exact accepted historical fitting path necessary to reproduce the previously accepted Y4–Y7 scorer; no out-of-core player may enter fitting/model selection. Package the recovered scorer only if all 335 reference outputs replay within frozen tolerance. If parity fails, stop for Management.
+**PR 1 — accepted-pipeline preservation and parity gate (authorized).** Preserve the remaining historical/route evidence before retention expiry. Reuse the exact accepted Git-pinned development/route programs and governed historical inputs to reproduce the frozen 335 Y4–Y7 board through the existing fit-on-materialization path. No out-of-core player may enter model-family/route selection or tuning. If all 335 reference outputs replay within governed tolerance, checkpoint the exact pipeline identity/provenance and the smallest reusable production seam for broader subjects. If parity fails, stop for Management.
 
 **PR 2 — subject resolver + rostered coverage.** Add the typed resolver/feature packet, candidate coverage reports, per-player provenance/confidence/uncertainty/failure contract, and same-State model scoring through unchanged authorities. Integrate Current, Y2/Y3, Y4–Y7 and terminal as supported. Keep #370 untouched and fail closed on player failures. Add rostered archetype regressions: veteran, injured established, incumbent-blocked young, taxi rookie, low-production developmental, older/no-current-NFL-team, sparse-evidence. Audit the exact preserved 25 as a regression fixture, not as current production truth.
 
