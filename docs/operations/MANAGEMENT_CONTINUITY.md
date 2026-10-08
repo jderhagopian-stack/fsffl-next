@@ -66,6 +66,8 @@ Authenticated iPhone/Safari physical acceptance completed on 2026-10-07.
 
 ### 2. Career Coverage #405 — ACTIVE
 
+**PR1 Management acceptance (2026-10-07 ET):** accepted after exact source/route/policy/identity/terminal provenance plus bounded downstream semantic sensitivity. The original strict numerical replay comparator remains red and visible; Management did not invent or back-fit a new epsilon. For this pipeline, exact authority/provenance invariants plus demonstrated unchanged governed downstream conclusions are the accepted reproducibility standard, with raw numeric drift and discrete threshold crossings separately reported. PR1 still requires its exact-head stable full-suite before merge. After PR1 merges, PR2 is the next authorized implementation tranche: subject resolver + dynamic evidence/materialization + complete roster coverage under the already-recorded season-rollover, multi-league reuse and resource-bounded architecture.
+
 The preserved 25-player roster gap is evidence of a broader production-universe boundary, not evidence that the accepted Y4–Y7 methodology was lost.
 
 Management correction:

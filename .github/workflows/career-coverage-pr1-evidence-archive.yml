@@ -1,0 +1,45 @@
+name: Career #405 PR1 replay evidence archival (no fitting)
+
+on:
+  push:
+    branches: [work/career-coverage-pr1-parity-20261007]
+    paths:
+      - .github/workflows/career-coverage-pr1-evidence-archive.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EVIDENCE_TAG: career-405-accepted-research-evidence-20261007
+    steps:
+      - name: Preserve hash-verified PR1 replay output ZIPs without rerunning fitting
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/career405-replay-evidence
+          cd /tmp/career405-replay-evidence
+          for id in 11523486083 11523786224 11524051845; do
+            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > "career-405-replay-${id}.zip"
+          done
+          cat > CAREER405_PR1_REPLAY_SHA256SUMS <<'EOF'
+          3c8a41a6fe67d9ccf7e606eaaadd6e0ee16d736bd87991f0002ce7a03ab46dec  career-405-replay-11523486083.zip
+          d79a38d506fa46de445af2c581b38050f3b66fd6e34f417f64146c5302a45151  career-405-replay-11523786224.zip
+          836e092d9249738340d2353f49240cc48ef8c07073d58baa83e1d4a473ec2b12  career-405-replay-11524051845.zip
+          EOF
+          sha256sum -c CAREER405_PR1_REPLAY_SHA256SUMS
+          gh release upload "$EVIDENCE_TAG" career-405-replay-{11523486083,11523786224,11524051845}.zip CAREER405_PR1_REPLAY_SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"
+      - name: Verify durable asset inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view "$EVIDENCE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | sort > /tmp/names
+          for name in 10899387479.zip 10912862252.zip 10916355135.zip 11263913850.zip SHA256SUMS CAREER405_PR1_REPLAY_SHA256SUMS career-405-replay-11523486083.zip career-405-replay-11523786224.zip career-405-replay-11524051845.zip; do
+            grep -Fx "$name" /tmp/names >/dev/null || { echo "missing release evidence: $name"; exit 1; }
+          done
+          cat /tmp/names

@@ -1,0 +1,125 @@
+name: Career Coverage PR1 accepted-335 provenance and replay
+
+on:
+  push:
+    branches:
+      - work/career-coverage-pr1-parity-20261007
+    paths:
+      - .github/workflows/career-coverage-pr1-parity.yml
+      - scripts/verify_career_coverage_pr1_parity.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: career-coverage-pr1-parity
+  cancel-in-progress: false
+
+jobs:
+  archive-and-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EVIDENCE_TAG: career-405-accepted-research-evidence-20261007
+      RESEARCH_HEAD: be2541a496227b33c12c755f576843dc4ab5a0bb
+      MAIN_AT_START: 6649d9d547a3d424580588233c3b2d1774b4d938
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Assert accepted Python 3.11 interpreter
+        run: python -c 'import sys; assert sys.version_info[:2] == (3, 11), sys.version'
+      - name: Reproduce exact accepted run 37096263982 numerical dependency versions
+        run: python -m pip install -e . pandas==3.0.6 numpy==2.4.6 scipy==1.17.1 scikit-learn==1.9.1
+      - name: Recover and verify accepted historic inputs before retention expiry
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/career405/{archive,panel,term,route,reference,replay}
+          for id in 10899387479 10912862252 10916355135 11263913850; do
+            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > "/tmp/career405/archive/${id}.zip"
+          done
+          cd /tmp/career405/archive
+          cat > SHA256SUMS <<'EOF'
+          ea72f312148f01b8066419e8f12cb3a04a4dbbd99fd6e0b7dc975c65cc2446b5  10899387479.zip
+          6dd664b632f4897f286a99794e10df29be21bf8c6cae70e526ea807470fdcb0e  10912862252.zip
+          63520ddb60a8ed12724fa21e8d276c4e3e7d5587162aade92ba7afaa3796ced2  10916355135.zip
+          6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22  11263913850.zip
+          EOF
+          sha256sum -c SHA256SUMS
+          unzip -oq 10912862252.zip -d /tmp/career405/panel
+          unzip -oq 10899387479.zip -d /tmp/career405/term
+          unzip -oq 10916355135.zip -d /tmp/career405/route
+          unzip -oq 11263913850.zip -d /tmp/career405/reference
+      - name: Preserve verified historical input/output ZIPs as non-expiring release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$EVIDENCE_TAG" >/dev/null 2>&1; then
+            gh release create "$EVIDENCE_TAG" --target "$MAIN_AT_START" \
+              --title "Career #405 accepted research evidence (frozen provenance)" \
+              --notes "Immutable source runs/artifact IDs: model A/terminal history 10899387479; rich panel 10912862252; frozen routing evidence 10916355135 (expires Oct 10); accepted 335 FSFFL board 11263913850 (expires Oct 17). Exact SHA256 manifest is attached. Accepted research code pinned to $RESEARCH_HEAD and workflow 37096263982. This is evidence preservation, not new model promotion."
+          fi
+          gh release upload "$EVIDENCE_TAG" /tmp/career405/archive/{10899387479,10912862252,10916355135,11263913850}.zip /tmp/career405/archive/SHA256SUMS --clobber
+          gh release view "$EVIDENCE_TAG" --json url,assets --jq '{url: .url, assets: [.assets[].name]}'
+      - name: Restore exact accepted research programs from immutable Git commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show "$RESEARCH_HEAD:scripts/run_intrinsic_comprehensive_development.py" > /tmp/career405/dev.py
+          git show "$RESEARCH_HEAD:scripts/run_intrinsic_cell_routing_validation.py" > /tmp/career405/route.py
+          test "$(git hash-object /tmp/career405/dev.py)" = ebb472514ece122bbdbabfe60cca991e5941ae1b
+          test "$(git hash-object /tmp/career405/route.py)" = f932f07c9cb29b3c07352d48a928d0b190562a29
+          test "$(git hash-object artifacts/research/intrinsic_cell_routing_y4_y8_20260926/CELL_ROUTING_POLICY_FREEZE.json)" = beded6dd776719c19c7323d4e8fa5e4d4d81b0c0
+          test "$(git hash-object scripts/materialize_foundation4_fsffl_coordinate.py)" = 2b31040b2c38215636981ac7ad0744aaf759acee
+          sha256sum /tmp/career405/{dev.py,route.py} > /tmp/career405/program-source-sha256.txt
+      - name: Replay original fit-on-materialization workflow without new-player fitting
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/time -v -o /tmp/career405/replay.time \
+          python scripts/materialize_foundation4_fsffl_coordinate.py \
+            --development-module /tmp/career405/dev.py \
+            --route-module /tmp/career405/route.py \
+            --model-a-rows /tmp/career405/term/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results /tmp/career405/term/frozen/qb/qb_career_state_deployment_results.json \
+            --raw-seasons /tmp/career405/panel/RAW_PLAYER_SEASONS_RICH.csv \
+            --players /tmp/career405/panel/PLAYERS.csv \
+            --residual-states /tmp/career405/term/frozen/modela/multiyear-intrinsic-model-a/player_specific_trajectory_residual_states.csv \
+            --innovation-states /tmp/career405/term/frozen/modela/multiyear-intrinsic-model-a/within_player_trajectory_innovation_states.csv \
+            --board artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_CONNECTED_LEAGUE_BOARD_335.csv \
+            --current-route /tmp/career405/route/CURRENT_RESEARCH_ROUTE.csv \
+            --policy-freeze artifacts/research/intrinsic_cell_routing_y4_y8_20260926/CELL_ROUTING_POLICY_FREEZE.json \
+            --connected-rules artifacts/implementation/forecast_source_coordinate_20260919/CONNECTED_LEAGUE_RULES.json \
+            --out-dir /tmp/career405/replay
+      - name: Fail-closed Y4-Y7 accepted-335 replay and provenance parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/verify_career_coverage_pr1_parity.py \
+            --reference /tmp/career405/reference/f4 \
+            --replay /tmp/career405/replay \
+            --report /tmp/career405/parity-report.json
+          sha256sum /tmp/career405/replay/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.csv
+          cat /tmp/career405/replay.time
+      - name: Preserve replay report and diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: career-405-pr1-replay-report
+          retention-days: 90
+          if-no-files-found: warn
+          path: |
+            /tmp/career405/parity-report.json
+            /tmp/career405/program-source-sha256.txt
+            /tmp/career405/replay.time
+            /tmp/career405/replay/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_SUMMARY.json
+            /tmp/career405/replay/FOUNDATION4_CURRENT_LONG_HORIZON_BOARD_335.csv
+            /tmp/career405/replay/FOUNDATION4_FSFFL_ROLLING_POLICY_CELL_METRICS.csv
