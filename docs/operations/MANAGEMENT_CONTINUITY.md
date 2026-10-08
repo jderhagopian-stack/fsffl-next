@@ -8,6 +8,12 @@ For **what is happening right now**, read [CURRENT_OPERATIONS.md](CURRENT_OPERAT
 For exact tranche implementation evidence, read the linked workstream checkpoint.  
 For the broad long-range capability plan, read [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and [../FSFFL_NEXT_PRODUCT_PRIORITIES.md](../FSFFL_NEXT_PRODUCT_PRIORITIES.md).
 
+## 2026-10-08 — Tranche B live; worker acceptance recommendation
+
+The Management-authorized Tranche B market batching correction passed focused parity tests and the single stable full suite `37805666770` (2,248 passed, one warning) on head `48d78375cce957dca5faee71a8c39108c3e006a2`; merged `3f079ca6df48fbae3e6adb83fa3df877dc05f1b1` and is live on Render `dep-db3ruiqjnfac738ibiag`. Hosted natural publication used 2 idempotent multirow INSERTs for **535** market observations; preserved 169,384 historical rows, original first-writer provenance, stable PIT State count and accepted model/publication contracts. Same 25 restore reads, read p95 improved, no inspected warning/error, and peak RSS below Render limit. Full measured ledger and limitations live in `docs/operations/workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md`.
+
+**Worker recommendation: ACCEPT Tranche B**, subject to Management's independent promotion gate. This does not authorize C-F, Career #405 PR2, paid Supabase, cleanup, migration, refresh policy or model work. PostgreSQL physical allocation rose from ~584.7MB to ~586.4MB across B's normal startup; Free quota remains exceeded. Do not conflate SQL attempt reduction with storage reclamation. Documentation-only commits after B's merge SHA are not runtime code changes.
+
 ## 2026-10-08 — Tranche A accepted; Tranche B alone authorized
 
 Management has **ACCEPTED Tranche A** transport on existing hosted write + matched restore evidence, with manual Gate 2 telemetry probe waived as unnecessary. Its exact live code stays `1c5b5325791cddaf49d35d372270a9aba0586afb` on Render `dep-db3qq4vlk1mc73cj3910`. This supersedes the earlier *recommended acceptance* and *B not authorized* checkpoint, which remains below as historical evidence.
