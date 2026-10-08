@@ -22,6 +22,23 @@ An unrostered candidate may be valued without being inserted into any team's roo
 
 Market/Search/Waiver/Opportunity/Trade/What-If/explicit lookup may identify a candidate or help establish decision relevance. Market remains a separate coordinate and is not a numeric Career Intrinsic input.
 
+### Scalable refresh/materialization contract
+Dynamic does **not** mean recompute everything continuously.
+
+The target refresh design is:
+
+1. **Cheap change detection first.** Provider synchronization / Refresh Intelligence determines whether any Career-relevant evidence changed. Opening Franchise/League/Explore/Trade must not itself launch heavy Career work.
+2. **Separate stable model authority from mutable player evidence.** If the accepted Y4–Y7 historical-training/model/route fingerprint is unchanged, reuse the fitted/model authority for in-season scoring. Do not refit the historical model merely because current player evidence changed. A parity-safe packaged/cached fitted representation is permitted as an implementation optimization if it is proven identical to the accepted deterministic pipeline.
+3. **Batch current evidence.** Build the roster + broad waiver decision-universe feature/evidence table once per publication generation. Cohort-relative transforms/normalizations, where the accepted model requires them, are computed consistently across that governed batch rather than independently per request.
+4. **Selective invalidation.** Compare player/material dependency fingerprints. Reuse unchanged player projections; recompute changed/new subjects. Do not rebuild historical inputs or unchanged horizons solely because another player's evidence changed unless the accepted math has a global dependency.
+5. **Coalesce global downstream work.** Some Value/Shapley/rank outputs are league/cohort dependent. If any relevant upstream subject changed, recompute those global downstream artifacts **once** for the new publication after the changed player-level evidence is ready—not once per transaction, player, or browser request.
+6. **Prewarm the ordinary waiver universe.** Broad fantasy-relevant free agents are materialized with the publication so waiver decisions are immediately informed. Deep/unusual long-tail candidates may be scored on demand and cached under the exact evidence/model fingerprint.
+7. **Full rematerialization is exceptional but legitimate.** New evaluation season, promoted model/version, changed historical training set, changed league scoring/lineup authority where required by the model, or an incompatible normalization/reference coordinate can require a full rebuild.
+8. **Last-good stays usable.** While a new Career publication is building, serve the prior compatible point-in-time Career artifact with truthful stale/updating status rather than blocking the product.
+9. **Measure cost as an acceptance condition.** Record changed-subject count, model-fit reuse/refit count, player-evidence materialization time, global downstream recompute time, peak RSS, and total publication latency. Validate both a normal 12-team league and a larger/deeper roster + waiver universe so the design is demonstrably scalable.
+
+This contract deliberately avoids a fixed weekly/nightly recomputation requirement. Freshness is tied to materially changed governed evidence and successful publication. A low-priority periodic integrity sweep may be added later as an operational backstop, but it is not the source of truth.
+
 ### Dynamic point-in-time requirement
 Coverage and freshness are one production contract. Career Intrinsic must not become a season-long static table merely because its model/policy is frozen.
 
