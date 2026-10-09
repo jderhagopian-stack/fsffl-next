@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
+from threading import RLock
+from time import monotonic
 from typing import Callable
 
 from fsffl.forecast.annual_preseason_snapshot import ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION
@@ -36,6 +39,87 @@ from .runtime import LiveForecastEvidence, default_live_forecast_loader
 
 _logger = logging.getLogger("fsffl.product.forecast")
 ForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
+
+
+class _PreseasonBaselineReadThrough:
+    """Tiny short-lived decoded immutable authority reuse, never scored State output.
+
+    Recheck latest PostgreSQL metadata on EVERY caller, including cache hits.
+    Reuse only if the complete artifact key AND its recorded computation time
+    still match. The bounded, expiring entries cannot replace PIT/last-good,
+    control provider refresh, or persist beyond a process restart.
+    """
+
+    def __init__(self, *, max_entries: int = 4, ttl_seconds: float = 150.0):
+        self._lock = RLock()
+        self._entries: OrderedDict[tuple, tuple[object, PreseasonForecastBaseline, float]] = OrderedDict()
+        self._max_entries = max_entries
+        self._ttl_seconds = ttl_seconds
+
+    def load(self, store: PersistenceStore, state: LeagueState) -> PreseasonForecastBaseline | None:
+        scope = preseason_scope_id(state)
+        lookup = dict(
+            artifact_kind=PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND,
+            scope_kind=LEAGUE_SEASON_SCOPE_KIND,
+            scope_id=scope,
+            model_version=PRESEASON_BASELINE_MODEL_VERSION,
+        )
+        latest_metadata = getattr(store, "get_latest_reusable_artifact_metadata", None)
+        exact_read = getattr(store, "get_reusable_artifact", None)
+        # In-memory/legacy persistence adapters keep the original authority path.
+        if not callable(latest_metadata) or not callable(exact_read):
+            record = store.get_latest_reusable_artifact(**lookup)
+            return decode_preseason_forecast_baseline(dict(record.payload)) if record else None
+
+        metadata = latest_metadata(**lookup)
+        if metadata is None:
+            return None
+        if not metadata.reusable or (
+            metadata.key.artifact_kind != PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND
+            or metadata.key.scope_kind != LEAGUE_SEASON_SCOPE_KIND
+            or metadata.key.scope_id != scope
+            or metadata.key.model_version != PRESEASON_BASELINE_MODEL_VERSION
+        ):
+            raise ValueError("stored preseason baseline metadata authority mismatch")
+
+        # Only the latest exact historical fingerprint is eligible. Including State
+        # prevents accidentally reusing across different tenant-private executions
+        # that happen to reference the same underlying immutable league season.
+        identity = (id(store), state.state_id, metadata.key, metadata.computed_at)
+        now = monotonic()
+        with self._lock:
+            for key, (_, _, expires) in tuple(self._entries.items()):
+                if expires <= now:
+                    self._entries.pop(key, None)
+            prior = self._entries.get(identity)
+            if prior is not None and prior[0] is store:
+                self._entries.move_to_end(identity)
+                return prior[1]
+            # Hold the small lock through the one exact full read so concurrent
+            # callers cannot start duplicate full-JSON transfers on a cold miss.
+            record = exact_read(metadata.key)
+            if (
+                record is None
+                or not record.reusable
+                or record.key != metadata.key
+                or record.computed_at != metadata.computed_at
+            ):
+                # Metadata/row race: restore original latest-authority read; never
+                # serve a cached result when evidence changed underfoot.
+                record = store.get_latest_reusable_artifact(**lookup)
+                return decode_preseason_forecast_baseline(dict(record.payload)) if record else None
+            baseline = decode_preseason_forecast_baseline(dict(record.payload))
+            if baseline.league_id != state.league.league_id or baseline.season != state.league.season:
+                raise ValueError("preserved preseason baseline belongs to different league or season")
+            self._entries[identity] = (store, baseline, monotonic() + self._ttl_seconds)
+            self._entries.move_to_end(identity)
+            while len(self._entries) > self._max_entries:
+                self._entries.popitem(last=False)
+            return baseline
+
+
+_preseason_baseline_read_through = _PreseasonBaselineReadThrough()
+
 
 
 def _league_baseline_from_annual_snapshot(
@@ -150,15 +234,8 @@ def make_preseason_baseline_authority_loader(
         if persistence_store is None:
             raise ValueError("preserved preseason Year-1 authority requires persistence")
         scope_id = preseason_scope_id(league_state)
-        existing = persistence_store.get_latest_reusable_artifact(
-            artifact_kind=PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND,
-            scope_kind=LEAGUE_SEASON_SCOPE_KIND,
-            scope_id=scope_id,
-            model_version=PRESEASON_BASELINE_MODEL_VERSION,
-        )
-        if existing is not None:
-            baseline = decode_preseason_forecast_baseline(dict(existing.payload))
-        else:
+        baseline = _preseason_baseline_read_through.load(persistence_store, league_state)
+        if baseline is None:
             annual = persistence_store.get_latest_reusable_artifact(
                 artifact_kind=ANNUAL_PRESEASON_PROJECTION_SNAPSHOT_ARTIFACT_KIND,
                 scope_kind=NFL_SEASON_SCOPE_KIND,
@@ -209,18 +286,7 @@ def make_resilient_forecast_loader(
 
     def load(league_state: LeagueState) -> LiveForecastEvidence:
         scope_id = preseason_scope_id(league_state)
-        existing = persistence_store.get_latest_reusable_artifact(
-            artifact_kind=PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND,
-            scope_kind=LEAGUE_SEASON_SCOPE_KIND,
-            scope_id=scope_id,
-            model_version=PRESEASON_BASELINE_MODEL_VERSION,
-        )
-
-        baseline = (
-            decode_preseason_forecast_baseline(dict(existing.payload))
-            if existing is not None
-            else None
-        )
+        baseline = _preseason_baseline_read_through.load(persistence_store, league_state)
 
         try:
             if live_loader is default_live_forecast_loader:
@@ -249,7 +315,7 @@ def make_resilient_forecast_loader(
                 live_failure=exc,
             )
 
-        if existing is None and state_is_preseason_capture_eligible(league_state):
+        if baseline is None and state_is_preseason_capture_eligible(league_state):
             baseline = baseline_from_runtime(league_state, evidence.runtime_result)
             persistence_store.put_artifact(
                 preseason_forecast_baseline_artifact(
