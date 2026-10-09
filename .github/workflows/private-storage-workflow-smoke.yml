@@ -1,0 +1,28 @@
+name: Private storage Workflow smoke (nonproduction)
+
+on:
+  pull_request:
+    paths:
+      - 'artifacts/implementation/private_storage_validation_20261009/**'
+      - '.github/workflows/private-storage-workflow-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-offline-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'pytest>=8,<9'
+      - name: Compile standalone Workflow and adapter
+        run: python -m compileall -q artifacts/implementation/private_storage_validation_20261009
+      - name: Test task registration, immutable adapter and fail-closed missing secrets
+        run: python -m pytest -q artifacts/implementation/private_storage_validation_20261009/test_workflow_entry.py
+# This job requires no GitHub secrets, database, S3, Render account or deployment.
+# It NEVER runs the real-artifact task. Only the Render Workflow has that authority.
