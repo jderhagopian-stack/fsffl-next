@@ -21,7 +21,7 @@
    - **Build Command:**
 
      ```bash
-     python -m pip install -e '.[web]' && python -m pip install -r artifacts/implementation/private_storage_validation_20261009/requirements-workflow.txt && python -m compileall -q artifacts/implementation/private_storage_validation_20261009 && python -m pytest -q artifacts/implementation/private_storage_validation_20261009/test_workflow_entry.py
+     bash artifacts/implementation/private_storage_validation_20261009/build_workflow.sh
      ```
 
    - **Start Command:**
