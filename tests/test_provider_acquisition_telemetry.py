@@ -81,6 +81,8 @@ def test_existing_http_getter_has_exact_attempt_and_raw_byte_parity(caplog, monk
     assert event["unknown_body_count"] == 0
     assert event["status_classes"] == {"2xx": 4}
     assert event["families"] == {"projection_page": 4}
+    assert event["family_response_body_bytes"] == {"projection_page": len("été".encode()) * 4}
+    assert event["family_unknown_body_count"] == {"projection_page": 0}
     assert event["season"] == 2026
     assert event["horizon"] == "rest_of_season"
     assert event["cause"] == "independent_current"
@@ -118,6 +120,7 @@ def test_failure_and_repeated_exact_url_count_as_attempts_not_second_fetch(caplo
     assert event["success"] == 1
     assert event["retries"] == 1
     assert event["unknown_body_count"] == 2
+    assert event["family_unknown_body_count"] == {"projection_page": 2}
     assert event["response_body_bytes"] == 0
     assert "SECRET_PROJECTION_RESPONSE" not in caplog.text
     assert "PRIVATE_ID" not in caplog.text
