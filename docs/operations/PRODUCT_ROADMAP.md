@@ -1,5 +1,11 @@
 # FSFFL NEXT — Product Roadmap
 
+## 2026-10-09 — Intelligence Lifecycle Tranche 1 production accepted
+
+A narrow exact preseason-baseline decode/read reuse is **accepted and live** from [PR #440](https://github.com/jderhagopian-stack/fsffl-next/pull/440), merge `31e68b0f4c48d5094353290f9c1ff8c1808d1452`, Render `dep-db4hs7vavr4c73f9pal0`. Real restore: full JSONB-derived baseline payload SELECT count 11→1, logged logical bytes -9.708MB, SQL read elapsed sum -2.656s and all-call SQL p95 498.05→398.11ms; cheap metadata reads rise to 11. No browser/user-visible latency or true process peak RSS causality claimed. Cache is short-lived, strict metadata-version scoped, and rescores each LeagueState. Accepted pooling/batching, first-writer Market/PIT, source/refresh model, publication last-good all unchanged.
+
+**Next program sequencing requires separate Management permission:** instrument source-acquisition event/request/response bytes/freshness within existing adapters, then decide whether shared provider-cohort acquisition truly avoids repeated HTTP traffic. No new provider selection, cohort reuse, licensed commercial provider discussion, presentation-byte compactness or hybrid migration is authorized by this acceptance. Commercial agreements remain **after product validation, before commercialization**. Full evidence and risks in [Supabase workstream](workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md).
+
 ## 2026-10-09 — Confirmed provider sequencing / efficiency priorities
 
 **Management clarification:** provider procurement/licensing is a future commercialization step after FSFFL NEXT is developed and validated; it is NOT a prerequisite for current technical efficiency research or implementation. No licensing negotiation workstream is opened. Maintain existing rights limits, source `usage_class`, provenance and governed interchangeable provider adapters. The broader product roadmap is unchanged.
