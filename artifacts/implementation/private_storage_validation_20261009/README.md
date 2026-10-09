@@ -20,7 +20,7 @@
 set +x
 python -m pip install --no-cache-dir --quiet 'boto3>=1.39,<2'
 curl -fLsS -o /tmp/hybrid_adapter.py 'https://raw.githubusercontent.com/jderhagopian-stack/fsffl-next/fccb9e0f147fce6aae6e6360d66d3e4aff12a050/artifacts/implementation/storage_foundation_poc_20261008/hybrid_adapter.py'
-curl -fLsS -o /tmp/render_s3_real_artifact_gate.py 'https://raw.githubusercontent.com/jderhagopian-stack/fsffl-next/96e7979095160b439122f3ed81a961f417845a89/artifacts/implementation/private_storage_validation_20261009/render_s3_real_artifact_gate.py'
+curl -fLsS -o /tmp/render_s3_real_artifact_gate.py 'https://raw.githubusercontent.com/jderhagopian-stack/fsffl-next/c627fdccfd5a7c626cdbbffbcaeda6ed2f090d82/artifacts/implementation/private_storage_validation_20261009/render_s3_real_artifact_gate.py'
 PYTHONPATH=/tmp python /tmp/render_s3_real_artifact_gate.py
 ```
 
