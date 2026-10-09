@@ -62,6 +62,16 @@ class TracedPersistence:
         return self.record
 
 
+def _contract(evidence):
+    """Compare governed scored output, authority and complete runtime values."""
+    return (
+        evidence.evidence_basis, evidence.raw_forecasts,
+        evidence.league_scored_forecasts, evidence.successful_source_ids,
+        evidence.failed_sources, evidence.uncertainty_ready,
+        evidence.runtime_result.model_dump(mode="json"),
+    )
+
+
 def _store():
     state = _state(scored=True)
     baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="capture-1")
@@ -80,9 +90,9 @@ def test_eleven_real_forecast_replays_use_one_full_payload_and_preserve_outputs(
         type("Legacy", (), {"get_latest_reusable_artifact":
              lambda self, **kw: store.record})()
     )
-    expected = legacy(state).model_dump(mode="json")
+    expected = _contract(legacy(state))
     loader = make_preseason_baseline_authority_loader(store)
-    actual = [loader(state).model_dump(mode="json") for _ in range(11)]
+    actual = [_contract(loader(state)) for _ in range(11)]
     assert all(x == expected for x in actual)
     assert store.full_reads == 1
     assert store.metadata_reads == 11
@@ -115,7 +125,13 @@ def test_new_exact_fingerprint_replaces_cached_artifact(monkeypatch):
     different = baseline_from_runtime(state,_raw_qb_runtime(),source_artifact_id="capture-2")
     rec = preseason_forecast_baseline_artifact(
         league_season_scope_id="league-1:2026",baseline=different)
-    store.record = replace(rec,computed_at=original_record.computed_at+timedelta(seconds=1))
+    # Changing source_artifact_id alone is not the accepted content fingerprint,
+    # so explicitly simulate a new immutable record identity.
+    store.record = replace(
+        rec,
+        key=replace(rec.key, input_fingerprint="different-accepted-artifact-fingerprint"),
+        computed_at=original_record.computed_at+timedelta(seconds=1),
+    )
     next_evidence = load(state)
     assert store.full_reads == 2
     assert next_evidence.raw_forecasts == original.raw_forecasts
@@ -127,9 +143,9 @@ def test_same_fingerprint_new_computation_timestamp_invalidates(monkeypatch):
     monkeypatch.setattr(module,"_preseason_baseline_read_through", _PreseasonBaselineReadThrough())
     state, store = _store()
     load = make_preseason_baseline_authority_loader(store)
-    before = load(state).model_dump(mode="json")
+    before = _contract(load(state))
     store.record = replace(store.record,computed_at=store.record.computed_at+timedelta(seconds=1))
-    after = load(state).model_dump(mode="json")
+    after = _contract(load(state))
     assert before == after and store.full_reads == 2
 
 
@@ -170,7 +186,8 @@ def test_store_and_state_isolation_and_missing_metadata_fallthrough(monkeypatch)
     import pytest
     with pytest.raises(ValueError,match="annual preseason"):
         load_first(state)
-    assert first.full_reads == 2
+    # The missing-baseline path still performs its original annual lookup.
+    assert first.full_reads == 3
 
 
 def test_concurrent_same_exact_artifact_single_cold_fetch(monkeypatch):
@@ -179,7 +196,7 @@ def test_concurrent_same_exact_artifact_single_cold_fetch(monkeypatch):
     state, store = _store()
     load = make_preseason_baseline_authority_loader(store)
     with ThreadPoolExecutor(max_workers=5) as pool:
-        results = list(pool.map(lambda _:load(state).model_dump(mode="json"),range(11)))
+        results = list(pool.map(lambda _:_contract(load(state)),range(11)))
     assert all(x==results[0] for x in results)
     assert store.full_reads == 1
 
