@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextvars import copy_context
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -516,7 +518,7 @@ def _fetch_current_snapshots(
         thread_name_prefix="fsffl-forecast-provider",
     ) as executor:
         future_by_source = {
-            executor.submit(fetcher.fetch, season): fetcher.source_id
+            executor.submit(copy_context().run, fetcher.fetch, season): fetcher.source_id
             for fetcher in fetchers
         }
         for future in as_completed(future_by_source):
