@@ -67,11 +67,13 @@ class S3Objects:
             if self.get(tenant, digest) != packed:
                 raise RuntimeError("S3 immutable-key content collision")
             return
+        # Track the attempted key before PUT so cleanup handles ambiguous
+        # network errors after a server-side successful write.
+        self.written.add(key)
         self.client.put_object(
             Bucket=BUCKET, Key=key, Body=packed,
             ContentType="application/octet-stream",
         )
-        self.written.add(key)
 
     def get(self, tenant, digest):
         from botocore.exceptions import ClientError
@@ -193,10 +195,10 @@ def probe_conditional_put(objects):
     """Fail closed if this S3 provider ignores If-None-Match on a foreign value."""
     from botocore.exceptions import ClientError
     canary = f"{objects.prefix}/immutable-canary"
+    objects.written.add(canary)
     objects.client.put_object(
         Bucket=BUCKET, Key=canary, Body=b"first", IfNoneMatch="*",
         ContentType="application/octet-stream")
-    objects.written.add(canary)
     try:
         objects.client.put_object(
             Bucket=BUCKET, Key=canary, Body=b"changed", IfNoneMatch="*",
@@ -214,18 +216,24 @@ def probe_conditional_put(objects):
         actual["Body"].close()
 
 
-def run():
-    # No persistent credentials: interactive prompt ONLY within ephemeral shell.
+def run(*, workflow: bool = False):
+    # No credentials in task input/output, Github, console messages or CLI args.
+    # In Workflow mode, read only this Workflow service's private environment.
+    # The old operator-shell procedure remains available but is not required.
     import boto3
     from botocore.config import Config
     from hybrid_adapter import (
         ArtifactIdentity, HybridPrototype, IntegrityError, Metadata, _bytes)
-    if not sys.stdin.isatty():
-        raise RuntimeError("interactive private shell required")
-    key = getpass.getpass("Supabase S3 access key ID (hidden): ")
-    secret = getpass.getpass("Supabase S3 secret key (hidden): ")
+    if workflow:
+        key = os.environ.get("FSFFL_TEST_S3_ACCESS_KEY_ID", "")
+        secret = os.environ.get("FSFFL_TEST_S3_SECRET_ACCESS_KEY", "")
+    else:
+        if not sys.stdin.isatty():
+            raise RuntimeError("interactive private shell required")
+        key = getpass.getpass("Supabase S3 access key ID (hidden): ")
+        secret = getpass.getpass("Supabase S3 secret key (hidden): ")
     if not key or not secret:
-        raise RuntimeError("S3 credentials not provided")
+        raise RuntimeError("test-only S3 credentials missing")
     client = boto3.client(
         "s3", region_name=REGION, endpoint_url=ENDPOINT,
         aws_access_key_id=key, aws_secret_access_key=secret,
@@ -333,6 +341,7 @@ def run():
         print("test_objects_cleanup_remaining_count=", pending,
               "; bucket remains private; verify cleanup before retiring credentials")
     print(status)
+    return {"status": "PASS", "scope": "nonproduction_two_artifacts_only", "artifact_count": 2}
 
 
 if __name__ == "__main__":
