@@ -8,7 +8,7 @@ For **what is happening right now**, read [CURRENT_OPERATIONS.md](CURRENT_OPERAT
 For exact tranche implementation evidence, read the linked workstream checkpoint.  
 For the broad long-range capability plan, read [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and [../FSFFL_NEXT_PRODUCT_PRIORITIES.md](../FSFFL_NEXT_PRODUCT_PRIORITIES.md).
 
-## 2026-10-09 — Provider acquisition measurement AUTHORIZED / DRAFT IMPLEMENTATION
+## 2026-10-09 — Provider acquisition instrumentation MERGED / HOSTED VERIFICATION PENDING
 
 Management accepted the Oct 9 physical-capacity/observation-representation diagnosis and specifically authorized the **EVENT / REQUEST / BYTES** instrumentation tranche, **not** provider cohort reuse, retention/deduplication, refresh-frequency edits, new telemetry storage or hybrid migration. Tranches A/B and #440 accepted/live; C whole-publication skip closed; provider commercial strategy develop/validate now, agreements later.
 
@@ -16,7 +16,7 @@ Execution began from main `234d7f510da0a4ad953e32ea5617b73d70d5dac1` on separate
 
 Focused tests are included in draft CI. Stable-head full-suite gate, merge/deploy SHA, natural hosted event counts/response-body bytes/p95/RSS and acceptance remain PENDING, not assumed. No artificial heavy refresh authorized for verification. [PR #441](https://github.com/jderhagopian-stack/fsffl-next/pull/441) independent real-storage validation and draft PR #439 untouched. Render connector exposes one workspace (`My Workspace`) but requires operator confirmation before connected service read/deploy actions; do not assert verified new live Render metrics until authorized.
 
-**Next authorized action:** obtain focused CI, resolve any failures narrowly, run ONE exact stable-head suite, then confirm explicit workspace selection for bounded deployment/runtime verification. No claim of provider or Supabase billed egress savings from instrumentation itself. Canonical details in [Supabase Capacity workstream](workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md).
+**Code-level gate completed:** final PR #442 head `69c07cfc965b94b4cd6dc2cd4ed7ed7338c61d1a` passed focused CI run `38001309606` (**84 tests**) and exact-head Stable full suite `38001394687` (**2,262 passed, 1 unrelated warning; before/after head checks passed**). Squash-merged into main as `db643f3368a0ccc21bd01dd616b16e066acf2741`. **NOT DEPLOYED. No real hosted EVENT/REQUEST/BYTES measurements or production performance acceptance**: the Render connector requires explicit user choice of workspace `My Workspace`, even though it is the only listed workspace. No artificial refresh was run by the worker in hosted production. Next authorize workspace selection, verify live production service and exact SHA, then deploy and collect bounded natural telemetry. No provider optimization or storage changes yet. No claim of provider or Supabase billed egress savings from instrumentation itself. Canonical details in [Supabase Capacity workstream](workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md).
 
 ## 2026-10-09 — Tranche 1 EXACT BASELINE READ REUSE / PRODUCTION ACCEPTANCE — COMPLETE
 
