@@ -137,7 +137,8 @@ def test_sleeper_parallel_worker_context_is_explicit_and_aggregate_is_safe(caplo
     def probe():
         observed = observed_getter(getter, "sleeper")
         with ThreadPoolExecutor(max_workers=3) as executor:
-            list(executor.map(lambda _: copy_context().run(observed, url), range(3)))
+            futures = [executor.submit(copy_context().run, observed, url) for _ in range(3)]
+            assert all(future.result() for future in futures)
         return SimpleNamespace(fingerprint="a" * 64, week=5)
 
     with acquisition_cause("saved_session_probe"):
