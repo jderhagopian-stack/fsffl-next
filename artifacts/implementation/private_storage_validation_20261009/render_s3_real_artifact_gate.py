@@ -278,6 +278,7 @@ def run(*, workflow: bool = False):
                 if store.head(identity.tenant, digest) != len(packed):
                     raise RuntimeError("S3 HEAD byte length mismatch")
                 measured = []
+                s3_read_cpu_start = time.process_time()
                 for _ in range(REPS):
                     t1 = time.perf_counter()
                     loaded = prototype.get(identity)
@@ -290,7 +291,10 @@ def run(*, workflow: bool = False):
                     if decoded != original:
                         raise RuntimeError("governed model decoder semantic difference")
                     measured.append((time.perf_counter() - t1) * 1000)
+                s3_read_cpu_ms = (time.process_time() - s3_read_cpu_start) * 1000
+                pg_read_cpu_start = time.process_time()
                 pg_measurements = benchmark_pg_get_and_decode(row, raw)
+                pg_read_cpu_ms = (time.process_time() - pg_read_cpu_start) * 1000
                 # Confirm a fresh persistence/metadata instance can restart and read.
                 prototype.metadata.close()
                 reopened = HybridPrototype(store, Metadata(directory / "local-meta.sqlite"))
@@ -324,7 +328,10 @@ def run(*, workflow: bool = False):
                       f"get_rehydrate_p95_ms={percentile(measured, 0.95):.2f} "
                       f"pg_get_model_p50_ms={statistics.median(pg_measurements):.2f} "
                       f"pg_get_model_p95_ms={percentile(pg_measurements, 0.95):.2f} "
-                      f"samples={len(measured)} cpu_ms={cpu_ms:.2f} "
+                      f"samples={len(measured)} "
+                      f"s3_read_decoder_cpu_ms={s3_read_cpu_ms:.2f} "
+                      f"pg_read_decoder_cpu_ms={pg_read_cpu_ms:.2f} "
+                      f"total_case_cpu_ms={cpu_ms:.2f} "
                       f"process_peak_rss_bytes={peak_rss} "
                       f"model_decoder=PASS sha256=PASS restart=PASS corruption=PASS")
                 del source, original, raw, packed
