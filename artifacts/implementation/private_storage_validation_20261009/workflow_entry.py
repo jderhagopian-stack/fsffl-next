@@ -11,7 +11,7 @@ from render import Retry, TaskContext, Workflows
 app = Workflows(default_plan="flex", default_timeout=180)
 
 
-@app.task(name="preflight", retry=Retry(max_retries=0), timeout_seconds=60, plan="flex")
+@app.task(name="preflight", retry=Retry(max_retries=0, wait_duration_ms=0), timeout_seconds=60, plan="flex")
 def preflight(ctx: TaskContext) -> dict[str, object]:
     """Offline smoke of frozen PR #439 adapter; no credentials, DB or cloud."""
     import tempfile
@@ -38,7 +38,8 @@ def preflight(ctx: TaskContext) -> dict[str, object]:
 
 
 @app.task(
-    name="validate_real_artifacts", retry=Retry(max_retries=0),
+    name="validate_real_artifacts",
+    retry=Retry(max_retries=0, wait_duration_ms=0),
     timeout_seconds=180, plan="flex"
 )
 def validate_real_artifacts(ctx: TaskContext) -> dict[str, object]:
@@ -55,9 +56,8 @@ def validate_real_artifacts(ctx: TaskContext) -> dict[str, object]:
     from render_s3_real_artifact_gate import run
     try:
         return run(workflow=True)
-    except Exception as exc:
+    except Exception:
         # Protect task logs/state from backend error text, payloads or secrets.
-        # Do not use "from exc": suppress sensitive chained trace messages.
         raise RuntimeError("NO-GO: private validation failed; review sanitized gate") from None
 
 
