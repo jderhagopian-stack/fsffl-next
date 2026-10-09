@@ -1,5 +1,9 @@
 # FSFFL NEXT Architecture Overview
 
+## Intelligence lifecycle efficiency direction (2026-10-09)
+
+Storage destination follows **evidence dependency and lifecycle economics**, not vice versa. Management no longer assumes PostgreSQL-to-object bulk migration is optimal; hybrid is one nonproduction candidate. Governed Data → State → Forecast → Simulation/Value → Current/Dynasty → one publication owner → consumer remains unchanged. First classify global/provider-horizon evidence, season/versioned raw snapshot, immutable model/rules-scoped computation, league-State/team-specific outputs, exact published generation, last-good, PIT and replay. Preserve historical versions and license/tenant isolation. Profile acquisition requests, shared-cache rights, independent Current freshness, numerical output version, serialization, full-payload reads and browser response sizes before evaluating (A) optimized PostgreSQL, (B) optimized hybrid, (C) selective compact hybrid. No second lifecycle controller, no same-State publication skipping, no provider/model/refresh change. Source rights include commercial licensing for Sleeper/Razzball/CBS. All concrete decisions remain in [Supabase capacity workstream](../operations/workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md); neither PR #439 nor an object provider is production authorized.
+
 ## Storage architecture direction and production gate (2026-10-08)
 
 The existing PostgreSQL `PersistenceStore` owns all active and accepted runtime persistence, including bounded pooled connections (Tranche A) and idempotent batched Market first-writer writes (Tranche B). Tranche C whole-publication skipping was closed. A hybrid design—authoritative PostgreSQL metadata/PIT/publication and immutable compressed large object payloads through the same adapter—is a **nonproduction architectural candidate only**.
