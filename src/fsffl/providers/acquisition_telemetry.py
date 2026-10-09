@@ -54,7 +54,8 @@ def _family(provider: str, url: str) -> str:
         if "/schedule/nfl/regular/" in path:
             return "nfl_schedule"
         if "/stats/nfl/regular/" in path:
-            return "weekly_actuals" if len(path.rsplit("/", 2)) >= 3 else "season_actuals"
+            after = path.split("/stats/nfl/regular/", 1)[1]
+            return "weekly_actuals" if "/" in after else "season_actuals"
         for suffix, family in (
             ("/rosters", "rosters"), ("/users", "users"),
             ("/traded_picks", "traded_picks"),
@@ -89,11 +90,12 @@ class _Event:
     unknown_bytes: int = 0
     elapsed_ms: list[float] = field(default_factory=list)
     families: dict[str, int] = field(default_factory=dict)
+    statuses: dict[str, int] = field(default_factory=dict)
     targets: set[str] = field(default_factory=set)
 
     def record(
         self, *, url: str, elapsed_ms: float, body_bytes: int | None,
-        failed: bool,
+        failed: bool, status_class: str,
     ) -> None:
         family = _family(self.provider, url)
         # Identifiers exist only as non-logged in-memory digests during this event.
@@ -101,6 +103,7 @@ class _Event:
         with self.lock:
             self.requests += 1
             self.failed += int(failed)
+            self.statuses[status_class] = self.statuses.get(status_class, 0) + 1
             self.succeeded += int(not failed)
             self.body_bytes += body_bytes or 0
             self.unknown_bytes += int(body_bytes is None)
@@ -119,8 +122,12 @@ def response_body_read(response: Any) -> bytes:
     """Exactly the original one read; measure actual body bytes before decoding."""
     data = response.read()
     sample = _attempt.get()
-    if sample is not None and isinstance(data, bytes):
-        sample["body_bytes"] = len(data)
+    if sample is not None:
+        if isinstance(data, bytes):
+            sample["body_bytes"] = len(data)
+        status = getattr(response, "status", None)
+        if isinstance(status, int):
+            sample["status_class"] = str(status // 100) + "xx"
     return data
 
 
@@ -131,14 +138,17 @@ def observed_getter(getter: Callable[[str], Any], provider: str) -> Callable[[st
         event = _active.get()
         if event is None or event.provider != provider:
             return getter(url)
-        sample: dict[str, Any] = {"body_bytes": None}
+        sample: dict[str, Any] = {"body_bytes": None, "status_class": "unknown"}
         token = _attempt.set(sample)
         began = perf_counter()
         failed = False
         try:
             return getter(url)
-        except BaseException:
+        except BaseException as exc:
             failed = True
+            code = getattr(exc, "code", None)
+            if isinstance(code, int):
+                sample["status_class"] = str(code // 100) + "xx"
             raise
         finally:
             duration = (perf_counter() - began) * 1000
@@ -147,6 +157,7 @@ def observed_getter(getter: Callable[[str], Any], provider: str) -> Callable[[st
                 event.record(
                     url=url, elapsed_ms=duration,
                     body_bytes=sample["body_bytes"], failed=failed,
+                    status_class=sample["status_class"],
                 )
             except Exception:
                 # Observability must never become a provider failure.
@@ -198,6 +209,8 @@ def _emit(event: _Event, result: Any, failure: str | None) -> None:
             "request_p50_ms": _nearest(event.elapsed_ms, 0.50),
             "request_p95_ms": _nearest(event.elapsed_ms, 0.95),
             "families": dict(sorted(event.families.items())),
+            "status_classes": dict(sorted(event.statuses.items())),
+            "cohort": sha256(f"{event.provider}|{event.horizon}|{event.season}|{event.week}".encode()).hexdigest()[:16],
             "cache": "miss" if event.requests else "not_observed",
             "result": "failed" if failure is not None else "ok",
             "error_class": failure, "source_version":
