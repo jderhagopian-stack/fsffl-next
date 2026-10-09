@@ -1,5 +1,16 @@
 # Supabase Capacity & Scalability Recovery
 
+## 2026-10-09 — MANAGEMENT AUTHORIZATION / Intelligence Lifecycle Efficiency Tranche 1
+
+**Management ACCEPTS the October 9 Technical Intelligence Lifecycle Efficiency Gate.** Authorized **Tranche 1 ONLY: exact-authority preseason forecast baseline execution-scoped read-through reuse**. Begin from GitHub main `60c4607fc5945eac6d1b08096dd0e7d48a8b8f9a`. Checkpoint this authorization BEFORE implementation. A+B accepted, C whole-publication skip CLOSED, provider-cohort acquisition/telemetry and presentation content reuse NOT authorized, and draft hybrid PR #439 remains a candidate.
+
+**Scope and acceptance:** Reproduce prior 11 calls / 10,679,328 logged serialized JSON bytes / 3,454.41 ms summed DB time to a retained preseason baseline in one restored journey, and reduce to at most one full DB read per exact league, season, model, governed artifact fingerprint and owner within that execution. Favor narrow bounded execution-context reuse, never unbounded or long-lived process cache; preserve authoritative invalidation, tenant/team/State isolation and last-good/legacy fallback. Require unchanged Forecast, Current Position & Depth, Intrinsic, PIT, replay, downstream outputs, manifest/pointer publication and no-silent-heavy-refresh. Test cold/restart/multi-league/season/model changes, baseline fallback and concurrent isolation; compare SQL counts, logical serialized bytes, actual wall-clock and p95, and peak RSS, with independent before/after hosted check. **Do not turn logical byte savings into billed egress or sum of SQL latency into user-visible wall time.**
+
+**Execution contract:** Focused tests during changes; ONE full suite on exact stable merge-ready head (not every push); accept head before merge/deploy; verify deployed SHA and bounded hosted saved-session/read behavior without initiating provider refresh. Stop/rollback for any analytical mismatch, memory exhaustion, new heavy refresh, incorrect reuse, or failure to measure hosted effects. Document actual measured deltas and terminal status before returning to Management. Commercial agreements remain a future post-validation step; no licensing/pricing reopening.
+
+**Hard exclusions:** No provider source, model, refresh policy, schema, data retention, migration, infrastructure or publication behavior changes; do not start Career #405 PR2, Supabase D-F, issue #436, provider cohort instrumentation or presentation content reuse.
+
+
 ## 2026-10-09 — Intelligence Lifecycle Efficiency: TECHNICAL MEASUREMENT GATE / MANAGEMENT DECISION
 
 **Management authority correction (supersedes the licensing-prerequisite language in earlier 2026-10-09 historical checkpoints):** FSFFL NEXT's provider commercial strategy is settled: **develop/validate first, pursue provider agreements later before commercialization**. This technical tranche must **not** launch provider negotiations, licensing reviews or a new commercialization workstream, nor make them a prerequisite. Retain all existing use boundaries, `usage_class`, source IDs and provenance. Every provider stays substitutable through governed acquisition/normalization adapters. Hybrid prototype PR #439 is *candidate*, not selected architecture; Supabase A (pool) and B (market batching) accepted; C whole-publication skipping CLOSED.
