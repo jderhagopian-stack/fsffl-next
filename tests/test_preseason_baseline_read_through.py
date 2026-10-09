@@ -5,6 +5,8 @@ the same authorized Forecast authority through real scoring/decoder logic must
 be byte-for-byte identical, with <=1 full persistence payload read.
 """
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+import sys
 from dataclasses import replace
 from datetime import timedelta
 from statistics import median
@@ -19,6 +21,8 @@ from fsffl.product.forecast_resilience import (
     make_resilient_forecast_loader,
 )
 from fsffl.forecast.preseason_baseline import baseline_from_runtime
+# Keep existing governed test fixtures local to the test directory.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_preseason_forecast_baseline import _raw_qb_runtime, _runtime, _state, _evidence
 
 
