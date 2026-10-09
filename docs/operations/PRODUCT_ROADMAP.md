@@ -1,5 +1,10 @@
 # FSFFL NEXT — Product Roadmap
 
+## 2026-10-09 — Provider acquisition instrumentation deployed; source-cohort optimization remains gated
+
+Management accepted Oct 9 source-capacity diagnosis and authorized observation **only**. [PR #442](https://github.com/jderhagopian-stack/fsffl-next/pull/442) passed the exact-head stable suite (**2,262 passed**) and merged as `db643f3368a0ccc21bd01dd616b16e066acf2741`. Existing Render service successfully deployed same executable at main SHA `2f89e83edbfbf31f72157735ced5fff4b0c4de5c`, deployment `dep-db4n3tvlk1mc73d80q4g`, on 2026-10-09 23:01:28 UTC, without plan/configuration changes. Initial startup full/ready under memory budget; no natural `FSFFL_PROVIDER_ACQUISITION` events captured yet, so **actual request/response-byte attribution remains open and unmeasured**. This does not authorize provider cohort reuse, new cache, cadence changes, historical observation deletion, source/blend change or production storage migration. When true natural request/byte/trigger data establishes repeated same-semantics acquisition, propose the smallest separately governed reuse optimization. Draft storage PRs #439/#441 remain independent, and commercialization rights decision stays closed. Canonical detail lives in [Supabase Capacity & Scalability](workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md).
+
+
 ## 2026-10-09 — Intelligence Lifecycle Tranche 1 production accepted
 
 A narrow exact preseason-baseline decode/read reuse is **accepted and live** from [PR #440](https://github.com/jderhagopian-stack/fsffl-next/pull/440), merge `31e68b0f4c48d5094353290f9c1ff8c1808d1452`, Render `dep-db4hs7vavr4c73f9pal0`. Real restore: full JSONB-derived baseline payload SELECT count 11→1, logged logical bytes -9.708MB, SQL read elapsed sum -2.656s and all-call SQL p95 498.05→398.11ms; cheap metadata reads rise to 11. No browser/user-visible latency or true process peak RSS causality claimed. Cache is short-lived, strict metadata-version scoped, and rescores each LeagueState. Accepted pooling/batching, first-writer Market/PIT, source/refresh model, publication last-good all unchanged.
