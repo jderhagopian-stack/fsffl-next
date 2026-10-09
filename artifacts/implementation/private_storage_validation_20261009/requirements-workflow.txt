@@ -1,0 +1,4 @@
+# Isolated Render Workflow only; never install in production serving.
+# Uses existing FSFFL project '.[web]' for psycopg and accepted model decoders.
+render>=1.0.1,<2
+boto3>=1.39,<2
