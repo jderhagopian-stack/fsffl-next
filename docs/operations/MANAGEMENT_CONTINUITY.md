@@ -1,12 +1,27 @@
 # FSFFL NEXT — Management Continuity
 
-Updated: 2026-10-08  
+Updated: 2026-10-09  
 Authority: canonical durable record of Management direction, sequencing, deferred work, and roadmap changes across Management chats.
 
 This document answers **where Management is going and why**.  
 For **what is happening right now**, read [CURRENT_OPERATIONS.md](CURRENT_OPERATIONS.md).  
 For exact tranche implementation evidence, read the linked workstream checkpoint.  
 For the broad long-range capability plan, read [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and [../FSFFL_NEXT_PRODUCT_PRIORITIES.md](../FSFFL_NEXT_PRODUCT_PRIORITIES.md).
+
+## 2026-10-09 — Management correction: optimize the INTELLIGENCE LIFECYCLE before choosing storage
+
+**Authority:** Management explicitly retracts any assumption that large JSONB artifacts must move wholesale into object storage. The hybrid prototype and draft PR #439 are **one candidate**, not an accepted production selection. This is a bounded read-only, no-runtime-change evaluation against current main `554225c66d32646beccb0ddf091fe01dd5bf1cd8`, production Render unchanged on accepted A+B. Whole-publication C skipping stays CLOSED; do not pursue new dependency-watermark engineering. Exact evidence/classifications and 1/10/50/100 league sensitivity model: `docs/operations/workstreams/SUPABASE_CAPACITY_AND_SCALABILITY.md`.
+
+**Measured:**
+- Current Supabase database **596,110,483 B** allocated, 445 PIT States and 169,923 Market first-writer observations. Presentation surfaces **2,525 / 155,170,202 B compressed JSONB datum**, compared with Forecast **397 / 63,057,386 B** and Simulation **295 / 27,491,129 B**. Presentation SQL JSON text is ~995 MB; none of this can be treated as isolated reclaimable physical files or as disposable historical data.
+- League-specific Sleeper full State fetch includes league, roster, users, picks, global NFL player catalog, NFL season schedule/state, and weekly matchups. Cheap change probe still issues multiple HTTP requests and is not exhaustive. Default configured full-provider interval 3600 s is NOT observed automatic refresh cadence. Four source full-season Forecast; ROS CBS/Razzball plus Sleeper actuals; direct in-season routes are acquisition-active. Normalize/score under league rules before 50,000-trial Simulation and Value; Current and late Dynasty readiness can change after same-State core publication. Single publication owner retains exact generation/manifest/hash/last-good and PIT.
+- 2026 CBS ROS snapshot revision history **31/31 distinct contents**, Razzball **23/22**, latest player overlap **282**, unique provider coverage materially differs. No observed accuracy/coverage backtests justify dropping one source or changing blend. Source HTTP counts, actual network payload bytes, refresh trigger distribution, cache hit/miss, SQL duplicate-byte classes, real GET response bytes, p95 and cloud costs remain unmeasured.
+- Current app has accepted A connection reuse, B market batches, queued same-State checkpoint coalescing, metadata-first presentation read bundles, bounded existing caches. Never erase these gains or recreate a second orchestrator. Sample restart previously used 25 exact reads/~22.3 MB logged serialized data; repeat API and Atlas retries were observed in one Safari session but are not proof of population traffic or cache rates.
+- **Commercial source licensing is a blocker to address before scale:** Sleeper API noncommercial free use and commercial inquiry; Razzball and CBS published noncommercial projection/content restrictions; FFToday/NFL Fantasy and other scopes require legal review. No public scraping license assumption. Tenant/private data and source license terms also govern shared caches and PIT retention.
+
+**Ranked next Management-controlled work, not implemented:** (1) approved provider-rights verification + privacy-safe acquisition/refresh/size/trigger ledger and licensed season/provider cohort sharing; (2) exactly contract-preserving sub-payload compression/dedup of eight presentation surfaces, preserving every generation and materially changing Current/Dynasty outputs; (3) narrow per-request/full-payload read and repeated serialization reuse inside current metadata/reader boundary, with resource instrumentation. Workload optimization precedes object destination selection. A optimized PG is simplest near-term, B optimized workload + hybrid possible later, C selective compact/hybrid merits a gated semantic and consumer-parity test; **zero verified incremental savings** claimed. Baseline 12 fresh publications/league/month modeled ~0.169 GB PostgreSQL combined derived+Market growth/league-year, rising to ~16.9 GB at 100 leagues before other families, with 25%-presentation-reuse an unproven sensitivity only. Neither proposed sharing nor dedup qualifies as blanket publication suppression.
+
+**Next explicit authorization if Management chooses:** 1 narrowly scoped instrumentation/source-rights ledger and a private content-equivalence POC with no production source/refresh/model/retention changes; wait for Management before code. Phase 2 private real-artifact zlib/S3 proof may proceed separately ONLY if safe private test bridge is available. A+B remain ACCEPTED, C skip CLOSED; Career #405 PR2, other Supabase D-F and Player Intelligence #436 remain paused. Product roadmap retained.
 
 ## 2026-10-08 — Phase 2 nonproduction storage validation: NO-GO / private export blocker
 
