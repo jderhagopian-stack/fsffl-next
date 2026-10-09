@@ -41,7 +41,7 @@ def percentile(values, q):
 
 
 class S3Objects:
-    """Only keys beneath this run's random private prefix; conditional immutable puts."""
+    """Isolated unique-prefix benchmark. Atomic S3 behavior is independently gated."""
 
     def __init__(self, client, prefix):
         self.client = client
@@ -60,19 +60,18 @@ class S3Objects:
             return 0
 
     def put_once(self, tenant, digest, packed):
-        from botocore.exceptions import ClientError
+        # This is a one-process, random-prefix measurement only. Never treat
+        # the check-then-put test operation as an atomic production writer.
         key = self.key(tenant, digest)
-        try:
-            self.client.put_object(
-                Bucket=BUCKET, Key=key, Body=packed, IfNoneMatch="*",
-                ContentType="application/octet-stream",
-            )
-            self.written.add(key)
-        except ClientError as exc:
-            if self.http_status(exc) not in (409, 412):
-                raise RuntimeError("S3 conditional immutable PUT failed") from None
+        if key in self.written:
             if self.get(tenant, digest) != packed:
-                raise RuntimeError("S3 immutable-key content collision") from None
+                raise RuntimeError("S3 immutable-key content collision")
+            return
+        self.client.put_object(
+            Bucket=BUCKET, Key=key, Body=packed,
+            ContentType="application/octet-stream",
+        )
+        self.written.add(key)
 
     def get(self, tenant, digest):
         from botocore.exceptions import ClientError
@@ -84,7 +83,7 @@ class S3Objects:
             finally:
                 response["Body"].close()
         except ClientError as exc:
-            if self.http_status(exc) in (403, 404):
+            if self.http_status(exc) == 404:
                 raise FileNotFoundError("S3 object inaccessible/missing") from None
             raise OSError("S3 get failed") from None
 
@@ -241,7 +240,6 @@ def run():
         # Check bucket is private, bounded and exactly the pre-authorized bucket.
         client.head_bucket(Bucket=BUCKET)
         rows = read_two_rows()
-        probe_conditional_put(store)
         with tempfile.TemporaryDirectory(prefix="fsffl-private-p2-") as td:
             # SQLite metadata and full payload objects exist only transiently.
             directory = Path(td)
@@ -323,6 +321,9 @@ def run():
                       f"model_decoder=PASS sha256=PASS restart=PASS corruption=PASS")
                 del source, original, raw, packed
                 gc.collect()
+        # Probe atomic first-writer semantics AFTER collecting real data metrics.
+        # Missing conditional-write support is an explicit backend NO-GO.
+        probe_conditional_put(store)
         status = "GO — private two-artifact proof only; no production integration decision"
     finally:
         try:
