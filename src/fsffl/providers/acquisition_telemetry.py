@@ -90,6 +90,8 @@ class _Event:
     unknown_bytes: int = 0
     elapsed_ms: list[float] = field(default_factory=list)
     families: dict[str, int] = field(default_factory=dict)
+    family_bytes: dict[str, int] = field(default_factory=dict)
+    family_unknown: dict[str, int] = field(default_factory=dict)
     statuses: dict[str, int] = field(default_factory=dict)
     targets: set[str] = field(default_factory=set)
 
@@ -107,6 +109,8 @@ class _Event:
             self.succeeded += int(not failed)
             self.body_bytes += body_bytes or 0
             self.unknown_bytes += int(body_bytes is None)
+            self.family_bytes[family] = self.family_bytes.get(family, 0) + (body_bytes or 0)
+            self.family_unknown[family] = self.family_unknown.get(family, 0) + int(body_bytes is None)
             self.retries += int(digest in self.targets)
             if len(self.targets) < 128:
                 self.targets.add(digest)
@@ -209,6 +213,8 @@ def _emit(event: _Event, result: Any, failure: str | None) -> None:
             "request_p50_ms": _nearest(event.elapsed_ms, 0.50),
             "request_p95_ms": _nearest(event.elapsed_ms, 0.95),
             "families": dict(sorted(event.families.items())),
+            "family_response_body_bytes": dict(sorted(event.family_bytes.items())),
+            "family_unknown_body_count": dict(sorted(event.family_unknown.items())),
             "status_classes": dict(sorted(event.statuses.items())),
             "cohort": sha256(f"{event.provider}|{event.horizon}|{event.season}|{event.week}".encode()).hexdigest()[:16],
             "cache": "miss" if event.requests else "not_observed",
