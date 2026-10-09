@@ -21,5 +21,5 @@ jobs:
           python-version: '3.11'
       - name: Install
         run: python -m pip install -e '.[dev,web]'
-      - name: Focused Dynasty and Tranche A persistence regressions
-        run: pytest -q tests/test_dynasty_presentation_handoff.py tests/test_postgres_connection_pool.py tests/test_persistence_metadata_reads.py tests/test_market_batch_persistence.py tests/test_persistence_contracts.py tests/test_atomic_intelligence_publication.py tests/test_preseason_forecast_baseline.py tests/test_preseason_baseline_read_through.py
+      - name: Focused Dynasty, persistence, and provider acquisition regressions
+        run: pytest -q tests/test_dynasty_presentation_handoff.py tests/test_postgres_connection_pool.py tests/test_persistence_metadata_reads.py tests/test_market_batch_persistence.py tests/test_persistence_contracts.py tests/test_atomic_intelligence_publication.py tests/test_preseason_forecast_baseline.py tests/test_preseason_baseline_read_through.py tests/test_provider_acquisition_telemetry.py tests/test_provider_sleeper_live.py tests/test_sleeper_live_parallel_acquisition.py tests/test_cbs_live.py tests/test_fftoday_live.py tests/test_nfl_fantasy_live.py tests/test_in_season_projection_sources.py

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from contextvars import copy_context
+
+from fsffl.providers.acquisition_telemetry import observe_acquisition, observed_getter, response_body_read
+
 import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor
@@ -48,20 +52,23 @@ class SleeperLiveSource:
     ) -> None:
         if max_workers < 1:
             raise ValueError("Sleeper max_workers must be positive")
-        self._http_get_json = http_get_json or _default_get_json
+        self._http_get_json = observed_getter(http_get_json or _default_get_json, "sleeper")
         self._clock = clock or (lambda: datetime.now(UTC))
         self._max_workers = max_workers
 
+    @observe_acquisition("sleeper", "catalog", cause="unknown")
     def fetch_nfl_player_universe(self) -> Any:
         """Acquire Sleeper's current NFL player catalog without league-specific state."""
 
         return self._get("/players/nfl")
 
+    @observe_acquisition("sleeper", "schedule", cause="unknown")
     def fetch_nfl_regular_season_schedule(self, *, season: int) -> Any:
         """Acquire Sleeper's regular-season schedule for one NFL season."""
 
         return self._nfl_regular_season_schedule(season)
 
+    @observe_acquisition("sleeper", "probe", cause="saved_session_probe")
     def fetch_sync_probe(self, *, league_external_id: str) -> SleeperSyncProbe:
         """Fingerprint likely league changes without rebuilding canonical State.
 
@@ -104,7 +111,7 @@ class SleeperLiveSource:
             max_workers=worker_count,
             thread_name_prefix="fsffl-sleeper-probe",
         ) as executor:
-            futures = {key: executor.submit(loader) for key, loader in tasks.items()}
+            futures = {key: executor.submit(copy_context().run, loader) for key, loader in tasks.items()}
             results = {key: futures[key].result() for key in tasks}
 
         probe_payload = {
@@ -134,6 +141,7 @@ class SleeperLiveSource:
             fingerprint=hashlib.sha256(encoded).hexdigest(),
         )
 
+    @observe_acquisition("sleeper", "league_state", cause="unknown")
     def fetch_latest(self, *, league_external_id: str) -> ProviderSnapshot:
         league_id = league_external_id.strip()
         if not league_id:
@@ -165,7 +173,7 @@ class SleeperLiveSource:
             max_workers=worker_count,
             thread_name_prefix="fsffl-sleeper",
         ) as executor:
-            futures = {key: executor.submit(loader) for key, loader in tasks.items()}
+            futures = {key: executor.submit(copy_context().run, loader) for key, loader in tasks.items()}
             results = {key: futures[key].result() for key in tasks}
 
         payload = {
@@ -270,4 +278,4 @@ class SleeperLiveSource:
 def _default_get_json(url: str) -> Any:
     request = Request(url, headers={"User-Agent": "fsffl-next/0.1"})
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider base
-        return json.loads(response.read().decode("utf-8"))
+        return json.loads(response_body_read(response).decode("utf-8"))

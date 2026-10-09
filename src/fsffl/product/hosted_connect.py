@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fsffl.providers.acquisition_telemetry import acquisition_cause, log_reuse
+
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
@@ -317,6 +319,7 @@ def install_hosted_connect_routes(
 
         def work() -> None:
             if already_loaded:
+                log_reuse(provider="sleeper", cause="connection", reuse="active_connection")
                 _logger.info(
                     "FSFFL Sleeper connect reused active league user=%s league=%s",
                     user_id,
@@ -329,7 +332,8 @@ def install_hosted_connect_routes(
                 ):
                     intelligence_reconciler(user_id)
                 return
-            league_state = state_loader(league_external_id)
+            with acquisition_cause("connection"):
+                league_state = state_loader(league_external_id)
             if not _matches_sleeper_league(league_state, league_external_id):
                 raise ValueError("Sleeper state loader returned a different league")
             current_job = jobs.current(user_id)
@@ -443,7 +447,8 @@ def install_hosted_connect_routes(
             cursor: SyncCursorRecord | None = None
             if persistence_store is not None and sync_probe_loader is not None:
                 try:
-                    probe = sync_probe_loader(league_external_id)
+                    with acquisition_cause("unknown"):
+                        probe = sync_probe_loader(league_external_id)
                     cursor = persistence_store.get_sync_cursor(
                         provider="sleeper",
                         scope_kind=_SYNC_SCOPE_KIND,
@@ -457,6 +462,7 @@ def install_hosted_connect_routes(
                             full_refresh_seconds=full_refresh_seconds,
                         )
                     ):
+                        log_reuse(provider="sleeper", cause="unknown", reuse="state_current")
                         _logger.info(
                             "FSFFL Sleeper incremental sync reused stored state league=%s week=%s",
                             league_external_id,
@@ -479,7 +485,8 @@ def install_hosted_connect_routes(
                     )
                     probe = None
 
-            league_state = state_loader(league_external_id)
+            with acquisition_cause("unknown"):
+                league_state = state_loader(league_external_id)
             if not _matches_sleeper_league(league_state, league_external_id):
                 raise ValueError("Sleeper state loader returned a different league")
             changed = (
@@ -678,7 +685,8 @@ def install_hosted_connect_routes(
             # Elapsed age governs when we perform this cheap probe; it is never
             # permission by itself to launch the heavyweight provider/materialization
             # path. A full refresh is due only when provider facts actually changed.
-            probe = sync_probe_loader(league_external_id)
+            with acquisition_cause("saved_session_probe"):
+                probe = sync_probe_loader(league_external_id)
         except Exception as exc:
             _logger.info(
                 "FSFFL Sleeper freshness check unavailable league=%s error=%s",

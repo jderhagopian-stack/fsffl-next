@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fsffl.providers.acquisition_telemetry import observe_acquisition, observed_getter, response_body_read
+
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Callable, Mapping, Sequence
@@ -69,9 +71,10 @@ class SleeperWeeklyStatsSource:
     state_url = "https://api.sleeper.app/v1/state/nfl"
 
     def __init__(self, *, http_get_json: JsonGetter | None = None, clock: Clock | None = None) -> None:
-        self._http_get_json = http_get_json or _default_get_json
+        self._http_get_json = observed_getter(http_get_json or _default_get_json, "sleeper")
         self._clock = clock or (lambda: datetime.now(UTC))
 
+    @observe_acquisition("sleeper", "state", cause="unknown")
     def fetch_nfl_state(self) -> SleeperNflState:
         captured = self._clock()
         if captured.tzinfo is None:
@@ -119,6 +122,7 @@ class SleeperWeeklyStatsSource:
             leg=optional_coordinates["leg"],
         )
 
+    @observe_acquisition("sleeper", "season_actuals", cause="unknown")
     def fetch_season_player(
         self,
         *,
@@ -150,6 +154,7 @@ class SleeperWeeklyStatsSource:
             captured_at=captured.astimezone(UTC),
         )
 
+    @observe_acquisition("sleeper", "season_actuals", cause="unknown")
     def fetch_season(self, *, season: int) -> tuple[SleeperSeasonStatLine, ...]:
         """Acquire provider-owned whole-season regular-season totals.
 
@@ -181,6 +186,7 @@ class SleeperWeeklyStatsSource:
                 output.append(line)
         return tuple(sorted(output, key=lambda item: item.player_id))
 
+    @observe_acquisition("sleeper", "weekly_actuals", cause="unknown")
     def fetch_week(self, *, season: int, week: int) -> tuple[SleeperWeeklyStatLine, ...]:
         if season < 2000:
             raise ValueError("Sleeper stats season is invalid")
@@ -308,4 +314,4 @@ def _default_get_json(url: str) -> Any:
         raise ValueError("Sleeper weekly stats source only permits fixed NFL state/stats URLs")
     request = Request(url, headers={"User-Agent": "fsffl-next/0.1"})
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider base
-        return json.loads(response.read().decode("utf-8"))
+        return json.loads(response_body_read(response).decode("utf-8"))
