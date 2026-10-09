@@ -135,6 +135,41 @@ def read_two_rows():
     return rows
 
 
+def benchmark_pg_get_and_decode(row, expected_canonical):
+    """Bounded like-for-like current SQL+model decode. Never modify the DB."""
+    import psycopg
+    from psycopg.rows import dict_row
+    samples = []
+    with psycopg.connect(
+        os.environ["FSFFL_DATABASE_URL"], row_factory=dict_row,
+        connect_timeout=6, options=f"-c statement_timeout={PG_TIMEOUT_MS}"
+    ) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SET TRANSACTION READ ONLY")
+            for _ in range(REPS):
+                start = time.perf_counter()
+                cursor.execute(
+                    "SELECT payload FROM fsffl.derived_artifact WHERE id = %s",
+                    (row["id"],))
+                selected = cursor.fetchone()
+                if selected is None:
+                    raise RuntimeError("PostgreSQL comparison record disappeared")
+                decoded = decode_governed(
+                    row["artifact_kind"], selected["payload"])
+                if _bytes_for_comparison(selected["payload"]) != expected_canonical:
+                    raise RuntimeError("PostgreSQL comparison bytes changed")
+                if decoded is None:
+                    raise RuntimeError("PostgreSQL governed decode absent")
+                samples.append((time.perf_counter() - start) * 1000)
+        connection.rollback()
+    return samples
+
+
+def _bytes_for_comparison(payload):
+    from hybrid_adapter import _bytes
+    return _bytes(payload)
+
+
 def build_record(row, payload):
     from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
     return ReusableArtifactRecord(
@@ -240,7 +275,6 @@ def run():
                 for _ in range(REPS):
                     t1 = time.perf_counter()
                     loaded = prototype.get(identity)
-                    measured.append((time.perf_counter() - t1) * 1000)
                     if loaded is None or _bytes(loaded["payload"]) != raw:
                         raise RuntimeError("S3 exact content reconstruction failed")
                     hydrated = build_record(row, loaded["payload"])
@@ -249,6 +283,8 @@ def run():
                     decoded = decode_governed(kind, loaded["payload"])
                     if decoded != original:
                         raise RuntimeError("governed model decoder semantic difference")
+                    measured.append((time.perf_counter() - t1) * 1000)
+                pg_measurements = benchmark_pg_get_and_decode(row, raw)
                 # Confirm a fresh persistence/metadata instance can restart and read.
                 prototype.metadata.close()
                 reopened = HybridPrototype(store, Metadata(directory / "local-meta.sqlite"))
@@ -280,6 +316,8 @@ def run():
                       f"encode_ms={encode_ms:.2f} put_ms={put_ms:.2f} "
                       f"get_rehydrate_p50_ms={statistics.median(measured):.2f} "
                       f"get_rehydrate_p95_ms={percentile(measured, 0.95):.2f} "
+                      f"pg_get_model_p50_ms={statistics.median(pg_measurements):.2f} "
+                      f"pg_get_model_p95_ms={percentile(pg_measurements, 0.95):.2f} "
                       f"samples={len(measured)} cpu_ms={cpu_ms:.2f} "
                       f"process_peak_rss_bytes={peak_rss} "
                       f"model_decoder=PASS sha256=PASS restart=PASS corruption=PASS")
