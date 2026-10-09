@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fsffl.providers.acquisition_telemetry import observe_acquisition, observed_getter, response_body_read
+
 import re
 from datetime import UTC, datetime
 from typing import Callable
@@ -33,9 +35,10 @@ class FFTodayLiveProjectionSource:
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
-        self._http_get_text = http_get_text or _default_get_text
+        self._http_get_text = observed_getter(http_get_text or _default_get_text, "fftoday")
         self._clock = clock or (lambda: datetime.now(UTC))
 
+    @observe_acquisition("fftoday", "season")
     def fetch_latest(self, *, season: int) -> CurrentProjectionSnapshot:
         captured = self._clock()
         if captured.tzinfo is None:
@@ -356,7 +359,7 @@ def _default_get_text(url: str) -> str:
         },
     )
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider URL
-        text = response.read().decode("utf-8", errors="replace")
+        text = response_body_read(response).decode("utf-8", errors="replace")
     if "Projections" not in text or "Updated:" not in text:
         raise ValueError("FFToday hosted response did not contain projection content")
     return text
