@@ -1,6 +1,6 @@
 # Supabase Capacity & Scalability Recovery
 
-## 2026-10-09 — Provider acquisition instrumentation: authorized implementation (NOT ACCEPTED)
+## 2026-10-09 — Provider acquisition instrumentation: merged / hosted acceptance pending
 
 Management accepted the Oct 9 read-only capacity findings, including the distinct canonical/mapped projection-history representations, 23,807 latest-24h observation rows, largely unchanged numeric cells across like-for-like revisions but changed whole-snapshot identities and legitimate PIT/history obligations. **Only EVENT/REQUEST/BYTES observability is authorized.** No cohort reuse, snapshot deletion/deduplication, source weighting/selection, refresh cadence, scoring, model, database schema, storage architecture, billing or production deployment change authorized by this checkpoint.
 
@@ -10,7 +10,7 @@ Starting main `234d7f510da0a4ad953e32ea5617b73d70d5dac1`, isolated draft [PR #44
 
 **Promotion gate:** focused new and existing provider tests, one ready-for-review exact-head Stable full suite, verified merge/deploy SHA, then **naturally occurring** bounded hosted request/response bytes, families, p95 and resource effect (no forced provider refresh) before labeling deployed/accepted. Prove no altered HTTP count, output/provenance, refresh cadence, tenant boundary, publication or memory/latency regression. Roll back by environment toggle/deploy rollback if violated. No measured provider savings claimed. Independently owned draft PRs #439/#441 remain untouched; real S3-artifact comparisons belong exclusively to #441.
 
-**Status at checkpoint: DRAFT PR #442, FOCUSED CI PENDING, NOT DEPLOYED; return acceptance only after hosted evidence.**
+**Implementation/code-validation checkpoint:** PR #442 final head `69c07cfc965b94b4cd6dc2cd4ed7ed7338c61d1a` passed focused CI `38001309606` (**84 passed**) and ONE final exact-head Stable full suite `38001394687` (**2,262 passed, 1 warning; exact pre/post SHA checks passed**). Squash merge main `db643f3368a0ccc21bd01dd616b16e066acf2741`. Three additional live/diagnostic workflows succeeded at final head; no source/semantic parity regression in focused/full suites. A preceding non-final head's corrective live-source trace had failed on insufficient healthy providers and did not constitute this gate; the final-head trace succeeded. The recorder now includes **body-byte breakdown by endpoint family** with unknown-byte counts, not just total event bytes. It is **NOT DEPLOYED**; there are **NO NATURAL HOSTED REQUEST/BODY-BYTES OR PERFORMANCE MEASUREMENTS** and no claimed acquired-provider savings. The Render integration lists sole workspace `My Workspace` but requires user confirmation before access; do not select it without permission. Await exact-SHA deployment on existing service and naturally occurring acquisition events (no forced refresh), then compare request bytes/count/p95/RSS and source authority. Status **MERGED / HOSTED ACCEPTANCE PENDING**.
 
 
 ## 2026-10-09 — Tranche 1 EXACT BASELINE READ REUSE / PRODUCTION ACCEPTANCE — COMPLETE
