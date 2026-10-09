@@ -266,6 +266,9 @@ def run():
                 else:
                     raise RuntimeError("corruption did not fail closed")
                 reopened.metadata.close()
+                # The second artifact needs its own fresh SQLite connection.
+                prototype = HybridPrototype(
+                    store, Metadata(directory / "local-meta.sqlite"))
                 # Metric definitions: PostgreSQL compressed datum is NOT a physical
                 # per-row disk saving; p95 here is 9 sampled S3+decoder round trips.
                 cpu_ms = (time.process_time() - start_cpu) * 1000
