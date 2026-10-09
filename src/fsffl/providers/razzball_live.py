@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fsffl.providers.acquisition_telemetry import observe_acquisition, observed_getter, response_body_read
+
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -79,9 +81,10 @@ class RazzballLiveProjectionSource:
     }
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
-        self._http_get_text = http_get_text or _default_get_text
+        self._http_get_text = observed_getter(http_get_text or _default_get_text, "razzball")
         self._clock = clock or (lambda: datetime.now(UTC))
 
+    @observe_acquisition("razzball", "season")
     def fetch_latest(self) -> RazzballProjectionSnapshot:
         captured_at = self._clock()
         if captured_at.tzinfo is None:
@@ -190,4 +193,4 @@ def _default_get_text(url: str) -> str:
         raise ValueError("Razzball live source only permits fixed HTTPS projection URLs")
     request = Request(url, headers={"User-Agent": "fsffl-next/0.1 (+private-beta projection research)", "Accept": "text/html,application/xhtml+xml"})
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider URL
-        return response.read().decode("utf-8", errors="replace")
+        return response_body_read(response).decode("utf-8", errors="replace")
