@@ -10,8 +10,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 class _Retry:
-    def __init__(self, max_retries: int = 3):
+    def __init__(self, max_retries: int = 3, wait_duration_ms: int = 0):
         self.max_retries = max_retries
+        self.wait_duration_ms = wait_duration_ms
 
 class _Workflows:
     def __init__(self, **kwargs):
@@ -40,6 +41,7 @@ def test_registration_and_no_argument_credentials(monkeypatch):
     for name, (task, settings) in entry.app.tasks.items():
         assert task.__code__.co_argcount == 1
         assert settings["retry"].max_retries == 0
+        assert settings["retry"].wait_duration_ms == 0
         assert settings["plan"] == "flex"
 
 def test_synthetic_preflight_no_secrets(monkeypatch):
