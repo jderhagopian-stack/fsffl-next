@@ -25,6 +25,7 @@ from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObser
 from fsffl.providers.sleeper_live import SleeperLiveSource
 from fsffl.providers.sleeper_snapshot import SleeperSnapshotNormalizer
 from fsffl.providers.sleeper_weekly_stats import (
+    SleeperNflState,
     SleeperSeasonStatLine,
     SleeperWeeklyStatLine,
     SleeperWeeklyStatsSource,
@@ -42,6 +43,31 @@ from .p0_future_forecast_provider import (
     P0FutureForecastContractMaterialization,
     build_p0_future_forecast_contract,
 )
+
+
+class _CachedSleeperWeeklyStatsSource:
+    """Expose this run's validated Sleeper feed to accepted supplement logic."""
+
+    def __init__(
+        self,
+        *,
+        nfl_state: SleeperNflState,
+        lines_by_week: Mapping[int, tuple[SleeperWeeklyStatLine, ...]],
+    ) -> None:
+        self._nfl_state = nfl_state
+        self._lines_by_week = lines_by_week
+
+    def fetch_nfl_state(self) -> SleeperNflState:
+        return self._nfl_state
+
+    def fetch_week(
+        self, *, season: int, week: int
+    ) -> tuple[SleeperWeeklyStatLine, ...]:
+        if season != self._nfl_state.season:
+            raise ValueError("cached Sleeper weekly season differs from acquired NFL state")
+        if week not in self._lines_by_week:
+            raise ValueError("requested Sleeper week was not acquired in this run")
+        return self._lines_by_week[week]
 
 
 def out_of_cohort_p0_subject_ids(
@@ -422,10 +448,30 @@ def build_live_p0_rostered_candidate_forecasts(
         lines_by_week=weekly,
         completed_through_week=completed,
     )
+    from fsffl.forecast.in_season_orchestration import (
+        build_current_ros_fumbles_lost_supplement_observations,
+    )
+
+    cached_stats = _CachedSleeperWeeklyStatsSource(
+        nfl_state=nfl_state,
+        lines_by_week=weekly,
+    )
+    ros_fumbles_lost: tuple[ForecastObservation, ...] = ()
+    fumbles_supplement_failure: str | None = None
+    try:
+        ros_fumbles_lost = build_current_ros_fumbles_lost_supplement_observations(
+            league_state,
+            current_runtime=ros_runtime,
+            stats_source=cached_stats,  # type: ignore[arg-type]
+            completed_through_week=completed,
+            as_of=cutoff,
+        )
+    except Exception as exc:
+        fumbles_supplement_failure = f"{type(exc).__name__}: {exc}"
     y1_raw = _year_one_raw_forecasts(
         league_state=league_state,
         completed_actuals=completed_raw,
-        ros_forecasts=ros_runtime.raw_ensemble,
+        ros_forecasts=ros_runtime.raw_ensemble + ros_fumbles_lost,
     )
     y1_standard, y1_standard_partial = _score_season_points(
         y1_raw, league_state=league_state, standard=True
@@ -472,6 +518,11 @@ def build_live_p0_rostered_candidate_forecasts(
                     f"standard_missing_rule_stats={list(standard_missing.omitted_rule_stats) if standard_missing else []}; "
                     f"league_missing_rule_stats={list(league_missing.omitted_rule_stats) if league_missing else []}"
                 )
+                if fumbles_supplement_failure and "fum_lost" in failures[player_id]:
+                    failures[player_id] += (
+                        "; accepted first-party FUMBLES_LOST supplement unavailable: "
+                        f"{fumbles_supplement_failure}"
+                    )
             else:
                 source_metrics = {
                     source_id: sorted(
@@ -518,3 +569,55 @@ def build_live_p0_rostered_candidate_forecasts(
     for player_id, fact in facts.items():
         try:
             from fsffl.product.p0_candidate_evidence import build_p0_candidate_source_rows
+
+            candidate_rows.update(
+                build_p0_candidate_source_rows(
+                    league_state=league_state,
+                    candidate_facts={player_id: fact},
+                    source_state_authority=source_state_authority,
+                    evaluation_as_of=cutoff,
+                )
+            )
+        except ValueError as exc:
+            failures[player_id] = str(exc)
+
+    if candidate_rows:
+        try:
+            # Keep the accepted 335 reference inputs/outputs byte-for-byte
+            # separate. This live dynamic batch passes only out-of-cohort rows;
+            # it must never re-feed current Y1 evidence into the frozen benchmark
+            # parity gate or alter a reference output.
+            dynamic_ids = set(candidate_rows)
+            future = build_p0_future_forecast_contract(
+                league_state=league_state,
+                raw_forecasts=tuple(
+                    item for item in y1_raw if item.player_id in dynamic_ids
+                ),
+                league_year_one=tuple(
+                    item for player_id, item in y1_league.items()
+                    if player_id in dynamic_ids
+                ),
+                candidate_source_rows=candidate_rows,
+                evaluation_as_of=cutoff,
+            )
+        except ValueError as exc:
+            for player_id in candidate_rows:
+                failures.setdefault(player_id, f"P0 future authority failure: {exc}")
+            future = None
+    else:
+        future = None
+    scored_ids = {item.player_id for item in future.contract.forecasts} if future else set()
+    for player_id in candidate_rows:
+        if player_id not in scored_ids:
+            failures.setdefault(player_id, "P0 future contract omitted candidate")
+    return P0LiveCandidateResult(
+        evaluation_as_of=cutoff,
+        completed_through_week=completed,
+        candidate_ids=candidates,
+        candidate_source_rows=candidate_rows,
+        year_one_standard=y1_standard,
+        year_one_league=y1_league,
+        future=future,
+        failures=failures,
+        ros_runtime=ros_runtime,
+    )
