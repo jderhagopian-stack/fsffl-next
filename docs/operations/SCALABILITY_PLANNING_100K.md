@@ -15,7 +15,7 @@ PR #443 remains the bounded nonproduction write-safety prototype: its tested mec
 - Forecast: 161,373 B PostgreSQL JSONB datum; 86,020 B compressed object; exact reconstruction passed; S3 GET/rebuild p95 349.86 ms versus PostgreSQL get/decode p95 354.17 ms.
 - Simulation: 118,887 B PostgreSQL datum; 67,816 B compressed object; exact reconstruction passed; object p95 135.78 ms versus PostgreSQL p95 136.97 ms.
 - Across those two measured artifacts: 280,260 B PostgreSQL payload versus 153,836 B object payload (45.1% fewer payload bytes).
-- Separate prototype evidence: 12 focused offline tests passed. Storage API and SQLite stand-ins were used; there was no live provider or PostgreSQL integration.
+- Separate prototype evidence: 12 focused offline tests passed, and focused GitHub CI run `38053806931` passed for PR #443 head `863279cff8581d7e7e3bd98c8fcce65551e2ba47`. Storage API and SQLite stand-ins were used; there was no live provider or PostgreSQL integration.
 
 **Extrapolation inputs used below:**
 
@@ -60,14 +60,14 @@ At 1m, even the upper five-year PG reference estimate is ~5.9 TB before 1.5× op
 
 ## Operating cost envelope (USD, public list-price inputs; not a quote)
 
-Supabase pricing currently lists Pro at $25/month; Pro includes 100 GB Storage and 250 GB each of cached and uncached egress. Overages shown in its current docs are $0.0213/GB-month for Storage, $0.03/GB for cached egress and $0.09/GB for uncached egress. Compute is separate and is billed per project. The table below approximates an end-of-year-5 month with all modeled objects retained, a 95% Storage-CDN hit rate, and one database project sized by *data-envelope only*: XL at 1k/10k, 4XL at 100k, 16XL at 1m. Compute tier selection is a placeholder to expose cost order, not an approved sizing recommendation.
+Supabase pricing currently lists Pro at $25/month; Pro includes 100 GB Storage and 250 GB each of cached and uncached egress. Overages shown in its current docs are $0.0213/GB-month for Storage, $0.03/GB for cached egress and $0.09/GB for uncached egress. Compute is separate and is billed per project. The table below approximates an end-of-year-5 month with all modeled objects retained, a 95% Storage-CDN hit rate, and one database project sized by *data-envelope only*: XL at 1k/10k, 4XL at 100k, 16XL at 1m. Compute tier selection is a placeholder to expose cost order, not an approved sizing recommendation. The tier subtotals show gross Pro plus compute list prices before any applicable compute credits.
 
 | Scale | Pro + illustrative DB compute | Storage overage at year 5 | Egress overage at modeled views (95% cached) | Approx. priced data-plane subtotal/month |
 |---:|---:|---:|---:|---:|
 | 1,000 | ~$235 (Pro + XL) | ~$0 | ~$0 | **~$235** |
 | 10,000 | ~$235 (Pro + XL) | ~$19 | ~$3 | **~$257** |
 | **100,000** | **~$985 (Pro + 4XL)** | **~$209** | **~$98** | **~$1,292** |
-| 1,000,000 | ~$3,755 (Pro + 16XL) | ~$2,113 | ~$1,043 | **~$6,911** |
+| 1,000,000 | ~$3,755 (Pro + 16XL) | ~$2,113 | ~$1,188 | **~$7,056** |
 
 The egress estimate treats 95% as Storage cached egress and 5% as uncached. At 100k, modeled pair-view egress is 3.69 TB/month: ~3.51 TB cached and ~185 GB uncached. With no caching, the same view traffic would be roughly $310/month uncached overage; with 80% cache it is about $125/month combined egress overage. Cacheability and cache hit rate require production-like CDN/load evidence. Figures use decimal GB/TB and are rounded.
 
