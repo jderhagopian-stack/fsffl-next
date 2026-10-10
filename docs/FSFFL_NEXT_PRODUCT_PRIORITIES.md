@@ -1,5 +1,18 @@
 # FSFFL NEXT — Living Product Development Priorities
 
+## 2026-10-10 — Management strategic reset: product-led, scale-safe execution
+
+Management accepts the whole-program architecture and product review. Preserve the accepted State, Forecast, Value, Decision, Simulation 2.0, PIT/replay, immutable publication, last-good and tenant-isolation authorities; **no rewrite**. The long-term design point is **100,000 leagues**, not a requirement to buy or build that capacity now.
+
+**Immediate product order:** complete Career Coverage #405 from its exact accepted checkpoint, then improve Explore opportunity discovery and Trade Center's practical trade evaluation. Every bounded product slice must deliver a useful authenticated iPhone/Safari owner journey with measured latency. Owner Intelligence, historical grading, What-If, storytelling and publications remain planned, not canceled.
+
+**Enabling architecture decision, bounded and nonblocking:** identify widest mathematically safe reuse scope for provider evidence, model fit, player forecasts, rules/scoring cohorts, league-State Simulation and team/user Decisions. Document semantic dependency identities, single-flight reuse, tenant fences, durable/idempotent job identities, bounded concurrency and future multi-instance worker substitution. Change interfaces now only where Career/product work would otherwise create commercial-scale lock-in. Do not launch a broad audit or implement a distributed queue prematurely.
+
+**Supporting lane:** PR #443 remains a nonproduction prototype / production NO-GO; do not merge or migrate storage without a separate approval. Use naturally occurring PR #442 provider telemetry to measure real reuse opportunity. Address PostgreSQL Free-allocation overage as a separate explicit Management decision, not silent spending or deletion.
+
+**Execution discipline:** at most one primary product implementation lane plus one narrowly scoped enabling/support lane. No redundant full-program retesting or repeated architecture investigations. Review weekly: owner-visible outcome, measured latency/cost, blocker, next Management decision. Prove multi-league reliability, then resource-proportionate 100- and 1,000-league growth gates before major infrastructure investment. This directive changes sequencing, not accepted model semantics or ongoing workers' exact checkpoints.
+
+
 ## 2026-10-07 current product-phase reconciliation
 
 The older phase text below remains useful as product intent and exit-gate history, but its chronology predates P0 Architecture Recovery, Simulation 2.0 completion, Career-forward Intrinsic, League Atlas / Current Position & Depth acceptance, and Home → Franchise consolidation.
