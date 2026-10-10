@@ -30,11 +30,27 @@ preseason snapshot horizons. The query constrained `effective_at` to the State
 as-of. Thus the missing candidate Y1 is a specific input-data gap, not a failure
 to reuse or execute P0's accepted scorer.
 
+The accepted `current_i1_facts_2026` artifact was also joined by exact Sleeper
+provider ID. It contains completed 2025-source-season rows for 21 of the 25
+subjects. The unmatched IDs are `sleeper:player:12476`, `sleeper:player:3321`,
+`sleeper:player:4018`, and `sleeper:player:4663`. Of the 21 matched rows, all 21
+have a completed-season points field, 5 have prior-season points, 10 have age,
+21 have an experience field, and 10 have complete role/games/opportunity
+evidence. Eleven lack age in that artifact; exact State `PlayerState` age is the
+point-in-time source where populated. This is useful historical evidence, not a
+forecast substitute: on shared reference players, this artifact's experience is
+one season behind P0's 2026 feature. The accepted entry-season/panel transform
+must therefore be reused rather than copying that column directly. The artifact
+does not contain P0 prior2 age/state residual transforms; those remain missing
+under existing P0 coverage flags rather than being synthesized from prior points.
+
 The accepted 335 source rows and P0 model/routes remain byte-identical. The new
 runtime boundary accepts a caller-built complete candidate feature row, validates
 exact State membership, position, required values, coverage/value consistency and
-as-of provenance, then calls the same `_score_source` implementation. It does not
-build a valid candidate row from the absent projection/history inputs by itself.
+as-of provenance, then calls the same `_score_source` implementation. The
+historical fact records above can improve prior/role coverage for 21 subjects,
+but missing candidate Y1 Forecasts and the separately hashed P0 source-state
+boundary mean those records do not yet form valid P0 candidate rows.
 
 ## Smallest remaining recovery action
 
