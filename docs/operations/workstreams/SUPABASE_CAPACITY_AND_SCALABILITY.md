@@ -1,5 +1,10 @@
 # Supabase Capacity & Scalability Recovery
 
+## 2026-10-10 — actual Supabase plan update: Pro verified
+
+Management completed an upgrade. Connected Supabase organization `Jimmy’s Lab` reports `plan=pro`, `tier=tier_pro`; FSFFL NEXT project `gldxkbqcprzuffgmamxl` is `ACTIVE_HEALTHY`. **Supersedes prior Free-tier 512 MiB quota risk framing** as a current blocker. The previously measured database size of 604,040,339 B remains historical physical evidence, not a present Pro quota violation. Verify live project-level quota and current usage separately before new capacity assertions. This upgrade does not prove any storage reclamation, remove the need for tenant-safe immutable publication, validate PR #443 for production, or authorize additional spend/migration. Continue narrow evidence-led storage work without delaying Career/Explore/Trade product priorities.
+
+
 ## 2026-10-10 — commercial scale planning correction: 100k primary scenario
 
 The prior 100-league illustration is insufficient for the intended product scale. The canonical [100k-league scalable-storage plan](../SCALABILITY_PLANNING_100K.md) models 1,000, 10,000, 100,000 and 1,000,000 leagues, with 100,000 as the principal design point. It extends the measured pair compression ratios through publication cadence, 5-year retained object/reference growth, read egress, refresh/simulation activity and current Supabase list-price sensitivity. Only the October 10 artifact measurements and PR #443's focused offline test results are evidence; all scale/cost outputs are explicitly extrapolations. PR #443's tested source and scope remain unchanged. The model assesses a credible conditional route to 100k, not proven capacity; it identifies metadata/PG throughput, bursty provider fan-out, simulation CPU, client egress/cache behavior and retained-history growth as load-test gates. No purchase, production integration or migration is authorized by this documentation checkpoint.
