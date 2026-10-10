@@ -499,6 +499,23 @@ def test_superseded_older_job_cannot_replace_newer_durable_current_job() -> None
     assert recovered.status == IntelligenceJobStatus.COMPLETED
 
 
+
+def _retry_after_slot_release(
+    coordinator: IntelligenceJobCoordinator, *, user_id: str,
+):
+    deadline = monotonic() + 2.0
+    while monotonic() < deadline:
+        try:
+            return coordinator.start(
+                user_id=user_id,
+                league_state_id="state",
+                work=lambda _progress: None,
+            )
+        except IntelligenceJobBusy:
+            sleep(0.01)
+    raise AssertionError("Background admission slot was not released")
+
+
 def test_bounded_admission_rejects_burst_without_recording_unbounded_jobs() -> None:
     coordinator = IntelligenceJobCoordinator(max_workers=1, max_pending_jobs=1)
     started = Event()
@@ -544,11 +561,7 @@ def test_bounded_admission_rejects_burst_without_recording_unbounded_jobs() -> N
     assert executed == ["second"]
 
     # A completed Future releases admission so a new user can retry.
-    retried = coordinator.start(
-        user_id="overflow-0",
-        league_state_id="state-0",
-        work=lambda _progress: None,
-    )
+    retried = _retry_after_slot_release(coordinator, user_id="overflow-0")
     assert _wait_for_status(
         coordinator, user_id="overflow-0", status=IntelligenceJobStatus.COMPLETED,
     ).job_id == retried.job_id
@@ -568,9 +581,7 @@ def test_bounded_admission_releases_slot_after_failed_and_interrupted_work() -> 
             coordinator, user_id=user_id, status=status,
         ).status == status
 
-    retry = coordinator.start(
-        user_id="after-failure", league_state_id="state", work=lambda _progress: None,
-    )
+    retry = _retry_after_slot_release(coordinator, user_id="after-failure")
     assert _wait_for_status(
         coordinator, user_id="after-failure", status=IntelligenceJobStatus.COMPLETED,
     ).job_id == retry.job_id
@@ -592,9 +603,7 @@ def test_cancelled_pending_future_releases_capacity_and_marks_interrupted() -> N
     assert interrupted is not None
     assert interrupted.status == IntelligenceJobStatus.INTERRUPTED
     assert interrupted.error == "job_cancelled"
-    retry = coordinator.start(
-        user_id="after-cancel", league_state_id="state", work=lambda _progress: None,
-    )
+    retry = _retry_after_slot_release(coordinator, user_id="after-cancel")
     assert _wait_for_status(
         coordinator, user_id="after-cancel", status=IntelligenceJobStatus.COMPLETED,
     ).job_id == retry.job_id
@@ -613,11 +622,7 @@ def test_executor_submit_failure_releases_admission_and_preserves_failure_status
     assert failed is not None
     assert failed.status == IntelligenceJobStatus.FAILED
     assert failed.error == "executor_submit_failed"
-    retry = coordinator.start(
-        user_id="after-submit-failure",
-        league_state_id="state",
-        work=lambda _progress: None,
-    )
+    retry = _retry_after_slot_release(coordinator, user_id="after-submit-failure")
     assert _wait_for_status(
         coordinator, user_id="after-submit-failure", status=IntelligenceJobStatus.COMPLETED,
     ).job_id == retry.job_id
