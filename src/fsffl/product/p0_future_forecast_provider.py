@@ -4,6 +4,7 @@ import hashlib
 import json
 import math
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from typing import Mapping
 
 from fsffl.forecast.future_contract import (
@@ -88,6 +89,7 @@ def build_p0_future_forecast_contract(
     candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
     candidate_facts: Mapping[str, P0CandidateFacts] | None = None,
     source_state_authority: P0SourceStateAuthority | None = None,
+    evaluation_as_of: datetime | None = None,
 ) -> P0FutureForecastContractMaterialization:
     """Materialize current P0 Y2/Y3 authority behind a model-agnostic contract.
 
@@ -97,6 +99,10 @@ def build_p0_future_forecast_contract(
     requiring downstream product code to know D0/D1 internals.
     """
 
+    cutoff = evaluation_as_of or league_state.as_of
+    if cutoff.tzinfo is None:
+        raise ValueError("P0 forecast evaluation cutoff must be timezone-aware")
+    cutoff = cutoff.astimezone(UTC)
     materialized_candidate_rows = dict(candidate_source_rows or {})
     if candidate_facts:
         if source_state_authority is None:
@@ -105,6 +111,7 @@ def build_p0_future_forecast_contract(
             league_state=league_state,
             candidate_facts=candidate_facts,
             source_state_authority=source_state_authority,
+            evaluation_as_of=cutoff,
         )
         overlap = set(materialized_candidate_rows) & set(assembled)
         if overlap:
@@ -113,7 +120,13 @@ def build_p0_future_forecast_contract(
     elif source_state_authority is not None:
         raise ValueError("P0 source-state authority provided without dynamic candidate facts")
 
-    governed_ids = set(governed_p0_player_ids(league_state, materialized_candidate_rows))
+    governed_ids = set(
+        governed_p0_player_ids(
+            league_state,
+            materialized_candidate_rows,
+            evaluation_as_of=cutoff,
+        )
+    )
     if not governed_ids:
         raise ValueError("frozen P0/H3 authority has no mapped subjects in current State")
 
@@ -159,10 +172,10 @@ def build_p0_future_forecast_contract(
                 f"{player_id}"
             )
         if (
-            standard_item.as_of > league_state.as_of
-            or standard_item.provenance.effective_at > league_state.as_of
-            or league_item.as_of > league_state.as_of
-            or league_item.provenance.effective_at > league_state.as_of
+            standard_item.as_of.astimezone(UTC) > cutoff
+            or standard_item.provenance.effective_at.astimezone(UTC) > cutoff
+            or league_item.as_of.astimezone(UTC) > cutoff
+            or league_item.provenance.effective_at.astimezone(UTC) > cutoff
         ):
             raise ValueError(f"dynamic P0 Year-1 Forecast postdates exact State: {player_id}")
     standard_ids = {item.player_id for item in standard_year_one_all}
@@ -189,6 +202,7 @@ def build_p0_future_forecast_contract(
         league_state=league_state,
         standard_year_one=standard_year_one,
         candidate_source_rows=materialized_candidate_rows,
+        evaluation_as_of=cutoff,
     )
 
     if set(p0.players) != set(scoring_multipliers):

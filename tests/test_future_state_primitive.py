@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -252,6 +253,38 @@ def test_p0_dynamic_candidate_rejects_future_source_evidence() -> None:
     with pytest.raises(ValueError, match="postdates or lacks PIT boundary"):
         governed_p0_player_ids(state, {player_id: future})
 
+    # State identity is still the exact Sep 1 snapshot. A fresh forecast can use
+    # that unchanged league identity when both evidence and evaluation cutoff are
+    # later; the State timestamp is not a forecast freshness clock.
+    evaluation_as_of = now + timedelta(days=2)
+    assert governed_p0_player_ids(
+        state,
+        {player_id: future},
+        evaluation_as_of=evaluation_as_of,
+    ) == (player_id,)
+    later = now + timedelta(days=1)
+    later_provenance = Provenance(
+        source="fixture", retrieved_at=later, effective_at=later, source_version="fixture"
+    )
+    year_one = ForecastObservation(
+        player_id=player_id,
+        position=player.position,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=later,
+        period_end=later + timedelta(days=180),
+        distribution=ForecastDistribution(mean=future.standard_y1_points, stddev=0.0),
+        source="fixture", model_version="fixture-v1", as_of=later,
+        provenance=later_provenance,
+    )
+    scored = build_p0_standard_future_materialization(
+        league_state=state,
+        standard_year_one=(year_one,),
+        candidate_source_rows={player_id: future},
+        evaluation_as_of=evaluation_as_of,
+    )
+    assert scored.player_count == 1
+
 
 def test_p0_candidate_feature_assembly_is_deterministic_and_uses_reference_percentiles(
     monkeypatch,
@@ -367,6 +400,18 @@ def test_p0_candidate_feature_assembly_is_deterministic_and_uses_reference_perce
     assert forecast.players[candidate_id].result_for(2).anticipated_points > 0
 
 
+def test_p0_candidate_threshold_digest_matches_canonical_accepted_manifest() -> None:
+    manifest_path = (
+        Path(__file__).parents[1]
+        / "artifacts/implementation/corrected_p0_preseason_credibility_gate_20260919/PROVENANCE_MANIFEST.json"
+    )
+    manifest = json.loads(manifest_path.read_text())
+    assert (
+        manifest["inputs"]["boundaries_file_sha256"]
+        == P0_ACCEPTED_SOURCE_STATE_AUTHORITY_SHA256
+    )
+
+
 def test_p0_candidate_feature_assembly_fails_closed_on_threshold_authority_or_future_facts(
     monkeypatch,
 ) -> None:
@@ -415,7 +460,7 @@ def test_p0_candidate_feature_assembly_fails_closed_on_threshold_authority_or_fu
         hashlib.sha256(wrong_threshold_bytes).hexdigest(),
     )
     authority = P0SourceStateAuthority.from_artifact_bytes(wrong_threshold_bytes)
-    with pytest.raises(ValueError, match="not point-in-time valid"):
+    with pytest.raises(ValueError, match="after evaluation cutoff"):
         build_p0_candidate_source_rows(
             league_state=state,
             candidate_facts={candidate_id: facts},

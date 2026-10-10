@@ -20,7 +20,7 @@ from fsffl.state.models import LeagueState
 from .p0_forecast_runtime import P0SourceRow, frozen_p0_source_rows
 
 P0_ACCEPTED_SOURCE_STATE_AUTHORITY_SHA256 = (
-    "51a6a892e9a19e52c593a52ba143fbe99fd6d1412aa7eb7e0c05e69fa72eef114"
+    "51a6a892e9a19e52b0ab8d2ac7f90b2850c199254f3021db0b5a989efdc107d5"
 )
 
 
@@ -121,6 +121,7 @@ def build_p0_candidate_source_rows(
     candidate_facts: Mapping[str, P0CandidateFacts],
     source_state_authority: P0SourceStateAuthority,
     reference_rows: Sequence[P0SourceRow] | None = None,
+    evaluation_as_of: datetime | None = None,
 ) -> dict[str, P0SourceRow]:
     """Assemble source rows for exact-State non-reference players.
 
@@ -132,6 +133,10 @@ def build_p0_candidate_source_rows(
 
     if source_state_authority.artifact_sha256 != P0_ACCEPTED_SOURCE_STATE_AUTHORITY_SHA256:
         raise ValueError("P0 source-state threshold authority digest mismatch")
+    cutoff = evaluation_as_of or league_state.as_of
+    if cutoff.tzinfo is None:
+        raise ValueError("P0 candidate evaluation cutoff must be timezone-aware")
+    cutoff = cutoff.astimezone(UTC)
     canonical = {
         player.player_id: player
         for player in league_state.players
@@ -160,8 +165,8 @@ def build_p0_candidate_source_rows(
             raise ValueError(f"P0 candidate canonical identity mismatch: {player_id}")
         if facts.position != state_player.position.value:
             raise ValueError(f"P0 candidate position mismatch: {player_id}")
-        if facts.facts_as_of.tzinfo is None or facts.facts_as_of > league_state.as_of:
-            raise ValueError(f"P0 candidate evidence is not point-in-time valid: {player_id}")
+        if facts.facts_as_of.tzinfo is None or facts.facts_as_of.astimezone(UTC) > cutoff:
+            raise ValueError(f"P0 candidate evidence is after evaluation cutoff: {player_id}")
         if (
             not facts.facts_source_version
             or len(facts.facts_digest) != 64
