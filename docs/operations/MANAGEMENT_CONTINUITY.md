@@ -1,5 +1,16 @@
 # FSFFL NEXT — Management Continuity
 
+## 2026-10-10 — Management correction: existing-model-first universal Forecast
+
+**Management decision:** The accepted Forecast/P0 and Career models are the production modeling authority for **any eligible player at any supported point in time**, not only the 335-player research cohort. The 335 embedded P0 source rows and exact parity gate are historical validation fixtures, **not** a perpetual production identity allowlist or evidence ceiling. Do not equate absence from the embedded CSV with absence of player data.
+
+**Implementation priority:** Inventory every accepted P0 feature and trace its authoritative source, historical as-of semantics, identity join and permissible rights; construct dynamic candidate inputs from existing provider/historical/State evidence, using existing missingness/coverage flags and accepted routes. Preserve the learned P0 coefficients, scoring, Career Y4–Y7/Y8+ authority, publication/replay and frozen-reference regression tests. Evaluate rookies, breakout players, veterans and reserves using their actual available evidence, not generic age/position averages by default. Do not assume any required feature exists until verified, and do not fabricate missing observations or use future/restricted data.
+
+**PR #447 disposition:** Treat the proposed sparse-player prior as an optional, separately gated last-resort evidence-support component, **not** an approved replacement or default P0 forecasting model. Do not merge or deploy #447 on the theory that a player is missing from the frozen 335. Before any new statistical prior is authorized for production, demonstrate which existing-model inputs genuinely cannot be recovered, why accepted missingness handling is insufficient, and how the new method is validated. PR #446 remains a separate coverage-accounting checkpoint.
+
+**Next reviewable tranche:** A bounded existing-model-first candidate evidence adapter, showing feature-by-feature source coverage, real out-of-cohort P0 forecasts, parity for reference cases, PIT/source-rights tests, and measured runtime/RSS. Follow with existing Career materialization and broader waiver/on-demand coverage. No model redesign, merge, deployment or infrastructure purchase without separate approval.
+
+
 ## 2026-10-10 — Management correction: universal point-in-time player forecasting
 
 **Product requirement:** FSFFL NEXT must support forecasting **any eligible player at any supported evaluation point in time**. The frozen 335-player Career cohort is a historical research/acceptance regression fixture, **not** a production player ceiling, a required membership list, or a source-of-truth restriction. The 25 missing historical roster IDs are an acceptance diagnostic, not the definition of success. Preserve accepted 335 reference parity where comparable; do not freeze production coverage to them.
