@@ -1,5 +1,9 @@
 # Current Operations
 
+## 2026-10-10 — Scalable computation foundation decision
+
+The bounded architecture decision is recorded in [Scalable Computation Foundation](workstreams/SCALABLE_COMPUTATION_FOUNDATION.md). Reuse provider evidence, historical fits, raw player forecasts and scoring cohorts at their exact semantic fingerprints; keep State/Simulation and team-specific Decision outputs isolated. Existing dependency fingerprints, PersistenceStore, exact Simulation reuse and publication safeguards remain authoritative. The clearest current weakness is the in-process job coordinator's unbounded pending executor queue and process-local single-flight. Do not add new high-fan-out callers without bounded admission/backpressure. No code, tests, migration, deployment, queue service or #443 change was made; targeted coordinator/protocol implementation remains a Management gate before broader async fan-out. Supabase Pro is active; the former Free allocation is not a current plan-level emergency.
+
 ## 2026-10-10 — Supabase Pro upgrade independently verified
 
 Management reported upgrading Supabase; connected Supabase organization details independently confirm organization `Jimmy’s Lab` is on `pro` / `tier_pro`, and project `FSFFL NEXT` (`gldxkbqcprzuffgmamxl`) reports `ACTIVE_HEALTHY`. The former Free-plan 512 MiB database allocation is **no longer the operative plan-level capacity gate**. Do not treat the earlier 604,040,339 B database size as evidence of current Pro-plan quota violation. Physical database growth, cost, retention, write safety, publication integrity and 100k-league economics remain open engineering concerns. This is a **record of an operator-completed billing upgrade**, not authorization for additional purchases, compute upgrades, data deletion, schema changes, migration or production deployment. Confirm actual current plan limits/usage before making capacity commitments.
