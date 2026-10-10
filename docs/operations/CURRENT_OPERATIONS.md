@@ -1,5 +1,10 @@
 # Current Operations
 
+## 2026-10-10 — Supabase Pro upgrade independently verified
+
+Management reported upgrading Supabase; connected Supabase organization details independently confirm organization `Jimmy’s Lab` is on `pro` / `tier_pro`, and project `FSFFL NEXT` (`gldxkbqcprzuffgmamxl`) reports `ACTIVE_HEALTHY`. The former Free-plan 512 MiB database allocation is **no longer the operative plan-level capacity gate**. Do not treat the earlier 604,040,339 B database size as evidence of current Pro-plan quota violation. Physical database growth, cost, retention, write safety, publication integrity and 100k-league economics remain open engineering concerns. This is a **record of an operator-completed billing upgrade**, not authorization for additional purchases, compute upgrades, data deletion, schema changes, migration or production deployment. Confirm actual current plan limits/usage before making capacity commitments.
+
+
 ## 2026-10-10 — Management strategic reset recorded on main
 
 **Active order:** Career Coverage #405 (continue exact checkpoint) → Explore useful opportunity discovery → Trade Center practical decision quality. A single short, nonblocking architecture contract will classify shared provider/model/rules-signature work versus league-State and user-specific computation; identify dependency fingerprints, safe coalescing, idempotent durable jobs, tenant fences and eventual multi-instance worker replacement. No new broad audit or wholesale rewrite. Every product slice needs a real iPhone/Safari owner outcome and measured latency.
