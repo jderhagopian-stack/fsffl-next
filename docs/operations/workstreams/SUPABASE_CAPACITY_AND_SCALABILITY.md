@@ -1,5 +1,9 @@
 # Supabase Capacity & Scalability Recovery
 
+## 2026-10-10 — commercial scale planning correction: 100k primary scenario
+
+The prior 100-league illustration is insufficient for the intended product scale. The canonical [100k-league scalable-storage plan](../SCALABILITY_PLANNING_100K.md) models 1,000, 10,000, 100,000 and 1,000,000 leagues, with 100,000 as the principal design point. It extends the measured pair compression ratios through publication cadence, 5-year retained object/reference growth, read egress, refresh/simulation activity and current Supabase list-price sensitivity. Only the October 10 artifact measurements and PR #443's focused offline test results are evidence; all scale/cost outputs are explicitly extrapolations. PR #443's tested source and scope remain unchanged. The model assesses a credible conditional route to 100k, not proven capacity; it identifies metadata/PG throughput, bursty provider fan-out, simulation CPU, client egress/cache behavior and retained-history growth as load-test gates. No purchase, production integration or migration is authorized by this documentation checkpoint.
+
 ## 2026-10-10 — real Forecast/Simulation storage validation accepted; S3 write gate NO-GO
 
 Management accepts the real nonproduction comparison executed by the isolated Render Workflow on PR #441 head `c3bf666a5251ff9748abb2c3d4ddf1b8372e0b23`. Run `trn-0b14gdb4nmaa396pc73ec6sng` ended NO-GO after 12.1 seconds (8.1 CPU seconds; $0.0004815 recorded task cost), solely because the immutable conditional `PutObject` gate failed. Compression and reconstruction evidence justify bounded storage development; they do not authorize production use.
