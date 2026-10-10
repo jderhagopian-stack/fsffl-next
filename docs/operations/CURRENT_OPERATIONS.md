@@ -1,4 +1,13 @@
 # Current Operations
+
+## 2026-10-10 — Management strategic reset recorded on main
+
+**Active order:** Career Coverage #405 (continue exact checkpoint) → Explore useful opportunity discovery → Trade Center practical decision quality. A single short, nonblocking architecture contract will classify shared provider/model/rules-signature work versus league-State and user-specific computation; identify dependency fingerprints, safe coalescing, idempotent durable jobs, tenant fences and eventual multi-instance worker replacement. No new broad audit or wholesale rewrite. Every product slice needs a real iPhone/Safari owner outcome and measured latency.
+
+**Infrastructure:** PR #443 remains prototype PASS / production NO-GO, without migration approval. Deployed PR #442 telemetry awaits natural provider acquisition evidence. PostgreSQL Free quota overage remains an explicit operational risk requiring a separate Management decision; no silent spend, unsafe deletion or new deployment. Long-term design point remains 100,000 leagues; practical next scale milestones are multiple leagues, then bounded 100- and 1,000-league measurement. Later historical/What-If/storytelling roadmap remains intact.
+
+**Canonical decision:** [Management Continuity](MANAGEMENT_CONTINUITY.md) and [Living Product Priorities](../FSFFL_NEXT_PRODUCT_PRIORITIES.md). Existing workstream checkpoints and previously accepted safeguards remain authoritative. Management review cadence: weekly concise owner-visible result, measured performance/cost, blocker and next decision.
+
 Updated: 2026-10-09  
 Authority: sole current cross-workstream status. Historical snapshots are under `docs/operations/archive/`. Detailed P0 decisions and evidence remain in [Architecture Recovery](workstreams/ARCHITECTURE_RECOVERY.md).
 
