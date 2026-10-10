@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import os
+from concurrent.futures import Future
+
+import pytest
 from threading import Event, Thread
 from unittest.mock import patch
 from time import monotonic, sleep
 
 from fsffl.product.background_jobs import (
     IntelligenceJobCoordinator,
+    IntelligenceJobBusy,
     IntelligenceJobInterrupted,
     IntelligenceJobPhase,
     IntelligenceJobStatus,
@@ -493,3 +497,132 @@ def test_superseded_older_job_cannot_replace_newer_durable_current_job() -> None
     assert recovered is not None
     assert recovered.job_id == new.job_id
     assert recovered.status == IntelligenceJobStatus.COMPLETED
+
+
+
+def _retry_after_slot_release(
+    coordinator: IntelligenceJobCoordinator, *, user_id: str,
+):
+    deadline = monotonic() + 2.0
+    while monotonic() < deadline:
+        try:
+            return coordinator.start(
+                user_id=user_id,
+                league_state_id="state",
+                work=lambda _progress: None,
+            )
+        except IntelligenceJobBusy:
+            sleep(0.01)
+    raise AssertionError("Background admission slot was not released")
+
+
+def test_bounded_admission_rejects_burst_without_recording_unbounded_jobs() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1, max_pending_jobs=1)
+    started = Event()
+    release = Event()
+    executed = []
+
+    def blocked(_progress) -> None:
+        started.set()
+        assert release.wait(timeout=3.0)
+
+    first = coordinator.start(user_id="burst-1", league_state_id="state-1", work=blocked)
+    assert started.wait(timeout=2.0)
+    second = coordinator.start(
+        user_id="burst-2",
+        league_state_id="state-2",
+        work=lambda _progress: executed.append("second"),
+    )
+    assert second.status == IntelligenceJobStatus.QUEUED
+
+    # Coalescing works even at capacity and does not consume another slot.
+    joined = coordinator.start(
+        user_id="burst-1",
+        league_state_id="state-1",
+        work=lambda _progress: executed.append("duplicate"),
+    )
+    assert joined.job_id == first.job_id
+
+    for i in range(20):
+        with pytest.raises(IntelligenceJobBusy):
+            coordinator.start(
+                user_id=f"overflow-{i}",
+                league_state_id=f"state-{i}",
+                work=lambda _progress: executed.append("overflow"),
+            )
+    assert len(coordinator._jobs) == 2
+    assert executed == []
+
+    release.set()
+    assert _wait_for_status(
+        coordinator, user_id="burst-2", status=IntelligenceJobStatus.COMPLETED,
+        timeout=3.0,
+    ).status == IntelligenceJobStatus.COMPLETED
+    assert executed == ["second"]
+
+    # A completed Future releases admission so a new user can retry.
+    retried = _retry_after_slot_release(coordinator, user_id="overflow-0")
+    assert _wait_for_status(
+        coordinator, user_id="overflow-0", status=IntelligenceJobStatus.COMPLETED,
+    ).job_id == retried.job_id
+
+
+def test_bounded_admission_releases_slot_after_failed_and_interrupted_work() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1, max_pending_jobs=0)
+    for user_id, exception, status in [
+        ("failure", ValueError("failure"), IntelligenceJobStatus.FAILED),
+        ("interrupted", IntelligenceJobInterrupted("switch"), IntelligenceJobStatus.INTERRUPTED),
+    ]:
+        def work(_progress, exc=exception) -> None:
+            raise exc
+
+        coordinator.start(user_id=user_id, league_state_id="state", work=work)
+        assert _wait_for_status(
+            coordinator, user_id=user_id, status=status,
+        ).status == status
+
+    retry = _retry_after_slot_release(coordinator, user_id="after-failure")
+    assert _wait_for_status(
+        coordinator, user_id="after-failure", status=IntelligenceJobStatus.COMPLETED,
+    ).job_id == retry.job_id
+
+
+def test_cancelled_pending_future_releases_capacity_and_marks_interrupted() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1, max_pending_jobs=0)
+    pending: Future[None] = Future()
+    with patch.object(coordinator._executor, "submit", return_value=pending):
+        job = coordinator.start(
+            user_id="cancelled", league_state_id="state", work=lambda _progress: None,
+        )
+        with pytest.raises(IntelligenceJobBusy):
+            coordinator.start(
+                user_id="overflow", league_state_id="state", work=lambda _progress: None,
+            )
+        assert pending.cancel()
+    interrupted = coordinator.get(job.job_id)
+    assert interrupted is not None
+    assert interrupted.status == IntelligenceJobStatus.INTERRUPTED
+    assert interrupted.error == "job_cancelled"
+    retry = _retry_after_slot_release(coordinator, user_id="after-cancel")
+    assert _wait_for_status(
+        coordinator, user_id="after-cancel", status=IntelligenceJobStatus.COMPLETED,
+    ).job_id == retry.job_id
+
+
+def test_executor_submit_failure_releases_admission_and_preserves_failure_status() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1, max_pending_jobs=0)
+    with patch.object(
+        coordinator._executor, "submit", side_effect=RuntimeError("executor shutdown"),
+    ):
+        with pytest.raises(RuntimeError, match="executor shutdown"):
+            coordinator.start(
+                user_id="submit-failed", league_state_id="state", work=lambda _progress: None,
+            )
+    failed = coordinator.current("submit-failed")
+    assert failed is not None
+    assert failed.status == IntelligenceJobStatus.FAILED
+    assert failed.error == "executor_submit_failed"
+    retry = _retry_after_slot_release(coordinator, user_id="after-submit-failure")
+    assert _wait_for_status(
+        coordinator, user_id="after-submit-failure", status=IntelligenceJobStatus.COMPLETED,
+    ).job_id == retry.job_id

@@ -32,6 +32,7 @@ from .foreground_pressure import foreground_pressure
 from .background_jobs import (
     IntelligenceJob,
     IntelligenceJobCoordinator,
+    IntelligenceJobBusy,
     IntelligenceJobInterrupted,
     IntelligenceJobPhase,
     IntelligenceJobStatus,
@@ -2160,12 +2161,21 @@ def create_app(
                     "coalesced": True,
                 }
             replace_current = bool(current_running and not current_same_owner)
-            job = jobs.start(
-                user_id=user_id,
-                league_state_id=starting_state.state_id,
-                work=work,
-                coalesce_current=not replace_current,
-            )
+            try:
+                job = jobs.start(
+                    user_id=user_id,
+                    league_state_id=starting_state.state_id,
+                    work=work,
+                    coalesce_current=not replace_current,
+                )
+            except IntelligenceJobBusy as exc:
+                # Do not change reconciliation ownership or create a durable
+                # queued job when the bounded executor is at capacity.
+                raise HTTPException(
+                    status_code=503,
+                    detail=str(exc),
+                    headers={"Retry-After": "5"},
+                ) from exc
             reconciliation_league_by_user[user_id] = starting_league_id
             reconciliation_generation_by_user[user_id] = expected_generation
         return {

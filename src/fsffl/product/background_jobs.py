@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
-from threading import RLock, get_native_id
+from threading import BoundedSemaphore, RLock, get_native_id
 from time import monotonic
 from typing import Callable
 from uuid import uuid4
@@ -55,6 +55,12 @@ class IntelligenceJobStatus(StrEnum):
 
 class IntelligenceJobInterrupted(RuntimeError):
     """Signal that a running intelligence job lost write authority."""
+
+    pass
+
+
+class IntelligenceJobBusy(RuntimeError):
+    """Admission is full; the caller may retry without creating a queued job."""
 
     pass
 
@@ -120,14 +126,22 @@ class IntelligenceJobCoordinator:
         max_workers: int = 2,
         persistence_store: PersistenceStore | None = None,
         max_records: int = 32,
+        max_pending_jobs: int = 8,
     ) -> None:
         if max_records < 4:
             raise ValueError("max_records must be at least 4")
+        if max_workers < 1:
+            raise ValueError("max_workers must be at least 1")
+        if max_pending_jobs < 0:
+            raise ValueError("max_pending_jobs must not be negative")
         self._lock = RLock()
         self._user_lock_registry = RLock()
         self._user_locks: dict[str, RLock] = {}
         self._persistence = persistence_store
         self._max_records = int(max_records)
+        # ThreadPoolExecutor bounds running threads, not submitted closures.
+        # Admission covers running AND pending work and never blocks a request.
+        self._admission = BoundedSemaphore(max_workers + max_pending_jobs)
         self._jobs: dict[str, IntelligenceJob] = {}
         self._current_by_user: dict[str, str] = {}
         self._job_started_monotonic: dict[str, float] = {}
@@ -306,6 +320,28 @@ class IntelligenceJobCoordinator:
             ):
                 return current
 
+            # Coalescing is checked first: an identical active request can join
+            # even when the executor has no room for additional work.
+            if not self._admission.acquire(blocking=False):
+                raise IntelligenceJobBusy("Intelligence refresh capacity is busy; retry shortly.")
+
+            try:
+                return self._submit_admitted(user_id=user_id, league_state_id=league_state_id, work=work, now=now)
+            except BaseException:
+                # _submit_admitted takes responsibility for release once a
+                # Future exists; before that point it releases on failure.
+                raise
+
+    def _submit_admitted(
+        self,
+        *,
+        user_id: str,
+        league_state_id: str,
+        work: JobWork,
+        now: datetime,
+    ) -> IntelligenceJob:
+        # Called with the user's single-flight lock held and one capacity slot.
+        try:
             with self._lock:
                 terminal = sorted(
                     (
@@ -340,8 +376,55 @@ class IntelligenceJobCoordinator:
                 self._current_by_user[user_id] = job.job_id
 
             self._persist(job)
-            self._executor.submit(self._run, job.job_id, work)
+            try:
+                future = self._executor.submit(self._run, job.job_id, work)
+            except BaseException:
+                self._update(
+                    job.job_id,
+                    status=IntelligenceJobStatus.FAILED,
+                    phase=IntelligenceJobPhase.FAILED,
+                    message="Intelligence refresh could not be queued.",
+                    error="executor_submit_failed",
+                    failure_phase=IntelligenceJobPhase.QUEUED,
+                )
+                raise
+            # Future callbacks also run for cancellation-before-start, when
+            # _run never executes. One callback owns exactly one admission slot.
+            future.add_done_callback(lambda done: self._finish_admitted(job.job_id, done))
             return job
+        except BaseException:
+            # A Future owns its slot once submitted; do not double-release.
+            if "future" not in locals():
+                self._admission.release()
+            raise
+
+    def _finish_admitted(self, job_id: str, future: Future[None]) -> None:
+        try:
+            current = self.get(job_id)
+            if current is not None and current.status in {
+                IntelligenceJobStatus.QUEUED,
+                IntelligenceJobStatus.RUNNING,
+            }:
+                if future.cancelled():
+                    self._update(
+                        job_id,
+                        status=IntelligenceJobStatus.INTERRUPTED,
+                        phase=IntelligenceJobPhase.INTERRUPTED,
+                        message="Intelligence refresh was cancelled before completion.",
+                        error="job_cancelled",
+                        failure_phase=current.phase,
+                    )
+                elif future.exception() is not None:
+                    self._update(
+                        job_id,
+                        status=IntelligenceJobStatus.FAILED,
+                        phase=IntelligenceJobPhase.FAILED,
+                        message="Intelligence refresh failed unexpectedly.",
+                        error="worker_execution_failed",
+                        failure_phase=current.phase,
+                    )
+        finally:
+            self._admission.release()
 
     def _update(
         self,
