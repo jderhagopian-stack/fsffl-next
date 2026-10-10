@@ -95,6 +95,85 @@ class P0SourceStateAuthority:
         return cls(thresholds_by_position=thresholds, artifact_sha256=digest)
 
 
+# Exact original research input, recovered from the September 19 artifact and
+# verified against the accepted provenance SHA-256. Embedded so deployment does
+# not depend on a local research checkout or a runtime filesystem path.
+P0_ACCEPTED_SOURCE_STATE_BOUNDARIES_JSON = r'''{
+  "schema_version": "fsffl-redevelopment-current-boundaries-v1",
+  "basis": "completed historical fantasy points strictly before 2026",
+  "boundaries": {
+    "QB": {
+      "centers": [
+        1.2764534917314387,
+        9.269988850762617,
+        32.55087507864474,
+        95.45507040029189,
+        244.05177868114126
+      ],
+      "thresholds": [
+        5.2732211712470285,
+        20.910431964703676,
+        64.0029727394683,
+        169.75342454071657
+      ]
+    },
+    "RB": {
+      "centers": [
+        1.6817447725918724,
+        8.352437786972093,
+        23.715673921179597,
+        64.14175327237696,
+        169.22006024104235
+      ],
+      "thresholds": [
+        5.017091279781983,
+        16.034055854075845,
+        43.92871359677828,
+        116.68090675670965
+      ]
+    },
+    "WR": {
+      "centers": [
+        1.8918103288781487,
+        8.855446670353974,
+        25.656202859963766,
+        61.26342926896892,
+        136.17254284122106
+      ],
+      "thresholds": [
+        5.3736284996160615,
+        17.25582476515887,
+        43.459816064466345,
+        98.717986055095
+      ]
+    },
+    "TE": {
+      "centers": [
+        1.4383214899573071,
+        6.053636229700034,
+        15.567346340958311,
+        38.26483287198442,
+        93.18343279094003
+      ],
+      "thresholds": [
+        3.7459788598286705,
+        10.810491285329173,
+        26.916089606471363,
+        65.72413283146223
+      ]
+    }
+  }
+}
+'''
+
+
+def accepted_p0_source_state_authority() -> P0SourceStateAuthority:
+    """Load the original, digest-verified source-state cutpoints without fitting."""
+    return P0SourceStateAuthority.from_artifact_bytes(
+        P0_ACCEPTED_SOURCE_STATE_BOUNDARIES_JSON.encode("utf-8")
+    )
+
+
 def _current_state(points: float, thresholds: Sequence[float]) -> str:
     if points <= 0:
         return "out"
