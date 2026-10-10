@@ -8,6 +8,10 @@ For **what is happening right now**, read [CURRENT_OPERATIONS.md](CURRENT_OPERAT
 For exact tranche implementation evidence, read the linked workstream checkpoint.  
 For the broad long-range capability plan, read [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and [../FSFFL_NEXT_PRODUCT_PRIORITIES.md](../FSFFL_NEXT_PRODUCT_PRIORITIES.md).
 
+## 2026-10-10 — commercial scale design point raised to 100k leagues
+
+Management's intended success scale is thousands through hundreds of thousands of leagues, with **100,000 as the primary long-term design point** and 1,000,000 as an upper-bound sensitivity. The [100k-league scalability plan](SCALABILITY_PLANNING_100K.md) replaces the former 100-league illustration with explicit workload, retention, PG/object capacity, bandwidth and cost assumptions at 1k/10k/100k/1m. The model distinguishes the two measured real artifacts and offline PR #443 tests from extrapolation. A credible path exists only if publication identity, tenant routing, immutable create-only writes, one authoritative DB publication/CAS boundary, job idempotency/backpressure and retention promises are fixed into interfaces now. Large tier purchases, replicas, shard count, and migration/reclamation wait for measured demand. This is a planning correction only; PR #443 stays open/draft and tested, with no implementation scope change, spend, production change, or data migration.
+
 ## 2026-10-10 — write-safety correction prototype: PASS / production NO-GO
 
 The contract review found a documented Supabase-native create-only path: Standard Storage Upload with upsert=false. Supabase documents that concurrent uploads to one path are first-completer-wins and losing writers receive “Asset Already Exists”; its current storage source stages a distinct upload version then serializes object-row completion. This is separate from the S3 conditional PutObject route, which remains NO-GO. See [Standard Upload concurrency](https://supabase.com/docs/guides/storage/uploads/standard-uploads#concurrency) and the draft prototype [PR #443](https://github.com/jderhagopian-stack/fsffl-next/pull/443), based on this documentation checkpoint.
