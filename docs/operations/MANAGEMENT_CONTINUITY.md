@@ -8,6 +8,23 @@ For **what is happening right now**, read [CURRENT_OPERATIONS.md](CURRENT_OPERAT
 For exact tranche implementation evidence, read the linked workstream checkpoint.  
 For the broad long-range capability plan, read [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and [../FSFFL_NEXT_PRODUCT_PRIORITIES.md](../FSFFL_NEXT_PRODUCT_PRIORITIES.md).
 
+## 2026-10-10 — real Forecast/Simulation storage comparison: NO-GO
+
+The real-artifact task ran on the isolated Render Workflow from PR #441 head `c3bf666a5251ff9748abb2c3d4ddf1b8372e0b23`. Run `trn-0b14gdb4nmaa396pc73ec6sng` failed after 12.1 s (8.1 CPU s; $0.0004815 recorded task cost). These are nonproduction validation results only.
+
+| Artifact | PG JSONB datum | PG text | Canonical bytes | zlib/S3 bytes | compressed / JSONB | Encode | PUT | S3 GET + rebuild p50 / p95 | PG get + decode p50 / p95 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Forecast | 161,373 B | 3,277,189 B | 3,073,225 B | 86,020 B | 0.533 (46.7% smaller) | 44.16 ms | 242.63 ms | 232.39 / 349.86 ms | 178.46 / 354.17 ms |
+| Simulation | 118,887 B | 727,232 B | 689,400 B | 67,816 B | 0.570 (43.0% smaller) | 13.81 ms | 144.86 ms | 96.04 / 135.78 ms | 36.24 / 136.97 ms |
+
+Each latency distribution used 9 samples. Both artifacts passed exact reconstruction, record/hash and deployed-decoder parity, restart, and corruption checks. Decoder CPU was Forecast 1,841.51 ms S3 / 1,738.49 ms PG; Simulation 315.34 / 313.32 ms. Combined case CPU was 3,758.78 ms and 684.62 ms respectively. Process peak RSS was 327,585,792 B (312.5 MiB), 101,910,928 B below the 429,496,720 B working budget.
+
+**The final immutable-write gate failed.** The task raised at the conditional first-writer `PutObject` probe after collecting comparison metrics and before emitting GO. The exact exception was deliberately sanitized, so it is not known whether the endpoint rejected the condition, ignored it, or failed for another reason. Supabase's published S3 compatibility matrix documents conditional `If-None-Match` for reads, not `PutObject`; this is consistent with the failed gate but does not identify the exact exception: https://supabase.com/docs/guides/storage/s3/compatibility. Do not remove the condition or treat process-local check-then-put as immutable/atomic. Smallest sound correction: retain NO-GO for Supabase S3 immutable writes; use an object service with verified atomic conditional `PutObject If-None-Match: *`, or separately design and prove an atomic database-coordinated publication protocol before reconsidering this backend.
+
+**Cleanup/evidence classification:** Task logs independently recorded zero remaining test objects. In the Dashboard, the S3 key list was independently observed empty after revocation; the Workflow environment was independently checked after secret removal and contained only `PYTHON_VERSION`. These UI checks occurred before the operator-reported Workflow deletion. Management confirms deletion through the Dashboard; deletion itself has not been independently rechecked from a service inventory. No credentials are retained here. The empty private test bucket was not reported deleted. Production app, database rows, and deployment were not changed.
+
+**Disposition: NO-GO.** Compression and reconstruction results are promising but cannot override the failed immutable-write requirement. This does not authorize production integration, deployment, another run, credential creation, or spend. Prior read-only transaction safeguards did not make the broad production database URL a least-privilege credential; any separately authorized future test must use purpose-limited read-only DB access.
+
 ## 2026-10-09 — iPhone-only Render Workflow private-storage continuation
 
 Management's iPhone-only operator constraint **supersedes the prior interactive Render SSH and CLI handoff**. Browser-deployed Render Workflows supports isolated one-off tasks through Dashboard New → Workflow and Tasks → Start Task, with no local computer. Independent draft [#441](https://github.com/jderhagopian-stack/fsffl-next/pull/441) has been extended with source-identical #439 adapter, noninteractive real-artifact validator, Python Render Workflow entrypoint, credential-free preflight and focused tests. Zero task arguments and disabled retries protect workflow state. Exact [Safari setup/runbook](https://github.com/jderhagopian-stack/fsffl-next/blob/docs/private-storage-validation-access-gate-20261009/artifacts/implementation/private_storage_validation_20261009/README.md) records existing bucket, read-only PG records 11540/11541, full build/start commands, Python 3.12.10, temporary private Workflow-only S3 keys and cleanup.
@@ -390,21 +407,3 @@ As of this reconciliation, the clean handoff is:
 **Franchise Overview accepted → navigation/product hierarchy accepted → Career Coverage #405 active decision gate → resume broader roadmap from the reconciled position.**
 
 The next Management chat should verify live repository/runtime state first, but should not invent a different sequence merely because older roadmap sections contain stale historical “NEXT” language.
-
-## 2026-10-10 — real Forecast/Simulation storage comparison: NO-GO
-
-The real-artifact task ran on the isolated Render Workflow from PR #441 head `c3bf666a5251ff9748abb2c3d4ddf1b8372e0b23`. Run `trn-0b14gdb4nmaa396pc73ec6sng` failed after 12.1 s (8.1 CPU s; $0.0004815 recorded task cost). These are nonproduction validation results only.
-
-| Artifact | PG JSONB datum | PG text | Canonical bytes | zlib/S3 bytes | compressed / JSONB | Encode | PUT | S3 GET + rebuild p50 / p95 | PG get + decode p50 / p95 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Forecast | 161,373 B | 3,277,189 B | 3,073,225 B | 86,020 B | 0.533 (46.7% smaller) | 44.16 ms | 242.63 ms | 232.39 / 349.86 ms | 178.46 / 354.17 ms |
-| Simulation | 118,887 B | 727,232 B | 689,400 B | 67,816 B | 0.570 (43.0% smaller) | 13.81 ms | 144.86 ms | 96.04 / 135.78 ms | 36.24 / 136.97 ms |
-
-Each latency distribution used 9 samples. Both artifacts passed exact reconstruction, record/hash and deployed-decoder parity, restart, and corruption checks. Decoder CPU was Forecast 1,841.51 ms S3 / 1,738.49 ms PG; Simulation 315.34 / 313.32 ms. Combined case CPU was 3,758.78 ms and 684.62 ms respectively. Process peak RSS was 327,585,792 B (312.5 MiB), 101,910,928 B below the 429,496,720 B working budget.
-
-**The final immutable-write gate failed.** The task raised at the conditional first-writer `PutObject` probe after collecting the comparison metrics and before emitting GO. The exact exception was deliberately sanitized, so it is not known whether the endpoint rejected the condition, ignored it, or failed for another reason. Supabase's published S3 compatibility matrix documents conditional `If-None-Match` for reads, not `PutObject`; this is consistent with the failed gate but does not identify the exact exception: https://supabase.com/docs/guides/storage/s3/compatibility. Do not remove the condition or treat process-local check-then-put as immutable/atomic. Smallest sound correction: retain NO-GO for Supabase S3 immutable writes; use an object service with verified atomic conditional `PutObject If-None-Match: *`, or separately design and prove an atomic database-coordinated publication protocol before reconsidering this backend.
-
-**Cleanup/evidence classification:** Task logs independently recorded zero remaining test objects. In the Dashboard, the S3 key list was independently observed empty after revocation; the Workflow environment was independently checked after secret removal and contained only `PYTHON_VERSION`. These UI checks occurred before the operator-reported Workflow deletion. Management confirms deletion through the Dashboard; deletion itself has not been independently rechecked from a service inventory. No credentials are retained here. The empty private test bucket was not reported deleted. Production app, database rows, and deployment were not changed.
-
-**Disposition: NO-GO.** Compression and reconstruction results are promising but cannot override the failed immutable-write requirement. This does not authorize production integration, deployment, another run, credential creation, or spend. Prior read-only transaction safeguards did not make the broad production database URL a least-privilege credential; any separately authorized future test must use purpose-limited read-only DB access.
-
