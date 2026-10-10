@@ -2,6 +2,10 @@
 Updated: 2026-10-09  
 Authority: sole current cross-workstream status. Historical snapshots are under `docs/operations/archive/`. Detailed P0 decisions and evidence remain in [Architecture Recovery](workstreams/ARCHITECTURE_RECOVERY.md).
 
+## 2026-10-10 — 100k-league storage scale plan recorded
+
+The primary long-term architecture scenario is **100,000 leagues**; 1,000 and 10,000 are growth gates, and 1,000,000 is an upper-bound sensitivity. The dedicated [Scalability Planning: 100k Leagues](SCALABILITY_PLANNING_100K.md) models workload, five-year retained object/reference growth, bandwidth, Supabase data-plane list-price sensitivity, compute sensitivity and infrastructure gates. This is explicitly extrapolation from the October 10 two-artifact measurement and offline write-safety prototype—not capacity acceptance or an operating-cost quote. The proposed architecture has a credible path to 100k only with tenant-scoped immutable artifacts, authoritative transactional publication, queue/backpressure controls, pooled DB access, and measured load gates. **PR #443 remains unchanged and PROTOTYPE PASS / PRODUCTION NO-GO. No purchase, merge, production change or migration is authorized.**
+
 ## 2026-10-10 — real Forecast/Simulation storage validation accepted; S3 write gate NO-GO
 
 Management accepts the real nonproduction comparison executed by the isolated Render Workflow on PR #441 head `c3bf666a5251ff9748abb2c3d4ddf1b8372e0b23`. Run `trn-0b14gdb4nmaa396pc73ec6sng` ended NO-GO after 12.1 seconds (8.1 CPU seconds; $0.0004815 recorded task cost), solely because the immutable conditional `PutObject` gate failed. Compression and reconstruction evidence justify bounded storage development; they do not authorize production use.
