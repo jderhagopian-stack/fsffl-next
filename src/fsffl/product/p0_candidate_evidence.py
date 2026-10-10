@@ -222,7 +222,8 @@ def build_p0_candidate_source_rows(
         if player.position.value in {"QB", "RB", "WR", "TE"}
     }
     references = tuple(reference_rows or frozen_p0_source_rows())
-    ref_ids = {row.current_player_id for row in references}
+    # Frozen rows retain legacy current_player_id encoding; compare canonical IDs.
+    ref_ids = {row.player_id for row in references}
     if len(references) != 335 or len(ref_ids) != 335:
         raise ValueError("P0 benchmark must remain exactly 335 unique reference players")
     by_position: dict[str, list[float]] = {}
