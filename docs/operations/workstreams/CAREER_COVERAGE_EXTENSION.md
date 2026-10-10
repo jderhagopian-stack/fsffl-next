@@ -1,5 +1,12 @@
 # Career Coverage Extension — Issue #405 implementation checkpoint
 
+## Universal Forecast coverage correction and implementation checkpoint — 2026-10-10
+
+Management clarified that the frozen 335 is a historical validation benchmark and not a production forecasting ceiling. The small current implementation is isolated in draft [PR #447](https://github.com/jderhagopian-stack/fsffl-next/pull/447), based on main independently of the coverage-accounting checkpoint PR #446. It adds a reusable point-in-time empirical QB/RB/WR/TE prior, split-conformal interval calibration, and a canonical Forecast observation adapter for subjects without approved ordinary projections. It uses the preserved accepted historical panel; rolling validation spans 18,905 outcomes, 36,232 calibration cases and 34,930 holdout forecasts, with approximately 90% empirical coverage for central-80 intervals across each position and both known-feature and sparse-position-only modes. See the PR artifact `artifacts/implementation/universal_sparse_forecast_prior_20261010/ROLLING_CALIBRATION_RESULT.json`.
+
+This checkpoint does not satisfy Career Coverage #405: candidate State/provider evidence, dynamic P0 feature construction, arbitrary league-scoring translation, changed-subject reuse, P0/Career materialization and full roster/waiver accounting are still to implement. The existing 335 P0 materialization is unchanged. Continue with candidate evidence/identity and scoring adapter into unchanged P0, then Career. Keep PR #446 separate. Preserve point-in-time safeguards, #370 fail-closed behavior, shared computation and #445 job bounds. No merge, deployment or infrastructure change.
+
+
 Updated: 2026-10-07  
 Status: **PR1 COMPLETE / MERGED — PR2 AUTHORIZED: dynamic subject/evidence materialization + rostered coverage**  
 Authority: [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405) and [Current Operations](../CURRENT_OPERATIONS.md). This is a separate Career/Foundation 4 workstream, not Architecture Recovery.
