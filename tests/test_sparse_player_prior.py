@@ -130,6 +130,8 @@ def test_prior_rejects_invalid_identity_position_coordinate_and_duplicate_rows()
         HistoricalSparsePlayerPrior([]).forecast(_profile(player_id=" "))
     with pytest.raises(SparsePriorAuthorityError, match="unsupported_position"):
         HistoricalSparsePlayerPrior([]).forecast(_profile(position="K"))
+    with pytest.raises(SparsePriorAuthorityError, match="invalid_age"):
+        HistoricalSparsePlayerPrior([]).forecast(_profile(age=-1))
     with pytest.raises(ValueError, match="standard_non_ppr"):
         HistoricalSparsePlayerPrior(
             [_outcome(1, position="QB", scoring_coordinate="connected_league")]
