@@ -1,5 +1,20 @@
 # FSFFL NEXT — Management Continuity
 
+## 2026-10-10 — Management decision: product-led strategic reset and commercial execution boundaries
+
+**Decision:** Management accepts the program-wide strategic assessment. FSFFL NEXT's differentiated State, Forecast, Value, Decision, Simulation 2.0, Career, PIT/replay, atomic publication, last-good and tenant-isolation contracts remain authoritative. No wholesale rewrite or new research program. Design interfaces for **100,000 leagues** without premature infrastructure purchases or deployment.
+
+**Product is the lead lane.** Continue Career Coverage #405 at its exact current accepted checkpoint, including complete roster/waiver subject coverage, preserved 335-player parity reference, governed season rollover and reuse of unchanged evidence. Then deliver bounded Explore discovery quality (credible, diversified, cheap-first opportunities) and Trade Center usefulness (specific bilateral consequences and targeted deep analysis). Verify each product slice through an authenticated iPhone/Safari owner task and real user-perceived latency. Preserve the later Owner Intelligence, historical grading, What-If, league history and publication roadmap.
+
+**One short architecture/interface contract, not a blocking audit.** Classify computation by widest mathematically and privacy-safe reuse scope: provider/season/week evidence; shared model fit; rules-signature player outputs; exact league State/scenario simulations; team/user-specific decisions and presentation. Identify existing seams, semantic dependency fingerprints, single-flight/coalescing, tenant fences, durable/idempotent job ownership, backpressure and eventual multiple worker/application instances. Specify KEEP / CHANGE NOW / CHANGE LATER, with CHANGE NOW restricted to an actual lock-in affecting #405 or next product work. No immediate distributed queue, broad lifecycle rewrite, schema migration or new infrastructure. Architecture work must not delay unaffected Career work.
+
+**Infrastructure remains a supporting lane.** Preserve PR #443's offline write-safety proof and strict production NO-GO. Complete only a separately approved narrow real Supabase/PostgreSQL safety gate before any storage migration. Observe naturally occurring PR #442 provider request/byte telemetry before proposing cohort reuse. PostgreSQL Free allocation overage remains an immediate independent operational risk; any upgrade, deletion or migration requires Management approval.
+
+**Execution governance:** one primary product implementation lane and at most one narrow enabling/support lane. Existing workers checkpoint exact authorized work rather than restart. Every change must provide an owner-visible improvement or remove a measured correctness, reliability, cost or future scale lock-in. Avoid redundant full-suite testing when contracts are unchanged; retain focused correctness and required acceptance gates. Report weekly: shipped owner outcome, real latency/cost evidence, active blocker, and one next decision. Near-term proof: multiple leagues and stable restores, followed by proportionate 100-/1,000-league measurement; 10k/100k/1m remain modeled scenarios until evidenced. This is a 30-day management direction, not a fixed feature-delivery deadline.
+
+**First Management action:** issue the bounded computation/reuse and job-identity contract to an architecture worker, while Career #405 continues unaffected; then route Explore/Trade work. See [Living Product Priorities](../FSFFL_NEXT_PRODUCT_PRIORITIES.md) for the active product sequence.
+
+
 Updated: 2026-10-09  
 Authority: canonical durable record of Management direction, sequencing, deferred work, and roadmap changes across Management chats.
 
