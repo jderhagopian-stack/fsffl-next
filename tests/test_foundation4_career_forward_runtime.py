@@ -18,6 +18,7 @@ from fsffl.product.foundation4_career_forward_runtime import (
     FOUNDATION4_Y4_Y7_ARTIFACT_KIND,
     CareerIntrinsicLoader,
     Foundation4CareerForwardShadowLoader,
+    _attach_rostered_accounting,
 )
 from fsffl.product.foundation4_shadow_inputs import (
     FOUNDATION4_CURRENT_COHORT_SIZE,
@@ -40,8 +41,12 @@ from fsffl.state.models import (
     LeagueRules,
     LeagueState,
     LineupRequirement,
+    Player,
+    Position,
+    RosterEntry,
     RosterSlot,
     ScoringRule,
+    TeamState,
 )
 from fsffl.value.shapley_intrinsic_contract import (
     CompletedSourceFactProvenance,
@@ -193,6 +198,57 @@ def test_live_sleeper_lineup_order_matches_frozen_terminal_capacity_signature() 
 
     assert contract.player_count == FOUNDATION4_CURRENT_COHORT_SIZE
     assert calls == ["current"]
+
+
+def test_career_contract_reports_uncovered_rostered_subjects_with_exact_slots(
+    materialized,
+) -> None:
+    _persistence, _calls, _loader_instance, _context_value, contract = materialized
+    roster_rows = (
+        ("qb-bench", Position.QB, RosterSlot.BENCH),
+        ("rb-ir", Position.RB, RosterSlot.IR),
+        ("wr-taxi", Position.WR, RosterSlot.TAXI),
+        ("te-flex", Position.TE, RosterSlot.FLEX),
+    )
+    state = LeagueState.model_construct(
+        league=League(
+            league_id="sleeper:coverage-test",
+            name="Coverage Test",
+            season=2026,
+            rules=_rules(),
+        ),
+        team_states=(
+            TeamState(
+                team_id="team-1",
+                roster=tuple(
+                    RosterEntry(player_id=player_id, slot=slot)
+                    for player_id, _position, slot in roster_rows
+                ),
+            ),
+        ),
+        players=tuple(
+            Player(player_id=player_id, full_name=player_id, position=position)
+            for player_id, position, _slot in roster_rows
+        ),
+    )
+
+    extended = _attach_rostered_accounting(contract, state)
+    validated = type(contract).model_validate(extended.model_dump(mode="python"))
+
+    assert len(validated.estimates) == FOUNDATION4_CURRENT_COHORT_SIZE
+    assert validated.rostered_subject_ids == tuple(sorted(row[0] for row in roster_rows))
+    assert {
+        (row.player_id, row.position, row.roster_slot, row.reason_code)
+        for row in validated.model_authority_failures
+    } == {
+        (
+            player_id,
+            position,
+            slot,
+            "career_intrinsic_estimate_not_materialized",
+        )
+        for player_id, position, slot in roster_rows
+    }
 
 
 @pytest.mark.parametrize(

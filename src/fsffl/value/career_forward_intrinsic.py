@@ -7,7 +7,7 @@ from typing import Annotated, Literal, Mapping
 
 from pydantic import Field, model_validator
 
-from fsffl.state.models import FrozenModel, Position
+from fsffl.state.models import FrozenModel, Position, RosterSlot
 from fsffl.value.career_tail import CareerTailAuthority
 from fsffl.value.long_term_intrinsic import (
     LONG_TERM_INTRINSIC_HORIZONS,
@@ -139,6 +139,22 @@ class CareerForwardIntrinsicPlayerEstimate(FrozenModel):
         return self
 
 
+class CareerForwardModelAuthorityFailure(FrozenModel):
+    """A rostered subject lacking a usable Career estimate in this publication."""
+
+    player_id: str
+    position: Position
+    team_id: str
+    roster_slot: RosterSlot
+    reason_code: str
+    reason: str
+
+
+CAREER_ACCOUNTING_POSITIONS = frozenset(
+    {Position.QB, Position.RB, Position.WR, Position.TE}
+)
+
+
 class CareerForwardIntrinsicShadowContract(FrozenModel):
     evaluation_season: Annotated[int, Field(ge=2000)]
     input_fingerprint: str
@@ -149,6 +165,8 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
     lineup_capacity_signature: str
     estimates: tuple[CareerForwardIntrinsicPlayerEstimate, ...]
     player_count: Annotated[int, Field(ge=1)]
+    rostered_subject_ids: tuple[str, ...] = ()
+    model_authority_failures: tuple[CareerForwardModelAuthorityFailure, ...] = ()
     model_version: str = CAREER_FORWARD_INTRINSIC_MODEL_VERSION
     contract_version: str = CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION
     raw_quantity: str = CAREER_FORWARD_RAW_QUANTITY
@@ -167,6 +185,19 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
             raise ValueError("career-forward player_count does not match estimates")
         if len({item.player_id for item in self.estimates}) != len(self.estimates):
             raise ValueError("career-forward player ids must be unique")
+        if len(set(self.rostered_subject_ids)) != len(self.rostered_subject_ids):
+            raise ValueError("career-forward rostered subject ids must be unique")
+        failure_ids = [item.player_id for item in self.model_authority_failures]
+        if len(set(failure_ids)) != len(failure_ids):
+            raise ValueError("career-forward model-authority failures must be unique")
+        if not set(failure_ids).issubset(set(self.rostered_subject_ids)):
+            raise ValueError("career-forward failures must identify rostered subjects")
+        if not set(self.rostered_subject_ids).issubset(
+            {item.player_id for item in self.estimates} | set(failure_ids)
+        ):
+            raise ValueError(
+                "every rostered Career subject needs an estimate or an explicit failure"
+            )
         if not self.input_fingerprint.strip():
             raise ValueError("career-forward input fingerprint cannot be blank")
         if self.authoritative_for_current_intrinsic or self.current_intrinsic_replaced:

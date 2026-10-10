@@ -12,9 +12,11 @@ from fsffl.persistence.contracts import (
     utc_now,
 )
 from fsffl.value.career_forward_intrinsic import (
+    CAREER_ACCOUNTING_POSITIONS,
     CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
     CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
     CareerForwardIntrinsicShadowContract,
+    CareerForwardModelAuthorityFailure,
     build_career_forward_intrinsic_shadow,
 )
 from fsffl.value.career_tail import (
@@ -31,6 +33,7 @@ from fsffl.value.shapley_intrinsic_contract import (
     ShapleyIntrinsicAvailability,
     ShapleyIntrinsicContract,
 )
+from fsffl.state.models import LeagueState
 
 from .foundation4_shadow_inputs import (
     FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256,
@@ -77,6 +80,67 @@ def _rules_payload(context: UserRuntimeContext) -> dict[str, object]:
     }
 
 
+def _rostered_accounting_subjects(state: LeagueState) -> tuple[dict[str, str], ...]:
+    """Resolve all exact-State QB/RB/WR/TE roster members, including bench/IR/taxi."""
+
+    players = {player.player_id: player for player in state.players}
+    subjects: list[dict[str, str]] = []
+    for team_state in state.team_states:
+        for entry in team_state.roster:
+            player = players.get(entry.player_id)
+            if player is None or player.position not in CAREER_ACCOUNTING_POSITIONS:
+                continue
+            subjects.append(
+                {
+                    "player_id": player.player_id,
+                    "position": player.position.value,
+                    "team_id": team_state.team_id,
+                    "roster_slot": entry.slot.value,
+                }
+            )
+    return tuple(sorted(subjects, key=lambda item: item["player_id"]))
+
+
+def _attach_rostered_accounting(
+    contract: CareerForwardIntrinsicShadowContract,
+    state: LeagueState,
+) -> CareerForwardIntrinsicShadowContract:
+    subjects = _rostered_accounting_subjects(state)
+    estimates = {row.player_id: row for row in contract.estimates}
+    failures: list[CareerForwardModelAuthorityFailure] = []
+    for subject in subjects:
+        estimate = estimates.get(subject["player_id"])
+        if estimate is not None and estimate.position.value == subject["position"]:
+            continue
+        mismatch = estimate is not None
+        failures.append(
+            CareerForwardModelAuthorityFailure(
+                player_id=subject["player_id"],
+                position=subject["position"],
+                team_id=subject["team_id"],
+                roster_slot=subject["roster_slot"],
+                reason_code=(
+                    "career_intrinsic_position_mismatch"
+                    if mismatch
+                    else "career_intrinsic_estimate_not_materialized"
+                ),
+                reason=(
+                    "The available Career estimate has a different position than "
+                    "the exact League State."
+                    if mismatch
+                    else "The accepted Career materialization does not yet contain "
+                    "this rostered subject."
+                ),
+            )
+        )
+    return contract.model_copy(
+        update={
+            "rostered_subject_ids": tuple(item["player_id"] for item in subjects),
+            "model_authority_failures": tuple(failures),
+        }
+    )
+
+
 class CareerIntrinsicLoader:
     """Build, restore, and persist canonical production Career Intrinsic authority."""
 
@@ -106,6 +170,9 @@ class CareerIntrinsicLoader:
         payload = {
             "evaluation_season": context.league_state.league.season,
             "league_id": context.league_state.league.league_id,
+            "rostered_accounting_subjects": _rostered_accounting_subjects(
+                context.league_state
+            ),
             "league_rules": _rules_payload(context),
             "current_intrinsic_input_fingerprint": (
                 self._current_intrinsic_fingerprint_resolver(context)
@@ -201,6 +268,7 @@ class CareerIntrinsicLoader:
             contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
         except (TypeError, ValueError):
             return None
+        contract = _attach_rostered_accounting(contract, context.league_state)
         if migrated_legacy:
             migrated_payload = contract.model_dump(mode="json")
             migrated_payload["_foundation4_dependency_fingerprint"] = fingerprint
@@ -377,6 +445,7 @@ class CareerIntrinsicLoader:
                 ),
             }
         )
+        contract = _attach_rostered_accounting(contract, context.league_state)
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
