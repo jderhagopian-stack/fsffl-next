@@ -31,6 +31,7 @@ from .p0_forecast_runtime import (
     P0_PACKAGE_SHA256,
     P0_SOURCE_SEASON,
     P0_STANDARD_Y1_BOARD_SHA256,
+    P0SourceRow,
     build_p0_standard_future_materialization,
     governed_p0_player_ids,
 )
@@ -65,6 +66,7 @@ def build_p0_future_forecast_contract(
     league_state: LeagueState,
     raw_forecasts: tuple[ForecastObservation, ...],
     league_year_one: tuple[ForecastObservation, ...],
+    candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
 ) -> P0FutureForecastContractMaterialization:
     """Materialize current P0 Y2/Y3 authority behind a model-agnostic contract.
 
@@ -74,13 +76,12 @@ def build_p0_future_forecast_contract(
     requiring downstream product code to know D0/D1 internals.
     """
 
-    governed_ids = set(governed_p0_player_ids(league_state))
+    governed_ids = set(governed_p0_player_ids(league_state, candidate_source_rows))
     if not governed_ids:
         raise ValueError("frozen P0/H3 authority has no mapped subjects in current State")
 
-    # Restrict scoring compatibility to the subjects actually owned by frozen P0/H3.
-    # Current State/provider universes may be larger, but they cannot broaden H3
-    # authority or collapse eligible subjects merely by containing additional players.
+    # Only frozen reference identities and candidates with a complete, validated
+    # point-in-time P0 source packet enter this scoring boundary.
     governed_raw = tuple(
         item for item in raw_forecasts if item.player_id in governed_ids
     )
@@ -114,6 +115,7 @@ def build_p0_future_forecast_contract(
     p0 = build_p0_standard_future_materialization(
         league_state=league_state,
         standard_year_one=standard_year_one,
+        candidate_source_rows=candidate_source_rows,
     )
 
     if set(p0.players) != set(scoring_multipliers):
@@ -172,6 +174,7 @@ def build_p0_future_forecast_contract(
         "future_i1_scoring_method": "player_specific_year1_league_standard_ratio",
         "future_i1_scoring_player_count": len(scoring_multipliers),
         "future_i1_governed_state_subject_count": len(governed_ids),
+        "future_i1_dynamic_candidate_subject_count": len(candidate_source_rows or {}),
         "future_i1_eligible_subject_count": len(eligible_ids),
         "future_i1_excluded_non_h3_subject_count": len(
             {
