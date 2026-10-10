@@ -7,7 +7,7 @@ Branch: `feature/universal-forecast-sparse-prior-20261010`
 ## Implemented in this tranche
 
 - Added an in-memory, reusable historical position × age × experience empirical prior with broad position-only backoff. It does not fit per candidate or per league.
-- Enforced canonical subject IDs, supported position, the standard/non-PPR training coordinate, completed target seasons, exact `as_of` cutoffs, minimum sample support and duplicate-history rejection. Missing seasons are not synthesized as zero by the production prior.
+- Enforced a nonblank subject ID supplied by the upstream canonical identity resolver, supported position, the standard/non-PPR training coordinate, completed target seasons, exact `as_of` cutoffs, minimum sample support and duplicate-history rejection. Identity mapping itself remains part of the next production evidence adapter. Missing seasons are not synthesized as zero by the production prior.
 - Added rolling-origin split-conformal calibration of central 50% and 80% forecast intervals. Calibration is limited to earlier target seasons and available observations, with position/evidence-tier pooling and a position fallback.
 - Added an adapter to the canonical Forecast observation only after compatible rolling calibration passes and source timestamps do not exceed the candidate `as_of`.
 - Added focused tests and a reproducible rolling validation script. Validation labels were derived from the preserved accepted historical panel and explicit rookie-season evidence; the source hashes are in `ROLLING_CALIBRATION_RESULT.json`.
