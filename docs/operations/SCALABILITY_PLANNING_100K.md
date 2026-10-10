@@ -62,16 +62,16 @@ At 1m, even the upper five-year PG reference estimate is ~5.9 TB before 1.5× op
 
 Supabase pricing currently lists Pro at $25/month; Pro includes 100 GB Storage, 250 GB each of cached and uncached egress, and 100,000 MAU. Additional MAUs are currently $0.00325 each. Overages shown in its current docs are $0.0213/GB-month for Storage, $0.03/GB for cached egress and $0.09/GB for uncached egress. Compute is separate and is billed per project. The table below approximates an end-of-year-5 month with all modeled objects retained, a 95% Storage-CDN hit rate, and one database project sized by *data-envelope only*: XL at 1k/10k, 4XL at 100k, 16XL at 1m. Compute tier selection is a placeholder to expose cost order, not an approved sizing recommendation. The tier subtotals show gross Pro plus compute list prices before any applicable compute credits.
 
-| Scale | Pro + illustrative DB compute | Storage overage at year 5 | Egress overage at modeled views (95% cached) | Approx. priced data-plane subtotal/month |
-|---:|---:|---:|---:|---:|
-| 1,000 | ~$235 (Pro + XL) | ~$0 | ~$0 | **~$235** |
-| 10,000 | ~$235 (Pro + XL) | ~$19 | ~$3 | **~$257** |
-| **100,000** | **~$985 (Pro + 4XL)** | **~$209** | **~$98** | **~$1,292** |
-| 1,000,000 | ~$3,755 (Pro + 16XL) | ~$2,113 | ~$1,188 | **~$7,056** |
+| Scale | Pro + illustrative DB compute | Storage overage at year 5 | Egress overage (95% cached) | Auth MAU overage | Priced subtotal/month |
+|---:|---:|---:|---:|---:|---:|
+| 1,000 | ~$235 (Pro + XL) | ~$0 | ~$0 | ~$0 | **~$235** |
+| 10,000 | ~$235 (Pro + XL) | ~$19 | ~$3 | ~$0 | **~$257** |
+| **100,000** | **~$985 (Pro + 4XL)** | **~$209** | **~$98** | **~$2,275** | **~$3,567** |
+| 1,000,000 | ~$3,755 (Pro + 16XL) | ~$2,113 | ~$1,188 | ~$25,675 | **~$32,731** |
 
 MAU overage assumes 8 distinct MAU per league and the current Pro allowance of 100,000. The egress estimate treats 95% as Storage cached egress and 5% as uncached. At 100k, modeled pair-view egress is 3.69 TB/month: ~3.51 TB cached and ~185 GB uncached. With no caching, the same view traffic would be roughly $310/month uncached overage; with 80% cache it is about $125/month combined egress overage. Cacheability and cache hit rate require production-like CDN/load evidence. Figures use decimal GB/TB and are rounded. Gross Pro+compute subtotal is before applicable account compute credits.
 
-**Not included in the subtotal:** FSFFL web/API and worker fleet, simulation CPU above, Supabase Auth/Realtime usage, extra read replicas, high availability, backup/PITR retention, disk IOPS/throughput add-ons, IPv4, log ingestion, taxes, support/enterprise terms, provider licensing/usage, and non-artifact traffic. Therefore ~$1.3k/month is not a total 100k-league operating-cost forecast. A plausible service-wide budget cannot be closed until load and simulation profiling establish app and worker CPU/memory, and product telemetry measures actual requests and bytes. No spend is authorized.
+**Not included in the subtotal:** FSFFL web/API and worker fleet, simulation CPU above, Auth/Realtime features or usage beyond modeled MAU charges, extra read replicas, high availability, backup/PITR retention, disk IOPS/throughput add-ons, IPv4, log ingestion, taxes, support/enterprise terms, provider licensing/usage, and non-artifact traffic. Therefore the ~$3.6k/month priced 100k data-plane subtotal is not a total operating-cost forecast. A plausible service-wide budget cannot be closed until load and simulation profiling establish app and worker CPU/memory, and product telemetry measures actual requests and bytes. No spend is authorized.
 
 ## Decisions to make now versus defer
 
