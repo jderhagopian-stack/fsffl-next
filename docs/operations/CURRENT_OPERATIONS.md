@@ -1,5 +1,10 @@
 # Current Operations
 
+## 2026-10-10 — Bounded intelligence job admission merged (#445)
+
+Management's narrow CHANGE NOW safeguard was implemented and merged into `main` as [PR #445](https://github.com/jderhagopian-stack/fsffl-next/pull/445), squash commit `a612c4dbd7eaadf676381238277664a663fa51df`. `IntelligenceJobCoordinator` now bounds admitted running + pending jobs, coalesces exact same-user/State requests before admission, and releases admission on completion, failure, interruption, cancellation and submission failure. Saturation returns a retryable HTTP 503 (`Retry-After: 5`) without changing reconciliation ownership or queuing unlimited closures. Focused GitHub checks and CI passed; stable full suite was skipped under proportionate-testing policy. **Not deployed**; production unchanged. PR #444 remains a separate draft architecture documentation PR. Career Coverage #405 PR1 remains merged and PR2 remains authorized but no PR2 implementation PR was visible as of this checkpoint. Next delivery focus: complete Career PR2 without parallel duplicate workers, then Explore and Trade.
+
+
 ## 2026-10-10 — Supabase Pro upgrade independently verified
 
 Management reported upgrading Supabase; connected Supabase organization details independently confirm organization `Jimmy’s Lab` is on `pro` / `tier_pro`, and project `FSFFL NEXT` (`gldxkbqcprzuffgmamxl`) reports `ACTIVE_HEALTHY`. The former Free-plan 512 MiB database allocation is **no longer the operative plan-level capacity gate**. Do not treat the earlier 604,040,339 B database size as evidence of current Pro-plan quota violation. Physical database growth, cost, retention, write safety, publication integrity and 100k-league economics remain open engineering concerns. This is a **record of an operator-completed billing upgrade**, not authorization for additional purchases, compute upgrades, data deletion, schema changes, migration or production deployment. Confirm actual current plan limits/usage before making capacity commitments.
