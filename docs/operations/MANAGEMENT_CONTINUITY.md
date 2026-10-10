@@ -1,5 +1,9 @@
 # FSFFL NEXT — Management Continuity
 
+## 2026-10-10 — Scalable computation foundation decision
+
+The bounded execution and reuse contract is now captured in [Scalable Computation Foundation](workstreams/SCALABLE_COMPUTATION_FOUNDATION.md). Safe shared work is keyed by provider evidence, historical/model identity, canonical player forecast inputs, and scoring-rule/horizon cohorts; immutable league State/Simulation and bilateral team Decisions remain isolated. Existing fingerprint and publication authorities stay in place. Immediate weakness: the in-process `IntelligenceJobCoordinator` has an unbounded pending executor queue and process-local locks; do not build additional high-fan-out callers on it until bounded admission/backpressure and an injected execution contract are implemented and tested. Cross-process durable queue and independent worker are deferred until measured demand. No code, tests, migration, deployment, infrastructure purchase, #405 checkpoint change, or #443 change in this documentation-only tranche. Supabase Pro is active.
+
 ## 2026-10-10 — Supabase Pro plan confirmed by connected account
 
 Management reports the Supabase Pro upgrade is complete. Connected Supabase organization verification confirms `Jimmy’s Lab` on `pro` / `tier_pro`, with FSFFL NEXT project `gldxkbqcprzuffgmamxl` reporting `ACTIVE_HEALTHY`. Supabase Free-tier database overage is no longer an immediate Free-plan operational blocker; **do not use the old 512 MiB allocation to justify urgent storage migration or infrastructure spending**. Retain disciplined storage growth/retention economics, PR #443 strict production NO-GO and independently approved real PostgreSQL/Supabase write-safety validation. No additional billing/compute changes, schema migrations, production deployment or deletion are authorized by this confirmation. Product-led Career → Explore → Trade sequence remains unchanged.
