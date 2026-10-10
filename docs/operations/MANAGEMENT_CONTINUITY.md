@@ -1,5 +1,14 @@
 # FSFFL NEXT — Management Continuity
 
+## 2026-10-10 — Management accepts scalable computation contract and bounded job-admission correction
+
+Management accepts the architecture direction documented in draft [PR #444](https://github.com/jderhagopian-stack/fsffl-next/pull/444): share provider/model/compatible scoring work only by exact semantic dependency and permission scope; preserve league-State Simulation and team-specific Decision isolation, PIT/replay, atomic publication and last-good. The identified near-term hazard is `IntelligenceJobCoordinator`: `ThreadPoolExecutor(max_workers=2)` bounds running threads but not its pending submissions; process-local locks do not provide cross-instance admission.
+
+**Authorization: one narrow code correction** to bound pending/admitted background jobs and expose a safe, explicit busy/coalesced/rejected result for callers, preserving accepted lifecycle semantics. Use a configurable conservative capacity, no blocking web request threads, no unbounded closure capture, no silent job drop, and correct slot release on completion/failure/cancellation. Preserve per-user single-flight, exact State/publication fences, persisted status and last-good. Prove focused burst, duplicate request, rejection/retry, cancellation and memory-bound tests. Prefer an injected executor/admission seam if small; do not build a distributed queue, introduce infrastructure, rewrite worker lifecycle, change provider/model/Simulation math, or expand Career #405 scope. Coordinate with active Career worker and do not interfere with Storage #443.
+
+**Process:** architecture worker prepares isolated PR and focused evidence; no merge or deploy without separate Management acceptance. PR #444 is a draft documentation proposal and is not itself executable remediation. Career Coverage #405 continues unaffected; no additional architecture audit. Supabase Pro removes the former Free-tier capacity emergency. Preserve worker allowance for product delivery.
+
+
 ## 2026-10-10 — Supabase Pro plan confirmed by connected account
 
 Management reports the Supabase Pro upgrade is complete. Connected Supabase organization verification confirms `Jimmy’s Lab` on `pro` / `tier_pro`, with FSFFL NEXT project `gldxkbqcprzuffgmamxl` reporting `ACTIVE_HEALTHY`. Supabase Free-tier database overage is no longer an immediate Free-plan operational blocker; **do not use the old 512 MiB allocation to justify urgent storage migration or infrastructure spending**. Retain disciplined storage growth/retention economics, PR #443 strict production NO-GO and independently approved real PostgreSQL/Supabase write-safety validation. No additional billing/compute changes, schema migrations, production deployment or deletion are authorized by this confirmation. Product-led Career → Explore → Trade sequence remains unchanged.
