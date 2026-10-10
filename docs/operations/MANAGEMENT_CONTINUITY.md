@@ -25,7 +25,7 @@ Each latency distribution used 9 samples. Both artifacts passed exact reconstruc
 
 **Disposition: NO-GO.** Compression and reconstruction results are promising but cannot override the failed immutable-write requirement. This does not authorize production integration, deployment, another run, credential creation, or spend. Prior read-only transaction safeguards did not make the broad production database URL a least-privilege credential; any separately authorized future test must use purpose-limited read-only DB access.
 
-## 2026-10-09 — iPhone-only Render Workflow private-storage continuation
+## 2026-10-09 — iPhone-only Render Workflow private-storage preparation (pre-run; superseded by the 2026-10-10 checkpoint above)
 
 Management's iPhone-only operator constraint **supersedes the prior interactive Render SSH and CLI handoff**. Browser-deployed Render Workflows supports isolated one-off tasks through Dashboard New → Workflow and Tasks → Start Task, with no local computer. Independent draft [#441](https://github.com/jderhagopian-stack/fsffl-next/pull/441) has been extended with source-identical #439 adapter, noninteractive real-artifact validator, Python Render Workflow entrypoint, credential-free preflight and focused tests. Zero task arguments and disabled retries protect workflow state. Exact [Safari setup/runbook](https://github.com/jderhagopian-stack/fsffl-next/blob/docs/private-storage-validation-access-gate-20261009/artifacts/implementation/private_storage_validation_20261009/README.md) records existing bucket, read-only PG records 11540/11541, full build/start commands, Python 3.12.10, temporary private Workflow-only S3 keys and cleanup.
 
