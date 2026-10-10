@@ -88,7 +88,7 @@ MAU overage assumes 8 distinct MAU per league and the current Pro allowance of 1
 
 ## Next engineering decision
 
-Authorize a separately bounded nonproduction integration proof for PR #443's existing contract: pinned Supabase Standard Upload with `upsert=false`, byte/hash verification of create-only collisions, and the actual PostgreSQL transaction/CAS/outbox owner under concurrent and injected-failure loads. Include tenant/state/PIT/last-good/replay assertions and a realistic 10k→100k synthetic load profile; report before requesting production wiring. This decision does not authorize credentials, live production writes, migration, purchase, merge, or deployment.
+Decide whether to authorize a **separate follow-on nonproduction integration proof** that uses PR #443 as the unchanged reference: pinned Supabase Standard Upload with `upsert=false`, byte/hash verification of create-only collisions, and the actual PostgreSQL transaction/CAS/outbox owner under concurrent and injected-failure loads. Put any integration code and tests in a new isolated branch/PR, not #443. Include tenant/State/PIT/last-good/replay assertions and a staged 10k→100k synthetic load profile; report before requesting production wiring. The decision must separately specify allowed test project/credential handling. It does not authorize production writes, migration, purchase, merge or deployment.
 
 ## References
 
