@@ -1,5 +1,20 @@
 # Supabase Capacity & Scalability Recovery
 
+## 2026-10-10 — real Forecast/Simulation storage validation accepted; S3 write gate NO-GO
+
+Management accepts the real nonproduction comparison executed by the isolated Render Workflow on PR #441 head `c3bf666a5251ff9748abb2c3d4ddf1b8372e0b23`. Run `trn-0b14gdb4nmaa396pc73ec6sng` ended NO-GO after 12.1 seconds (8.1 CPU seconds; $0.0004815 recorded task cost), solely because the immutable conditional `PutObject` gate failed. Compression and reconstruction evidence justify bounded storage development; they do not authorize production use.
+
+| Artifact | PostgreSQL JSONB datum | Canonical bytes | zlib object bytes | Compression ratio | S3 GET + rebuild p50/p95 | PG get + decode p50/p95 |
+|---|---:|---:|---:|---:|---:|---:|
+| Forecast | 161,373 B | 3,073,225 B | 86,020 B | 0.533 (46.7% smaller) | 232.39 / 349.86 ms | 178.46 / 354.17 ms |
+| Simulation | 118,887 B | 689,400 B | 67,816 B | 0.570 (43.0% smaller) | 96.04 / 135.78 ms | 36.24 / 136.97 ms |
+
+Each latency used 9 samples. Both records passed exact reconstruction, record/hash and deployed-decoder parity, restart and corruption checks. Process peak RSS was 327,585,792 B (312.5 MiB), 101,910,928 B below the 429,496,720 B working budget. The final conditional immutable-write probe failed; its sanitized exception does not reveal whether the condition was rejected, ignored, or failed for another reason. Supabase's S3 compatibility matrix lists conditional operations for `HeadObject`/`GetObject`, not `PutObject`: https://supabase.com/docs/guides/storage/s3/compatibility.
+
+Cleanup evidence: the task log recorded zero test objects remaining; the Supabase Dashboard key list was independently observed empty after revocation; and the Workflow environment was independently checked with only `PYTHON_VERSION` after secret removal. Management confirms later Workflow deletion in the Dashboard; the deletion itself was not independently reverified. The test bucket was not reported deleted. No production app, database rows, or deployment were changed.
+
+**Status: accepted validation / tested S3 conditional-write implementation NO-GO.** Preserve strict immutability. Next authorized tranche: establish a documented atomic create-without-overwrite path, content-addressed identity/hash verification, and one authoritative database transaction for immutable registration plus publication, with concurrency/failure tests. Continue to preserve State, manifest, PIT, last-good, replay and tenant isolation. No Workflow, credentials, experiment rerun, production change, migration or purchase is authorized.
+
 ## 2026-10-09 23:01 UTC — Provider-acquisition telemetry deployment LIVE; natural measurement evidence gate OPEN
 
 **Deployment verified (existing paid Render only):** Operator authorized sole workspace `My Workspace`; production web service `fsffl-next-private-beta` is existing Starter `0.5c-512mb` single instance, auto-deploy OFF, no change to service plan, configuration or paid resources. GitHub merge of PR #442 is `db643f3368a0ccc21bd01dd616b16e066acf2741`; five subsequent main commits through deployed `2f89e83edbfbf31f72157735ced5fff4b0c4de5c` are **only operations Markdown** (verified repository comparison). Manual API deploy `dep-db4n3tvlk1mc73d80q4g` became live at **2026-10-09 23:01:28 UTC** after successful build and runtime startup; exact commit and deployment event verified in connected Render. No separate Workflow/VM, new key, secret, charge, Storage bucket mutation, forced refresh or #439/#441 interference.
