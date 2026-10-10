@@ -232,6 +232,8 @@ class HistoricalSparsePlayerPrior:
             raise SparsePriorAuthorityError(profile.player_id, "as_of_not_timezone_aware")
         if profile.age_years is not None and not math.isfinite(profile.age_years):
             raise SparsePriorAuthorityError(profile.player_id, "invalid_age")
+        if profile.age_years is not None and profile.age_years < 0:
+            raise SparsePriorAuthorityError(profile.player_id, "invalid_age")
         if profile.experience_years is not None and profile.experience_years < 0:
             raise SparsePriorAuthorityError(profile.player_id, "invalid_experience")
 
