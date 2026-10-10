@@ -351,3 +351,18 @@ PR1 may now advance through the repository's normal exact-head stable full-suite
 
 
 **PR1 merge closeout:** stable head `223241edcccf44af6e1c236cbab84751820c6ddf`; Stable full suite run `37723655257` attempt 2 **2,231 passed / 1 warning** with exact-head verification; squash merge `9141c12f3d69e8fa012b4e4db664f96e54f94aec`. Attempt 1's lone absolute-process-RSS failure on the same head was retried unchanged and passed; no memory ceiling or product/runtime code was changed. PR1 requires no Render deploy. **PR2 is authorized from merged main.**
+
+## PR2 implementation tranche 1 — exact-State roster accounting
+
+**Draft PR #446:** https://github.com/jderhagopian-stack/fsffl-next/pull/446  
+Base: `a0ff36870b33a9eb079ce40ed394c6145fcc87f4`  
+Implementation commit: `68cbd79a35d3818b9c8adc34460e90c2c48cec28`  
+Status: **open / draft / not merged / not deployed**. The operations checkpoint is also on this branch; GitHub holds the exact current PR head SHA.
+
+This first production slice makes the precise uncovered roster population explicit without extending or changing any accepted model output. On the Career loader's exact League State, it resolves every rostered QB/RB/WR/TE across teams and slots (including bench, IR and taxi), includes those canonical subjects in the Career dependency fingerprint, and adds a player-specific model-authority failure for each rostered subject without a position-compatible estimate. Compatible artifact restores reconcile the same coverage. Existing 335 estimates and all Career/#370 economics are unchanged; #370 remains fail-closed whenever estimate coverage is incomplete. No waiver subject is counted as rostered.
+
+Validation on the implementation branch: focused Career runtime, Career contract and Dynasty room tests **8 passed / 1 warning** in 41.79 seconds. The isolated roster resolver + failure-contract construction measured 0.001746 s / 285,240-byte Python allocation peak at 216 subjects, 0.007340 s / 1,281,888 bytes at 1,000, and 0.097547 s / 12,878,496 bytes at 10,000. This synthetic measurement excludes model scoring, full publication work and process RSS.
+
+**Coverage claim limit:** the slice exposes all eligible QB/RB/WR/TE members of whichever exact League State is evaluated; it does not yet create a Career estimate for subjects outside the frozen 335. Thus the historic 25-player gap in preserved State `606ba3...` would now appear as 25 individual failures if that exact State were evaluated, but no claim is made that those subjects have been valued or that the live hosted endpoint has been exercised. This was locally validated, not deployed.
+
+**Remaining #405/PR2 work:** generalize the accepted fit-on-materialization subject boundary so new rostered players with valid governed evidence receive estimates under the same historical route/policy and economics; preserve shared model/evidence reuse and point-in-time invalidation; route any new async materialization through bounded admission from #445; build the broad governed precomputed waiver/free-agent cohort; and support unusual players on demand. Then run focused model/materialization tests, measure real publication time and RSS, and perform the targeted hosted acceptance before asking for merge/deploy approval. Do not treat this slice as PR2 completion.
