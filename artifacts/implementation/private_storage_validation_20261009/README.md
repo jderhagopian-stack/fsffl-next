@@ -1,6 +1,6 @@
 # iPhone-only, private storage validation — Render Workflow
 
-**2026-10-09 — Management-authorized nonproduction preparation.** This is a **RUNNABLE WORKFLOW DEFINITION**, not a completed hosted test or an authorization to purchase/launch. Keep PR #441 DRAFT / unmerged. It is deliberately separate from the LIVE main service and from draft #439.
+**Historical 2026-10-09 pre-run preparation snapshot; superseded by the 2026-10-10 NO-GO checkpoint below.** It described a runnable Workflow definition before the hosted test and is retained for audit, not current status. Keep PR #441 DRAFT / unmerged. It is deliberately separate from the LIVE main service and from draft #439.
 
 ## 2026-10-10 — real Forecast/Simulation storage comparison: NO-GO
 
