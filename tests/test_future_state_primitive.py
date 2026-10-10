@@ -22,6 +22,7 @@ from fsffl.product.p0_forecast_runtime import (
     governed_p0_player_ids,
     frozen_p0_source_rows,
 )
+from fsffl.product.p0_future_forecast_provider import _candidate_evidence_digest
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -204,6 +205,11 @@ def test_p0_scores_dynamic_canonical_candidate_through_unchanged_model() -> None
     assert result.source.current_player_id == candidate_id
     assert result.result_for(2).anticipated_points > 0
     assert result.route_for(2) in {"D0", "D1"}
+    candidate_digest = _candidate_evidence_digest({candidate_id: candidate})
+    assert candidate_digest == _candidate_evidence_digest({candidate_id: candidate})
+    assert candidate_digest != _candidate_evidence_digest(
+        {candidate_id: replace(candidate, source_percentile=candidate.source_percentile + 0.001)}
+    )
 
 
 def test_p0_dynamic_candidate_rejects_future_source_evidence() -> None:

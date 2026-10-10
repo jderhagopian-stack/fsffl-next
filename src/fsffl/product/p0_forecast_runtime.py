@@ -608,6 +608,18 @@ def _validate_candidate_sources(
             raise ValueError(f"P0 candidate evidence has invalid career stage for {canonical_id}")
         if not all(math.isfinite(float(value)) for value in (source.age, source.standard_y1_points, source.source_percentile, source.state_percentile)):
             raise ValueError(f"P0 candidate evidence has non-finite required inputs for {canonical_id}")
+        if not (0.0 <= source.source_percentile <= 1.0 and 0.0 <= source.state_percentile <= 1.0):
+            raise ValueError(f"P0 candidate evidence has out-of-range percentiles for {canonical_id}")
+        optional_numeric = (
+            source.prior1_points,
+            source.games,
+            source.opportunity_per_game,
+            source.prior_age_state_resid_z,
+            source.prior2_mean_age_state_z,
+            source.prior2_gap_age_state_z,
+        )
+        if any(value is not None and not _finite(value) for value in optional_numeric):
+            raise ValueError(f"P0 candidate evidence has non-finite optional inputs for {canonical_id}")
         if source.age < 0 or source.experience < 0 or source.standard_y1_points < 0:
             raise ValueError(f"P0 candidate evidence has invalid age, experience, or Y1 for {canonical_id}")
         if not source.evidence_as_of or not source.evidence_source_version or not source.evidence_sha256:

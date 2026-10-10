@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Mapping
 
 from fsffl.forecast.future_contract import (
@@ -57,6 +57,19 @@ def _multiplier_digest(scoring_multipliers: Mapping[str, float]) -> str:
         },
         sort_keys=True,
         separators=(",", ":"),
+    )
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _candidate_evidence_digest(candidate_source_rows: Mapping[str, P0SourceRow]) -> str:
+    encoded = json.dumps(
+        {
+            player_id: asdict(source)
+            for player_id, source in sorted(candidate_source_rows.items())
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
     )
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
@@ -166,6 +179,9 @@ def build_p0_future_forecast_contract(
         "p0_final_route_authority_sha256": P0_FINAL_ROUTE_AUTHORITY_SHA256,
         "p0_final_route_authority_version": P0_FINAL_ROUTE_AUTHORITY_VERSION,
         "p0_current_source_sha256": P0_CURRENT_SOURCE_CSV_SHA256,
+        "p0_dynamic_candidate_evidence_sha256": _candidate_evidence_digest(
+            candidate_source_rows or {}
+        ),
         "p0_standard_y1_board_sha256": P0_STANDARD_Y1_BOARD_SHA256,
         "p0_connected_league_y1_control_sha256": P0_CONNECTED_LEAGUE_Y1_BOARD_SHA256,
         "p0_internal_scoring_coordinate": "standard_non_ppr",
