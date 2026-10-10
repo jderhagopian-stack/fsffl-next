@@ -356,8 +356,8 @@ PR1 may now advance through the repository's normal exact-head stable full-suite
 
 **Draft PR #446:** https://github.com/jderhagopian-stack/fsffl-next/pull/446  
 Base: `a0ff36870b33a9eb079ce40ed394c6145fcc87f4`  
-Head: `68cbd79a35d3818b9c8adc34460e90c2c48cec28`  
-Status: **open / draft / not merged / not deployed**.
+Implementation commit: `68cbd79a35d3818b9c8adc34460e90c2c48cec28`  
+Status: **open / draft / not merged / not deployed**. The operations checkpoint is also on this branch; GitHub holds the exact current PR head SHA.
 
 This first production slice makes the precise uncovered roster population explicit without extending or changing any accepted model output. On the Career loader's exact League State, it resolves every rostered QB/RB/WR/TE across teams and slots (including bench, IR and taxi), includes those canonical subjects in the Career dependency fingerprint, and adds a player-specific model-authority failure for each rostered subject without a position-compatible estimate. Compatible artifact restores reconcile the same coverage. Existing 335 estimates and all Career/#370 economics are unchanged; #370 remains fail-closed whenever estimate coverage is incomplete. No waiver subject is counted as rostered.
 
