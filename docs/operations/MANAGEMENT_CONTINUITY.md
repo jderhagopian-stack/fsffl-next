@@ -1,5 +1,14 @@
 # FSFFL NEXT — Management Continuity
 
+## 2026-10-10 — Management correction: universal point-in-time player forecasting
+
+**Product requirement:** FSFFL NEXT must support forecasting **any eligible player at any supported evaluation point in time**. The frozen 335-player Career cohort is a historical research/acceptance regression fixture, **not** a production player ceiling, a required membership list, or a source-of-truth restriction. The 25 missing historical roster IDs are an acceptance diagnostic, not the definition of success. Preserve accepted 335 reference parity where comparable; do not freeze production coverage to them.
+
+Forecast authority must accept dynamically discovered canonical player identities and point-in-time evidence, including sparse-data/rookie/deep players, with governed internal prior/uncertainty/fallback logic **to be designed, validated and explicitly approved**, rather than silently substituting research-only or commercially restricted projections, Market values, later observations or fabricated zeroes. "Any player" is a capability/eligibility requirement, not permission to claim a precise or historically evidence-backed numerical result where sufficient permissible inputs do not exist; return explicit uncertainty, provenance or a specific authority failure pending a governed method. Historical as-of integrity is nonnegotiable; never backfill a historical forecast with future information.
+
+Next engineering decision: design and validate the smallest commercial-use-compatible universal Forecast/P0 candidate path (including sparse-data prior, canonical identity, scoring and PIT rules), then extend the existing Career model/materializer. Treat this as an upstream Forecast product foundation rather than repeatedly demanding that frozen 335 archives contain new player rows. Reuse fit/provider computation across compatible leagues; preserve State-specific downstream authority, #370 completeness, bounded jobs and publication/replay. Existing draft PR #446 is a useful accounting checkpoint but is not universal forecast delivery. Do not merge/deploy or change model authority without Management approval.
+
+
 ## 2026-10-10 — Management accepts scalable computation contract and bounded job-admission correction
 
 Management accepts the architecture direction documented in draft [PR #444](https://github.com/jderhagopian-stack/fsffl-next/pull/444): share provider/model/compatible scoring work only by exact semantic dependency and permission scope; preserve league-State Simulation and team-specific Decision isolation, PIT/replay, atomic publication and last-good. The identified near-term hazard is `IntelligenceJobCoordinator`: `ThreadPoolExecutor(max_workers=2)` bounds running threads but not its pending submissions; process-local locks do not provide cross-instance admission.
