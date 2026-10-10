@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from typing import Mapping
 
 from fsffl.forecast.future_contract import (
@@ -30,10 +32,16 @@ from .p0_forecast_runtime import (
     P0_FORECAST_VERSION,
     P0_PACKAGE_SHA256,
     P0_SOURCE_SEASON,
+    P0_STANDARD_PARITY_TOLERANCE,
     P0_STANDARD_Y1_BOARD_SHA256,
     P0SourceRow,
     build_p0_standard_future_materialization,
     governed_p0_player_ids,
+)
+from .p0_candidate_evidence import (
+    P0CandidateFacts,
+    P0SourceStateAuthority,
+    build_p0_candidate_source_rows,
 )
 
 
@@ -80,6 +88,9 @@ def build_p0_future_forecast_contract(
     raw_forecasts: tuple[ForecastObservation, ...],
     league_year_one: tuple[ForecastObservation, ...],
     candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
+    candidate_facts: Mapping[str, P0CandidateFacts] | None = None,
+    source_state_authority: P0SourceStateAuthority | None = None,
+    evaluation_as_of: datetime | None = None,
 ) -> P0FutureForecastContractMaterialization:
     """Materialize current P0 Y2/Y3 authority behind a model-agnostic contract.
 
@@ -89,7 +100,34 @@ def build_p0_future_forecast_contract(
     requiring downstream product code to know D0/D1 internals.
     """
 
-    governed_ids = set(governed_p0_player_ids(league_state, candidate_source_rows))
+    cutoff = evaluation_as_of or league_state.as_of
+    if cutoff.tzinfo is None:
+        raise ValueError("P0 forecast evaluation cutoff must be timezone-aware")
+    cutoff = cutoff.astimezone(UTC)
+    materialized_candidate_rows = dict(candidate_source_rows or {})
+    if candidate_facts:
+        if source_state_authority is None:
+            raise ValueError("dynamic P0 candidate facts require accepted source-state authority")
+        assembled = build_p0_candidate_source_rows(
+            league_state=league_state,
+            candidate_facts=candidate_facts,
+            source_state_authority=source_state_authority,
+            evaluation_as_of=cutoff,
+        )
+        overlap = set(materialized_candidate_rows) & set(assembled)
+        if overlap:
+            raise ValueError(f"dynamic P0 candidate evidence supplied twice: {sorted(overlap)}")
+        materialized_candidate_rows.update(assembled)
+    elif source_state_authority is not None:
+        raise ValueError("P0 source-state authority provided without dynamic candidate facts")
+
+    governed_ids = set(
+        governed_p0_player_ids(
+            league_state,
+            materialized_candidate_rows,
+            evaluation_as_of=cutoff,
+        )
+    )
     if not governed_ids:
         raise ValueError("frozen P0/H3 authority has no mapped subjects in current State")
 
@@ -105,6 +143,42 @@ def build_p0_future_forecast_contract(
         raw_forecasts=governed_raw,
         rules=league_state.league.rules,
     )
+    standard_y1_by_id = {item.player_id: item for item in standard_year_one_all}
+    league_y1_by_id = {item.player_id: item for item in governed_league_year_one}
+    for player_id, source in materialized_candidate_rows.items():
+        standard_item = standard_y1_by_id.get(player_id)
+        league_item = league_y1_by_id.get(player_id)
+        if standard_item is None:
+            raise ValueError(f"dynamic P0 candidate lacks standard Year-1 Forecast: {player_id}")
+        if league_item is None:
+            raise ValueError(f"dynamic P0 candidate lacks league Year-1 Forecast: {player_id}")
+        if not math.isclose(
+            float(standard_item.distribution.mean),
+            float(source.standard_y1_points),
+            rel_tol=0.0,
+            abs_tol=P0_STANDARD_PARITY_TOLERANCE,
+        ):
+            raise ValueError(
+                "dynamic P0 standard Year-1 input differs from source facts: "
+                f"{player_id}"
+            )
+        if not math.isclose(
+            float(league_item.distribution.mean),
+            float(source.connected_league_y1_points),
+            rel_tol=0.0,
+            abs_tol=P0_STANDARD_PARITY_TOLERANCE,
+        ):
+            raise ValueError(
+                "dynamic P0 league Year-1 input differs from source facts: "
+                f"{player_id}"
+            )
+        if (
+            standard_item.as_of.astimezone(UTC) > cutoff
+            or standard_item.provenance.effective_at.astimezone(UTC) > cutoff
+            or league_item.as_of.astimezone(UTC) > cutoff
+            or league_item.provenance.effective_at.astimezone(UTC) > cutoff
+        ):
+            raise ValueError(f"dynamic P0 Year-1 Forecast postdates exact State: {player_id}")
     standard_ids = {item.player_id for item in standard_year_one_all}
     league_ids = {item.player_id for item in governed_league_year_one}
     eligible_ids = governed_ids & standard_ids & league_ids
@@ -128,7 +202,8 @@ def build_p0_future_forecast_contract(
     p0 = build_p0_standard_future_materialization(
         league_state=league_state,
         standard_year_one=standard_year_one,
-        candidate_source_rows=candidate_source_rows,
+        candidate_source_rows=materialized_candidate_rows,
+        evaluation_as_of=cutoff,
     )
 
     if set(p0.players) != set(scoring_multipliers):
@@ -180,7 +255,7 @@ def build_p0_future_forecast_contract(
         "p0_final_route_authority_version": P0_FINAL_ROUTE_AUTHORITY_VERSION,
         "p0_current_source_sha256": P0_CURRENT_SOURCE_CSV_SHA256,
         "p0_dynamic_candidate_evidence_sha256": _candidate_evidence_digest(
-            candidate_source_rows or {}
+            materialized_candidate_rows
         ),
         "p0_standard_y1_board_sha256": P0_STANDARD_Y1_BOARD_SHA256,
         "p0_connected_league_y1_control_sha256": P0_CONNECTED_LEAGUE_Y1_BOARD_SHA256,
@@ -190,7 +265,7 @@ def build_p0_future_forecast_contract(
         "future_i1_scoring_method": "player_specific_year1_league_standard_ratio",
         "future_i1_scoring_player_count": len(scoring_multipliers),
         "future_i1_governed_state_subject_count": len(governed_ids),
-        "future_i1_dynamic_candidate_subject_count": len(candidate_source_rows or {}),
+        "future_i1_dynamic_candidate_subject_count": len(materialized_candidate_rows),
         "future_i1_eligible_subject_count": len(eligible_ids),
         "future_i1_excluded_non_h3_subject_count": len(
             {

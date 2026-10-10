@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import json
+from pathlib import Path
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -23,6 +26,13 @@ from fsffl.product.p0_forecast_runtime import (
     frozen_p0_source_rows,
 )
 from fsffl.product.p0_future_forecast_provider import _candidate_evidence_digest
+from fsffl.product.p0_candidate_evidence import (
+    P0_ACCEPTED_SOURCE_STATE_AUTHORITY_SHA256,
+    P0CandidateFacts,
+    P0SourceStateAuthority,
+    build_p0_candidate_source_rows,
+)
+import fsffl.product.p0_candidate_evidence as p0_candidate_evidence
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -216,8 +226,17 @@ def test_p0_dynamic_candidate_rejects_future_source_evidence() -> None:
     now = datetime(2026, 9, 1, tzinfo=UTC)
     reference = frozen_p0_source_rows()[0]
     player_id = "sleeper:player:999998"
-    player = Player(player_id=player_id, full_name="Future Evidence Player", position=Position(reference.position))
-    provenance = Provenance(source="fixture", retrieved_at=now, effective_at=now, source_version="fixture")
+    player = Player(
+        player_id=player_id,
+        full_name="Future Evidence Player",
+        position=Position(reference.position),
+    )
+    provenance = Provenance(
+        source="fixture",
+        retrieved_at=now,
+        effective_at=now,
+        source_version="fixture",
+    )
     state = LeagueState(
         league=League(
             league_id="pit-fixture", name="PIT fixture", season=2026,
@@ -233,3 +252,217 @@ def test_p0_dynamic_candidate_rejects_future_source_evidence() -> None:
     )
     with pytest.raises(ValueError, match="postdates or lacks PIT boundary"):
         governed_p0_player_ids(state, {player_id: future})
+
+    # State identity is still the exact Sep 1 snapshot. A fresh forecast can use
+    # that unchanged league identity when both evidence and evaluation cutoff are
+    # later; the State timestamp is not a forecast freshness clock.
+    evaluation_as_of = now + timedelta(days=2)
+    assert governed_p0_player_ids(
+        state,
+        {player_id: future},
+        evaluation_as_of=evaluation_as_of,
+    ) == (player_id,)
+    later = now + timedelta(days=1)
+    later_provenance = Provenance(
+        source="fixture", retrieved_at=later, effective_at=later, source_version="fixture"
+    )
+    year_one = ForecastObservation(
+        player_id=player_id,
+        position=player.position,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=later,
+        period_end=later + timedelta(days=180),
+        distribution=ForecastDistribution(mean=future.standard_y1_points, stddev=0.0),
+        source="fixture", model_version="fixture-v1", as_of=later,
+        provenance=later_provenance,
+    )
+    scored = build_p0_standard_future_materialization(
+        league_state=state,
+        standard_year_one=(year_one,),
+        candidate_source_rows={player_id: future},
+        evaluation_as_of=evaluation_as_of,
+    )
+    assert scored.player_count == 1
+
+
+def test_p0_candidate_feature_assembly_is_deterministic_and_uses_reference_percentiles(
+    monkeypatch,
+) -> None:
+    now = datetime(2026, 9, 1, tzinfo=UTC)
+    reference = frozen_p0_source_rows()[42]
+    candidate_id = "sleeper:player:999997"
+    provenance = Provenance(
+        source="fixture", retrieved_at=now, effective_at=now, source_version="v1"
+    )
+    player = Player(
+        player_id=candidate_id,
+        full_name="Candidate Player",
+        position=Position(reference.position),
+        provider_refs=(ProviderRef(provider="sleeper", external_id="999997"),),
+    )
+    state = LeagueState(
+        league=League(
+            league_id="p0-candidate-builder-fixture",
+            name="P0 candidate builder fixture",
+            season=2026,
+            rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
+        ),
+        as_of=now,
+        teams=(),
+        team_states=(),
+        players=(player,),
+        player_states=(PlayerState(player_id=candidate_id, as_of=now, provenance=provenance),),
+    )
+    facts = P0CandidateFacts(
+        player_id=candidate_id,
+        current_player_id=candidate_id,
+        player_name=player.full_name,
+        position=reference.position,
+        age=reference.age,
+        experience=reference.experience,
+        mapping_status="EXACT_CANONICAL_ID",
+        historical_gsis_id=reference.historical_gsis_id,
+        history_status=reference.history_status,
+        standard_y1_points=reference.standard_y1_points,
+        connected_league_y1_points=reference.connected_league_y1_points,
+        prior1_points=reference.prior1_points,
+        prior1_coverage=reference.prior1_coverage,
+        source_role_band=reference.source_role_band,
+        games=reference.games,
+        opportunity_per_game=reference.opportunity_per_game,
+        prior_age_state_resid_z=reference.prior_age_state_resid_z,
+        prior2_coverage=reference.prior2_coverage,
+        prior2_mean_age_state_z=reference.prior2_mean_age_state_z,
+        prior2_gap_age_state_z=reference.prior2_gap_age_state_z,
+        facts_as_of=now,
+        facts_source_version="accepted-feature-input-fixture-v1",
+        facts_digest="a" * 64,
+    )
+    threshold_bytes = json.dumps(
+        {"boundaries": {reference.position: {"thresholds": [0, 0, 0, 0]}}}
+    ).encode()
+    monkeypatch.setattr(
+        p0_candidate_evidence,
+        "P0_ACCEPTED_SOURCE_STATE_AUTHORITY_SHA256",
+        hashlib.sha256(threshold_bytes).hexdigest(),
+    )
+    authority = P0SourceStateAuthority.from_artifact_bytes(threshold_bytes)
+
+    rows = build_p0_candidate_source_rows(
+        league_state=state,
+        candidate_facts={candidate_id: facts},
+        source_state_authority=authority,
+    )
+    repeated = build_p0_candidate_source_rows(
+        league_state=state,
+        candidate_facts={candidate_id: facts},
+        source_state_authority=authority,
+    )
+
+    assert tuple(rows) == (candidate_id,)
+    assert rows == repeated
+    assert rows[candidate_id].source_state == "elite"
+    assert rows[candidate_id].career_stage == reference.career_stage
+    assert rows[candidate_id].age_band == reference.age_band
+    assert rows[candidate_id].source_percentile == reference.source_percentile
+    elite_values = [
+        row.standard_y1_points
+        for row in frozen_p0_source_rows()
+        if row.position == reference.position and row.source_state == "elite"
+    ]
+    expected_state_percentile = (
+        sum(value < reference.standard_y1_points for value in elite_values)
+        + sum(value == reference.standard_y1_points for value in elite_values) / 2
+    ) / len(elite_values)
+    assert rows[candidate_id].state_percentile == expected_state_percentile
+    assert rows[candidate_id].evidence_as_of == now.isoformat()
+    assert rows[candidate_id].evidence_sha256 != facts.facts_digest
+    year_one = ForecastObservation(
+        player_id=candidate_id,
+        position=player.position,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=now,
+        period_end=now + timedelta(days=180),
+        distribution=ForecastDistribution(mean=reference.standard_y1_points, stddev=0.0),
+        source="accepted-feature-input-fixture",
+        model_version="fixture-v1",
+        as_of=now,
+        provenance=provenance,
+    )
+    forecast = build_p0_standard_future_materialization(
+        league_state=state,
+        standard_year_one=(year_one,),
+        candidate_source_rows=rows,
+    )
+    assert set(forecast.players) == {candidate_id}
+    assert forecast.players[candidate_id].result_for(2).anticipated_points > 0
+
+
+def test_p0_candidate_threshold_digest_matches_canonical_accepted_manifest() -> None:
+    manifest_path = (
+        Path(__file__).parents[1]
+        / "artifacts/implementation/corrected_p0_preseason_credibility_gate_20260919/PROVENANCE_MANIFEST.json"
+    )
+    manifest = json.loads(manifest_path.read_text())
+    assert (
+        manifest["inputs"]["boundaries_file_sha256"]
+        == P0_ACCEPTED_SOURCE_STATE_AUTHORITY_SHA256
+    )
+
+
+def test_p0_candidate_feature_assembly_fails_closed_on_threshold_authority_or_future_facts(
+    monkeypatch,
+) -> None:
+    now = datetime(2026, 9, 1, tzinfo=UTC)
+    reference = frozen_p0_source_rows()[0]
+    candidate_id = "sleeper:player:999996"
+    provenance = Provenance(
+        source="fixture", retrieved_at=now, effective_at=now, source_version="v1"
+    )
+    player = Player(
+        player_id=candidate_id,
+        full_name="Candidate Player",
+        position=Position(reference.position),
+    )
+    state = LeagueState(
+        league=League(league_id="p0-pit-fixture", name="P0 PIT fixture", season=2026,
+                      rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=())),
+        as_of=now, teams=(), team_states=(), players=(player,),
+        player_states=(PlayerState(player_id=candidate_id, as_of=now, provenance=provenance),),
+    )
+    facts = P0CandidateFacts(
+        player_id=candidate_id, current_player_id=candidate_id, player_name=player.full_name,
+        position=reference.position, age=reference.age, experience=reference.experience,
+        mapping_status="EXACT_CANONICAL_ID", historical_gsis_id=reference.historical_gsis_id,
+        history_status=reference.history_status, standard_y1_points=reference.standard_y1_points,
+        connected_league_y1_points=reference.connected_league_y1_points,
+        prior1_points=reference.prior1_points, prior1_coverage=reference.prior1_coverage,
+        source_role_band=reference.source_role_band, games=reference.games,
+        opportunity_per_game=reference.opportunity_per_game,
+        prior_age_state_resid_z=reference.prior_age_state_resid_z,
+        prior2_coverage=reference.prior2_coverage,
+        prior2_mean_age_state_z=reference.prior2_mean_age_state_z,
+        prior2_gap_age_state_z=reference.prior2_gap_age_state_z,
+        facts_as_of=now + timedelta(seconds=1),
+        facts_source_version="fixture-v1",
+        facts_digest="c" * 64,
+    )
+    wrong_threshold_bytes = json.dumps(
+        {"boundaries": {reference.position: {"thresholds": [1, 2, 3, 4]}}}
+    ).encode()
+    with pytest.raises(ValueError, match="threshold authority digest mismatch"):
+        P0SourceStateAuthority.from_artifact_bytes(wrong_threshold_bytes)
+    monkeypatch.setattr(
+        p0_candidate_evidence,
+        "P0_ACCEPTED_SOURCE_STATE_AUTHORITY_SHA256",
+        hashlib.sha256(wrong_threshold_bytes).hexdigest(),
+    )
+    authority = P0SourceStateAuthority.from_artifact_bytes(wrong_threshold_bytes)
+    with pytest.raises(ValueError, match="after evaluation cutoff"):
+        build_p0_candidate_source_rows(
+            league_state=state,
+            candidate_facts={candidate_id: facts},
+            source_state_authority=authority,
+        )

@@ -6,7 +6,7 @@ import io
 import json
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Mapping
 
@@ -576,6 +576,7 @@ def _source_for_player(league_state: LeagueState, player_id: str) -> P0SourceRow
 def _validate_candidate_sources(
     league_state: LeagueState,
     candidate_source_rows: Mapping[str, P0SourceRow] | None,
+    evaluation_as_of: datetime | None = None,
 ) -> dict[str, P0SourceRow]:
     """Validate caller-built, point-in-time feature rows for dynamic State players.
 
@@ -585,6 +586,10 @@ def _validate_candidate_sources(
     percentile, or scoring features.
     """
 
+    cutoff = evaluation_as_of or league_state.as_of
+    if cutoff.tzinfo is None:
+        raise ValueError("P0 candidate evaluation cutoff must be timezone-aware")
+    cutoff = cutoff.astimezone(UTC)
     if not candidate_source_rows:
         return {}
     state_players = {player.player_id: player for player in league_state.players}
@@ -628,7 +633,7 @@ def _validate_candidate_sources(
             evidence_as_of = datetime.fromisoformat(source.evidence_as_of.replace("Z", "+00:00"))
         except ValueError as exc:
             raise ValueError(f"P0 candidate evidence has invalid as-of timestamp for {canonical_id}") from exc
-        if evidence_as_of.tzinfo is None or evidence_as_of > league_state.as_of:
+        if evidence_as_of.tzinfo is None or evidence_as_of.astimezone(UTC) > cutoff:
             raise ValueError(f"P0 candidate evidence postdates or lacks PIT boundary for {canonical_id}")
         if len(source.evidence_sha256) != 64 or any(ch not in "0123456789abcdef" for ch in source.evidence_sha256.lower()):
             raise ValueError(f"P0 candidate evidence has invalid evidence digest for {canonical_id}")
@@ -648,6 +653,8 @@ def _validate_candidate_sources(
 def governed_p0_player_ids(
     league_state: LeagueState,
     candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
+    *,
+    evaluation_as_of: datetime | None = None,
 ) -> tuple[str, ...]:
     """Return reference and explicitly evidenced dynamic P0 subjects in exact State."""
 
@@ -658,7 +665,13 @@ def governed_p0_player_ids(
         except ValueError:
             continue
         governed.append(player.player_id)
-    governed.extend(_validate_candidate_sources(league_state, candidate_source_rows))
+    governed.extend(
+        _validate_candidate_sources(
+            league_state,
+            candidate_source_rows,
+            evaluation_as_of=evaluation_as_of,
+        )
+    )
     return tuple(sorted(set(governed)))
 
 
@@ -667,12 +680,21 @@ def build_p0_standard_future_materialization(
     league_state: LeagueState,
     standard_year_one: tuple[ForecastObservation, ...],
     candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
+    evaluation_as_of: datetime | None = None,
 ) -> P0FutureMaterialization:
     year_one = _year_one_index(standard_year_one)
     if not year_one:
         raise ValueError("P0 requires a non-empty frozen standard/non-PPR Year-1 coordinate")
 
-    candidates = _validate_candidate_sources(league_state, candidate_source_rows)
+    cutoff = evaluation_as_of or league_state.as_of
+    if cutoff.tzinfo is None:
+        raise ValueError("P0 forecast evaluation cutoff must be timezone-aware")
+    cutoff = cutoff.astimezone(UTC)
+    candidates = _validate_candidate_sources(
+        league_state,
+        candidate_source_rows,
+        evaluation_as_of=cutoff,
+    )
     players: dict[str, P0PlayerForecast] = {}
     for player_id, observation in sorted(year_one.items()):
         source = candidates.get(player_id)
@@ -684,8 +706,8 @@ def build_p0_standard_future_materialization(
                 f"{observation.position.value} != {source.position}"
             )
         if player_id in candidates and (
-            observation.as_of > league_state.as_of
-            or observation.provenance.effective_at > league_state.as_of
+            observation.as_of.astimezone(UTC) > cutoff
+            or observation.provenance.effective_at.astimezone(UTC) > cutoff
         ):
             raise ValueError(f"P0 candidate Year-1 Forecast postdates exact State for {player_id}")
         actual = float(observation.distribution.mean)
