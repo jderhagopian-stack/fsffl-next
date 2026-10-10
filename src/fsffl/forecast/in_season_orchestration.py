@@ -208,6 +208,75 @@ def fill_current_ros_fumbles_lost_gaps(
     No missing provider coordinate is interpreted as zero.
     """
 
+    try:
+        ros_supplement = build_current_ros_fumbles_lost_supplement_observations(
+            league_state,
+            current_runtime=current_runtime,
+            stats_source=stats_source,
+            completed_through_week=completed_through_week,
+            as_of=as_of,
+        )
+    except Exception:
+        # Point authority is optional evidence. Preserve the strict partial so the
+        # existing governed preseason remaining-prior fallback can run next.
+        return current_runtime.fantasy_point_forecasts, 0
+    if not ros_supplement:
+        return current_runtime.fantasy_point_forecasts, 0
+
+    rescored = derive_league_scoring_result(
+        current_runtime.raw_ensemble,
+        rules=league_state.league.rules,
+        supplemental_observations=ros_supplement,
+        source="fsffl:in-season-league-scored",
+        model_version="next2-in-season-runtime-v1",
+    )
+    current_keys = {
+        (item.player_id, item.position, item.metric)
+        for item in current_runtime.fantasy_point_forecasts
+    }
+    additions = tuple(
+        item
+        for item in rescored.authoritative_forecasts
+        if (item.player_id, item.position)
+        in {
+            (partial.player_id, partial.position)
+            for partial in current_runtime.partial_fantasy_point_forecasts
+            if tuple(sorted(partial.omitted_rule_stats)) == ("fum_lost",)
+            and partial.horizon == ForecastHorizon.REST_OF_SEASON
+        }
+        and (item.player_id, item.position, item.metric) not in current_keys
+    )
+    return (
+        tuple(
+            sorted(
+                current_runtime.fantasy_point_forecasts + additions,
+                key=lambda item: (
+                    item.player_id,
+                    item.position.value,
+                    item.metric.value,
+                    item.source,
+                ),
+            )
+        ),
+        len(additions),
+    )
+
+
+def build_current_ros_fumbles_lost_supplement_observations(
+    league_state: LeagueState,
+    *,
+    current_runtime: InSeasonForecastRuntimeResult,
+    stats_source: SleeperWeeklyStatsSource,
+    completed_through_week: int,
+    as_of: datetime,
+) -> tuple[ForecastObservation, ...]:
+    """Return accepted first-party FUMBLES_LOST ROS raw-stat supplements.
+
+    Only subjects whose current ROS scoring partial omits exactly ``fum_lost``
+    are eligible. This exposes the same accepted supplement already used by the
+    in-season scored-output path so a downstream raw-stat scorer can consume the
+    coordinate without changing provider ensemble requirements.
+    """
     if as_of.tzinfo is None:
         raise ValueError("current ROS FUMBLES_LOST fallback as_of must be timezone-aware")
     eligible = {
@@ -217,20 +286,13 @@ def fill_current_ros_fumbles_lost_gaps(
         and item.horizon == ForecastHorizon.REST_OF_SEASON
     }
     if not eligible:
-        return current_runtime.fantasy_point_forecasts, 0
-
-    try:
-        supplement = build_first_party_fumbles_lost_supplement(
-            league_state,
-            base_observations=(),
-            stats_source=stats_source,
-            clock=lambda: as_of,
-        )
-    except Exception:
-        # Point authority is optional evidence. Preserve the strict partial so the
-        # existing governed preseason remaining-prior fallback can run next.
-        return current_runtime.fantasy_point_forecasts, 0
-
+        return ()
+    supplement = build_first_party_fumbles_lost_supplement(
+        league_state,
+        base_observations=(),
+        stats_source=stats_source,
+        clock=lambda: as_of,
+    )
     ros_supplement: list[ForecastObservation] = []
     for observation in supplement.observations:
         partial = eligible.get((observation.player_id, observation.position))
@@ -272,40 +334,7 @@ def fill_current_ros_fumbles_lost_gaps(
                 }
             )
         )
-    if not ros_supplement:
-        return current_runtime.fantasy_point_forecasts, 0
-
-    rescored = derive_league_scoring_result(
-        current_runtime.raw_ensemble,
-        rules=league_state.league.rules,
-        supplemental_observations=tuple(ros_supplement),
-        source="fsffl:in-season-league-scored",
-        model_version="next2-in-season-runtime-v1",
-    )
-    current_keys = {
-        (item.player_id, item.position, item.metric)
-        for item in current_runtime.fantasy_point_forecasts
-    }
-    additions = tuple(
-        item
-        for item in rescored.authoritative_forecasts
-        if (item.player_id, item.position) in eligible
-        and (item.player_id, item.position, item.metric) not in current_keys
-    )
-    return (
-        tuple(
-            sorted(
-                current_runtime.fantasy_point_forecasts + additions,
-                key=lambda item: (
-                    item.player_id,
-                    item.position.value,
-                    item.metric.value,
-                    item.source,
-                ),
-            )
-        ),
-        len(additions),
-    )
+    return tuple(ros_supplement)
 
 
 def fill_current_ros_coverage_gaps(
