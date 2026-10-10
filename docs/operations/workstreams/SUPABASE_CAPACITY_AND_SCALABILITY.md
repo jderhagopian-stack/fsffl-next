@@ -18,7 +18,7 @@ Each latency distribution used 9 samples. Both artifacts passed exact reconstruc
 **Disposition: NO-GO.** Compression and reconstruction results are promising but cannot override the failed immutable-write requirement. This does not authorize production integration, deployment, another run, credential creation, or spend. Prior read-only transaction safeguards did not make the broad production database URL a least-privilege credential; any separately authorized future test must use purpose-limited read-only DB access.
 
 
-## 2026-10-09 — iPhone Safari Workflow test route (latest)
+## 2026-10-09 — iPhone Safari Workflow preparation (superseded by the 2026-10-10 NO-GO checkpoint above)
 
 Management has **iPhone-only access**. Render's interactive-shell instructions below are superseded by an independent Render **Workflow service** that can be created and started from Safari. Draft PR #441 now contains a standalone Render Python SDK Workflow with credential-free `preflight` and full `validate_real_artifacts` tasks, both zero-argument and no automatic retries; frozen #439 adapter, focused offline smoke tests, and [mobile Dashboard runbook](https://github.com/jderhagopian-stack/fsffl-next/blob/docs/private-storage-validation-access-gate-20261009/artifacts/implementation/private_storage_validation_20261009/README.md). The existing private Supabase Free Storage bucket is reusable. Python 3.12.10 must be pinned in Workflow configuration. Each task executes separately from production web.
 
