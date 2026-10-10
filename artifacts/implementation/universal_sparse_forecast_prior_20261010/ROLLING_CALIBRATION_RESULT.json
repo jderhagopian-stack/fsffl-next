@@ -1,0 +1,661 @@
+{
+  "authority_failures": {
+    "insufficient_point_in_time_history": 1310
+  },
+  "by_position": {
+    "QB|known_age_experience": {
+      "count": 2290,
+      "evidence_tier": "known_age_experience",
+      "intervals": {
+        "base_50": {
+          "count": 2290,
+          "covered": 1475,
+          "nominal": 0.5,
+          "observed": 0.6441048034934498,
+          "wilson_95": [
+            0.6242687714474683,
+            0.6634581756185761
+          ]
+        },
+        "base_80": {
+          "count": 2290,
+          "covered": 1840,
+          "nominal": 0.8,
+          "observed": 0.8034934497816594,
+          "wilson_95": [
+            0.7867162970033732,
+            0.8192540915145083
+          ]
+        },
+        "calibrated_50": {
+          "count": 2290,
+          "covered": 1475,
+          "nominal": 0.5,
+          "observed": 0.6441048034934498,
+          "wilson_95": [
+            0.6242687714474683,
+            0.6634581756185761
+          ]
+        },
+        "calibrated_80": {
+          "count": 2290,
+          "covered": 2062,
+          "nominal": 0.8,
+          "observed": 0.9004366812227074,
+          "wilson_95": [
+            0.8874947326435221,
+            0.9120374202642438
+          ]
+        }
+      },
+      "position": "QB",
+      "quantiles": {
+        "p10": {
+          "base_observed_cdf": 0.33799126637554583,
+          "calibrated_observed_cdf": 0.0,
+          "count": 2290,
+          "nominal_cdf": 0.1
+        },
+        "p25": {
+          "base_observed_cdf": 0.3554585152838428,
+          "calibrated_observed_cdf": 0.3554585152838428,
+          "count": 2290,
+          "nominal_cdf": 0.25
+        },
+        "p50": {
+          "base_observed_cdf": 0.5117903930131005,
+          "calibrated_observed_cdf": 0.5117903930131005,
+          "count": 2290,
+          "nominal_cdf": 0.5
+        },
+        "p75": {
+          "base_observed_cdf": 0.7187772925764192,
+          "calibrated_observed_cdf": 0.7187772925764192,
+          "count": 2290,
+          "nominal_cdf": 0.75
+        },
+        "p90": {
+          "base_observed_cdf": 0.848471615720524,
+          "calibrated_observed_cdf": 0.9004366812227074,
+          "count": 2290,
+          "nominal_cdf": 0.9
+        }
+      }
+    },
+    "QB|sparse_position_only": {
+      "count": 2290,
+      "evidence_tier": "sparse_position_only",
+      "intervals": {
+        "base_50": {
+          "count": 2290,
+          "covered": 1574,
+          "nominal": 0.5,
+          "observed": 0.6873362445414847,
+          "wilson_95": [
+            0.668048940836888,
+            0.7059960903489696
+          ]
+        },
+        "base_80": {
+          "count": 2290,
+          "covered": 1869,
+          "nominal": 0.8,
+          "observed": 0.8161572052401747,
+          "wilson_95": [
+            0.7997671742214735,
+            0.831488309644636
+          ]
+        },
+        "calibrated_50": {
+          "count": 2290,
+          "covered": 1574,
+          "nominal": 0.5,
+          "observed": 0.6873362445414847,
+          "wilson_95": [
+            0.668048940836888,
+            0.7059960903489696
+          ]
+        },
+        "calibrated_80": {
+          "count": 2290,
+          "covered": 2068,
+          "nominal": 0.8,
+          "observed": 0.903056768558952,
+          "wilson_95": [
+            0.8902546905619887,
+            0.9145088613833418
+          ]
+        }
+      },
+      "position": "QB",
+      "quantiles": {
+        "p10": {
+          "base_observed_cdf": 0.35240174672489083,
+          "calibrated_observed_cdf": 0.0,
+          "count": 2290,
+          "nominal_cdf": 0.1
+        },
+        "p25": {
+          "base_observed_cdf": 0.35240174672489083,
+          "calibrated_observed_cdf": 0.35240174672489083,
+          "count": 2290,
+          "nominal_cdf": 0.25
+        },
+        "p50": {
+          "base_observed_cdf": 0.4781659388646288,
+          "calibrated_observed_cdf": 0.4781659388646288,
+          "count": 2290,
+          "nominal_cdf": 0.5
+        },
+        "p75": {
+          "base_observed_cdf": 0.7323144104803494,
+          "calibrated_observed_cdf": 0.7323144104803494,
+          "count": 2290,
+          "nominal_cdf": 0.75
+        },
+        "p90": {
+          "base_observed_cdf": 0.8611353711790393,
+          "calibrated_observed_cdf": 0.903056768558952,
+          "count": 2290,
+          "nominal_cdf": 0.9
+        }
+      }
+    },
+    "RB|known_age_experience": {
+      "count": 4583,
+      "evidence_tier": "known_age_experience",
+      "intervals": {
+        "base_50": {
+          "count": 4583,
+          "covered": 3297,
+          "nominal": 0.5,
+          "observed": 0.7193977743835915,
+          "wilson_95": [
+            0.7062103972300042,
+            0.732217662264566
+          ]
+        },
+        "base_80": {
+          "count": 4583,
+          "covered": 4126,
+          "nominal": 0.8,
+          "observed": 0.9002836569932359,
+          "wilson_95": [
+            0.8912710451328746,
+            0.9086257973761148
+          ]
+        },
+        "calibrated_50": {
+          "count": 4583,
+          "covered": 3272,
+          "nominal": 0.5,
+          "observed": 0.7139428322059787,
+          "wilson_95": [
+            0.7006841869361274,
+            0.7268431251816508
+          ]
+        },
+        "calibrated_80": {
+          "count": 4583,
+          "covered": 4139,
+          "nominal": 0.8,
+          "observed": 0.9031202269255946,
+          "wilson_95": [
+            0.8942158263868082,
+            0.9113494047581131
+          ]
+        }
+      },
+      "position": "RB",
+      "quantiles": {
+        "p10": {
+          "base_observed_cdf": 0.3382064150120009,
+          "calibrated_observed_cdf": 0.17346716124809078,
+          "count": 4583,
+          "nominal_cdf": 0.1
+        },
+        "p25": {
+          "base_observed_cdf": 0.33886100807331443,
+          "calibrated_observed_cdf": 0.33886100807331443,
+          "count": 4583,
+          "nominal_cdf": 0.25
+        },
+        "p50": {
+          "base_observed_cdf": 0.5040366572114335,
+          "calibrated_observed_cdf": 0.5040366572114335,
+          "count": 4583,
+          "nominal_cdf": 0.5
+        },
+        "p75": {
+          "base_observed_cdf": 0.7501636482653284,
+          "calibrated_observed_cdf": 0.7501636482653284,
+          "count": 4583,
+          "nominal_cdf": 0.75
+        },
+        "p90": {
+          "base_observed_cdf": 0.9050840061095352,
+          "calibrated_observed_cdf": 0.9070477852934759,
+          "count": 4583,
+          "nominal_cdf": 0.9
+        }
+      }
+    },
+    "RB|sparse_position_only": {
+      "count": 4583,
+      "evidence_tier": "sparse_position_only",
+      "intervals": {
+        "base_50": {
+          "count": 4583,
+          "covered": 3337,
+          "nominal": 0.5,
+          "observed": 0.7281256818677722,
+          "wilson_95": [
+            0.7150572836472184,
+            0.7408119716502186
+          ]
+        },
+        "base_80": {
+          "count": 4583,
+          "covered": 4125,
+          "nominal": 0.8,
+          "observed": 0.9000654593061314,
+          "wilson_95": [
+            0.8910446139239869,
+            0.9084161986899308
+          ]
+        },
+        "calibrated_50": {
+          "count": 4583,
+          "covered": 3337,
+          "nominal": 0.5,
+          "observed": 0.7281256818677722,
+          "wilson_95": [
+            0.7150572836472184,
+            0.7408119716502186
+          ]
+        },
+        "calibrated_80": {
+          "count": 4583,
+          "covered": 4125,
+          "nominal": 0.8,
+          "observed": 0.9000654593061314,
+          "wilson_95": [
+            0.8910446139239869,
+            0.9084161986899308
+          ]
+        }
+      },
+      "position": "RB",
+      "quantiles": {
+        "p10": {
+          "base_observed_cdf": 0.3382064150120009,
+          "calibrated_observed_cdf": 0.31027711106262273,
+          "count": 4583,
+          "nominal_cdf": 0.1
+        },
+        "p25": {
+          "base_observed_cdf": 0.3382064150120009,
+          "calibrated_observed_cdf": 0.3382064150120009,
+          "count": 4583,
+          "nominal_cdf": 0.25
+        },
+        "p50": {
+          "base_observed_cdf": 0.4863626445559677,
+          "calibrated_observed_cdf": 0.4863626445559677,
+          "count": 4583,
+          "nominal_cdf": 0.5
+        },
+        "p75": {
+          "base_observed_cdf": 0.7329260309840716,
+          "calibrated_observed_cdf": 0.7329260309840716,
+          "count": 4583,
+          "nominal_cdf": 0.75
+        },
+        "p90": {
+          "base_observed_cdf": 0.9048658084224307,
+          "calibrated_observed_cdf": 0.9048658084224307,
+          "count": 4583,
+          "nominal_cdf": 0.9
+        }
+      }
+    },
+    "TE|known_age_experience": {
+      "count": 3689,
+      "evidence_tier": "known_age_experience",
+      "intervals": {
+        "base_50": {
+          "count": 3689,
+          "covered": 2560,
+          "nominal": 0.5,
+          "observed": 0.6939550013553809,
+          "wilson_95": [
+            0.6788882012815789,
+            0.7086182800979355
+          ]
+        },
+        "base_80": {
+          "count": 3689,
+          "covered": 3266,
+          "nominal": 0.8,
+          "observed": 0.8853347790729195,
+          "wilson_95": [
+            0.8746498075663748,
+            0.8952180656425416
+          ]
+        },
+        "calibrated_50": {
+          "count": 3689,
+          "covered": 2560,
+          "nominal": 0.5,
+          "observed": 0.6939550013553809,
+          "wilson_95": [
+            0.6788882012815789,
+            0.7086182800979355
+          ]
+        },
+        "calibrated_80": {
+          "count": 3689,
+          "covered": 3362,
+          "nominal": 0.8,
+          "observed": 0.9113580916237463,
+          "wilson_95": [
+            0.9017530994707065,
+            0.9201072576130295
+          ]
+        }
+      },
+      "position": "TE",
+      "quantiles": {
+        "p10": {
+          "base_observed_cdf": 0.36541068040119273,
+          "calibrated_observed_cdf": 0.009487666034155597,
+          "count": 3689,
+          "nominal_cdf": 0.1
+        },
+        "p25": {
+          "base_observed_cdf": 0.37083220384928167,
+          "calibrated_observed_cdf": 0.37083220384928167,
+          "count": 3689,
+          "nominal_cdf": 0.25
+        },
+        "p50": {
+          "base_observed_cdf": 0.51341827053402,
+          "calibrated_observed_cdf": 0.51341827053402,
+          "count": 3689,
+          "nominal_cdf": 0.5
+        },
+        "p75": {
+          "base_observed_cdf": 0.737869341284901,
+          "calibrated_observed_cdf": 0.737869341284901,
+          "count": 3689,
+          "nominal_cdf": 0.75
+        },
+        "p90": {
+          "base_observed_cdf": 0.8869612361073461,
+          "calibrated_observed_cdf": 0.9113580916237463,
+          "count": 3689,
+          "nominal_cdf": 0.9
+        }
+      }
+    },
+    "TE|sparse_position_only": {
+      "count": 3689,
+      "evidence_tier": "sparse_position_only",
+      "intervals": {
+        "base_50": {
+          "count": 3689,
+          "covered": 2689,
+          "nominal": 0.5,
+          "observed": 0.7289238275955543,
+          "wilson_95": [
+            0.7143468379710374,
+            0.7430245436152656
+          ]
+        },
+        "base_80": {
+          "count": 3689,
+          "covered": 3247,
+          "nominal": 0.8,
+          "observed": 0.880184331797235,
+          "wilson_95": [
+            0.8693074118050329,
+            0.8902702823036587
+          ]
+        },
+        "calibrated_50": {
+          "count": 3689,
+          "covered": 2689,
+          "nominal": 0.5,
+          "observed": 0.7289238275955543,
+          "wilson_95": [
+            0.7143468379710374,
+            0.7430245436152656
+          ]
+        },
+        "calibrated_80": {
+          "count": 3689,
+          "covered": 3345,
+          "nominal": 0.8,
+          "observed": 0.9067497966928707,
+          "wilson_95": [
+            0.8969385727124496,
+            0.9157147820184538
+          ]
+        }
+      },
+      "position": "TE",
+      "quantiles": {
+        "p10": {
+          "base_observed_cdf": 0.36541068040119273,
+          "calibrated_observed_cdf": 0.0,
+          "count": 3689,
+          "nominal_cdf": 0.1
+        },
+        "p25": {
+          "base_observed_cdf": 0.36541068040119273,
+          "calibrated_observed_cdf": 0.36541068040119273,
+          "count": 3689,
+          "nominal_cdf": 0.25
+        },
+        "p50": {
+          "base_observed_cdf": 0.49362970994849553,
+          "calibrated_observed_cdf": 0.49362970994849553,
+          "count": 3689,
+          "nominal_cdf": 0.5
+        },
+        "p75": {
+          "base_observed_cdf": 0.7305502846299811,
+          "calibrated_observed_cdf": 0.7305502846299811,
+          "count": 3689,
+          "nominal_cdf": 0.75
+        },
+        "p90": {
+          "base_observed_cdf": 0.8818107888316618,
+          "calibrated_observed_cdf": 0.9067497966928707,
+          "count": 3689,
+          "nominal_cdf": 0.9
+        }
+      }
+    },
+    "WR|known_age_experience": {
+      "count": 6903,
+      "evidence_tier": "known_age_experience",
+      "intervals": {
+        "base_50": {
+          "count": 6903,
+          "covered": 5017,
+          "nominal": 0.5,
+          "observed": 0.726785455599015,
+          "wilson_95": [
+            0.7161495169186217,
+            0.7371691264391776
+          ]
+        },
+        "base_80": {
+          "count": 6903,
+          "covered": 6239,
+          "nominal": 0.8,
+          "observed": 0.9038099377082428,
+          "wilson_95": [
+            0.8966280831182624,
+            0.91054260890337
+          ]
+        },
+        "calibrated_50": {
+          "count": 6903,
+          "covered": 5017,
+          "nominal": 0.5,
+          "observed": 0.726785455599015,
+          "wilson_95": [
+            0.7161495169186217,
+            0.7371691264391776
+          ]
+        },
+        "calibrated_80": {
+          "count": 6903,
+          "covered": 6275,
+          "nominal": 0.8,
+          "observed": 0.9090250615674345,
+          "wilson_95": [
+            0.9020117646854877,
+            0.9155833739416257
+          ]
+        }
+      },
+      "position": "WR",
+      "quantiles": {
+        "p10": {
+          "base_observed_cdf": 0.3796899898594814,
+          "calibrated_observed_cdf": 0.21802115022454005,
+          "count": 6903,
+          "nominal_cdf": 0.1
+        },
+        "p25": {
+          "base_observed_cdf": 0.38374619730551934,
+          "calibrated_observed_cdf": 0.38374619730551934,
+          "count": 6903,
+          "nominal_cdf": 0.25
+        },
+        "p50": {
+          "base_observed_cdf": 0.5458496305953933,
+          "calibrated_observed_cdf": 0.5458496305953933,
+          "count": 6903,
+          "nominal_cdf": 0.5
+        },
+        "p75": {
+          "base_observed_cdf": 0.7677821237143271,
+          "calibrated_observed_cdf": 0.7677821237143271,
+          "count": 6903,
+          "nominal_cdf": 0.75
+        },
+        "p90": {
+          "base_observed_cdf": 0.9064174996378386,
+          "calibrated_observed_cdf": 0.9106185716355207,
+          "count": 6903,
+          "nominal_cdf": 0.9
+        }
+      }
+    },
+    "WR|sparse_position_only": {
+      "count": 6903,
+      "evidence_tier": "sparse_position_only",
+      "intervals": {
+        "base_50": {
+          "count": 6903,
+          "covered": 5208,
+          "nominal": 0.5,
+          "observed": 0.7544545849630595,
+          "wilson_95": [
+            0.7441614965043807,
+            0.7644646274547214
+          ]
+        },
+        "base_80": {
+          "count": 6903,
+          "covered": 6233,
+          "nominal": 0.8,
+          "observed": 0.9029407503983775,
+          "wilson_95": [
+            0.8957314224195551,
+            0.9097018618344971
+          ]
+        },
+        "calibrated_50": {
+          "count": 6903,
+          "covered": 5208,
+          "nominal": 0.5,
+          "observed": 0.7544545849630595,
+          "wilson_95": [
+            0.7441614965043807,
+            0.7644646274547214
+          ]
+        },
+        "calibrated_80": {
+          "count": 6903,
+          "covered": 6282,
+          "nominal": 0.8,
+          "observed": 0.910039113428944,
+          "wilson_95": [
+            0.903059357275805,
+            0.916562757080152
+          ]
+        }
+      },
+      "position": "WR",
+      "quantiles": {
+        "p10": {
+          "base_observed_cdf": 0.3796899898594814,
+          "calibrated_observed_cdf": 0.22251195132551066,
+          "count": 6903,
+          "nominal_cdf": 0.1
+        },
+        "p25": {
+          "base_observed_cdf": 0.3796899898594814,
+          "calibrated_observed_cdf": 0.3796899898594814,
+          "count": 6903,
+          "nominal_cdf": 0.25
+        },
+        "p50": {
+          "base_observed_cdf": 0.5099232217876286,
+          "calibrated_observed_cdf": 0.5099232217876286,
+          "count": 6903,
+          "nominal_cdf": 0.5
+        },
+        "p75": {
+          "base_observed_cdf": 0.7570621468926554,
+          "calibrated_observed_cdf": 0.7570621468926554,
+          "count": 6903,
+          "nominal_cdf": 0.75
+        },
+        "p90": {
+          "base_observed_cdf": 0.9055483123279734,
+          "calibrated_observed_cdf": 0.9119223526003187,
+          "count": 6903,
+          "nominal_cdf": 0.9
+        }
+      }
+    }
+  },
+  "calibrated_holdout_forecasts": 34930,
+  "calibration_version": "sparse_prior_rolling_cqr_v2",
+  "coordinate": "standard_non_ppr",
+  "evaluation_seasons": [
+    2000,
+    2025
+  ],
+  "historical_outcome_count": 18905,
+  "history_window_seasons": 15,
+  "input_sha256": {
+    "players": "4dd70f328f31b0bb7cbf043412298d5a325863e27b8f2eeea22c9e925c808dee",
+    "raw_player_seasons": "06925ff55c19f645405952c6a4d1f77c358c1f6b353abcf18b4f31fa94532c70"
+  },
+  "limitations": [
+    "Historical input is the accepted nflverse-derived player-season panel.",
+    "Sparse position-only validation deliberately withholds player age and experience from the predictor.",
+    "Prior calibration does not supply the P0 candidate feature packet or league scoring translation.",
+    "A production Forecast is ready only when the exact State, canonical identity, scoring authority, and compatible calibration artifact are attached."
+  ],
+  "prior_version": "historical_position_experience_age_empirical_v1",
+  "rolling_calibration_cases": 36232,
+  "schema_version": "fsffl-sparse-player-prior-rolling-calibration-v1"
+}
