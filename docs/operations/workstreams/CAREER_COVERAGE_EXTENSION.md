@@ -1,5 +1,17 @@
 # Career Coverage Extension — Issue #405 implementation checkpoint
 
+## 2026-10-11 — Work checkpoint: dynamic Career coverage (#454, draft)
+
+Work advanced PR #454 to head `e5eec7dc706f7849f57cffb3d81ee4f47a0bc906` on main `df62354f3a40e4b30275645db0171bf518ed8a5b`. It adds one synchronous batched selector for exact-State rostered players, all NFL-attached unrostered players in the saved State universe, and explicit on-demand IDs.
+
+On saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (2026-10-08), the population is 250 rostered QB/RB/WR/TE: 223 reference estimates and 27 dynamic candidates. #449’s assembler, now run against this exact State, produced governed P0 inputs for 10/27. Those 10 received accepted Y4–Y7 policy outputs and Y8+ tail authority, but **0 complete new out-of-cohort Career estimates**: the accepted Current Y1–Y3 Shapley contract is available, but is not yet carried into this dynamic Career composition. The remaining 17 have explicit source/coverage failures.
+
+The selector also identifies the complete NFL-attached unrostered waiver pool in that State: **592 players** (70 QB, 115 RB, 234 WR, 173 TE). They are selected, not yet precomputed through Career (**0 Career authorities** in this tranche). A unit test verifies a newly rostered out-of-pool subject routes through the selector when a candidate packet is supplied; the production provider/identity and matching-publication path is not yet integrated.
+
+Validation: 19 focused tests passed; exact-head CI run 5023 passed; stable full suite skipped while draft. #449 exact-State P0 assembly took 14.2 s / 265,776 KiB peak. The 10-player Y4–Y7 + tail batch took 46.3 s / 490,928 KiB (~479 MiB), above the existing 429,496,720-byte (~410 MiB) budget. Selection + roster refresh of 842 subjects was ~0.001 s; reported process RSS 147,756 KiB includes Python/import baseline. No model refit, reference-board change, production publication, or deployment occurred. PR #454 remains draft/unmerged/nonproduction.
+
+**Management direction:** keep the accepted model/Shapley contract and established provider-rights handling settled. Next, pass the existing Y1–Y3 Shapley authority through Career composition and prove parity; close the 17 exact-State evidence gaps under existing source rules; precompute Career authorities for the 592-player pool where accepted inputs support them; wire refresh into the matching-State publication path; exercise a real provider/identity on-demand acquisition through bounded #445 admission; and reduce peak memory below budget. #405 is not complete until rostered Career Position & Depth is complete and the pool/acquisition path prevents routine pickups from reopening the same gap.
+
 Updated: 2026-10-07  
 Status: **PR1 COMPLETE / MERGED — PR2 AUTHORIZED: dynamic subject/evidence materialization + rostered coverage**  
 Authority: [Issue #405](https://github.com/jderhagopian-stack/fsffl-next/issues/405) and [Current Operations](../CURRENT_OPERATIONS.md). This is a separate Career/Foundation 4 workstream, not Architecture Recovery.
