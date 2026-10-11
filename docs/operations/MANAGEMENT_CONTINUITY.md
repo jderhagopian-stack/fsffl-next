@@ -1,3 +1,13 @@
+
+
+## 2026-10-11 — Career Coverage #405 full-cohort composition checkpoint
+
+Using the already accepted canonical base—not a request to resupply model data—the supported roster outputs were composed from the saved 11 exact-State P0 packets plus the frozen 335-player Career/Shapley cohort. Canonical base: `career-405-pr1-semantic-11526021872.zip` SHA-256 `1bad20d2f4bc369d64f59f5ab2d2bd75117f594d45aeace352b58d4aedb3b2f3`; current Shapley CSV `SHAPLEY_CURRENT_BOARD_335.csv` SHA-256 `03636d36726cb8765b34a0bf9f400fc1e29d8c32651352ab77ee293bded89b26`. Foundation 4 accepted bundle SHA-256 `6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22` (Y4–Y7 board `f04547d3fae97420a12c13ff2f15010c9c54ec5b3a6af5ccd68927774aa12484`; terminal features `ac7755962be04a51391120a8c92df31a1dfdca19368d3e6c0b3078745a7f9292`).
+
+Results: 335 base Shapley reproduction max absolute component delta `5.97e-13`; 335 frozen Career parity max absolute numeric delta `9.10e-13`; exact base preservation after append max delta `0.0`. Added 11 Career values using the full 346-player Shapley context; retained the accepted 335 Career outputs because re-evaluating them in the expanded game would reallocate values (diagnostic max delta `98.15`). All 16 player-specific P0 failures remain explicit with their original evidence reason; no waivers or fabricated/zero values were included. No provider acquisition rerun.
+
+Private artifact: `/FSFFL NEXT/_implementation_temp/CAREER_COMPOSED_SUPPORTED_ROSTER_11_FULL_COHORT.json` SHA-256 `2379c42b84116707d92e387e74f05097d13925a80b8dbb34476f47935a1da894`; sibling manifest includes State/evaluation timestamps and source hashes. #454 remains draft. **Next gate:** add the composition implementation and numeric parity test to PR CI; then finish matching-State publication/outside-cohort acquisition fixtures and prove complete materializer RSS below 410 MiB. No broader waiver precomputation.
+
 # FSFFL NEXT — Management Continuity
 
 ## 2026-10-10 — Management correction: existing-model-first universal Forecast
