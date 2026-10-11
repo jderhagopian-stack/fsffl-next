@@ -6,6 +6,7 @@ fit a new model family, or change the frozen 335 reference board.
 from __future__ import annotations
 
 import argparse
+import gc
 import hashlib
 import importlib.util
 import json
@@ -129,13 +130,20 @@ def main():
     route = load_module("dynamic_career_route", a.route_module)
     source = load_module("foundation4_source", str(Path(__file__).with_name("materialize_foundation4_fsffl_coordinate.py")))
     connected = source.scored_raw_frame(pd.read_csv(a.raw_seasons))
+    previous = {(str(row.player_id), int(row.season)): float(row.fantasyPoints)
+                for row in connected.itertuples() if int(row.season) == 2025}
     raw = dev.prep_raw(connected.copy())
     players = pd.read_csv(a.players)
     residual, innovation = pd.read_csv(a.residual_states), pd.read_csv(a.innovation_states)
     reference_board = pd.read_csv(a.reference_board)
     reference = source.build_current(dev, reference_board, raw, players, residual, innovation)
+    reference_player_count = int(reference.output_player_id.nunique())
     candidates = validate_candidates(pd.read_csv(a.candidate_input), set(reference.output_player_id.astype(str)), 2026, pd.read_csv(a.state_roster))
     current = build_candidate_features(dev, candidates, reference, raw, players, residual, innovation)
+    # Drop materialization-only wide tables before loading/using the accepted
+    # route-training panel; this bounds the scorer phase to one historical panel.
+    del connected, raw, players, residual, innovation, reference_board, reference
+    gc.collect()
     class Args: pass
     history = Args()
     history.model_a_rows, history.qb_results, history.raw_seasons = a.model_a_rows, a.qb_results, a.raw_seasons
@@ -157,7 +165,6 @@ def main():
     from fsffl.state.models import LeagueRules, Position
     from fsffl.value.career_tail import CAREER_TAIL_SCORING_COORDINATE, CareerTailFeatures, build_career_tail_authority
     rules = LeagueRules.model_validate(json.loads(Path(a.connected_rules).read_text()))
-    previous = {(str(row.player_id), int(row.season)): float(row.fantasyPoints) for row in connected.itertuples()}
     tails = []
     for row in candidates.itertuples():
         features = CareerTailFeatures(
@@ -187,7 +194,7 @@ def main():
         "roster_slot": str(row.roster_slot),
     } for row in candidates.itertuples()]).to_csv(out / "CAREER_DYNAMIC_CANDIDATE_AUTHORITY.csv", index=False)
     (out / "FOUNDATION4_DYNAMIC_CANDIDATE_SUMMARY.json").write_text(json.dumps({
-        "evaluation_season": 2026, "reference_player_count": int(reference.output_player_id.nunique()),
+        "evaluation_season": 2026, "reference_player_count": reference_player_count,
         "candidate_count": int(candidates.player_id.nunique()), "y4_y7_policy_rows": int(len(result)),
         "y8_plus_authorities": len(tails), "candidate_evidence_sha256": evidence_digest,
         "accepted_model_authority": "Foundation4 frozen route / policy / uncertainty cells + Career Tail v1",
