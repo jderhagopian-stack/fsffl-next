@@ -7,7 +7,13 @@ from typing import Annotated, Literal, Mapping
 
 from pydantic import Field, model_validator
 
-from fsffl.state.models import FrozenModel, Position
+from fsffl.state.models import FrozenModel, LeagueRules, Position
+from fsffl.forecast.integrated_i1 import I1ForecastResult
+from fsffl.forecast.models import ForecastObservation
+from fsffl.value.live_intrinsic_calendar import (
+    build_live_calendar_shapley_estimates,
+    compose_live_intrinsic_calendar_from_future_results,
+)
 from fsffl.value.career_tail import CareerTailAuthority
 from fsffl.value.long_term_intrinsic import (
     LONG_TERM_INTRINSIC_HORIZONS,
@@ -16,8 +22,10 @@ from fsffl.value.long_term_intrinsic import (
 )
 from fsffl.value.shapley_intrinsic_contract import (
     ShapleyHorizonUncertainty,
+    CompletedSourceFactProvenance,
     ShapleyIntrinsicAvailability,
     ShapleyIntrinsicContract,
+    build_shapley_intrinsic_contract,
 )
 
 
@@ -182,6 +190,37 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
                 "career-forward residual omissions require explicit scoring provenance"
             )
         return self
+
+
+def build_career_forward_from_canonical_p0(
+    *,
+    live_year_one_forecasts: tuple[ForecastObservation, ...],
+    future_results: Mapping[str, Mapping[int, I1ForecastResult]],
+    future_source_season: int,
+    rules: LeagueRules,
+    long_term: LongTermIntrinsicShadowContract,
+    tails: Mapping[str, CareerTailAuthority],
+    completed_source_provenance: CompletedSourceFactProvenance | None = None,
+    missing_required_fact_families: tuple[str, ...] = (),
+) -> CareerForwardIntrinsicShadowContract:
+    """Compose a complete Career shadow from canonical P0 Y2/Y3 packets.
+
+    Inputs must cover the identical full Shapley cohort. Shapley is evaluated
+    on that cohort before Career composition; this function never computes a
+    candidate-alone marginal or fills an absent player/horizon.
+    """
+    calendar = compose_live_intrinsic_calendar_from_future_results(
+        live_year_one_forecasts=live_year_one_forecasts,
+        future_results=future_results,
+        future_source_season=future_source_season,
+    )
+    shapley = build_live_calendar_shapley_estimates(calendar, rules=rules)
+    current = build_shapley_intrinsic_contract(
+        shapley,
+        completed_source_provenance=completed_source_provenance,
+        missing_required_fact_families=missing_required_fact_families,
+    )
+    return build_career_forward_intrinsic_shadow(current, long_term, tails)
 
 
 def _semantic_payload(
