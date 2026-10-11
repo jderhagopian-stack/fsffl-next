@@ -1,3 +1,7 @@
+## 2026-10-11 — Follow-up: Year 1 Experiments 1–2 completed; REVISE
+
+The architecture assessment remains a background inventory. Its original “Management gate” and request to approve the initial research protocols are superseded by the completed, separately authorized Experiments 1–2. Management accepts their evidence; the challenger remains REVISE and nonproduction. No Experiment 3 is authorized. History-first dynasty/career forecasting remains a distinct strategic objective. Use the combined [Experiments 1–2 record](../../research/INDEPENDENT_YEAR1_EXPERIMENTS_20261011.md) and current [Independent Forecasting workstream](INDEPENDENT_FORECASTING.md).
+
 # Workstream — Forecast Research: League-Agnostic Scoring Coverage
 
 ## State
