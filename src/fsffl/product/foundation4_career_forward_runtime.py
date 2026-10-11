@@ -15,6 +15,7 @@ from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
     CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
     CareerForwardIntrinsicShadowContract,
+    append_dynamic_career_estimates,
     build_career_forward_intrinsic_shadow,
 )
 from fsffl.value.career_tail import (
@@ -58,6 +59,11 @@ FOUNDATION4_RUNTIME_VERSION = (
 
 CurrentIntrinsicLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
 CurrentIntrinsicFingerprintResolver = Callable[[UserRuntimeContext], str]
+ExpandedCareerContractLoader = Callable[
+    [UserRuntimeContext, CareerForwardIntrinsicShadowContract],
+    CareerForwardIntrinsicShadowContract | None,
+]
+ExpandedCareerContractFingerprintResolver = Callable[[UserRuntimeContext], str]
 
 
 def _rules_payload(context: UserRuntimeContext) -> dict[str, object]:
@@ -88,7 +94,22 @@ class CareerIntrinsicLoader:
         current_intrinsic_loader: CurrentIntrinsicLoader,
         current_intrinsic_fingerprint_resolver: CurrentIntrinsicFingerprintResolver,
         persistence_store: PersistenceStore | None = None,
+        expanded_career_contract_loader: ExpandedCareerContractLoader | None = None,
+        expanded_career_contract_fingerprint_resolver: (
+            ExpandedCareerContractFingerprintResolver | None
+        ) = None,
     ) -> None:
+        if (expanded_career_contract_loader is None) != (
+            expanded_career_contract_fingerprint_resolver is None
+        ):
+            raise ValueError(
+                "expanded Career contract loader and semantic fingerprint resolver "
+                "must be configured together"
+            )
+        self._expanded_career_contract_loader = expanded_career_contract_loader
+        self._expanded_career_contract_fingerprint_resolver = (
+            expanded_career_contract_fingerprint_resolver
+        )
         self._current_intrinsic_loader = current_intrinsic_loader
         self._current_intrinsic_fingerprint_resolver = (
             current_intrinsic_fingerprint_resolver
@@ -123,6 +144,11 @@ class CareerIntrinsicLoader:
             "long_horizon_value_model_version": LONG_TERM_INTRINSIC_MODEL_VERSION,
             "career_tail_model_version": CAREER_TAIL_MODEL_VERSION,
             "runtime_version": FOUNDATION4_RUNTIME_VERSION,
+            "expanded_career_contract_input_fingerprint": (
+                self._expanded_career_contract_fingerprint_resolver(context)
+                if self._expanded_career_contract_fingerprint_resolver is not None
+                else None
+            ),
         }
         return hashlib.sha256(
             json.dumps(
@@ -305,6 +331,50 @@ class CareerIntrinsicLoader:
             self._cached_component = None
             return 1
 
+    def _append_expanded_rostered_contract(
+        self,
+        context: UserRuntimeContext,
+        frozen_reference: CareerForwardIntrinsicShadowContract,
+    ) -> CareerForwardIntrinsicShadowContract:
+        loader = self._expanded_career_contract_loader
+        if loader is None:
+            return frozen_reference
+        if context.league_state is None:
+            raise ValueError("dynamic Career append requires canonical league State")
+        expanded = loader(context, frozen_reference)
+        if expanded is None:
+            return frozen_reference
+        frozen_ids = {row.player_id for row in frozen_reference.estimates}
+        expanded_ids = {row.player_id for row in expanded.estimates}
+        candidate_ids = expanded_ids - frozen_ids
+        if not candidate_ids:
+            return frozen_reference
+
+        state_players = {row.player_id: row for row in context.league_state.players}
+        roster_ids = {
+            entry.player_id
+            for team_state in context.league_state.team_states
+            for entry in team_state.roster
+        }
+        outside_roster = candidate_ids - roster_ids
+        if outside_roster:
+            raise ValueError(
+                "expanded Career contract includes players outside exact-State roster: "
+                + ", ".join(sorted(outside_roster))
+            )
+        for player_id in candidate_ids:
+            player = state_players.get(player_id)
+            position = str(player.position.value) if player is not None else ""
+            if position not in {"QB", "RB", "WR", "TE"}:
+                raise ValueError(
+                    f"expanded Career contract has unsupported exact-State roster identity {player_id}"
+                )
+        return append_dynamic_career_estimates(
+            frozen_reference,
+            expanded,
+            candidate_player_ids=candidate_ids,
+        )
+
     def __call__(
         self,
         context: UserRuntimeContext,
@@ -377,6 +447,7 @@ class CareerIntrinsicLoader:
                 ),
             }
         )
+        contract = self._append_expanded_rostered_contract(context, contract)
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
