@@ -1,3 +1,15 @@
+## 2026-10-11 — Management accepts independent forecasting research stage
+
+**Strategic objective:** FSFFL NEXT is to own an independent, evidence-driven current-season forecasting and dynasty-valuation system. CBS, Razzball, FFToday and similar projections may remain optional evidence or independent benchmarks; they are not mandatory inputs or permanent architecture dependencies. Current-season and long-term dynasty forecasts are separate predictive problems. Neither must mechanically depend on an external Year 1 forecast.
+
+**Research disposition:** Management accepts the [Independent Forecasting Architecture & Research Assessment](../research/INDEPENDENT_FORECASTING_ARCHITECTURE_ASSESSMENT_20261011.md) as the basis for review. It distinguishes measured historical model results from assumptions and gaps, inventories reusable evidence and model components, and proposes separate chronological validation paths for independent Year 1 and history-first dynasty forecasts.
+
+**Preserve:** accepted P0, recovered thresholds and exact 335-player regression benchmark; PR #449’s successful live integration (keep separate, draft and unmerged); accepted scoring, canonical identity, PIT and State/publication safeguards; accepted Career and tail authority. No model refit/replacement, production behavior change, merge, deployment or infrastructure purchase is authorized by this stage.
+
+**Next gate:** Management approval is requested for separate bounded research protocols for (1) independent Year 1 feasibility and (2) history-first future-season/career forecasting. No challenger fitting or broad implementation begins until the protocols and evidence gates are approved. Where historical evidence was not retained, label replay unavailable; never substitute later observations or fabricated values.
+
+
+
 # FSFFL NEXT — Management Continuity
 
 ## 2026-10-10 — Management correction: existing-model-first universal Forecast

@@ -1,3 +1,13 @@
+## 2026-10-11 — Independent Forecasting Architecture research gate
+
+Management accepts the focused assessment in [INDEPENDENT_FORECASTING_ARCHITECTURE_ASSESSMENT_20261011.md](../research/INDEPENDENT_FORECASTING_ARCHITECTURE_ASSESSMENT_20261011.md) as the basis for review. It covers prior experiments, reusable evidence, independent Year 1 and history-first dynasty design, cohort coverage and chronological validation.
+
+**Current status: MANAGEMENT GATE — FORECASTING RESEARCH.** Documentation only: no production behavior/model artifact changed; no challenger fit, merge or deployment. Preserve P0, recovered thresholds, 335 parity, scoring/PIT/State safeguards and PR #449’s live integration; #449 remains separate/draft/unmerged. CBS/Razzball/FFToday remain optional rights-scoped evidence/benchmarks, not required production inputs.
+
+The next step is Management approval of the bounded Y1 and dynasty research protocols. No fitting or broad implementation begins before that approval.
+
+
+
 # Current Operations
 
 ## 2026-10-10 — Bounded intelligence job admission merged (#445)
