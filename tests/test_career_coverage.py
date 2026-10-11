@@ -132,3 +132,92 @@ def test_position_depth_publication_fails_closed_on_state_mismatch():
             authority={"p1": {"career": 42.0}},
             failures={},
         )
+
+
+def test_newly_rostered_outside_precomputed_resolves_identity_and_provider_fixture():
+    """Exercise canonical identity -> provider packet -> Career batch without I/O."""
+    canonical_id = "sleeper:player:outside-9002"
+    provider_identity = "nfl:gsis:00-0039002"
+    state_hash = "exact-state-new"
+    state_players = [
+        {"player_id": canonical_id, "position": "TE", "nfl_team": "BUF"},
+    ]
+    roster_rows = [
+        {"player_id": canonical_id, "position": "TE", "team_id": "team-2",
+         "roster_slot": "IR", "state_hash": state_hash},
+    ]
+
+    # Fixture identity map and provider response stand in for the existing
+    # governed acquisition boundary. No network/provider call is made.
+    identity_map = {provider_identity: canonical_id}
+    identity_requests = []
+    provider_requests = []
+
+    def resolve_identity(external_id):
+        identity_requests.append(external_id)
+        return identity_map.get(external_id)
+
+    resolved_id = resolve_identity(provider_identity)
+    assert resolved_id == canonical_id
+    packet = {"player_id": resolved_id, "source": "approved-provider-fixture",
+              "as_of": "2026-10-11T14:00:00Z", "projection": {"Y1": 42.0}}
+    provider_requests.append(resolved_id)
+    assert packet["player_id"] == canonical_id
+
+    materialized = []
+    result = resolve_career_coverage(
+        state_players=state_players,
+        roster_rows=roster_rows,
+        state_hash=state_hash,
+        precomputed_player_ids=(),
+        evidence_by_player={resolved_id: packet},
+        materialize_batch=lambda subjects, packets: (
+            materialized.append((subjects, packets))
+            or {subject.player_id: {"career": 42.0} for subject in subjects}
+        ),
+    )
+
+    assert identity_requests == [provider_identity]
+    assert provider_requests == [canonical_id]
+    assert len(materialized) == 1
+    assert [subject.player_id for subject in materialized[0][0]] == [canonical_id]
+    assert materialized[0][1][canonical_id] == packet
+    assert result.authority[canonical_id] == {"career": 42.0}
+    assert result.missing == {}
+    assert result.subjects[0].source == "exact_state_roster"
+
+
+def test_matching_state_publication_accounts_for_all_roster_rows_and_failures():
+    state_hash = "exact-state-3"
+    state_players = [
+        {"player_id": "p1", "position": "QB"},
+        {"player_id": "p2", "position": "WR"},
+    ]
+    roster_rows = [
+        {"player_id": "p1", "position": "QB", "team_id": "t1",
+         "roster_slot": "STARTER", "state_hash": state_hash},
+        {"player_id": "p2", "position": "WR", "team_id": "t2",
+         "roster_slot": "BENCH", "state_hash": state_hash},
+    ]
+    subjects = select_career_coverage(
+        state_players=state_players, roster_rows=roster_rows, state_hash=state_hash,
+    )
+    refresh = build_career_position_depth_refresh(
+        state_hash=state_hash,
+        roster_rows=roster_rows,
+        subjects=subjects,
+        authority={"p1": {"raw_career_forward_reference": 120.0}},
+        partial_authority={"p2": {"y4_y7": 10.0}},
+        failures={"p2": "p0_year1_evidence_incomplete"},
+    )
+
+    assert [row["player_id"] for row in refresh] == ["p1", "p2"]
+    assert all(row["state_hash"] == state_hash for row in refresh)
+    published = {row["player_id"]: row for row in refresh}
+    assert published["p1"]["career_coverage_status"] == "career_authority_available"
+    assert published["p1"]["team_id"] == "t1"
+    assert published["p1"]["roster_slot"] == "STARTER"
+    assert published["p2"]["career_coverage_status"] == "career_authority_partial"
+    assert published["p2"]["career_failure_reason"] == "p0_year1_evidence_incomplete"
+    assert published["p2"]["team_id"] == "t2"
+    assert published["p2"]["roster_slot"] == "BENCH"
