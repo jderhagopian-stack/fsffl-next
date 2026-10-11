@@ -130,12 +130,12 @@ PR #454 is still draft. This pass read the private 27-player P0 artifact and man
 
 The exact identity in these records is a canonical Sleeper ID plus exact-State position/team/slot; the saved records do not provide display names or CBS/Razzball external player IDs. Provider status below is exactly what the accepted P0 failure rows retained, not a new live provider check. Team numbers are the suffix of exact State team ID `sleeper:1312071960615731200:team:<number>`.
 
-| Sleeper ID | Exact-State identity | CBS ROS metrics | Razzball ROS metrics found | Exact missing evidence |
+| Sleeper ID | Exact-State identity | CBS status | Razzball status | Exact missing evidence |
 |---|---|---|---|---|
-| `sleeper:player:11638` | WR, team 3, IR | none | none | No complete Year-1 row; no two-source ensemble |
+| `sleeper:player:11638` | WR, team 3, IR | no canonical row | no canonical row recorded | No complete Year-1 row; no two-source ensemble |
 | `sleeper:player:12484` | WR, team 7, IR | none | none | No complete Year-1 row; no two-source ensemble |
-| `sleeper:player:12510` | QB, team 4, BENCH | none | `fumbles_lost`, `interceptions`, `pass_td`, `pass_yards`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:13268` | WR, team 12, TAXI | none | `rec_td`, `rec_yards`, `receptions`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| `sleeper:player:12510` | QB, team 4, BENCH | no canonical row | partial canonical row recorded in private artifact | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| `sleeper:player:13268` | WR, team 12, TAXI | no canonical row | partial canonical row recorded in private artifact | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
 | `sleeper:player:13270` | WR, team 2, TAXI | none | `rec_td`, `rec_yards`, `receptions`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
 | `sleeper:player:13289` | QB, team 10, TAXI | none | `fumbles_lost`, `interceptions`, `pass_td`, `pass_yards`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
 | `sleeper:player:13306` | QB, team 1, TAXI | none | `fumbles_lost`, `interceptions`, `pass_td`, `pass_yards`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
