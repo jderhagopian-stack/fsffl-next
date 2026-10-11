@@ -151,11 +151,34 @@ def main():
     ap = argparse.ArgumentParser()
     for name in ("development-module", "route-module", "model-a-rows", "qb-results", "raw-seasons", "players", "residual-states", "innovation-states", "reference-board", "current-route", "cell-metrics", "policy-freeze", "connected-rules", "candidate-input", "state-roster", "out-dir"):
         ap.add_argument("--" + name, required=True)
+    ap.add_argument("--state-player-universe", help="exact-State JSON with the complete canonical players list")
     a = ap.parse_args()
     out = Path(a.out_dir); out.mkdir(parents=True, exist_ok=True)
     dev = load_module("dynamic_career_dev", a.development_module)
     route = load_module("dynamic_career_route", a.route_module)
     source = load_module("foundation4_source", str(Path(__file__).with_name("materialize_foundation4_fsffl_coordinate.py")))
+    from fsffl.product.career_coverage import (
+        build_career_position_depth_refresh,
+        select_career_coverage,
+    )
+    roster_frame = pd.read_csv(a.state_roster)
+    if a.state_player_universe:
+        state_payload = json.loads(Path(a.state_player_universe).read_text())
+        state_players = state_payload.get("players", [])
+    else:
+        # Roster-only mode remains useful for bounded replay. Production should
+        # supply the exact State universe to preselect the full waiver pool.
+        state_players = roster_frame[["player_id", "position"]].to_dict("records")
+    if roster_frame.state_hash.nunique() != 1:
+        raise ValueError("roster input must represent one exact State")
+    exact_state_hash = str(roster_frame.state_hash.iloc[0])
+    coverage_subjects = select_career_coverage(
+        state_players=state_players, roster_rows=roster_frame.to_dict("records"),
+        state_hash=exact_state_hash,
+    )
+    pd.DataFrame([subject.__dict__ for subject in coverage_subjects]).to_csv(
+        out / "CAREER_EXACT_STATE_COVERAGE_SELECTION.csv", index=False
+    )
     connected = source.scored_raw_frame(pd.read_csv(a.raw_seasons))
     previous = {(str(row.player_id), int(row.season)): float(row.fantasyPoints)
                 for row in connected.itertuples() if int(row.season) == 2025}
@@ -166,7 +189,7 @@ def main():
     reference = source.build_current(dev, reference_board, raw, players, residual, innovation)
     reference_player_count = int(reference.output_player_id.nunique())
     reference_ids = set(reference.output_player_id.astype(str))
-    candidates = validate_candidates(pd.read_csv(a.candidate_input), set(reference.output_player_id.astype(str)), 2026, pd.read_csv(a.state_roster))
+    candidates = validate_candidates(pd.read_csv(a.candidate_input), set(reference.output_player_id.astype(str)), 2026, roster_frame)
     current = build_candidate_features(dev, candidates, reference, raw, players, residual, innovation)
     # Drop materialization-only wide tables before loading/using the accepted
     # route-training panel; this bounds the scorer phase to one historical panel.
@@ -212,11 +235,26 @@ def main():
                       "model_version": authority.model_version})
     pd.DataFrame(tails).to_csv(out / "FOUNDATION4_DYNAMIC_CANDIDATE_Y8_PLUS.csv", index=False)
     roster_status = build_roster_authority_status(
-        pd.read_csv(a.state_roster),
+        roster_frame,
         reference_ids,
         set(candidates.player_id.astype(str)),
     )
     roster_status.to_csv(out / "CAREER_EXACT_STATE_ROSTER_AUTHORITY.csv", index=False)
+    authority_by_id = {
+        player_id: "reference" for player_id in set(roster_frame.player_id.astype(str)) & reference_ids
+    }
+    partial_by_id = {player_id: "partial" for player_id in set(candidates.player_id.astype(str))}
+    failure_by_id = {
+        str(row.player_id): str(row.full_career_failure)
+        for row in roster_status.itertuples()
+        if str(row.coverage_status) == "unavailable"
+    }
+    depth_refresh = build_career_position_depth_refresh(
+        state_hash=exact_state_hash, roster_rows=roster_frame.to_dict("records"),
+        subjects=coverage_subjects, authority=authority_by_id,
+        partial_authority=partial_by_id, failures=failure_by_id,
+    )
+    pd.DataFrame(depth_refresh).to_csv(out / "CAREER_POSITION_DEPTH_EXACT_STATE.csv", index=False)
     (out / "FOUNDATION4_DYNAMIC_CANDIDATE_SUMMARY.json").write_text(json.dumps({
         "evaluation_season": 2026, "reference_player_count": reference_player_count,
         "candidate_count": int(candidates.player_id.nunique()), "y4_y7_policy_rows": int(len(result)),
@@ -225,6 +263,9 @@ def main():
         "exact_state_reference_estimates": int((roster_status.coverage_status == "reference_estimate_available").sum()),
         "exact_state_partial_authorities": int((roster_status.coverage_status == "partial_authority").sum()),
         "exact_state_player_specific_failures": int((roster_status.coverage_status == "unavailable").sum()),
+        "exact_state_coverage_selection_subjects": len(coverage_subjects),
+        "exact_state_waiver_pool_subjects": sum(subject.source == "waiver_pool" for subject in coverage_subjects),
+        "full_state_universe_supplied": bool(a.state_player_universe),
         "accepted_model_authority": "Foundation4 frozen route / policy / uncertainty cells + Career Tail v1",
         "reference_board_modified": False, "full_career_composed": False,
         "full_career_gate": "exact Current Y1-Y3 Shapley contract required for full Career Forward aggregation",
