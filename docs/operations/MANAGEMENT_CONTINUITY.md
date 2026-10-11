@@ -9,6 +9,10 @@ Position & Depth now emits an exact roster row with explicit player-level Career
 
 **Next:** compose the 10 supported packets through the existing full-cohort Shapley/Career contract (never candidate-only), test frozen-335 numerical parity, and maintain explicit failures for the 18 unsupported Year-1 packets. Then verify complete exact-State Position & Depth publication and automatic resolution for future roster additions. Do not expand to the 480 unrostered players, alter settled sources/rights/models, merge, or deploy.
 
+## 2026-10-11 — Career selector bounded to product scope
+
+Review of #454 found the shared Career selector still auto-included every NFL-attached unrostered QB/RB/WR/TE, creating a path to materialize about 480 non-reference players. Removed that default. Exact-State roster rows remain automatic; unrostered Career work now requires explicit bounded cohort selection or an on-demand request. Explore's governed opportunity-score selection remains bounded to 50 by default and 100 maximum, only for supported candidates. A 500-player regression fixture confirms the selector accepts only explicitly selected unrostered IDs. Focused suite is now **22 passed**. No waiver batch was run.
+
 ## 2026-10-11 — Career Coverage #405 full-cohort composition checkpoint
 
 Using the already accepted canonical base—not a request to resupply model data—the supported roster outputs were composed from the saved 11 exact-State P0 packets plus the frozen 335-player Career/Shapley cohort. Canonical base: `career-405-pr1-semantic-11526021872.zip` SHA-256 `1bad20d2f4bc369d64f59f5ab2d2bd75117f594d45aeace352b58d4aedb3b2f3`; current Shapley CSV `SHAPLEY_CURRENT_BOARD_335.csv` SHA-256 `03636d36726cb8765b34a0bf9f400fc1e29d8c32651352ab77ee293bded89b26`. Foundation 4 accepted bundle SHA-256 `6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22` (Y4–Y7 board `f04547d3fae97420a12c13ff2f15010c9c54ec5b3a6af5ccd68927774aa12484`; terminal features `ac7755962be04a51391120a8c92df31a1dfdca19368d3e6c0b3078745a7f9292`).

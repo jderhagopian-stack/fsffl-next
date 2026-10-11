@@ -8,7 +8,7 @@ from fsffl.product.career_coverage import (
 )
 
 
-def test_roster_waiver_and_newly_rostered_out_of_pool_share_one_batch():
+def test_roster_bounded_explore_and_newly_rostered_out_of_pool_share_one_batch():
     state = [
         {"player_id": "sleeper:player:ref", "position": "QB", "nfl_team": "KC"},
         {"player_id": "sleeper:player:pool", "position": "WR", "nfl_team": "SF"},
@@ -50,6 +50,21 @@ def test_roster_waiver_and_newly_rostered_out_of_pool_share_one_batch():
     )
     assert len(refresh) == 2
     assert next(x for x in refresh if x["player_id"].endswith(":deep"))["career_coverage_status"] == "career_authority_partial"
+
+
+def test_nfl_attached_unrostered_pool_is_not_selected_by_default():
+    state = [
+        {"player_id": f"waiver:{i}", "position": "WR", "nfl_team": "SF"}
+        for i in range(500)
+    ]
+    selected = select_career_coverage(
+        state_players=state,
+        roster_rows=[],
+        state_hash="state-bounded",
+        precomputed_player_ids={"waiver:12", "waiver:37"},
+    )
+    assert [row.player_id for row in selected] == ["waiver:12", "waiver:37"]
+    assert all(row.source == "waiver_pool" for row in selected)
 
 
 def test_missing_evidence_is_explicit_and_never_sent_as_zero():

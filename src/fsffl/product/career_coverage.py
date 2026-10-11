@@ -95,13 +95,13 @@ def select_career_coverage(
     precomputed_player_ids: Iterable[str] = (),
     on_demand_player_ids: Iterable[str] = (),
 ) -> tuple[CareerCoverageSubject, ...]:
-    """Select every roster subject, the broad NFL-attached FA pool, and requests.
+    """Select roster subjects, an explicitly bounded cohort, and requests.
 
-    The waiver cohort is all unrostered canonical QB/RB/WR/TE players attached
-    to an NFL team in this State. Roster rows take precedence over the pool;
-    explicit candidate requests work even when absent from the precomputed ID
-    set. A player outside the State universe is deliberately left to the
-    canonical identity/acquisition layer and is not assigned a fabricated row.
+    Roster rows always take precedence. Unrostered players are included only
+    when named in the caller's already-ranked/precomputed cohort or explicitly
+    requested on demand; NFL attachment alone never expands Career work to the
+    full free-agent pool. A player outside the State universe is deliberately
+    left to the canonical identity/acquisition layer and is not fabricated.
     """
     if not state_hash or not str(state_hash).strip():
         raise ValueError("exact State hash is required")
@@ -133,7 +133,6 @@ def select_career_coverage(
         if position not in POSITIONS:
             continue
         roster_row = roster.get(player_id)
-        nfl_team = str(row.get("nfl_team") or "").strip()
         if roster_row:
             roster_position = str(roster_row.get("position", position)).upper()
             if roster_position != position:
@@ -144,9 +143,8 @@ def select_career_coverage(
             )
         elif player_id in requested:
             selected[player_id] = CareerCoverageSubject(player_id, position, None, None, "on_demand")
-        elif player_id in precomputed or nfl_team:
-            # NFL attachment is the governed broad-pool rule; retaining explicit
-            # precomputed IDs supports a source-defined eligible pool as well.
+        elif player_id in precomputed:
+            # Callers provide only the bounded cohort selected for Explore.
             selected[player_id] = CareerCoverageSubject(player_id, position, None, None, "waiver_pool")
     return tuple(selected[k] for k in sorted(selected))
 
