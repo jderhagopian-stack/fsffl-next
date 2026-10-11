@@ -6,8 +6,7 @@ Date: 2026-10-11
 - PR: #454, draft
 - Branch: `career/dynamic-materializer-20261011`
 - Starting head: `dbef69412e488e747b3caaf57a02fdf46c5adff4`
-- Code/test head: `c88d971fcaaf4715be5ee15e7c23fcdb67c2c4ab`
-- Current documentation head: `0953656dfc2bcdd1ad60064e92841a1f0e915bdc`
+- Tested code head: `8fbf4781d0733e978d13dc7426b18b799b3b22c6`
 - Durable derived-output destination: private Library folder `/FSFFL NEXT/_implementation_temp` (available; no provider payloads will be stored in GitHub).
 
 ## Current durable evidence
@@ -31,10 +30,10 @@ This session confirmed the repository write path and private durable destination
 
 ## Implementation checkpoint — 2026-10-11
 
-Branch-targeted commits now add a deterministic bounded Explore selector (default 50, hard cap 100) for supported waiver candidates, focused tests, and Career contract tests in PR CI. CI now installs pandas explicitly for the dynamic candidate tests. A stale-State Position & Depth publication regression now asserts fail-closed behavior.
+Branch-targeted commits add `build_career_forward_from_canonical_p0`: it validates canonical Y1/Y2/Y3 cohort coverage, calculates Shapley over the supplied cohort, then calls the existing Career contract. It does not calculate candidate-alone marginals and fails closed on missing horizons or mismatched cohorts. Fixture tests prove parity with direct existing Shapley/Career composition. A bounded Explore selector (default 50, maximum 100) ranks supported waiver candidates; tests cover limits and stable ranking. A stale-State Position & Depth publication regression asserts fail-closed behavior. CI explicitly installs pandas for dynamic-candidate tests.
 
 The 335-player long-horizon materializer now releases raw feature joins after constructing narrow current/terminal snapshots and before loading the historical route panel; it also drops route panels and prediction caches before allocating publication tables. This is a code-level lifetime reduction only. The full materializer has not been run in this environment, so the measured 490,928 KiB baseline is not yet shown below 410 MiB, and no RSS benchmark result is claimed.
 
-PR CI at the latest code head is running (PR focused trace succeeded; Career CI and PR164 checks are pending). No Career candidate has been newly scored or reported as covered. Dynamic Career composition still requires the unavailable canonical P0 packets and matching cohort Shapley outputs; the existing Career composer remains strict about ready Current Shapley, matching Y4–Y7/tail cohorts, and frozen reference authority. No provider acquisition or production-model change occurred.
+At tested code head `8fbf4781d0733e978d13dc7426b18b799b3b22c6`, PR CI, PR164 focused corrective regression, and Live Forecast corrective trace passed; stable full suite skipped while the PR remains draft. No Career candidate has been newly scored or reported as covered. Dynamic Career composition still requires the unavailable canonical P0 packets and matching cohort Shapley outputs; the existing Career composer remains strict about ready Current Shapley, matching Y4–Y7/tail cohorts, and frozen reference authority. No provider acquisition or production-model change occurred.
 
 **Next:** inspect final CI, add/fix a focused benchmark if repository fixtures support exercising the materializer path, and obtain an authorized runner for only the exact-State 27-player P0 refresh. Persist its player-level results privately before dynamic composition. Keep #454 draft.
