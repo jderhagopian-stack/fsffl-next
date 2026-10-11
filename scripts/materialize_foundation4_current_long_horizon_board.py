@@ -60,6 +60,33 @@ def candidate_prediction(route, dev, long, candidate: str, h: int, pos: str,
     return np.asarray(pred, dtype=float).clip(min=0.0)
 
 
+def build_history_inputs_memory_bounded(dev, args):
+    """Mirror the frozen route builder while releasing wide inputs as soon as safe."""
+    model_a = pd.read_csv(args.model_a_rows)
+    qb_results = json.loads(Path(args.qb_results).read_text())
+    model_a = dev.add_qb_governed_path(model_a, qb_results)
+    del qb_results
+    base = dev.build_forecast_base(model_a)
+    del model_a
+
+    raw = dev.prep_raw(pd.read_csv(args.raw_seasons))
+    base = dev.merge_lags(base, raw)
+    players = pd.read_csv(args.players)
+    base = dev.add_engineered_features(base, players)
+    del players
+
+    residual = pd.read_csv(args.residual_states)
+    innovation = pd.read_csv(args.innovation_states)
+    base = dev.merge_trajectory(base, residual, innovation)
+    del residual, innovation
+
+    long = dev.build_long(base, raw)
+    del base, raw
+    import gc
+    gc.collect()
+    return long
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--development-module", required=True)
@@ -140,7 +167,7 @@ def main() -> None:
     history_args.players = args.players
     history_args.residual_states = args.residual_states
     history_args.innovation_states = args.innovation_states
-    long = route.build_inputs(dev, history_args)
+    long = build_history_inputs_memory_bounded(dev, history_args)
 
     current_route = pd.read_csv(args.current_route)
     metrics = pd.read_csv(args.cell_metrics)
