@@ -340,7 +340,7 @@ def _canonical_p0_year_one() -> ForecastObservation:
     )
 
 
-def test_canonical_p0_packet_uses_shared_shapley_and_career_contracts():
+def test_canonical_p0_numeric_shapley_career_parity():
     year_one = (_canonical_p0_year_one(),)
     future = {"p1": {2: _canonical_p0_future(2), 3: _canonical_p0_future(3)}}
     tail = build_career_tail_authority(
@@ -389,15 +389,30 @@ def test_canonical_p0_packet_uses_shared_shapley_and_career_contracts():
         _long_term(),
         {"p1": tail},
     )
+    reference_row = reference.estimates[0]
+    assert row.current_intrinsic_raw_y1_y3 == pytest.approx(
+        reference_row.current_intrinsic_raw_y1_y3, abs=1e-12
+    )
+    assert tuple(
+        item.raw_shapley_contribution for item in row.uncertainty.current_y1_y3
+    ) == pytest.approx(tuple(
+        item.raw_shapley_contribution
+        for item in reference_row.uncertainty.current_y1_y3
+    ), abs=1e-12)
+    assert tuple(
+        item.target_season for item in row.uncertainty.current_y1_y3
+    ) == tuple(item.target_season for item in reference_row.uncertainty.current_y1_y3)
+    assert row.long_horizon_raw_y4_y7_reference == pytest.approx(
+        reference_row.long_horizon_raw_y4_y7_reference, abs=1e-12
+    )
+    assert row.terminal_raw_y8_plus_reference == pytest.approx(
+        reference_row.terminal_raw_y8_plus_reference, abs=1e-12
+    )
     assert row.raw_career_forward_reference == pytest.approx(
-        reference.estimates[0].raw_career_forward_reference, abs=1e-9
+        reference_row.raw_career_forward_reference, abs=1e-12
     )
-    assert row.model_authority.low == pytest.approx(
-        reference.estimates[0].model_authority.low, abs=1e-9
-    )
-    assert row.model_authority.high == pytest.approx(
-        reference.estimates[0].model_authority.high, abs=1e-9
-    )
+    assert row.model_authority.low == pytest.approx(reference_row.model_authority.low, abs=1e-12)
+    assert row.model_authority.high == pytest.approx(reference_row.model_authority.high, abs=1e-12)
 
 
 def test_canonical_p0_composition_fails_closed_on_missing_horizon():
