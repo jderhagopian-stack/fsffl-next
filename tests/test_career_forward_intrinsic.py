@@ -8,6 +8,11 @@ from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, Forecas
 from fsffl.state.models import Provenance
 
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot
+from fsffl.value.live_intrinsic_calendar import (
+    build_live_calendar_shapley_estimates,
+    compose_live_intrinsic_calendar_from_future_results,
+)
+from fsffl.value.shapley_intrinsic_contract import build_shapley_intrinsic_contract
 from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
     build_career_forward_intrinsic_shadow,
@@ -368,6 +373,31 @@ def test_canonical_p0_packet_uses_shared_shapley_and_career_contracts():
         + row.terminal_raw_y8_plus_reference
     )
     assert row.aggregation == CAREER_FORWARD_AGGREGATION
+
+    # The convenience adapter must preserve the established Shapley/Career
+    # contract result for the same full-cohort canonical packet.
+    calendar = compose_live_intrinsic_calendar_from_future_results(
+        live_year_one_forecasts=year_one,
+        future_results=future,
+        future_source_season=2026,
+    )
+    current = build_shapley_intrinsic_contract(
+        build_live_calendar_shapley_estimates(calendar, rules=_rules())
+    )
+    reference = build_career_forward_intrinsic_shadow(
+        current,
+        _long_term(),
+        {"p1": tail},
+    )
+    assert row.raw_career_forward_reference == pytest.approx(
+        reference.estimates[0].raw_career_forward_reference, abs=1e-9
+    )
+    assert row.model_authority.low == pytest.approx(
+        reference.estimates[0].model_authority.low, abs=1e-9
+    )
+    assert row.model_authority.high == pytest.approx(
+        reference.estimates[0].model_authority.high, abs=1e-9
+    )
 
 
 def test_canonical_p0_composition_fails_closed_on_missing_horizon():
