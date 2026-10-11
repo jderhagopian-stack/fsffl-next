@@ -35,6 +35,15 @@ def test_frozen_335_shapley_and_career_numeric_parity() -> None:
     ]
     current = helpers["current_intrinsic"](frozen_shapley_rows)
     assert current.coverage.player_count == len(current.estimates) == 335
+    frozen_by_id = {row["player_id"]: row for row in frozen_shapley_rows}
+    shapley_columns = ("year1_shapley", "year2_expected_shapley", "year3_expected_shapley")
+    max_shapley_delta = 0.0
+    for estimate in current.estimates:
+        reference = frozen_by_id[estimate.player_id]
+        for component, column in zip(estimate.contributions, shapley_columns, strict=True):
+            delta = abs(component.raw_shapley_contribution - float(reference[column]))
+            max_shapley_delta = max(max_shapley_delta, delta)
+            assert delta <= 1e-9, (estimate.player_id, column, delta)
 
     long_term = helpers["build_long_term_intrinsic_shadow"](
         helpers["forecast_contract"](
@@ -81,4 +90,4 @@ def test_frozen_335_shapley_and_career_numeric_parity() -> None:
             assert delta <= 1e-9, (
                 player_id, actual_field, value, reference[expected_field], delta
             )
-    print(f"frozen_335_shapley_career_numeric_max_abs_delta={max_delta:.3g}")
+    print(f"frozen_335_shapley_max_abs_delta={max_shapley_delta:.3g}")\n    print(f"frozen_335_career_numeric_max_abs_delta={max_delta:.3g}")
