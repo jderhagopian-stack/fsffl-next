@@ -351,6 +351,7 @@ class CareerIntrinsicLoader:
             return frozen_reference
 
         state_players = {row.player_id: row for row in context.league_state.players}
+        expanded_by_id = {row.player_id: row for row in expanded.estimates}
         roster_ids = {
             entry.player_id
             for team_state in context.league_state.team_states
@@ -368,6 +369,10 @@ class CareerIntrinsicLoader:
             if position not in {"QB", "RB", "WR", "TE"}:
                 raise ValueError(
                     f"expanded Career contract has unsupported exact-State roster identity {player_id}"
+                )
+            if expanded_by_id[player_id].position.value != position:
+                raise ValueError(
+                    f"expanded Career position differs from exact-State roster for {player_id}"
                 )
         return append_dynamic_career_estimates(
             frozen_reference,
