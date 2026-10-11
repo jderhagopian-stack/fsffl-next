@@ -585,3 +585,14 @@ The earlier October 11 provider refresh was a local/workspace execution whose re
 The approved #449 adapter at `9216571ca81bc03f60ded7e23244489a00cd3622` is a Python function in `src/fsffl/product/p0_live_candidate_runtime.py`; it is not a CLI/manual-dispatch workflow and is not included on PR #454. PR #454 only has a downstream Career materializer for already-governed candidate rows, which cannot enforce provider-fetch scope. This session has no repository checkout, no provider execution action, no GitHub workflow dispatch, and no existing Render job launch action. No attempt or provider request was made.
 
 No compliant iPhone launch path can be prepared/validated here without introducing a new trigger and verifying existing credential access, which is outside current repo capabilities. **Single operator action:** restore/attach the prior authorized execution environment that held `/tmp/career-source-refresh-20261011` and the #449 adapter checkout. Then execute exactly the 16-ID allowlist with a pre-fetch reject-extra guard, save each outcome privately, and compose only complete evidence with frozen-335 parity. Do not rerun 507, process waivers, or add infrastructure. See the detailed executor checkpoint in [CAREER_COVERAGE_PR2_20261011.md](workstreams/CAREER_COVERAGE_PR2_20261011.md).
+
+## Operating requirement — durable implementation checkpoints (2026-10-11)
+
+Temporary paths such as `/tmp` are for scratch work only. Any execution used to support a checkpoint or handoff must be recoverable by a later chat or worker:
+
+- Keep the reusable runner and reproducible invocation in the repository/PR branch, or in an explicitly approved durable execution environment. Record the exact entry point, required nonsecret configuration, and launch steps.
+- Persist outputs and per-player success/failure records in durable private storage when they contain provider data. Put a repository manifest beside the runner with the exact State/evaluation times, source revisions, artifact paths, and hashes needed to retrieve and verify those records. Never put secrets in the repository or logs.
+- Verify that the saved artifacts can be retrieved from a fresh execution context before calling the run complete.
+- If any of these gates fail, mark the execution incomplete and record the exact missing item and next action. Do not treat an ephemeral workspace, vanished `/tmp` directory, chat transcript, or undocumented command as a durable checkpoint, and do not ask Management to reconstruct lost execution details.
+
+For Career #405, this gate applies to provider acquisition, composition, memory benchmarks, and any result used to claim roster coverage.
