@@ -691,7 +691,10 @@ def test_runtime_appends_only_complete_expanded_candidates_from_exact_roster(mat
             "team_states": (team_state,),
         }
     )
-    exact_context = context.model_copy(update={"league_state": league_state})
+    exact_context = UserRuntimeContext(
+        user_id=context.user_id,
+        league_state=league_state,
+    )
     dynamic_loader = CareerIntrinsicLoader(
         current_intrinsic_loader=lambda _context: _current_intrinsic(),
         current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
