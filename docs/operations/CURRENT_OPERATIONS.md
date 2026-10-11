@@ -1,5 +1,20 @@
 # Current Operations
 
+## 2026-10-11 — Career #405 checkpoint (PR #454; draft / nonproduction)
+
+The accepted existing-model-first path is being extended by [PR #454](https://github.com/jderhagopian-stack/fsffl-next/pull/454), based on current main `df62354f3a40e4b30275645db0171bf518ed8a5b`. It reuses the frozen Foundation 4 Y4–Y7 route/policy/uncertainty materializer and Career Tail v1 for governed dynamic candidate rows. The 335 reference board remains intact; candidate ranking is anchored to its fixed position-specific Y1 distribution. No production model, scoring authority, Current/Career formula, State publication, #370 gate, or deployment changed.
+
+On exact saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (as of 2026-10-08 16:20:14Z), two of the live #449 out-of-benchmark Forecast subjects are confirmed on roster: Athan Kaliakmanis (`sleeper:player:13557`, TAXI) and Anthony Richardson (`sleeper:player:9229`, BENCH). The bounded accepted Career batch produced 16 Y4–Y7 policy rows and one Y8+ tail authority for each: **2 partial component authorities, 0 complete Career Forward estimates**. The exact Y1–Y3 Current Shapley contract is absent from the #449 result package; only rounded Year 1–3 means were preserved. They are not promoted to complete Career estimates. CBS/Razzball production rights also remain unresolved.
+
+Focused tests: **13 passed**; Python compile and diff checks passed. Actual two-subject batch: **18.876 s; 511,200 KiB peak RSS (~499 MiB)**. One bounded synchronous batch; no asynchronous fan-out. PR #454 remains draft/unmerged. #446 accounting, #447 research prior, #448 dynamic P0 scorer and #449 Forecast integration remain separate/unmerged; none alone completes #405.
+
+**Remaining #405 work:** retain/pass exact Current Y1–Y3 contract output; reuse fitted/shared model and evidence across publication cohorts; extend through every exact-State rostered QB/RB/WR/TE with estimate or reasoned player-specific failure; then precompute a broad governed waiver/free-agent universe and support unusual on-demand candidates. Apply merged #445 bounded job admission if asynchronous scheduling is later added.
+
+**Product sequence:** complete #405, then Explore opportunity discovery, then Trade Center. Independent Year 1 Experiments 1–2 remain research-only **REVISE**; history-first dynasty forecasting remains a separate strategic objective.
+
+**Next Management action:** review PR #454’s partial materialization and decide the authorized, rights-cleared mechanism for preserving exact P0 Current Y1–Y3 contracts and provider provenance. Do not merge/deploy pending review.
+
+
 ## 2026-10-11 — Documentation reconciliation for #450–#452
 
 Research status is governed by Experiments 1–2: accepted as research evidence, challenger REVISE, no production promotion. The architecture assessment from #450 is retained as background; its prior proposed next gate is superseded by completed experiments. History-first dynasty forecasting remains separate, and Career #405 → Explore → Trade remains the product order. The consolidated report and workstream are linked in Management Continuity.
