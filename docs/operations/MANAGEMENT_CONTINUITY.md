@@ -1,5 +1,10 @@
 # FSFFL NEXT — Management Continuity
 
+## 2026-10-11 — Documentation reconciliation for #450–#452
+
+The current disposition for overlapping #450–#452 documentation is: Year 1 Experiments 1–2 are accepted as nonproduction evidence; the challenger remains REVISE. The original assessment’s future-protocol gate is historical, no Experiment 3 is authorized, and independent history-first dynasty/career forecasting remains separate. Career #405 → Explore → Trade remains the active product sequence. The architecture report and dedicated workstream are retained; the combined experiments report supersedes the Experiment 1-only record.
+
+
 ## 2026-10-11 — Independent Year 1 Experiments 1–2 accepted as research; REVISE
 
 Management accepts recovered panel and Experiments 1 and 2 as **nonproduction research evidence**. Experiment 1 established modest independent history-only signal for observed returning-player outcomes. Experiment 2 used the exact same rolling origins/base predictor and a fixed pre-test calibration split; point-calibration performance regressed slightly overall and failed more clearly for one-season histories. Its interval recalibration improved pooled coverage but over-covered WR/TE, under-covered QB and widened intervals. **Current decision remains REVISE; no production model promotion or P0 change.** See [Independent Year 1 Experiments](../research/INDEPENDENT_YEAR1_EXPERIMENTS_20261011.md) and ChatGPT Library's Experiment 1/2 reports and reproducibility packages.
