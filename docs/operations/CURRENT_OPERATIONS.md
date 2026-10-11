@@ -1,23 +1,24 @@
 # Current Operations
 
-## 2026-10-11 — Management correction: continue accepted Career authority
+## 2026-10-11 — Management correction: prioritize Career coverage
 
 Management confirms that the accepted Current Y1–Y3 Shapley model/contract and established provider-rights handling are settled. The fact that #449’s result package retained rounded Y1–Y3 means is a limitation of that package, not evidence that the model or accepted contract is missing. Do not conduct model recovery, refit, rediscovery, or a new rights review absent concrete new evidence or changed terms/intended use.
 
-PR #454 remains partial: 27 out-of-reference rostered players, 2 partial authorities, 25 player-specific unavailable statuses, and 0 complete out-of-reference Career estimates. Its two-candidate batch took 16.772 seconds and peaked at 469,260 KiB (~458 MiB), above the existing 410 MiB working budget.
+**Coverage is the primary #405 outcome.** On the exact saved State, 27 of 250 rostered QB/RB/WR/TE are out of the 335-player reference board. PR #454 has produced 2 partial Career authorities, 25 player-specific unavailable statuses, and **0 complete out-of-reference Career estimates**. Materialized waiver/free-agent and on-demand coverage is **0**. This is partial implementation, not completed Career Coverage.
 
-**Authorized bounded follow-up, nonproduction only:**
-1. Continue the candidate Career integration using the existing accepted Current Y1–Y3 Shapley contract and established model path. This is integration/plumbing and exact parity work, not model recovery or new model authority.
-2. Reduce measured materializer peak below the existing 429,496,720-byte (~410 MiB) budget while preserving output parity. Do not raise the budget, add infrastructure, move work into request workers, or introduce unbounded fan-out. Any later asynchronous integration must use #445 bounded admission.
-3. Preserve the already-established provider/source rights handling. Reopen it only if concrete new terms, a changed intended use, or other material evidence arises.
+**Management priority and authorized bounded follow-up, nonproduction only:**
+1. Complete Career estimates or reasoned player-specific failures for every exact-State rostered QB/RB/WR/TE, using the existing accepted model and contract.
+2. Reduce the measured materializer peak of 469,260 KiB (~458 MiB) below the existing 429,496,720-byte (~410 MiB) budget while preserving output parity. This is a constraint on delivering coverage, not a replacement for the coverage objective. Do not raise the budget, add infrastructure, move work into request workers, or introduce unbounded fan-out; later asynchronous integration must use #445 bounded admission.
+3. After rostered coverage, materialize a broad governed waiver/free-agent universe and support unusual on-demand candidates.
+4. Preserve the established provider/source rights handling. Reopen it only if concrete new terms, a changed intended use, or other material evidence arises.
 
-Keep implementation on an isolated draft PR and report exact tests, parity, resource peak and remaining coverage. No merge, deployment, production-model change, or infrastructure spend is authorized.
+Keep implementation on an isolated draft PR and report coverage counts, exact tests, parity, resource peak, and remaining gaps. No merge, deployment, production-model change, or infrastructure spend is authorized.
 
 ## 2026-10-11 — Career #405 checkpoint (PR #454; draft / nonproduction)
 
 The accepted existing-model-first path is being extended by [PR #454](https://github.com/jderhagopian-stack/fsffl-next/pull/454), based on current main `df62354f3a40e4b30275645db0171bf518ed8a5b`. It reuses the frozen Foundation 4 Y4–Y7 route/policy/uncertainty materializer and Career Tail v1 for governed dynamic candidate rows. The 335 reference board remains intact; candidate ranking is anchored to its fixed position-specific Y1 distribution. No production model, scoring authority, Current/Career formula, State publication, #370 gate, or deployment changed.
 
-On exact saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (as of 2026-10-08 16:20:14Z), the roster denominator is **250 QB/RB/WR/TE** (QB 49, RB 78, WR 95, TE 28). **223** are in the frozen reference board and **27 are out-of-reference** (QB 5, RB 9, WR 11, TE 2). Two out-of-reference QBs are confirmed rostered: Athan Kaliakmanis (`sleeper:player:13557`, TAXI) and Anthony Richardson (`sleeper:player:9229`, BENCH). PR #454 produced 16 Y4–Y7 policy rows and one Y8+ tail authority for each: **2 partial authorities, 25 explicit player-specific unavailable statuses, 0 complete out-of-cohort Career estimates**. The 25 statuses mean no governed dynamic P0 packet was supplied to this batch; they do not assert permanent provider/model impossibility. Waiver/free-agent and on-demand coverage remains 0. The #449 result package preserved rounded Year 1–3 means rather than exact contract output; this package limitation does not mean the accepted contract or model is unavailable. The #449 P0 run sampled a live roster after 30 roster-entry changes from this State; its 25 failures are not attributed to these 25 exact-State subjects. Continue the established provider-rights handling.
+On exact saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (as of 2026-10-08 16:20:14Z), the roster denominator is **250 QB/RB/WR/TE** (QB 49, RB 78, WR 95, TE 28). **223** are in the frozen reference board and **27 are out-of-reference** (QB 5, RB 9, WR 11, TE 2). Two out-of-reference QBs are confirmed rostered: Athan Kaliakmanis (`sleeper:player:13557`, TAXI) and Anthony Richardson (`sleeper:player:9229`, BENCH). PR #454 produced 16 Y4–Y7 policy rows and one Y8+ tail authority for each: **2 partial authorities, 25 explicit player-specific unavailable statuses, 0 complete out-of-cohort Career estimates**. Materialized waiver/free-agent and on-demand coverage is **0**. The 25 statuses mean no governed dynamic P0 packet was supplied to this batch; they do not assert permanent provider/model impossibility. Waiver/free-agent and on-demand coverage remains 0. The #449 result package preserved rounded Year 1–3 means rather than exact contract output; this package limitation does not mean the accepted contract or model is unavailable. The #449 P0 run sampled a live roster after 30 roster-entry changes from this State; its 25 failures are not attributed to these 25 exact-State subjects. Continue the established provider-rights handling.
 
 Focused tests: **14 passed**; Python compile and diff checks passed. Actual two-subject batch: **16.772 s; 469,260 KiB peak RSS (~458 MiB)**. One bounded synchronous batch; no asynchronous fan-out. Peak RSS exceeds the recorded ~410 MiB process working budget, so this path is not eligible for request-worker execution; lower memory or obtain an explicitly approved worker budget before async integration. PR #454 remains draft/unmerged. #446 accounting, #447 research prior, #448 dynamic P0 scorer and #449 Forecast integration remain separate/unmerged; none alone completes #405.
 
@@ -25,7 +26,7 @@ Focused tests: **14 passed**; Python compile and diff checks passed. Actual two-
 
 **Product sequence:** complete #405, then Explore opportunity discovery, then Trade Center. Independent Year 1 Experiments 1–2 remain research-only **REVISE**; history-first dynasty forecasting remains a separate strategic objective.
 
-**Next Management action:** continue bounded integration using the existing accepted model/contract and optimize the measured memory overrun. Keep PR #454 draft; verify output parity, complete coverage and memory under budget before any merge/deploy decision. Keep established provider-rights handling settled absent new evidence.
+**Next Management action:** complete exact-State rostered Career coverage first (every rostered QB/RB/WR/TE: estimate or reasoned failure), while bringing peak memory under the existing budget; then deliver governed waiver/free-agent and on-demand coverage. Use the existing accepted model/contract and established provider-rights handling. Keep PR #454 draft; no merge/deploy decision until evidence supports it.
 
 
 ## 2026-10-11 — Documentation reconciliation for #450–#452
