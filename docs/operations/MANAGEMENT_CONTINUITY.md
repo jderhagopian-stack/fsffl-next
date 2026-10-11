@@ -596,3 +596,13 @@ Temporary paths such as `/tmp` are for scratch work only. Any execution used to 
 - If any of these gates fail, mark the execution incomplete and record the exact missing item and next action. Do not treat an ephemeral workspace, vanished `/tmp` directory, chat transcript, or undocumented command as a durable checkpoint, and do not ask Management to reconstruct lost execution details.
 
 For Career #405, this gate applies to provider acquisition, composition, memory benchmarks, and any result used to claim roster coverage.
+
+
+
+## 2026-10-11 — Career #405 roster-only durability stage
+
+Draft PR #454 now contains `src/fsffl/product/rostered_career_journal.py` and focused tests. The journal accepts one exact-State QB/RB/WR/TE record per rostered player, enforces canonical State/position and State-hash agreement, rejects unrostered IDs, requires provenance and timezone-aware evaluation time, and records either a complete numeric Career result or a specific evidence failure. Each output row carries a digest and is appended/fsynced with mode 0600. The fixture exercises a newly rostered identity outside any precomputed cohort and proves the outside-roster / missing-metric paths fail closed. CI run for current code was not yet visible when checkpointed; inspect before claiming CI pass.
+
+This is a persistence and validation boundary only. It does not invoke the approved #449 adapter or claim any of the 16 gaps resolved. The approved adapter is a batch function absent from #454; this session has no authorized repository command runner, provider call interface, workflow-dispatch path, or private artifact mount. The previously used `/tmp/career-source-refresh-20261011` is gone. No provider request was made. Current live roster coverage, Career publication against a newly matching State, and the outside-cohort live acquisition gate remain blocked.
+
+**Next action:** attach the already authorized adapter runner with existing credentials and private durable destination; integrate its verified dynamic-roster outputs with the journal; persist per-player inputs/results/failures; compose using the accepted full Shapley/Career context; run frozen-335 numeric parity and matching-State publication checks. Resolve every rostered QB/RB/WR/TE, including new outside-precomputed roster additions. Keep unsupported evidence as explicit failure. Do not process the 480 waiver candidates. After roster coverage closes, propose Explore cohort size and deterministic opportunity-score selection separately; existing selector defaults to 50 supported waiver candidates and caps a batch at 100, but no cohort expansion is authorized by this checkpoint.
