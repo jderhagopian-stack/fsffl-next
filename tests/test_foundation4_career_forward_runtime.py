@@ -436,11 +436,13 @@ def test_career_position_depth_publishes_each_exact_state_roster_player_independ
         players=(
             SimpleNamespace(player_id="sleeper:player:frozen", position=SimpleNamespace(value="QB")),
             SimpleNamespace(player_id="sleeper:player:new-roster", position=SimpleNamespace(value="TE")),
+            SimpleNamespace(player_id="sleeper:player:kicker", position=SimpleNamespace(value="K")),
         ),
         team_states=(
             SimpleNamespace(team_id="team-a", roster=(
                 SimpleNamespace(player_id="sleeper:player:frozen", slot=SimpleNamespace(value="BENCH")),
                 SimpleNamespace(player_id="sleeper:player:new-roster", slot=SimpleNamespace(value="TAXI")),
+                SimpleNamespace(player_id="sleeper:player:kicker", slot=SimpleNamespace(value="K")),
             )),
         ),
     )
