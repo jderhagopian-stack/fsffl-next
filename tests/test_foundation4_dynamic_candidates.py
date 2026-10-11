@@ -101,7 +101,7 @@ def test_durable_roster_checkpoint_atomically_accounts_for_success_and_failure(t
         {"player_id": failed, "position": "RB", "team_id": "t2", "roster_slot": "IR",
          "state_hash": "state-1"},
     ]
-    candidate_inputs = pd.DataFrame([row()])
+    candidate_inputs = pd.DataFrame([row(team_id="t1")])
     y4_y7 = pd.DataFrame([
         {"player_id": success, "year_index": year, "policy_id": policy,
          "central_expectation": 10.0 + year}
