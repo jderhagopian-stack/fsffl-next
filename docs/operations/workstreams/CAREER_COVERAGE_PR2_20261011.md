@@ -176,3 +176,15 @@ Temporary paths such as `/tmp` are for scratch work only. Any execution used to 
 - If any of these gates fail, mark the execution incomplete and record the exact missing item and next action. Do not treat an ephemeral workspace, vanished `/tmp` directory, chat transcript, or undocumented command as a durable checkpoint, and do not ask Management to reconstruct lost execution details.
 
 For Career #405, this gate applies to provider acquisition, composition, memory benchmarks, and any result used to claim roster coverage.
+
+
+
+## 2026-10-11 — Exact-State Career journal implementation stage
+
+PR #454 head advanced to `634910773b5fcb4271fc265f9390ea48c8359d6b`. Added `src/fsffl/product/rostered_career_journal.py`, a nonproduction persistence boundary for results emitted by the accepted P0 adapter and Career composer. It verifies every subject is a QB/RB/WR/TE player in the supplied exact-State roster and canonical identity universe; rejects any extra provider ID or mismatched State/position; requires exactly one nonempty complete Career result or explicit evidence failure; retains provenance and a timezone-aware evaluation timestamp; hashes each row; and appends/fsyncs each player record to a caller-selected output file with mode 0600. No source values are inferred or filled.
+
+Added `tests/test_rostered_career_journal.py` and included it in focused PR CI. Fixtures cover a newly rostered player outside a precomputed set, explicit per-player failure, exact-State binding, outside-roster rejection, empty-result rejection, digest creation, and restrictive file mode. The CI run for head `634910773b5fcb4271fc265f9390ea48c8359d6b` had not appeared at checkpoint time; retrieve and inspect it before treating the stage as validated.
+
+**This does not complete acquisition or roster coverage.** The journal consumes completed adapter/composer records; it does not call #449. The accepted adapter at #449 exposes a batch function and its code is not present on #454. This chat has GitHub file-write/CI-read access but no repository command runner, provider acquisition interface, manual workflow-dispatch action, or durable private artifact mount to bind the approved adapter to the journal and execute it. No provider calls were made. The 16 gaps remain as recorded above; no new Career values or live matching-State publication are claimed.
+
+**Concrete next step:** attach the existing authorized execution environment containing the #449 checkout/credentials and configured private durable destination, then integrate the adapter output with this journal in that runner. Have it refresh and verify the current league State, select only dynamic verified roster IDs (not a fixed 16-ID ceiling), persist each explicit success/failure, compose complete values under the frozen 335-player contract, and verify/publish only against the same State. Then test automatic resolution for an outside-precomputed newly rostered player. Do not run the 507 cohort or precompute all 480 waivers.
