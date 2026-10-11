@@ -91,7 +91,7 @@ Preserve Data → point-in-time State → Forecast → Value → Decision → Se
 
 ## Next Management action
 
-Continue the existing #405 implementation lane against the measured gaps: provide governed candidate packets and produce either a complete Career estimate or a reasoned player-specific failure for every exact-State rostered QB/RB/WR/TE; bring the materializer below the existing memory budget as a delivery constraint; then deliver governed waiver/free-agent and on-demand coverage. Preserve accepted model, Shapley, rights, #370, State/publication, PIT and last-good authorities. PR #454 remains draft; no merge, deployment, production-model change or infrastructure spend is authorized. When the Work implementation changes, incorporate its exact coverage counts, tests, memory, parity, and any Safari evidence into this record.
+Immediate next engineering step: run #449’s existing evidence assembler against #454’s exact saved State and produce a canonical-ID packet/failure matrix. The separate October 10 live-roster run reported 9 missing strict-scoring `fum_lost` inputs, 8 without CBS/Razzball ROS metrics, and 8 Razzball-only rows without a CBS canonical match; because roster membership changed (30 added / 28 removed or slot-changed), those counts are diagnostic only until reclassified on the exact #454 State. Use existing accepted model and Shapley authority, complete roster coverage, address memory under the existing budget as a delivery constraint, then build governed waiver/free-agent and on-demand coverage. Keep PR #454 draft; no merge, deployment, model change, or infrastructure spend is authorized.
 
 ## Handoff authorization
 
