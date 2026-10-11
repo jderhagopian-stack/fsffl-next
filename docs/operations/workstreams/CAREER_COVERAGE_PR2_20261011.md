@@ -217,3 +217,29 @@ Private intermediate output is `/FSFFL NEXT/rostered-p0-expanded-shapley.json`, 
 Added `tests/test_rostered_p0_expanded_shapley.py` for saved six-state conversion, central-expectation reconciliation, and fail-closed incomplete geometry. PR CI is triggered at commit `b346a33e0378bca1320b2956d9a2be9309210498`; results are pending. This is not a complete Career result: retrieved accepted archives include historical season/players files and policy outputs but not the dynamic route-training modules/inputs consumed by `materialize_foundation4_dynamic_candidates.py`; current roster State is also still the saved Oct 8 snapshot. No Y4–Y7 or Y8+ candidate component is claimed or borrowed from older outputs. The 18 Year-1 failures remain explicit (8 no CBS/Razzball metrics, 3 complete Razzball-only but no CBS, 7 partial Razzball missing `fumbles_lost` and no CBS). No live source lookup or State refresh was available; no broad or waiver run occurred.
 
 **Next:** supply the already accepted route-training input bundle to the existing dynamic materializer, run current-State identity refresh via its authorized State source, compute current-input Y4–Y7 and Y8+, then call the existing complete Career aggregator and persist the finished 10-player results privately. Address the 18 failures only through the approved exact-player source path. Until those gates pass, all 10 remain P0-supported but not fully Career-covered. Full materializer RSS remains unmeasured at this head (last known 490,928 KiB).
+
+
+## 2026-10-11 — P0 conversion tests and current-input Y8+ component
+
+At branch head `f1622e448e6d11ead9630f0a3ccf1a841b470a80`, focused PR CI run `38178190838` passed. The 335-player composer RSS test measured **195.7 MiB** (composer only); frozen-reference verifier reported Shapley max absolute delta `0` and Career numeric max delta `0`; canonical P0 Shapley/Career contract test passed; focused regressions passed **134 tests** with one existing Starlette/httpx deprecation warning. The focused suite now runs `tests/test_rostered_p0_expanded_shapley.py`, covering valid 6-state Y2/Y3 contract conversion, expectation reconciliation, and rejection of incomplete state geometry. Stable full suite was skipped because #454 remains draft. This does not satisfy the full materializer RSS gate.
+
+Separately recomputed the accepted Y8+ tail authority for all **10** successful roster P0 records using their current P0 Year-1 league points, age, and experience with the accepted connected-league rules. Their records have no historical GSIS crosswalk; prior-year points were therefore passed as missing (not inferred or copied from another player). Exact recipe used:
+
+```python
+CareerTailFeatures(
+    player_id=player_id, position=Position(p0_row["position"]),
+    age_years=float(p0_row["age"]), experience_years=float(p0_row["experience"]),
+    current_points=float(p0_artifact["year_one_points"][player_id]["league"]),
+    prior_points=None,
+    current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+    prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+    live_feature_transport_limitation="...no historical GSIS crosswalk... prior remains missing.",
+)
+build_career_tail_authority(features, rules=accepted_connected_rules)
+```
+
+Private artifact `/FSFFL NEXT/rostered-p0-y8-plus.json`, Library ID `libfile_05f3344564fc8191b62da87edcd7d99f`, SHA-256 `167f285a3477bf4fa563ded4f7de227d3c9116b85bfd83348fe4c3b5a7556dde`. It includes all 10 results and P0 evidence hashes. State is the saved 2026-10-08 snapshot; this is not a publication artifact and must not be used until exact State is refreshed.
+
+Accepted input inventory now recovered: artifact `10899387479.zip` SHA `ea72f312148f01b8066419e8f12cb3a04a4dbbd99fd6e0b7dc975c65cc2446b5` contains Model-A repair/residual/innovation files and seasonal player cache; `10912862252.zip` SHA `6dd664b632f4897f286a99794e10df29be21bf8c6cae70e526ea807470fdcb0e` contains raw player seasons and players; `10916355135.zip` SHA `63520ddb60a8ed12724fa21e8d276c4e3e7d5587162aade92ba7afaa3796ced2` contains current route and rolling policy outputs/metrics. Y4–Y7 cannot be safely regenerated yet: the existing adapter's required `development-module` and `route-module` code, exact `qb-results` input, and `policy-freeze` configuration are absent from those archives/repository. Do not reuse previous components. Current-State refresh and the accepted per-player acquisition route for the 18 failures also remain unavailable here.
+
+Roster counts remain **10 P0-supported, 18 explicit Year-1 failures, 0 waivers processed**. No complete Career result is claimed yet. Full materializer's last known peak remains **490,928 KiB**; the current 195.7 MiB is a separate composer benchmark. Next gate: recover the already accepted route module/development module, QB result input and policy freeze, run the existing dynamic materializer on current P0 and fresh exact-State roster, then compose complete Career and resolve each failure only through the accepted source path. No provider acquisition, broad cohort, or waiver run occurred.
