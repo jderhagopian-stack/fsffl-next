@@ -10,7 +10,7 @@ Management accepts recovered panel and Experiments 1 and 2 as **nonproduction re
 
 **Roadmap boundary:** preserve the independent history-first dynasty/career forecasting objective as a separate future workstream; it does not wait on perfecting Year 1, resolving this target-row selection issue, or obtaining rookie evidence. Preserve accepted production P0 and current Career/Product work. No training for production, merge, deployment, infrastructure purchase, or commercial-use approval occurred.
 
-**Next decision, not automatically authorized:** before another Year 1 experiment, either obtain approved historical participation/roster/outcome evidence that distinguishes zero/nonparticipation/retirement from missing source coverage, or explicitly constrain the estimand to players with an observed next-season row. Do not impute absent targets as zero. Any further one-season/QB work must report conditional coverage and the selection assumption. This conclusion is captured in a documentation-only draft PR (no production behavior changed).
+**Next decision, not automatically authorized:** before another Year 1 experiment, either obtain approved historical participation/roster/outcome evidence that distinguishes zero/nonparticipation/retirement from missing source coverage, or explicitly constrain the estimand to players with an observed next-season row. Do not impute absent targets as zero. Any further one-season/QB work must report conditional coverage and the selection assumption. This conclusion is captured in documentation-only draft [PR #452](https://github.com/jderhagopian-stack/fsffl-next/pull/452) (no production behavior changed).
 
 ## 2026-10-10 — Management correction: existing-model-first universal Forecast
 
