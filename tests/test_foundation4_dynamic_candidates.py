@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -87,3 +89,71 @@ def test_roster_authority_status_covers_reference_partial_and_missing_subjects()
     assert result.set_index("player_id").loc["ref", "coverage_status"] == "reference_estimate_available"
     assert result.set_index("player_id").loc["candidate", "coverage_status"] == "partial_authority"
     assert result.set_index("player_id").loc["missing", "coverage_status"] == "unavailable"
+
+
+
+def test_durable_roster_checkpoint_atomically_accounts_for_success_and_failure(tmp_path):
+    success = "sleeper:player:9001"
+    failed = "sleeper:player:9002"
+    roster = [
+        {"player_id": success, "position": "QB", "team_id": "t1", "roster_slot": "BENCH",
+         "state_hash": "state-1"},
+        {"player_id": failed, "position": "RB", "team_id": "t2", "roster_slot": "IR",
+         "state_hash": "state-1"},
+    ]
+    candidate_inputs = pd.DataFrame([row()])
+    y4_y7 = pd.DataFrame([
+        {"player_id": success, "year_index": year, "policy_id": policy,
+         "central_expectation": 10.0 + year}
+        for year in range(4, 8)
+        for policy in ("baseline", "hard_router", "soft_stack", "blanket_75_25")
+    ])
+    y8_plus = pd.DataFrame([{"player_id": success, "model_version": "career-tail-v1"}])
+    failures = {
+        failed: {
+            "failure_code": "p0_source_missing",
+            "failure_detail": "No eligible governed source row",
+            "evidence_checked": ["provider-a", "provider-b"],
+            "provenance": {"run_id": "fixture"},
+        }
+    }
+    path = tmp_path / "private" / "roster-checkpoint.json"
+    digest = MOD.write_durable_roster_checkpoint(
+        path,
+        state_hash="state-1",
+        state_as_of="2026-10-08T00:00:00Z",
+        evaluation_as_of="2026-10-10T00:00:00Z",
+        roster_rows=roster,
+        candidate_inputs=candidate_inputs,
+        y4_y7_rows=y4_y7,
+        y8_plus_rows=y8_plus,
+        failures=failures,
+    )
+    payload = json.loads(path.read_text())
+    assert len(digest) == 64
+    assert payload["player_count"] == 2
+    assert payload["success_count"] == 1
+    assert payload["failure_count"] == 1
+    assert [item["player_id"] for item in payload["players"]] == [success, failed]
+    assert payload["players"][0]["status"] == "p0_inputs_available_career_partial"
+    assert len(payload["players"][0]["y4_y7"]) == 16
+    assert payload["players"][1]["failure"]["evidence_checked"] == ["provider-a", "provider-b"]
+    assert os.stat(path).st_mode & 0o777 == 0o600
+
+
+def test_durable_roster_checkpoint_rejects_unaccounted_player(tmp_path):
+    with pytest.raises(ValueError, match="account for every roster player"):
+        MOD.write_durable_roster_checkpoint(
+            tmp_path / "roster.json",
+            state_hash="state-1",
+            state_as_of="2026-10-08T00:00:00Z",
+            evaluation_as_of="2026-10-10T00:00:00Z",
+            roster_rows=[
+                {"player_id": "missing", "position": "TE", "team_id": "t1",
+                 "roster_slot": "TAXI", "state_hash": "state-1"}
+            ],
+            candidate_inputs=pd.DataFrame(),
+            y4_y7_rows=pd.DataFrame(),
+            y8_plus_rows=pd.DataFrame(),
+            failures={},
+        )
