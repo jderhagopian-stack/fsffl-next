@@ -6,7 +6,8 @@ Date: 2026-10-11
 - PR: #454, draft
 - Branch: `career/dynamic-materializer-20261011`
 - Starting head: `dbef69412e488e747b3caaf57a02fdf46c5adff4`
-- Current implementation head: `c88d971fcaaf4715be5ee15e7c23fcdb67c2c4ab`
+- Code/test head: `c88d971fcaaf4715be5ee15e7c23fcdb67c2c4ab`
+- Current documentation head: `0953656dfc2bcdd1ad60064e92841a1f0e915bdc`
 - Durable derived-output destination: private Library folder `/FSFFL NEXT/_implementation_temp` (available; no provider payloads will be stored in GitHub).
 
 ## Current durable evidence
