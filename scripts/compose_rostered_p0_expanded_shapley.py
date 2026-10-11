@@ -243,24 +243,35 @@ def compose_saved_rostered_p0(
             "evaluation_as_of": str(artifact["evaluation_as_of"]),
         },
     )
-    calendar = compose_live_intrinsic_calendar_from_forecast_contract(
-        live_year_one_forecasts=tuple(observations),
-        future_contract=contract,
-    )
     rules = LeagueRules.model_validate_json(rules_path.read_text())
-    current = build_shapley_intrinsic_contract(
-        build_live_calendar_shapley_estimates(calendar, rules=rules)
-    )
-
     frozen_rows = {row["player_id"]: row for row in _read_csv(frozen_shapley_path)}
     if set(frozen_rows) != base_ids:
         raise ValueError("frozen Shapley fixture identity set differs from frozen P0 board")
-    actual_by_id = {row.player_id: row for row in current.estimates}
-    if len(actual_by_id) != 345:
-        raise ValueError(f"full-cohort Shapley expected 345 players, got {len(actual_by_id)}")
-    max_base_delta = 0.0
+
+    # First prove the frozen input base reproduces the accepted 335 reference.
+    # Then expand the composer context for candidate values. Shapley reallocates
+    # among members when the game expands; those diagnostic base changes are not
+    # allowed to replace the accepted frozen Career values.
+    base_contract = FutureForecastContract(
+        evaluation_season=2026,
+        scoring_coordinate="connected_league_fantasy_points",
+        forecast_model_version="accepted-frozen-p0-335",
+        forecast_source="frozen-base-parity",
+        forecasts=tuple(_base_future_rows(base)),
+    )
+    base_calendar = compose_live_intrinsic_calendar_from_forecast_contract(
+        live_year_one_forecasts=tuple(observations[: len(base)]),
+        future_contract=base_contract,
+    )
+    base_current = build_shapley_intrinsic_contract(
+        build_live_calendar_shapley_estimates(base_calendar, rules=rules)
+    )
+    base_by_id = {row.player_id: row for row in base_current.estimates}
+    if set(base_by_id) != base_ids:
+        raise ValueError("frozen-base Shapley output differs from its 335 identities")
+    max_frozen_base_delta = 0.0
     for player_id in sorted(base_ids):
-        actual = actual_by_id[player_id]
+        actual = base_by_id[player_id]
         reference = frozen_rows[player_id]
         for component, column in zip(
             actual.contributions,
@@ -268,7 +279,30 @@ def compose_saved_rostered_p0(
             strict=True,
         ):
             delta = abs(float(component.raw_shapley_contribution) - float(reference[column]))
-            max_base_delta = max(max_base_delta, delta)
+            max_frozen_base_delta = max(max_frozen_base_delta, delta)
+    if max_frozen_base_delta > 1e-9:
+        raise ValueError(
+            f"frozen 335 Shapley parity failed: max component delta={max_frozen_base_delta}"
+        )
+
+    expanded_contract = FutureForecastContract(
+        evaluation_season=contract.evaluation_season,
+        scoring_coordinate=contract.scoring_coordinate,
+        forecast_model_version=contract.forecast_model_version,
+        forecast_source=contract.forecast_source,
+        forecasts=tuple(future_rows),
+        provenance=contract.provenance,
+    )
+    calendar = compose_live_intrinsic_calendar_from_forecast_contract(
+        live_year_one_forecasts=tuple(observations),
+        future_contract=expanded_contract,
+    )
+    current = build_shapley_intrinsic_contract(
+        build_live_calendar_shapley_estimates(calendar, rules=rules)
+    )
+    actual_by_id = {row.player_id: row for row in current.estimates}
+    if len(actual_by_id) != 345:
+        raise ValueError(f"full-cohort Shapley expected 345 players, got {len(actual_by_id)}")
     candidate_estimates = []
     for player_id in sorted(candidate_ids):
         estimate = actual_by_id[player_id]
@@ -299,7 +333,7 @@ def compose_saved_rostered_p0(
         "expanded_full_cohort_count": len(actual_by_id),
         "candidate_count": len(candidate_ids),
         "candidate_ids": sorted(candidate_ids),
-        "frozen_base_max_abs_component_delta": max_base_delta,
+        "frozen_base_max_abs_component_delta": max_frozen_base_delta,
         "frozen_base_preserved_in_outputs": True,
         "candidate_current_y1_y3": candidate_estimates,
         "max_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
