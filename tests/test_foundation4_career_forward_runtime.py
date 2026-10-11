@@ -646,3 +646,83 @@ def test_dynasty_rejects_unversioned_last_good_instead_of_guessing_generation(
     ).json()
     assert payload["status"] == "unavailable"
     assert payload["publication_generation_id"] == "current-runtime-generation"
+
+
+def test_runtime_appends_only_complete_expanded_candidates_from_exact_roster(materialized) -> None:
+    _persistence, _calls, _base_loader, context, frozen = materialized
+    candidate_id = "sleeper:player:outside-runtime-fixture"
+    frozen_row = frozen.estimates[0]
+    frozen_tail = frozen_row.uncertainty.terminal_y8_plus
+    candidate_tail = frozen_tail.model_copy(
+        update={
+            "player_id": candidate_id,
+            "features": frozen_tail.features.model_copy(
+                update={"player_id": candidate_id}
+            ),
+        }
+    )
+    candidate_uncertainty = frozen_row.uncertainty.model_copy(
+        update={"terminal_y8_plus": candidate_tail}
+    )
+    candidate_row = frozen_row.model_copy(
+        update={"player_id": candidate_id, "uncertainty": candidate_uncertainty}
+    )
+    expanded = frozen.model_copy(
+        update={
+            "input_fingerprint": "expanded-runtime-fixture",
+            "estimates": frozen.estimates + (candidate_row,),
+            "player_count": frozen.player_count + 1,
+        }
+    )
+    state_player = SimpleNamespace(
+        player_id=candidate_id,
+        position=SimpleNamespace(value="QB"),
+    )
+    roster_entry = SimpleNamespace(
+        player_id=candidate_id,
+        slot=SimpleNamespace(value="BENCH"),
+    )
+    team_state = SimpleNamespace(team_id="team-1", roster=(roster_entry,))
+    league_state = context.league_state.model_copy(
+        update={
+            "players": context.league_state.players + (state_player,),
+            "team_states": (team_state,),
+        }
+    )
+    exact_context = context.model_copy(update={"league_state": league_state})
+    dynamic_loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _context: _current_intrinsic(),
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        expanded_career_contract_loader=lambda _context, _frozen: expanded,
+        expanded_career_contract_fingerprint_resolver=lambda _context: "regular-forecast-evidence-fixture-v1",
+    )
+
+    result = dynamic_loader(exact_context)
+    frozen_result = {row.player_id: row for row in result.estimates}
+    assert result.player_count == 336
+    assert frozen_result[candidate_id] == candidate_row
+    assert all(
+        frozen_result[row.player_id] == row for row in frozen.estimates
+    )
+    assert result.current_intrinsic_replaced is False
+
+
+def test_runtime_rejects_expanded_candidates_outside_exact_roster(materialized) -> None:
+    _persistence, _calls, _base_loader, context, frozen = materialized
+    candidate_id = "sleeper:player:outside-unrostered-fixture"
+    candidate_row = frozen.estimates[0].model_copy(update={"player_id": candidate_id})
+    expanded = frozen.model_copy(
+        update={
+            "input_fingerprint": "unrostered-runtime-fixture",
+            "estimates": frozen.estimates + (candidate_row,),
+            "player_count": frozen.player_count + 1,
+        }
+    )
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _context: _current_intrinsic(),
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        expanded_career_contract_loader=lambda _context, _frozen: expanded,
+        expanded_career_contract_fingerprint_resolver=lambda _context: "unrostered-evidence-fixture-v1",
+    )
+    with pytest.raises(ValueError, match="outside exact-State roster"):
+        loader(context)
