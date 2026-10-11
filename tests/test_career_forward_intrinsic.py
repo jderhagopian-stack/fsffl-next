@@ -455,21 +455,21 @@ def test_career_composer_materializer_peak_rss_below_budget():
             )
         }
     )
-    base_tail = build_career_tail_authority(
-        CareerTailFeatures(
-            player_id=player_ids[0],
-            position=Position.WR,
-            age_years=25.0,
-            experience_years=3.0,
-            current_points=100.0,
-            prior_points=80.0,
-            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
-            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
-        ),
-        rules=_rules(),
-    )
+    benchmark_rules = _rules()
     tails = {
-        player_id: base_tail.model_copy(update={"player_id": player_id})
+        player_id: build_career_tail_authority(
+            CareerTailFeatures(
+                player_id=player_id,
+                position=Position.WR,
+                age_years=25.0,
+                experience_years=3.0,
+                current_points=100.0,
+                prior_points=80.0,
+                current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+                prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            ),
+            rules=benchmark_rules,
+        )
         for player_id in player_ids
     }
 
