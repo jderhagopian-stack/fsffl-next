@@ -297,6 +297,8 @@ def current_policy_rows(route, dev, long, current, current_route, metrics, freez
     for h in HORIZONS:
         for pos in POSITIONS:
             ev = current[current.position == pos].copy()
+            if ev.empty:
+                continue
             ev["horizon"] = h
             ev["horizon_sq"] = float(h * h)
             ev["target_season"] = 2026 + h - 1
