@@ -2,6 +2,24 @@
 
 Date: 2026-10-11
 
+## 2026-10-12 — Regular Forecast-to-Career trace and State-bound roster publication
+
+PR #454 remains draft. Branch code commits: `d62ff40d291acc1a8eb81c847e3f623baff7c027` wires exact-State roster coverage into both Career Intrinsic and Dynasty Position Rooms responses; `ded083b1d18549642c6a9402082b1c13f780a76b` adds the outside-cohort/partial-coverage regression. The response now contains `career_position_depth`: one row per rostered QB/RB/WR/TE in the same `LeagueState.state_id`, with exact roster position/team/slot and either `career_authority_available` or the explicit player-level failure `career_estimate_missing_from_exact_state_contract`. This does not substitute ROS inputs, change Career values, or modify production rows.
+
+### Recomputed exact-State gap and source-to-consumer trace
+
+Read-only Supabase audit used the newest saved State (hash `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`, as-of `2026-10-08T16:20:14.036832Z`) and the current `career_intrinsic_v1` artifact 10829 (335 estimates, computed 2026-10-06). Result remains 223/250 rostered QB/RB/WR/TE covered and 27 absent (QB 5, RB 9, TE 2, WR 11); no production player rows changed.
+
+The regular provider producer writes canonical `player_id` values to `fsffl.projection_observation`, associated with `projection_snapshot` (2026 ROS snapshots 61–63). The audit confirmed many of the exact 27 canonical IDs are present in these source snapshots, including complete six-metric CBS ROS rows for 11 and Razzball ROS rows for a broader subset; eight IDs had no ROS metric rows in snapshots 62/63. This is not an ID-prefix mismatch. These are rest-of-season source records, not full-season accepted Year-1 packets.
+
+The runtime consumer is intentionally separate: `make_preseason_baseline_authority_loader` returns the immutable preseason Year-1 coordinate. `PrivateBetaShapleyContractLoader` filters the accepted vNext future provider output to the frozen source identities. Continuity artifact 11543 contains 654 Y2/Y3 rows for 327 players. Provider code maps through `current_player_id`, historical source ID, or explicit Sleeper ProviderRef, but the frozen identity/Stage-D source has only 335 rows and declares `fail_closed_until_governed_source_refresh`. Current forecast evidence artifact 11540 has 658 scored rows total, but among the 27 exact gaps only Roman Wilson (canonical `sleeper:player:11630`) has two rows. The Career consumer then requires Current Y1–Y3, Y4–Y7 and terminal identities to be the identical cohort; accepted Career artifact 10829 is the frozen 335. Thus canonical ROS rows do not satisfy the current Year-1 contract, and the future provider has no accepted dynamic source rows to append. No mapping defect could be fixed without changing settled forecast authority or treating ROS as full-season evidence.
+
+### Validation and remaining gates
+
+The added regression uses one frozen player and one newly rostered outside-cohort player and verifies both rows publish with the matching State, preserving BENCH/TAXI details and an explicit failure for the missing Career ID. Changed source and test files parsed successfully with Python AST. This environment lacks pytest/FastAPI, and GitHub reported no Actions runs or commit status checks for the two Contents-API commits; current PR CI is therefore not verified. Last accepted frozen-335 parity remains CI 38182447528 (max numeric delta 0); this tranche leaves those values byte-for-byte untouched. Full materializer RSS remains unverified and the last known peak is 490,928 KiB, above the ~410 MiB budget.
+
+No provider acquisition, source recovery, waiver work, live publication, or State refresh occurred. Exact next implementation gate: supply the already-authorized accepted full-season Year-1 plus future/long-horizon candidate outputs into the regular Career materializer path without relaxing the frozen model/source boundary; otherwise retain the visible per-player failures. Then run CI, prove frozen-335 parity, and measure/reduce full-path RSS. No merge, deployment, model change, refit, or infrastructure purchase.
+
 ## 2026-10-11 — Superseding implementation and roster evidence checkpoint
 
 This section supersedes earlier statements in this document that this session had no writable checkout, no adapter execution path, or made no provider requests. Those notes describe earlier checkpoints and are no longer current.
