@@ -1,5 +1,18 @@
 # FSFFL NEXT — Management Continuity
 
+## 2026-10-11 — Management decision: authorize bounded Career #405 follow-up
+
+Management reviewed draft PR #454 and its documentation checkpoint in draft PR #452. PR #454 is useful partial materialization evidence, not Career Coverage completion: the exact State has 27 out-of-reference rostered players, 2 partial authorities, 25 player-specific unavailable statuses, and 0 complete out-of-reference Career estimates. The two-candidate batch took 16.772 seconds and peaked at 469,260 KiB (~458 MiB), above the documented 410 MiB working budget. Exact Current Y1–Y3 Shapley contract output is absent from the #449 result package, and CBS/Razzball production rights remain unresolved.
+
+**Authorized next tranche, nonproduction only:**
+
+1. Recover and pass the exact accepted Current Y1–Y3 Shapley contract for candidate Career composition from governed, point-in-time artifacts or the unchanged accepted pipeline. Preserve exact player identity, State/publication, source provenance, uncertainty and reference parity. Rounded P0 means, reconstructed approximations, zeros, and new model authority are not acceptable. If exact contract authority cannot be recovered, keep the candidate status explicitly incomplete.
+2. Reduce the bounded materializer’s measured peak below the existing 429,496,720-byte (~410 MiB) process working budget while preserving output parity. Do not raise the budget, add infrastructure, move this work into request workers, or introduce unbounded fan-out. Any later asynchronous integration must use #445 bounded admission.
+3. Conduct a bounded internal source-rights review for CBS/Razzball evidence, covering permitted research, retention and production/commercial use. This authorizes review only; it does not authorize provider contact, purchase, retention expansion, production use, or a legal/commercial rights claim. Keep these sources nonproduction until written authorization is established.
+
+Keep implementation on an isolated draft PR and report exact tests, parity, source lineage, resource peak and remaining coverage. Do not expand into waiver/free-agent precomputation or unusual on-demand scoring until the exact rostered candidate path is complete and within budget. No merge, deployment, production-model change, or infrastructure spend is authorized.
+
+
 ## 2026-10-11 — Career #405 checkpoint (PR #454; draft / nonproduction)
 
 The accepted existing-model-first path is being extended by [PR #454](https://github.com/jderhagopian-stack/fsffl-next/pull/454), based on current main `df62354f3a40e4b30275645db0171bf518ed8a5b`. It reuses the frozen Foundation 4 Y4–Y7 route/policy/uncertainty materializer and Career Tail v1 for governed dynamic candidate rows. The 335 reference board remains intact; candidate ranking is anchored to its fixed position-specific Y1 distribution. No production model, scoring authority, Current/Career formula, State publication, #370 gate, or deployment changed.
