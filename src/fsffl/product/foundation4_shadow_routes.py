@@ -91,6 +91,8 @@ def _career_position_depth_rows(state, career_forward) -> list[dict[str, object]
         for entry in team_state.roster:
             player = player_by_id.get(entry.player_id)
             position = str(player.position.value) if player is not None else ""
+            if player is not None and position not in {"QB", "RB", "WR", "TE"}:
+                continue
             roster_rows.append({
                 "player_id": entry.player_id,
                 "position": position,
