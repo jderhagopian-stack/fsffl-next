@@ -1,6 +1,6 @@
 # FSFFL NEXT — Management handoff | 2026-10-11
 
-**Status: PROVISIONAL handoff while Career Coverage implementation continues.**
+**Status: PROVISIONAL handoff updated after Work's bounded Career #405 tranche; overall Career Coverage remains incomplete.**
 **Authority:** This is a point-in-time orientation, not a replacement for current `main`, accepted governance, the actual live PR state, or Work's later implementation report. Incoming Management must check those sources first. No merge, deployment, model promotion, or spending approval is implied.
 
 ## Mission and immediate sequencing
@@ -27,9 +27,8 @@ At handoff preparation, `main` HEAD was `df62354f3a40e4b30275645db0171bf518ed8a5
 - [#449](https://github.com/jderhagopian-stack/fsffl-next/pull/449): real point-in-time candidate evidence integration for a bounded set, still reliant on existing provider ROS projections. Not proof of universal, independent or full Career coverage.
 
 **Open draft research documentation PRs:**
-- [#450](https://github.com/jderhagopian-stack/fsffl-next/pull/450): independent forecasting architecture assessment.
-- [#451](https://github.com/jderhagopian-stack/fsffl-next/pull/451): Experiment 1 evidence, continuity and dedicated independent forecasting workstream.
-- [#452](https://github.com/jderhagopian-stack/fsffl-next/pull/452): most current Experiment 1 + 2 results and REVISE decision. Reconcile unique evidence and workstream references into one authoritative outcome; do not blindly merge overlapping drafts.
+- [#450](https://github.com/jderhagopian-stack/fsffl-next/pull/450) and [#451](https://github.com/jderhagopian-stack/fsffl-next/pull/451) were closed unmerged after their documentation was reconciled into #452.
+- [#452](https://github.com/jderhagopian-stack/fsffl-next/pull/452) remains the current documentation draft for Experiments 1–2 (accepted research evidence; REVISE) and updated Career continuity. No merge is implied.
 
 **Other relevant status:**
 - [#445](https://github.com/jderhagopian-stack/fsffl-next/pull/445) bounded pending intelligence jobs was merged to main; current operations said **not deployed** at the last recorded checkpoint. Confirm live deploy separately.
@@ -50,7 +49,7 @@ Accepted scope:
 6. Do not treat a mandatory external projection dependency as solved independent forecasting. Do not use #447 sparse prior as production authority without separate approval.
 7. Keep implementation isolated and reviewable; proportionate tests and actual iPhone/Safari validation before Management merge/deploy decision.
 
-**Unknown at handoff:** The final Work implementation result, exact coverage numbers, PR link/head, CI, performance and any new blockers. Do not invent or infer them. Request Work's final checkpoint and append an addendum after it returns.
+**Work checkpoint received — 2026-10-11:** Work completed the bounded materialization tranche in draft [PR #454](https://github.com/jderhagopian-stack/fsffl-next/pull/454), head `5b4b264816c3bf23221b011e59673c70bc2950c5`, based on `df62354f3a40e4b30275645db0171bf518ed8a5b`. On saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`, it covers 2 of 27 out-of-reference rostered players with partial Y4–Y7/Y8+ authorities; 25 remain explicit unavailable statuses and there are 0 complete out-of-reference Career estimates. Waiver/free-agent and on-demand materialization remains 0. The bounded batch took 16.772 seconds and peaked at 469,260 KiB (~458 MiB), exceeding the existing ~410 MiB budget. Fourteen focused tests, compile/diff checks and focused CI run 5002 passed; stable full suite was skipped because the PR is draft. PR #454 remains unmerged and nonproduction. The accepted Y1–Y3 model/contract and established provider-rights handling remain settled. This is partial implementation evidence, not completion of #405.
 
 ## Independent Forecast / Intrinsic research — preserve, do not let displace product
 
@@ -90,9 +89,9 @@ Preserve Data → point-in-time State → Forecast → Value → Decision → Se
 5. Reconcile #450–#452 documentation without overwriting newer research evidence. Continue product order: Career → Explore → Trade.
 6. Report to Management in concise plain English: what shipped/what is merely drafted, user-visible result, measured latency/cost, blocker, next approval.
 
-## Pending addendum after Work completes
+## Next Management action
 
-Fill in: completion timestamp; main SHA; implementation PR number/head; merged/deployed status; exact eligible/covered/missing player counts by position and slot; reference parity; tests; measured end-to-end latency/RSS; Safari acceptance; unresolved source/authority issues; precise next Management approval. **Do not prefill these as successes.**
+Continue the existing #405 implementation lane against the measured gaps: provide governed candidate packets and produce either a complete Career estimate or a reasoned player-specific failure for every exact-State rostered QB/RB/WR/TE; bring the materializer below the existing memory budget as a delivery constraint; then deliver governed waiver/free-agent and on-demand coverage. Preserve accepted model, Shapley, rights, #370, State/publication, PIT and last-good authorities. PR #454 remains draft; no merge, deployment, production-model change or infrastructure spend is authorized. When the Work implementation changes, incorporate its exact coverage counts, tests, memory, parity, and any Safari evidence into this record.
 
 ## Handoff authorization
 
