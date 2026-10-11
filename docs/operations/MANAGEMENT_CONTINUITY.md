@@ -1,5 +1,14 @@
 # FSFFL NEXT — Management Continuity
 
+## 2026-10-11 — Independent Forecasting Experiment 1 evidence accepted; model REVISE
+
+**Historical recovery CLOSED:** User-provided `player_stats_seasonal.RData` and NFLverse `players.csv` plus preserved generator yielded 15,492 player-season rows (3,770 QB/RB/WR/TE players, 1999–2025), 14,876 season-end origins, 11,106 observed next-season targets. Identity/duplicate/season checks passed; future-derived `last_observed_season` excluded. Retrospective data does not prove exact calendar-date PIT, target absence reasons or source rights.
+
+**Experiment 1 accepted as bounded research signal, NOT forecasting promotion:** rolling held-out 2015–2025 outcomes, 4,862 scored observed next-season pairs. History-only challenger vs last-season persistence: pooled MAE 35.61 vs 37.11 (4.0% improvement); RMSE 50.76 vs 56.22 (9.7%). RB/WR/TE MAE improved; QB MAE 67.77 vs 67.18 worsened; one-completed-season MAE 33.34 vs 31.52 worsened. Nominal 80% intervals covered 76.7% overall (QB 70.1%). 1,686 of 6,548 held-out origins had no next-season row (25.7%); conditional scoring may select survivors. No rookie/no-provider/P0 direct comparison, multi-year dynasty model, or commercial rights approval. **Decision: REVISE; accepted P0 and Career remain unchanged.**
+
+**Management next gate:** preserve exact reproducibility package in Library and provenance, and propose a *separately authorized*, bounded Experiment 2 focused on absent-target semantics/selection, QB and one-season-history safety, and uncertainty calibration. No blind zero-fill, research loop, new architecture, merge, deploy, infrastructure or production model change. Independent history-first dynasty forecasting remains distinct, history-driven, and must not be held hostage to Year 1 perfection. Current product priority stays **Career Coverage #405 → Explore → Trade**. See [research evidence and detailed limits](../research/INDEPENDENT_YEAR1_EXPERIMENT1_20261011.md). PR #450's architecture report remains separate draft documentation; reconcile overlap before merge.
+
+
 ## 2026-10-10 — Management correction: existing-model-first universal Forecast
 
 **Management decision:** The accepted Forecast/P0 and Career models are the production modeling authority for **any eligible player at any supported point in time**, not only the 335-player research cohort. The 335 embedded P0 source rows and exact parity gate are historical validation fixtures, **not** a perpetual production identity allowlist or evidence ceiling. Do not equate absence from the embedded CSV with absence of player data.
