@@ -651,7 +651,9 @@ def test_dynasty_rejects_unversioned_last_good_instead_of_guessing_generation(
 def test_runtime_appends_only_complete_expanded_candidates_from_exact_roster(materialized) -> None:
     _persistence, _calls, _base_loader, context, frozen = materialized
     candidate_id = "sleeper:player:outside-runtime-fixture"
-    frozen_row = frozen.estimates[0]
+    frozen_row = next(
+        row for row in frozen.estimates if row.position.value == "QB"
+    )
     frozen_tail = frozen_row.uncertainty.terminal_y8_plus
     candidate_tail = frozen_tail.model_copy(
         update={
