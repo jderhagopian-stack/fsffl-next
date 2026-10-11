@@ -28,6 +28,7 @@ from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 from fsffl.product.foundation4_shadow_routes import (
     FOUNDATION4_CAREER_FORWARD_ENDPOINT,
     FOUNDATION4_Y4_Y7_ENDPOINT,
+    _career_position_depth_rows,
     install_foundation4_shadow_routes,
 )
 from fsffl.product.intrinsic_background import (
@@ -427,6 +428,33 @@ def test_dynasty_rooms_prefer_ready_canonical_career_intrinsic_over_stale_unavai
     assert payload["capability"] == "career_intrinsic"
     assert payload["publication_generation_id"] == "dynasty-generation-ready"
     assert len(payload["rooms"]) == 0  # synthetic unit State has no teams
+
+
+def test_career_position_depth_publishes_each_exact_state_roster_player_independently():
+    state = SimpleNamespace(
+        state_id="state-current",
+        players=(
+            SimpleNamespace(player_id="sleeper:player:frozen", position=SimpleNamespace(value="QB")),
+            SimpleNamespace(player_id="sleeper:player:new-roster", position=SimpleNamespace(value="TE")),
+        ),
+        team_states=(
+            SimpleNamespace(team_id="team-a", roster=(
+                SimpleNamespace(player_id="sleeper:player:frozen", slot=SimpleNamespace(value="BENCH")),
+                SimpleNamespace(player_id="sleeper:player:new-roster", slot=SimpleNamespace(value="TAXI")),
+            )),
+        ),
+    )
+    career = SimpleNamespace(estimates=(SimpleNamespace(player_id="sleeper:player:frozen"),))
+
+    rows = _career_position_depth_rows(state, career)
+
+    assert len(rows) == 2
+    assert {row["state_hash"] for row in rows} == {"state-current"}
+    by_id = {row["player_id"]: row for row in rows}
+    assert by_id["sleeper:player:frozen"]["career_coverage_status"] == "career_authority_available"
+    assert by_id["sleeper:player:new-roster"]["career_coverage_status"] == "career_authority_failure"
+    assert by_id["sleeper:player:new-roster"]["career_failure_reason"] == "career_estimate_missing_from_exact_state_contract"
+    assert by_id["sleeper:player:new-roster"]["roster_slot"] == "TAXI"
 
 
 def test_accepted_legacy_y4_y7_component_migrates_scope_without_rebuild(materialized) -> None:
