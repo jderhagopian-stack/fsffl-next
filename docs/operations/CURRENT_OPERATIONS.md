@@ -7,10 +7,11 @@ Management confirms that the accepted Current Y1–Y3 Shapley model/contract and
 **Coverage is the primary #405 outcome.** On the exact saved State, 27 of 250 rostered QB/RB/WR/TE are out of the 335-player reference board. Work completed the bounded implementation tranche in draft PR #454. It produced 2 partial Career authorities, 25 player-specific unavailable statuses, and **0 complete out-of-reference Career estimates**. Materialized waiver/free-agent and on-demand coverage is **0**. This is partial implementation, not completed Career Coverage.
 
 **Management priority and authorized bounded follow-up, nonproduction only:**
-1. Complete Career estimates or reasoned player-specific failures for every exact-State rostered QB/RB/WR/TE, using the existing accepted model and contract.
-2. Reduce the measured materializer peak of 469,260 KiB (~458 MiB) below the existing 429,496,720-byte (~410 MiB) budget while preserving output parity. This is a constraint on delivering coverage, not a replacement for the coverage objective. Do not raise the budget, add infrastructure, move work into request workers, or introduce unbounded fan-out; later asynchronous integration must use #445 bounded admission.
-3. After rostered coverage, materialize a broad governed waiver/free-agent universe and support unusual on-demand candidates.
-4. Preserve the established provider/source rights handling. Reopen it only if concrete new terms, a changed intended use, or other material evidence arises.
+1. Complete Career estimates or reasoned player-specific failures for every exact-State rostered QB/RB/WR/TE, using the existing accepted model and contract. First rerun the #449 evidence assembler against the same saved State used by #454 and produce a canonical-ID-by-ID packet/failure matrix. The separate October 10 #449 live-roster run categorized 25 failures as 9 missing strict-scoring `fum_lost` inputs, 8 without CBS or Razzball ROS metrics, and 8 Razzball-only without a CBS canonical match. That roster had changed from the #454 saved State (30 added / 28 removed or slot-changed roster entries), so do not assign those counts to #454's 25 players without exact-State evidence. Use the established source handling; never zero-fill missing scoring inputs or force an unmatched projection.
+2. Pass the existing accepted exact Current Y1–Y3 Shapley contract through Career composition and the governed #454 Y4–Y7/Y8+ path. This is integration of available authority, not model recovery, refitting, rediscovery, or new authority.
+3. Reduce the measured materializer peak of 469,260 KiB (~458 MiB) below the existing 429,496,720-byte (~410 MiB) budget while preserving output parity. This is a constraint on delivering coverage, not a replacement for the coverage objective. Do not raise the budget, add infrastructure, move work into request workers, or introduce unbounded fan-out; later asynchronous integration must use #445 bounded admission.
+4. After rostered coverage, materialize a broad governed waiver/free-agent universe and support unusual on-demand candidates.
+5. Preserve the established provider/source rights handling. Reopen it only if concrete new terms, a changed intended use, or other material evidence arises.
 
 Keep implementation on an isolated draft PR and report coverage counts, exact tests, parity, resource peak, and remaining gaps. No merge, deployment, production-model change, or infrastructure spend is authorized.
 
@@ -26,7 +27,7 @@ Focused tests: **14 passed**; Python compile and diff checks passed. Actual two-
 
 **Product sequence:** complete #405, then Explore opportunity discovery, then Trade Center. Independent Year 1 Experiments 1–2 remain research-only **REVISE**; history-first dynasty forecasting remains a separate strategic objective.
 
-**Next Management action:** continue #405 from this partial tranche: supply governed candidate packets and complete exact-State rostered Career coverage (estimate or reasoned player-specific failure for every QB/RB/WR/TE); bring peak memory under the existing budget as a delivery constraint; then deliver the governed waiver/free-agent and on-demand universe. Use the accepted model/contract and established provider-rights handling. PR #454 remains draft; no merge/deploy decision until the coverage and acceptance evidence is complete.
+**Next Management action:** produce the exact-State canonical-ID packet/failure matrix using #449’s existing assembler, route available inputs through the accepted model and Shapley/Career contracts, and close roster coverage with estimates or reasoned player-specific failures. Address memory under the existing budget as a delivery constraint; then build the governed waiver/free-agent and on-demand universe. PR #454 remains draft; preserve the established provider-rights handling and accepted model authority.
 
 
 ## 2026-10-11 — Documentation reconciliation for #450–#452
