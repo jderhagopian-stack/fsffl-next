@@ -5,7 +5,8 @@ Date: 2026-10-11
 - Repository: `jderhagopian-stack/fsffl-next`
 - PR: #454, draft
 - Branch: `career/dynamic-materializer-20261011`
-- Starting head: `e5eec7dc706f7849f57cffb3d81ee4f47a0bc906`
+- Starting head: `dbef69412e488e747b3caaf57a02fdf46c5adff4`
+- Current implementation head: `c88d971fcaaf4715be5ee15e7c23fcdb67c2c4ab`
 - Durable derived-output destination: private Library folder `/FSFFL NEXT/_implementation_temp` (available; no provider payloads will be stored in GitHub).
 
 ## Current durable evidence
@@ -26,3 +27,13 @@ The accepted source/rights policy, frozen 335-player reference, Shapley contract
 ## This checkpoint
 
 This session confirmed the repository write path and private durable destination. No provider acquisition has run. GitHub branch-targeted writes are confirmed. At head `9ad57eb994b48b812a53b4a3c4ee10fd864cf5c7`, focused CI and PR164 focused corrective regression passed; stable full suite skipped because the PR remains draft. The current tool session has no local checkout, and Actions capabilities expose run/artifact reads plus failed-job reruns, but no workflow dispatch or command execution. Therefore the roster-only P0 adapter cannot be launched from this chat yet. Next: establish an authorized execution path for the existing adapter that is constrained to these 27 roster IDs and can persist sanitized derived outputs into the private Library destination before Career composition. Do not repeat the 507-player refresh.
+
+## Implementation checkpoint — 2026-10-11
+
+Branch-targeted commits now add a deterministic bounded Explore selector (default 50, hard cap 100) for supported waiver candidates, focused tests, and Career contract tests in PR CI. CI now installs pandas explicitly for the dynamic candidate tests. A stale-State Position & Depth publication regression now asserts fail-closed behavior.
+
+The 335-player long-horizon materializer now releases raw feature joins after constructing narrow current/terminal snapshots and before loading the historical route panel; it also drops route panels and prediction caches before allocating publication tables. This is a code-level lifetime reduction only. The full materializer has not been run in this environment, so the measured 490,928 KiB baseline is not yet shown below 410 MiB, and no RSS benchmark result is claimed.
+
+PR CI at the latest code head is running (PR focused trace succeeded; Career CI and PR164 checks are pending). No Career candidate has been newly scored or reported as covered. Dynamic Career composition still requires the unavailable canonical P0 packets and matching cohort Shapley outputs; the existing Career composer remains strict about ready Current Shapley, matching Y4–Y7/tail cohorts, and frozen reference authority. No provider acquisition or production-model change occurred.
+
+**Next:** inspect final CI, add/fix a focused benchmark if repository fixtures support exercising the materializer path, and obtain an authorized runner for only the exact-State 27-player P0 refresh. Persist its player-level results privately before dynamic composition. Keep #454 draft.
