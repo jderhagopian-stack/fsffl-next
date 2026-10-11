@@ -165,3 +165,14 @@ The approved adapter implementation is in PR #449 at head `9216571ca81bc03f60ded
 The current implementation environment has no repository checkout (`git status` reports this directory is not a repository), no prior temporary run directory, and no provider-adapter or GitHub workflow-dispatch action. The repo's CI workflow is pull-request-triggered; the exposed Render tools provide no existing job/Workflow launch action. No new infrastructure or production service was created or changed. Therefore the requested 16-ID guard could not be added at the actual acquisition boundary or exercised, and no provider call was made. This is not an authorization refusal; the missing item is the prior runner/adapter execution surface itself.
 
 **Smallest iPhone launch path:** none is currently present to prepare or validate. A manual Actions launch would require a `workflow_dispatch` path and access to the existing credentials; neither is exposed, and PR #454 cannot provide a ready-to-run manual action from its draft branch alone. The single operator action required is to restore/attach the same authorized execution environment that held `/tmp/career-source-refresh-20261011` and the #449 adapter checkout to this implementation session. Once exposed, add the strict 16-ID allowlist at the adapter boundary, fail closed before any fetch on an extra ID, execute only those 16, persist each result privately, and compose complete packets through the frozen full-cohort contract. Do not run the 507 cohort or waivers.
+
+## Durable runner and evidence handoff gate
+
+Temporary paths such as `/tmp` are for scratch work only. Any execution used to support a checkpoint or handoff must be recoverable by a later chat or worker:
+
+- Keep the reusable runner and reproducible invocation in the repository/PR branch, or in an explicitly approved durable execution environment. Record the exact entry point, required nonsecret configuration, and launch steps.
+- Persist outputs and per-player success/failure records in durable private storage when they contain provider data. Put a repository manifest beside the runner with the exact State/evaluation times, source revisions, artifact paths, and hashes needed to retrieve and verify those records. Never put secrets in the repository or logs.
+- Verify that the saved artifacts can be retrieved from a fresh execution context before calling the run complete.
+- If any of these gates fail, mark the execution incomplete and record the exact missing item and next action. Do not treat an ephemeral workspace, vanished `/tmp` directory, chat transcript, or undocumented command as a durable checkpoint, and do not ask Management to reconstruct lost execution details.
+
+For Career #405, this gate applies to provider acquisition, composition, memory benchmarks, and any result used to claim roster coverage.
