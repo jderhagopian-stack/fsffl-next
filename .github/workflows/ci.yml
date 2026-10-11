@@ -38,8 +38,8 @@ jobs:
           unzip -oq /tmp/career405/frozen_335_numeric_reference.zip -d /tmp/career405
       - name: Focused numeric frozen 335 Career and Shapley parity
         env:
-          CAREER_PR1_SEMANTIC_DIR: /tmp/career405
-          CAREER_FOUNDATION4_DIR: /tmp/career405
+          CAREER_PR1_SEMANTIC_DIR: /tmp/career405/semantic
+          CAREER_FOUNDATION4_DIR: /tmp/career405/foundation4
         run: pytest -q -s tests/test_career_frozen_reference_parity.py
       - name: Focused numeric Shapley and Career contract parity
         run: pytest -q tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity
