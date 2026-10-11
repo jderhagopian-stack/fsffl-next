@@ -90,4 +90,5 @@ def test_frozen_335_shapley_and_career_numeric_parity() -> None:
             assert delta <= 1e-9, (
                 player_id, actual_field, value, reference[expected_field], delta
             )
-    print(f"frozen_335_shapley_max_abs_delta={max_shapley_delta:.3g}")\n    print(f"frozen_335_career_numeric_max_abs_delta={max_delta:.3g}")
+    print(f"frozen_335_shapley_max_abs_delta={max_shapley_delta:.3g}")
+    print(f"frozen_335_career_numeric_max_abs_delta={max_delta:.3g}")
