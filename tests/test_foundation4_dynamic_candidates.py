@@ -157,3 +157,24 @@ def test_durable_roster_checkpoint_rejects_unaccounted_player(tmp_path):
             y8_plus_rows=pd.DataFrame(),
             failures={},
         )
+
+
+
+def test_durable_roster_checkpoint_rejects_candidate_identity_drift(tmp_path):
+    success = "sleeper:player:9001"
+    roster = [
+        {"player_id": success, "position": "QB", "team_id": "t1", "roster_slot": "BENCH",
+         "state_hash": "state-1"},
+    ]
+    with pytest.raises(ValueError, match="team_id differs from exact State"):
+        MOD.write_durable_roster_checkpoint(
+            tmp_path / "roster.json",
+            state_hash="state-1",
+            state_as_of="2026-10-08T00:00:00Z",
+            evaluation_as_of="2026-10-10T00:00:00Z",
+            roster_rows=roster,
+            candidate_inputs=pd.DataFrame([row(team_id="stale-team")]),
+            y4_y7_rows=pd.DataFrame(),
+            y8_plus_rows=pd.DataFrame(),
+            failures={},
+        )
