@@ -220,6 +220,12 @@ def main() -> None:
                         ),
                     })
 
+    # Predictions are complete; release the large historical training panel
+    # and per-cell prediction cache before allocating publication tables.
+    del long, current, candidate_cache, ev, policy_predictions
+    import gc
+    gc.collect()
+
     result = pd.DataFrame(rows).sort_values(
         ["player_id", "year_index", "policy_id"]
     ).reset_index(drop=True)
