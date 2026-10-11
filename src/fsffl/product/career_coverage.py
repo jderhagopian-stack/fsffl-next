@@ -215,3 +215,54 @@ class BoundedCareerEvidenceCache:
     def __len__(self) -> int:
         with self._lock:
             return len(self._values)
+
+
+DEFAULT_EXPLORE_CAREER_COHORT_SIZE = 50
+MAX_EXPLORE_CAREER_COHORT_SIZE = 100
+
+
+def select_explore_career_cohort(
+    *,
+    candidate_rows: Iterable[Mapping[str, object]],
+    max_candidates: int = DEFAULT_EXPLORE_CAREER_COHORT_SIZE,
+) -> tuple[Mapping[str, object], ...]:
+    """Select a bounded Explore cohort from already-supported waiver evidence.
+
+    The broad State selector remains a cheap discovery index. Career precompute
+    is limited to supported waiver rows explicitly carrying a governed
+    opportunity_score; unsupported or unscored rows are not silently promoted.
+    Highest opportunity scores rank first, with canonical player ID as a stable
+    tie-break. The default is 50 and callers cannot exceed 100 in one cohort.
+    """
+    if isinstance(max_candidates, bool) or not isinstance(max_candidates, int):
+        raise ValueError("Explore cohort size must be an integer")
+    if not 1 <= max_candidates <= MAX_EXPLORE_CAREER_COHORT_SIZE:
+        raise ValueError(
+            f"Explore cohort size must be between 1 and {MAX_EXPLORE_CAREER_COHORT_SIZE}"
+        )
+
+    ranked: list[tuple[float, str, Mapping[str, object]]] = []
+    seen: set[str] = set()
+    for row in candidate_rows:
+        player_id = str(row.get("player_id", "")).strip()
+        if not player_id:
+            raise ValueError("Explore candidate requires canonical player_id")
+        if player_id in seen:
+            raise ValueError(f"duplicate Explore candidate {player_id}")
+        seen.add(player_id)
+        if row.get("source") != "waiver_pool":
+            continue
+        if row.get("career_supported") is not True:
+            continue
+        try:
+            score = float(row["opportunity_score"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                f"supported Explore candidate {player_id} requires governed opportunity_score"
+            ) from exc
+        if not math.isfinite(score):
+            raise ValueError(f"invalid opportunity_score for {player_id}")
+        ranked.append((score, player_id, row))
+
+    ranked.sort(key=lambda item: (-item[0], item[1]))
+    return tuple(item[2] for item in ranked[:max_candidates])
