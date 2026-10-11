@@ -418,3 +418,63 @@ def test_canonical_p0_composition_fails_closed_on_missing_horizon():
                 rules=_rules(),
             )},
         )
+
+
+def test_career_composer_materializer_peak_rss_below_budget():
+    """Focused 335-row Career composition RSS benchmark (Linux runner)."""
+    import resource
+
+    count = 335
+    player_ids = tuple(f"career-bench-{index:03d}" for index in range(count))
+    base_current = _current()
+    current_estimate = base_current.estimates[0]
+    current = base_current.model_copy(
+        update={
+            "coverage": base_current.coverage.model_copy(
+                update={
+                    "player_count": count,
+                    "year_1_forecast_players": count,
+                    "year_2_i1_players": count,
+                    "year_3_i1_players": count,
+                    "rich_path_players": count,
+                }
+            ),
+            "estimates": tuple(
+                current_estimate.model_copy(update={"player_id": player_id})
+                for player_id in player_ids
+            ),
+        }
+    )
+    base_long = _long_term()
+    long_estimate = base_long.estimates[0]
+    long_term = base_long.model_copy(
+        update={
+            "estimates": tuple(
+                long_estimate.model_copy(update={"player_id": player_id})
+                for player_id in player_ids
+            )
+        }
+    )
+    base_tail = build_career_tail_authority(
+        CareerTailFeatures(
+            player_id=player_ids[0],
+            position=Position.WR,
+            age_years=25.0,
+            experience_years=3.0,
+            current_points=100.0,
+            prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+        ),
+        rules=_rules(),
+    )
+    tails = {
+        player_id: base_tail.model_copy(update={"player_id": player_id})
+        for player_id in player_ids
+    }
+
+    result = build_career_forward_intrinsic_shadow(current, long_term, tails)
+    peak_rss_mib = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    print(f"career_composer_335_peak_rss_mib={peak_rss_mib:.1f}")
+    assert result.player_count == count
+    assert peak_rss_mib < 410.0
