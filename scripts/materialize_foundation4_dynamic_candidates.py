@@ -227,7 +227,10 @@ def write_durable_roster_checkpoint(
         "players": records,
     }
     encoded = (json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
-    target = Path(path)
+    target = Path(path).expanduser().resolve()
+    repository_root = Path(__file__).resolve().parents[1]
+    if target == repository_root or repository_root in target.parents:
+        raise ValueError("durable roster checkpoint must be outside the public repository")
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = None
     try:
