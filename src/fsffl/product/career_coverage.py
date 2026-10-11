@@ -39,7 +39,13 @@ def build_career_position_depth_refresh(
     subjects: Sequence[CareerCoverageSubject], authority: Mapping[str, object],
     failures: Mapping[str, str], partial_authority: Mapping[str, object] | None = None,
 ) -> tuple[Mapping[str, object], ...]:
-    """Create the player-level Position & Depth refresh for this exact State."""
+    """Create one Position & Depth status row for every roster identity.
+
+    Missing canonical player evidence is represented on that player's roster
+    row. It must not cause the whole matching-State payload to disappear.
+    Position/team/slot are copied from the exact roster record when no canonical
+    Career subject exists; no Career value or player identity is inferred.
+    """
     selected = {subject.player_id: subject for subject in subjects}
     output = []
     for row in roster_rows:
@@ -49,8 +55,16 @@ def build_career_position_depth_refresh(
         if str(row.get("state_hash", state_hash)) != state_hash:
             raise ValueError("Career Position & Depth row belongs to another State")
         subject = selected.get(player_id)
-        if subject is None:
-            raise ValueError(f"rostered Career subject omitted: {player_id}")
+        position = subject.position if subject is not None else str(row.get("position") or "")
+        team_id = subject.team_id if subject is not None else row.get("team_id")
+        roster_slot = subject.roster_slot if subject is not None else row.get("roster_slot")
+        if subject is not None:
+            if str(row.get("position", subject.position)).upper() != subject.position.upper():
+                raise ValueError(f"Career Position & Depth position differs from exact roster for {player_id}")
+            if str(row.get("team_id") or "") != str(subject.team_id or ""):
+                raise ValueError(f"Career Position & Depth team differs from exact roster for {player_id}")
+            if str(row.get("roster_slot") or "") != str(subject.roster_slot or ""):
+                raise ValueError(f"Career Position & Depth slot differs from exact roster for {player_id}")
         if player_id in authority:
             status, reason = "career_authority_available", ""
         elif player_id in (partial_authority or {}):
@@ -59,12 +73,15 @@ def build_career_position_depth_refresh(
             )
         else:
             status, reason = "career_authority_failure", failures.get(
-                player_id, "player_specific_career_authority_unavailable"
+                player_id,
+                "canonical_player_absent_from_exact_state_identity_universe"
+                if subject is None
+                else "player_specific_career_authority_unavailable",
             )
         output.append({
             "state_hash": state_hash, "player_id": player_id,
-            "position": subject.position, "team_id": subject.team_id,
-            "roster_slot": subject.roster_slot, "career_coverage_status": status,
+            "position": position, "team_id": team_id,
+            "roster_slot": roster_slot, "career_coverage_status": status,
             "career_failure_reason": reason,
         })
     return tuple(sorted(output, key=lambda row: str(row["player_id"])))

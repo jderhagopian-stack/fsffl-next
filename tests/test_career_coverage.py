@@ -221,3 +221,40 @@ def test_matching_state_publication_accounts_for_all_roster_rows_and_failures():
     assert published["p2"]["career_failure_reason"] == "p0_year1_evidence_incomplete"
     assert published["p2"]["team_id"] == "t2"
     assert published["p2"]["roster_slot"] == "BENCH"
+
+
+def test_missing_canonical_roster_identity_does_not_blank_position_depth_payload():
+    state_hash = "exact-state-with-unknown-roster-id"
+    roster_rows = [
+        {"player_id": "p1", "position": "QB", "team_id": "t1",
+         "roster_slot": "STARTER", "state_hash": state_hash},
+        {"player_id": "p-outside", "position": "WR", "team_id": "t2",
+         "roster_slot": "IR", "state_hash": state_hash},
+    ]
+    batch = resolve_career_coverage(
+        state_players=[{"player_id": "p1", "position": "QB"}],
+        roster_rows=roster_rows,
+        state_hash=state_hash,
+        evidence_by_player={"p1": {"source": "accepted", "packet": "fixture"}},
+        materialize_batch=lambda subjects, packets: {"p1": {"career": 10.0}},
+    )
+
+    refresh = build_career_position_depth_refresh(
+        state_hash=state_hash,
+        roster_rows=roster_rows,
+        subjects=batch.subjects,
+        authority=batch.authority,
+        failures=batch.missing,
+    )
+
+    assert [row["player_id"] for row in refresh] == ["p-outside", "p1"]
+    unknown = next(row for row in refresh if row["player_id"] == "p-outside")
+    assert unknown == {
+        "state_hash": state_hash,
+        "player_id": "p-outside",
+        "position": "WR",
+        "team_id": "t2",
+        "roster_slot": "IR",
+        "career_coverage_status": "career_authority_failure",
+        "career_failure_reason": "canonical_player_absent_from_exact_state_identity_universe",
+    }

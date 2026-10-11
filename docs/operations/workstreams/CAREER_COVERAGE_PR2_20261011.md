@@ -2,6 +2,20 @@
 
 Date: 2026-10-11
 
+## 2026-10-11 — Superseding implementation and roster evidence checkpoint
+
+This section supersedes earlier statements in this document that this session had no writable checkout, no adapter execution path, or made no provider requests. Those notes describe earlier checkpoints and are no longer current.
+
+PR #454 remains draft. The existing approved #449 P0 adapter was executed locally against the exact saved State (as-of `2026-10-08T16:20:14.036832Z`, SHA-256 `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`). The roster-only run identified 28 live roster out-of-reference candidates: 10 produced canonical P0 source rows and future Y2/Y3 outputs; 18 produced explicit Year-1 evidence failures. Evaluation timestamp: `2026-10-11T21:16:00.573062+00:00`. Private durable result: `/FSFFL NEXT/rostered-p0-batch.json`, SHA-256 `ab812b9a25a3662557c1c035138dcf76dc73b9a3e7ee051f5abe731d83646c44`. This is provider evidence only: no Career values or matching-State publication were produced.
+
+Failure breakdown: 8 IDs have no canonical CBS or Razzball ROS metrics recorded; 3 have complete Razzball-only QB metrics but no CBS canonical row; 7 have partial Razzball-only rows missing `fumbles_lost` and no CBS row. None of the 18 has the accepted two-source Year-1 ensemble. All remain explicit failures. Do not fill missing fields, infer provider matches, or treat the 10 P0 packets as complete Career values. The existing 11-player Career composition and frozen 335-player authority remain unchanged; older component outputs are not current substitutes for this run.
+
+The code now preserves Position & Depth rows when a rostered identity is absent from the canonical Career subject set. It copies position/team/slot from that exact State roster record and emits a player-specific `career_authority_failure`; it does not infer identity or Career value or let one missing player erase other roster rows. Added regression coverage in `tests/test_career_coverage.py`.
+
+Validation: `tests/test_career_coverage.py`, `tests/test_rostered_career_journal.py`, `tests/test_foundation4_dynamic_candidates.py`, and `tests/test_foundation4_materializer_memory.py`: **21 passed**. `git diff --check` passed. Full-path memory validation and full roster Career coverage remain open.
+
+**Next implementation:** integrate the 10 supported packets into the accepted full-cohort Career/Shapley composition, not a 10-player-only Shapley run; verify exact frozen-335 numeric parity and complete State-bound Position & Depth publication. Keep all 18 source failures visible. Close their missing canonical two-source ROS evidence through the existing governed source path. New roster additions must flow through the same dynamic exact-State path. No waiver cohort work, model changes, merge, or deployment is authorized by this checkpoint.
+
 - Repository: `jderhagopian-stack/fsffl-next`
 - PR: #454, draft
 - Branch: `career/dynamic-materializer-20261011`

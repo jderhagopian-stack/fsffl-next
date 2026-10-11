@@ -1,4 +1,13 @@
 
+## 2026-10-11 — Career #405 roster run and implementation checkpoint
+
+This entry supersedes older same-day statements that the current session had no checkout/provider execution path. The approved existing #449 P0 adapter was run locally for the exact saved State, not for all 507 prior candidates and not for waivers. The State snapshot is as-of `2026-10-08T16:20:14.036832Z` (hash `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`). It returned 10 canonical P0 packets and future Y2/Y3 outputs, plus 18 explicit Year-1 evidence failures, among 28 live roster out-of-reference candidates. The private durable artifact is `/FSFFL NEXT/rostered-p0-batch.json` (SHA-256 `ab812b9a25a3662557c1c035138dcf76dc73b9a3e7ee051f5abe731d83646c44`; evaluation `2026-10-11T21:16:00.573062+00:00`). No Career values or matching-State publication were produced.
+
+The 18 remain the key coverage blocker: 8 have neither CBS nor Razzball canonical ROS metrics; 3 have complete Razzball-only QB metrics with no CBS match; 7 have partial Razzball-only metrics missing `fumbles_lost` and no CBS match. All fail the accepted two-source Year-1 contract. Previously composed 11-player values and frozen 335-player authority are unchanged; older component outputs are not substituted for new inputs.
+
+Position & Depth now emits an exact roster row with explicit player-level Career failure when a roster identity is absent from the Career subject universe, preserving its exact State position/team/slot and other players' rows. The missing-ID regression and adjacent Career/journal/dynamic-candidate/materializer-memory suite passed: **21 tests**; `git diff --check` passed. Full-path memory acceptance and full roster Career coverage remain open.
+
+**Next:** compose the 10 supported packets through the existing full-cohort Shapley/Career contract (never candidate-only), test frozen-335 numerical parity, and maintain explicit failures for the 18 unsupported Year-1 packets. Then verify complete exact-State Position & Depth publication and automatic resolution for future roster additions. Do not expand to the 480 unrostered players, alter settled sources/rights/models, merge, or deploy.
 
 ## 2026-10-11 — Career Coverage #405 full-cohort composition checkpoint
 
