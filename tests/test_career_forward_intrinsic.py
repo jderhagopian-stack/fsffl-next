@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
+from fsffl.forecast.integrated_i1 import I1ForecastResult, STATE_NAMES
+from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
+from fsffl.state.models import Provenance
 
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot
 from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
     build_career_forward_intrinsic_shadow,
+    build_career_forward_from_canonical_p0,
 )
 from fsffl.value.career_tail import (
     CAREER_TAIL_SCORING_COORDINATE,
@@ -288,3 +294,97 @@ def test_holistic_shadow_requires_identical_full_cohort() -> None:
     long_term = _long_term()
     with pytest.raises(ValueError, match="identical player cohort"):
         build_career_forward_intrinsic_shadow(current, long_term, {})
+
+
+
+def _canonical_p0_future(horizon: int) -> I1ForecastResult:
+    probabilities = {
+        "out": 0.05, "depth": 0.10, "usable": 0.20,
+        "starter": 0.35, "premium": 0.20, "elite": 0.10,
+    }
+    means = {state: float(index * 35) for index, state in enumerate(STATE_NAMES)}
+    return I1ForecastResult(
+        probabilities=probabilities,
+        persistence_probability=0.9,
+        anticipated_points=130.0 - 10.0 * horizon,
+        state_means=means,
+        evidence_path="rich",
+        model_version="canonical-p0-fixture-v1",
+    )
+
+
+def _canonical_p0_year_one() -> ForecastObservation:
+    as_of = datetime(2026, 10, 10, tzinfo=UTC)
+    return ForecastObservation(
+        player_id="p1",
+        position=Position.WR,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=datetime(2026, 1, 1, tzinfo=UTC),
+        period_end=datetime(2027, 1, 1, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=155.0, stddev=22.0, p10=120.0, p50=155.0, p90=190.0),
+        source="fixture:canonical-p0",
+        model_version="current-y1-fixture-v1",
+        as_of=as_of,
+        provenance=Provenance(
+            source="fixture",
+            retrieved_at=as_of,
+            effective_at=as_of,
+            source_version="fixture-v1",
+        ),
+    )
+
+
+def test_canonical_p0_packet_uses_shared_shapley_and_career_contracts():
+    year_one = (_canonical_p0_year_one(),)
+    future = {"p1": {2: _canonical_p0_future(2), 3: _canonical_p0_future(3)}}
+    tail = build_career_tail_authority(
+        CareerTailFeatures(
+            player_id="p1",
+            position=Position.WR,
+            age_years=25.0,
+            experience_years=3.0,
+            current_points=100.0,
+            prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+        ),
+        rules=_rules(),
+    )
+    composed = build_career_forward_from_canonical_p0(
+        live_year_one_forecasts=year_one,
+        future_results=future,
+        future_source_season=2026,
+        rules=_rules(),
+        long_term=_long_term(),
+        tails={"p1": tail},
+    )
+    assert composed.player_count == 1
+    row = composed.estimates[0]
+    assert tuple(item.target_season for item in row.uncertainty.current_y1_y3) == (2026, 2027, 2028)
+    assert row.raw_career_forward_reference == pytest.approx(
+        row.current_intrinsic_raw_y1_y3
+        + row.long_horizon_raw_y4_y7_reference
+        + row.terminal_raw_y8_plus_reference
+    )
+    assert row.aggregation == CAREER_FORWARD_AGGREGATION
+
+
+def test_canonical_p0_composition_fails_closed_on_missing_horizon():
+    with pytest.raises(ValueError, match="direct Y2/Y3 only"):
+        build_career_forward_from_canonical_p0(
+            live_year_one_forecasts=(_canonical_p0_year_one(),),
+            future_results={"p1": {2: _canonical_p0_future(2)}},
+            future_source_season=2026,
+            rules=_rules(),
+            long_term=_long_term(),
+            tails={"p1": build_career_tail_authority(
+                CareerTailFeatures(
+                    player_id="p1", position=Position.WR, age_years=25.0,
+                    experience_years=3.0, current_points=100.0, prior_points=80.0,
+                    current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+                    prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+                ),
+                rules=_rules(),
+            )},
+        )
