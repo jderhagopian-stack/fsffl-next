@@ -15,6 +15,7 @@ from fsffl.value.live_intrinsic_calendar import (
 from fsffl.value.shapley_intrinsic_contract import build_shapley_intrinsic_contract
 from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
+    append_dynamic_career_estimates,
     build_career_forward_intrinsic_shadow,
     build_career_forward_from_canonical_p0,
 )
@@ -299,6 +300,76 @@ def test_holistic_shadow_requires_identical_full_cohort() -> None:
     long_term = _long_term()
     with pytest.raises(ValueError, match="identical player cohort"):
         build_career_forward_intrinsic_shadow(current, long_term, {})
+
+
+def test_dynamic_career_append_keeps_frozen_rows_after_full_cohort_composition() -> None:
+    frozen_current = _current()
+    frozen_long = _long_term()
+    frozen_tail = build_career_tail_authority(
+        CareerTailFeatures(
+            player_id="p1", position=Position.WR, age_years=25.0,
+            experience_years=3.0, current_points=100.0, prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+        ),
+        rules=_rules(),
+    )
+    frozen = build_career_forward_intrinsic_shadow(
+        frozen_current, frozen_long, {"p1": frozen_tail}
+    )
+
+    candidate_id = "sleeper:player:dynamic-fixture"
+    candidate_current = frozen_current.estimates[0].model_copy(
+        update={"player_id": candidate_id}
+    )
+    expanded_current = frozen_current.model_copy(
+        update={
+            "coverage": frozen_current.coverage.model_copy(
+                update={
+                    "player_count": 2,
+                    "year_1_forecast_players": 2,
+                    "year_2_i1_players": 2,
+                    "year_3_i1_players": 2,
+                    "rich_path_players": 2,
+                }
+            ),
+            "estimates": frozen_current.estimates + (candidate_current,),
+        }
+    )
+    candidate_long = frozen_long.estimates[0].model_copy(
+        update={"player_id": candidate_id}
+    )
+    expanded_long = frozen_long.model_copy(
+        update={"estimates": frozen_long.estimates + (candidate_long,)}
+    )
+    candidate_tail = build_career_tail_authority(
+        CareerTailFeatures(
+            player_id=candidate_id, position=Position.WR, age_years=25.0,
+            experience_years=3.0, current_points=100.0, prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+        ),
+        rules=_rules(),
+    )
+    expanded = build_career_forward_intrinsic_shadow(
+        expanded_current, expanded_long,
+        {"p1": frozen_tail, candidate_id: candidate_tail},
+    )
+
+    result = append_dynamic_career_estimates(
+        frozen, expanded, candidate_player_ids=(candidate_id,)
+    )
+    result_by_id = {row.player_id: row for row in result.estimates}
+    frozen_by_id = {row.player_id: row for row in frozen.estimates}
+    expanded_by_id = {row.player_id: row for row in expanded.estimates}
+    assert result.player_count == 2
+    assert all(result_by_id[player_id] == row for player_id, row in frozen_by_id.items())
+    assert result_by_id[candidate_id] == expanded_by_id[candidate_id]
+
+    with pytest.raises(ValueError, match="exactly match the expanded cohort"):
+        append_dynamic_career_estimates(
+            frozen, expanded, candidate_player_ids=("sleeper:player:wrong",)
+        )
 
 
 
