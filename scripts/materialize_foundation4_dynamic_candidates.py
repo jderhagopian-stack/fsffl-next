@@ -10,6 +10,8 @@ import gc
 import hashlib
 import importlib.util
 import json
+import os
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -114,6 +116,133 @@ def build_candidate_features(dev, candidates, reference, raw, players, residual,
         x.at[idx, "y1_pct"] = (int(np.sum(values < row.y1)) + 0.5 * int(np.sum(values == row.y1))) / len(values)
     x["age"], x["experience"] = age, exp
     return dev.merge_trajectory(x, residual, innovation)
+
+
+def write_durable_roster_checkpoint(
+    path: str | Path,
+    *,
+    state_hash: str,
+    state_as_of: str,
+    evaluation_as_of: str,
+    roster_rows: list[dict],
+    candidate_inputs: pd.DataFrame,
+    y4_y7_rows: pd.DataFrame,
+    y8_plus_rows: pd.DataFrame,
+    failures: dict[str, dict],
+) -> str:
+    """Atomically persist sanitized roster-only derived outputs with mode 0600."""
+    if not state_hash.strip():
+        raise ValueError("durable roster checkpoint requires exact State hash")
+    state_time = pd.to_datetime(state_as_of, utc=True, errors="coerce")
+    evaluation_time = pd.to_datetime(evaluation_as_of, utc=True, errors="coerce")
+    if pd.isna(state_time) or pd.isna(evaluation_time) or state_time > evaluation_time:
+        raise ValueError("invalid State/evaluation timestamps for durable checkpoint")
+
+    roster_by_id = {str(row["player_id"]): row for row in roster_rows}
+    if len(roster_by_id) != len(roster_rows) or not roster_by_id:
+        raise ValueError("durable roster checkpoint requires unique roster player IDs")
+    candidate_by_id = {
+        str(row["player_id"]): row
+        for row in json.loads(candidate_inputs.to_json(orient="records", date_format="iso"))
+    }
+    failure_ids = set(failures)
+    candidate_ids = set(candidate_by_id)
+    roster_ids = set(roster_by_id)
+    if candidate_ids & failure_ids or candidate_ids | failure_ids != roster_ids:
+        raise ValueError("durable checkpoint must account for every roster player exactly once")
+    if candidate_inputs.empty and not failures:
+        raise ValueError("durable checkpoint cannot be empty")
+    for player_id in roster_ids:
+        row = roster_by_id[player_id]
+        if str(row.get("state_hash", state_hash)) != state_hash:
+            raise ValueError("roster row State mismatch in durable checkpoint")
+    for player_id, row in candidate_by_id.items():
+        if str(row.get("state_hash", "")) != state_hash:
+            raise ValueError(f"candidate State mismatch for {player_id}")
+        row_evaluation = pd.to_datetime(row.get("evaluation_as_of"), utc=True, errors="coerce")
+        if pd.isna(row_evaluation) or row_evaluation != evaluation_time:
+            raise ValueError(f"candidate evaluation cutoff mismatch for {player_id}")
+
+    y4_by_id = {
+        player_id: rows
+        for player_id, rows in y4_y7_rows.groupby("player_id", sort=False)
+    } if not y4_y7_rows.empty else {}
+    tail_by_id = {
+        str(row["player_id"]): row
+        for row in json.loads(y8_plus_rows.to_json(orient="records"))
+    } if not y8_plus_rows.empty else {}
+    records = []
+    for player_id in sorted(roster_ids):
+        roster = roster_by_id[player_id]
+        if player_id in failure_ids:
+            failure = failures[player_id]
+            code, detail = str(failure.get("failure_code", "")).strip(), str(
+                failure.get("failure_detail", "")
+            ).strip()
+            if not code or not detail or "evidence_checked" not in failure or "provenance" not in failure:
+                raise ValueError(f"failure record is incomplete for {player_id}")
+            records.append({
+                "player_id": player_id,
+                "state_hash": state_hash,
+                "state_as_of": state_time.isoformat(),
+                "evaluation_as_of": evaluation_time.isoformat(),
+                "status": "p0_failure",
+                "failure": failure,
+            })
+            continue
+
+        annual = y4_by_id.get(player_id)
+        tail = tail_by_id.get(player_id)
+        if annual is None or len(annual) != 16 or tail is None:
+            raise ValueError(f"partial Career outputs incomplete for {player_id}")
+        records.append({
+            "player_id": player_id,
+            "position": str(roster["position"]),
+            "team_id": str(roster["team_id"]),
+            "roster_slot": str(roster["roster_slot"]),
+            "state_hash": state_hash,
+            "state_as_of": state_time.isoformat(),
+            "evaluation_as_of": evaluation_time.isoformat(),
+            "status": "p0_inputs_available_career_partial",
+            "career_failure_reason": "exact_Current_Y1_Y3_Shapley_contract_absent",
+            "p0_input": candidate_by_id[player_id],
+            "y4_y7": json.loads(annual.to_json(orient="records", date_format="iso")),
+            "y8_plus": tail,
+            "provenance": {
+                "evidence_source": candidate_by_id[player_id]["evidence_source"],
+                "evidence_version": candidate_by_id[player_id]["evidence_version"],
+                "forecast_as_of": candidate_by_id[player_id]["forecast_as_of"],
+                "identity_as_of": candidate_by_id[player_id]["identity_as_of"],
+            },
+        })
+
+    payload = {
+        "schema_version": "fsffl-career-roster-p0-checkpoint-v1",
+        "state_hash": state_hash,
+        "state_as_of": state_time.isoformat(),
+        "evaluation_as_of": evaluation_time.isoformat(),
+        "player_count": len(records),
+        "success_count": len(candidate_ids),
+        "failure_count": len(failure_ids),
+        "players": records,
+    }
+    encoded = (json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix=f".{target.name}.", delete=False) as handle:
+            temporary_path = Path(handle.name)
+            os.chmod(temporary_path, 0o600)
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, target)
+        os.chmod(target, 0o600)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def build_roster_authority_status(roster, reference_ids: set[str], candidate_ids: set[str]):
