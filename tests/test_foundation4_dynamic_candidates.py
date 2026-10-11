@@ -51,3 +51,16 @@ def test_candidate_y1_percentile_uses_frozen_reference():
     result = MOD.build_candidate_features(Dev(), candidate, ref, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
     assert result.iloc[0].y1_pct == pytest.approx(0.5)
     assert result.iloc[0].age == 24
+
+
+def test_roster_authority_status_covers_reference_partial_and_missing_subjects():
+    roster = pd.DataFrame([
+        {"player_id":"ref", "position":"RB", "team_id":"t1", "roster_slot":"IR", "state_hash":"s"},
+        {"player_id":"candidate", "position":"QB", "team_id":"t1", "roster_slot":"TAXI", "state_hash":"s"},
+        {"player_id":"missing", "position":"WR", "team_id":"t2", "roster_slot":"BENCH", "state_hash":"s"},
+    ])
+    result = MOD.build_roster_authority_status(roster, {"ref"}, {"candidate"})
+    assert len(result) == 3
+    assert result.set_index("player_id").loc["ref", "coverage_status"] == "reference_estimate_available"
+    assert result.set_index("player_id").loc["candidate", "coverage_status"] == "partial_authority"
+    assert result.set_index("player_id").loc["missing", "coverage_status"] == "unavailable"

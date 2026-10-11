@@ -111,6 +111,28 @@ def build_candidate_features(dev, candidates, reference, raw, players, residual,
     return dev.merge_trajectory(x, residual, innovation)
 
 
+def build_roster_authority_status(roster, reference_ids: set[str], candidate_ids: set[str]):
+    """Account for every exact-State QB/RB/WR/TE without hiding missing subjects."""
+    rows = []
+    for row in roster.sort_values("player_id").itertuples():
+        player_id = str(row.player_id)
+        if player_id in reference_ids:
+            status, components, failure = "reference_estimate_available", "accepted_335_career", ""
+        elif player_id in candidate_ids:
+            status, components = "partial_authority", "accepted_y4_y7_and_y8_plus"
+            failure = "exact_Current_Y1_Y3_Shapley_contract_absent"
+        else:
+            status, components = "unavailable", "none"
+            failure = "governed_dynamic_P0_candidate_packet_absent_for_this_exact_State"
+        rows.append({
+            "player_id": player_id, "position": str(row.position),
+            "team_id": str(row.team_id), "roster_slot": str(row.roster_slot),
+            "state_hash": str(row.state_hash), "coverage_status": status,
+            "available_components": components, "full_career_failure": failure,
+        })
+    return pd.DataFrame(rows)
+
+
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -138,6 +160,7 @@ def main():
     reference_board = pd.read_csv(a.reference_board)
     reference = source.build_current(dev, reference_board, raw, players, residual, innovation)
     reference_player_count = int(reference.output_player_id.nunique())
+    reference_ids = set(reference.output_player_id.astype(str))
     candidates = validate_candidates(pd.read_csv(a.candidate_input), set(reference.output_player_id.astype(str)), 2026, pd.read_csv(a.state_roster))
     current = build_candidate_features(dev, candidates, reference, raw, players, residual, innovation)
     # Drop materialization-only wide tables before loading/using the accepted
@@ -183,20 +206,20 @@ def main():
                       "outcome_outer_80": authority.outcome_outer_80, "outcome_outer_90": authority.outcome_outer_90,
                       "model_version": authority.model_version})
     pd.DataFrame(tails).to_csv(out / "FOUNDATION4_DYNAMIC_CANDIDATE_Y8_PLUS.csv", index=False)
-    pd.DataFrame([{
-        "player_id": str(row.player_id),
-        "position": str(row.position),
-        "coverage_status": "partial_authority",
-        "available_components": "accepted_y4_y7_and_y8_plus",
-        "full_career_failure": "exact Current Intrinsic Y1-Y3 Shapley contract is absent from supplied governed evidence",
-        "state_hash": str(row.state_hash),
-        "team_id": str(row.team_id),
-        "roster_slot": str(row.roster_slot),
-    } for row in candidates.itertuples()]).to_csv(out / "CAREER_DYNAMIC_CANDIDATE_AUTHORITY.csv", index=False)
+    roster_status = build_roster_authority_status(
+        pd.read_csv(a.state_roster),
+        reference_ids,
+        set(candidates.player_id.astype(str)),
+    )
+    roster_status.to_csv(out / "CAREER_EXACT_STATE_ROSTER_AUTHORITY.csv", index=False)
     (out / "FOUNDATION4_DYNAMIC_CANDIDATE_SUMMARY.json").write_text(json.dumps({
         "evaluation_season": 2026, "reference_player_count": reference_player_count,
         "candidate_count": int(candidates.player_id.nunique()), "y4_y7_policy_rows": int(len(result)),
         "y8_plus_authorities": len(tails), "candidate_evidence_sha256": evidence_digest,
+        "exact_state_roster_subjects": int(len(roster_status)),
+        "exact_state_reference_estimates": int((roster_status.coverage_status == "reference_estimate_available").sum()),
+        "exact_state_partial_authorities": int((roster_status.coverage_status == "partial_authority").sum()),
+        "exact_state_player_specific_failures": int((roster_status.coverage_status == "unavailable").sum()),
         "accepted_model_authority": "Foundation4 frozen route / policy / uncertainty cells + Career Tail v1",
         "reference_board_modified": False, "full_career_composed": False,
         "full_career_gate": "exact Current Y1-Y3 Shapley contract required for full Career Forward aggregation",
