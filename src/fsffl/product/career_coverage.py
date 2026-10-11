@@ -1,0 +1,215 @@
+"""Shared bounded selection path for exact-State Career coverage.
+
+This module only chooses canonical subjects and batches them to the accepted
+Career materializer. It owns no model math and never manufactures evidence.
+"""
+from __future__ import annotations
+
+from collections import OrderedDict
+from dataclasses import dataclass
+from hashlib import sha256
+import json
+from threading import RLock
+from typing import Callable, Iterable, Mapping, Sequence
+
+
+POSITIONS = frozenset({"QB", "RB", "WR", "TE"})
+
+
+@dataclass(frozen=True)
+class CareerCoverageSubject:
+    player_id: str
+    position: str
+    team_id: str | None
+    roster_slot: str | None
+    source: str
+
+
+@dataclass(frozen=True)
+class CareerCoverageBatch:
+    subjects: tuple[CareerCoverageSubject, ...]
+    authority: Mapping[str, object]
+    missing: Mapping[str, str]
+    state_hash: str
+
+
+def build_career_position_depth_refresh(
+    *, state_hash: str, roster_rows: Iterable[Mapping[str, object]],
+    subjects: Sequence[CareerCoverageSubject], authority: Mapping[str, object],
+    failures: Mapping[str, str], partial_authority: Mapping[str, object] | None = None,
+) -> tuple[Mapping[str, object], ...]:
+    """Create the player-level Position & Depth refresh for this exact State."""
+    selected = {subject.player_id: subject for subject in subjects}
+    output = []
+    for row in roster_rows:
+        player_id = str(row.get("player_id", "")).strip()
+        if not player_id:
+            continue
+        if str(row.get("state_hash", state_hash)) != state_hash:
+            raise ValueError("Career Position & Depth row belongs to another State")
+        subject = selected.get(player_id)
+        if subject is None:
+            raise ValueError(f"rostered Career subject omitted: {player_id}")
+        if player_id in authority:
+            status, reason = "career_authority_available", ""
+        elif player_id in (partial_authority or {}):
+            status, reason = "career_authority_partial", str(
+                failures.get(player_id, "required_career_component_unavailable")
+            )
+        else:
+            status, reason = "career_authority_failure", failures.get(
+                player_id, "player_specific_career_authority_unavailable"
+            )
+        output.append({
+            "state_hash": state_hash, "player_id": player_id,
+            "position": subject.position, "team_id": subject.team_id,
+            "roster_slot": subject.roster_slot, "career_coverage_status": status,
+            "career_failure_reason": reason,
+        })
+    return tuple(sorted(output, key=lambda row: str(row["player_id"])))
+
+
+def select_career_coverage(
+    *,
+    state_players: Iterable[Mapping[str, object]],
+    roster_rows: Iterable[Mapping[str, object]],
+    state_hash: str,
+    precomputed_player_ids: Iterable[str] = (),
+    on_demand_player_ids: Iterable[str] = (),
+) -> tuple[CareerCoverageSubject, ...]:
+    """Select every roster subject, the broad NFL-attached FA pool, and requests.
+
+    The waiver cohort is all unrostered canonical QB/RB/WR/TE players attached
+    to an NFL team in this State. Roster rows take precedence over the pool;
+    explicit candidate requests work even when absent from the precomputed ID
+    set. A player outside the State universe is deliberately left to the
+    canonical identity/acquisition layer and is not assigned a fabricated row.
+    """
+    if not state_hash or not str(state_hash).strip():
+        raise ValueError("exact State hash is required")
+    universe: dict[str, Mapping[str, object]] = {}
+    for row in state_players:
+        player_id = str(row.get("player_id", "")).strip()
+        if not player_id:
+            continue
+        if player_id in universe:
+            raise ValueError(f"duplicate canonical State player {player_id}")
+        universe[player_id] = row
+
+    roster: dict[str, Mapping[str, object]] = {}
+    for row in roster_rows:
+        player_id = str(row.get("player_id", "")).strip()
+        if not player_id:
+            continue
+        if player_id in roster:
+            raise ValueError(f"duplicate roster player {player_id}")
+        if str(row.get("state_hash", state_hash)) != state_hash:
+            raise ValueError("roster row belongs to a different exact State")
+        roster[player_id] = row
+
+    selected: dict[str, CareerCoverageSubject] = {}
+    requested = {str(x).strip() for x in on_demand_player_ids if str(x).strip()}
+    precomputed = {str(x).strip() for x in precomputed_player_ids if str(x).strip()}
+    for player_id, row in universe.items():
+        position = str(row.get("position", "")).upper()
+        if position not in POSITIONS:
+            continue
+        roster_row = roster.get(player_id)
+        nfl_team = str(row.get("nfl_team") or "").strip()
+        if roster_row:
+            roster_position = str(roster_row.get("position", position)).upper()
+            if roster_position != position:
+                raise ValueError(f"roster/State position mismatch for {player_id}")
+            selected[player_id] = CareerCoverageSubject(
+                player_id, position, str(roster_row.get("team_id") or "") or None,
+                str(roster_row.get("roster_slot") or "") or None, "exact_state_roster",
+            )
+        elif player_id in requested:
+            selected[player_id] = CareerCoverageSubject(player_id, position, None, None, "on_demand")
+        elif player_id in precomputed or nfl_team:
+            # NFL attachment is the governed broad-pool rule; retaining explicit
+            # precomputed IDs supports a source-defined eligible pool as well.
+            selected[player_id] = CareerCoverageSubject(player_id, position, None, None, "waiver_pool")
+    return tuple(selected[k] for k in sorted(selected))
+
+
+def resolve_career_coverage(
+    *,
+    state_players: Iterable[Mapping[str, object]],
+    roster_rows: Iterable[Mapping[str, object]],
+    state_hash: str,
+    evidence_by_player: Mapping[str, object],
+    materialize_batch: Callable[[Sequence[CareerCoverageSubject], Mapping[str, object]], Mapping[str, object]],
+    precomputed_player_ids: Iterable[str] = (),
+    on_demand_player_ids: Iterable[str] = (),
+) -> CareerCoverageBatch:
+    """Make one shared batch call; preserve missing-input failures per player."""
+    state_players = tuple(state_players)
+    roster_rows = tuple(roster_rows)
+    subjects = select_career_coverage(
+        state_players=state_players, roster_rows=roster_rows, state_hash=state_hash,
+        precomputed_player_ids=precomputed_player_ids,
+        on_demand_player_ids=on_demand_player_ids,
+    )
+    missing: dict[str, str] = {}
+    selected_ids = {subject.player_id for subject in subjects}
+    state_ids = {str(row.get("player_id", "")).strip() for row in state_players}
+    roster_ids = {str(row.get("player_id", "")).strip() for row in roster_rows}
+    requested_ids = {str(x).strip() for x in on_demand_player_ids if str(x).strip()}
+    for player_id in sorted((roster_ids | requested_ids) - state_ids):
+        missing[player_id] = "canonical_player_absent_from_exact_state_identity_universe"
+    for player_id in sorted(roster_ids - selected_ids - set(missing)):
+        missing[player_id] = "rostered_player_has_no_supported_qb_rb_wr_te_position"
+    usable: list[CareerCoverageSubject] = []
+    packets: dict[str, object] = {}
+    for subject in subjects:
+        packet = evidence_by_player.get(subject.player_id)
+        if packet is None:
+            missing[subject.player_id] = "governed_player_evidence_packet_unavailable"
+        else:
+            usable.append(subject)
+            packets[subject.player_id] = packet
+    # The accepted model/materializer owns missing-feature semantics and
+    # authority failures. This callback is intentionally invoked once per State.
+    authority = materialize_batch(tuple(usable), packets) if usable else {}
+    for subject in usable:
+        if subject.player_id not in authority:
+            missing[subject.player_id] = "materializer_returned_no_player_authority"
+    return CareerCoverageBatch(tuple(subjects), authority, missing, state_hash)
+
+
+def evidence_fingerprint(*, model_digest: str, scoring_digest: str,
+                          evidence_packet: Mapping[str, object]) -> str:
+    """League-neutral reusable key for one subject's governed Career evidence."""
+    payload = {"model": model_digest, "scoring": scoring_digest, "evidence": evidence_packet}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
+    return sha256(encoded).hexdigest()
+
+
+class BoundedCareerEvidenceCache:
+    """Small process-local LRU; State/tenant artifacts are never cached here."""
+
+    def __init__(self, max_entries: int = 512) -> None:
+        if max_entries < 1:
+            raise ValueError("max_entries must be positive")
+        self._limit = int(max_entries)
+        self._values: OrderedDict[str, object] = OrderedDict()
+        self._lock = RLock()
+
+    def get(self, key: str) -> object | None:
+        with self._lock:
+            value = self._values.get(key)
+            if value is not None:
+                self._values.move_to_end(key)
+            return value
+
+    def put(self, key: str, value: object) -> None:
+        with self._lock:
+            self._values[key] = value
+            self._values.move_to_end(key)
+            while len(self._values) > self._limit:
+                self._values.popitem(last=False)
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._values)

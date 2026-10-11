@@ -53,6 +53,29 @@ def test_candidate_y1_percentile_uses_frozen_reference():
     assert result.iloc[0].age == 24
 
 
+def test_missing_historical_crosswalk_uses_canonical_key_without_zero_filling():
+    seen = {}
+    class Dev:
+        @staticmethod
+        def merge_lags(frame, raw):
+            seen["player_id"] = frame.player_id.tolist()
+            return frame.copy()
+        @staticmethod
+        def add_engineered_features(frame, players):
+            result = frame.copy(); result["y1_pct"] = 1.0; return result
+        @staticmethod
+        def merge_trajectory(frame, residual, innovation): return frame
+    candidate = pd.DataFrame([row(historical_gsis_id="", league_y1_points=16.0)])
+    reference = pd.DataFrame({"position": ["QB"] * 2, "y1": [8.0, 24.0]})
+    output = MOD.build_candidate_features(
+        Dev(), candidate, reference, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+    )
+    assert seen["player_id"] == ["sleeper:player:9001"]
+    assert output.iloc[0].output_player_id == "sleeper:player:9001"
+    assert output.iloc[0].y1 == 16.0
+    assert output.iloc[0].historical_gsis_id == ""
+
+
 def test_roster_authority_status_covers_reference_partial_and_missing_subjects():
     roster = pd.DataFrame([
         {"player_id":"ref", "position":"RB", "team_id":"t1", "roster_slot":"IR", "state_hash":"s"},

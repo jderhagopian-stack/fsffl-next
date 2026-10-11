@@ -42,8 +42,12 @@ def validate_candidates(frame: pd.DataFrame, reference_ids: set[str], season: in
         raise ValueError("dynamic candidate overlaps frozen reference cohort")
     if not frame.position.isin(POSITIONS).all():
         raise ValueError("unsupported candidate position")
-    if frame.historical_gsis_id.isna().any() or frame.historical_gsis_id.astype(str).str.strip().eq("").any():
-        raise ValueError("accepted historical identity mapping is required")
+    # The accepted feature pipeline represents absent historical crosswalks as
+    # missing lags/metadata. Keep the canonical State ID as the model row key in
+    # that case; do not drop the player or fabricate historical production.
+    frame["historical_gsis_id"] = frame["historical_gsis_id"].where(
+        frame["historical_gsis_id"].notna(), ""
+    ).astype(str).str.strip()
     for field in ("age", "experience", "league_y1_points", "y2_player_league_expected_points", "y3_player_league_expected_points"):
         frame[field] = pd.to_numeric(frame[field], errors="coerce")
         if not np.isfinite(frame[field]).all() or (frame[field] < 0).any():
@@ -89,7 +93,8 @@ def validate_candidates(frame: pd.DataFrame, reference_ids: set[str], season: in
 def build_candidate_features(dev, candidates, reference, raw, players, residual, innovation):
     x = candidates.copy()
     x["output_player_id"] = x.player_id.astype(str)
-    x["player_id"] = x.historical_gsis_id.astype(str)
+    history_ids = x.historical_gsis_id.astype(str).str.strip()
+    x["player_id"] = history_ids.where(history_ids.ne(""), x.output_player_id)
     x["base_season"] = 2026
     x["y1"] = x.league_y1_points.astype(float)
     x["y2"] = x.y2_player_league_expected_points.astype(float)
