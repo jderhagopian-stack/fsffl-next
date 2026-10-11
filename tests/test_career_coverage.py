@@ -4,6 +4,7 @@ from fsffl.product.career_coverage import (
     evidence_fingerprint,
     resolve_career_coverage,
     select_career_coverage,
+    select_explore_career_cohort,
 )
 
 
@@ -84,3 +85,29 @@ def test_cache_fingerprint_is_dependency_scoped_and_bounded():
     cache = BoundedCareerEvidenceCache(max_entries=2)
     cache.put("1", 1); cache.put("2", 2); cache.get("1"); cache.put("3", 3)
     assert len(cache) == 2 and cache.get("2") is None and cache.get("1") == 1
+
+
+def test_explore_career_cohort_is_bounded_supported_and_deterministic():
+    candidates = [
+        {"player_id": "waiver:c", "source": "waiver_pool", "career_supported": True, "opportunity_score": 8},
+        {"player_id": "waiver:a", "source": "waiver_pool", "career_supported": True, "opportunity_score": 8},
+        {"player_id": "waiver:b", "source": "waiver_pool", "career_supported": True, "opportunity_score": 5},
+        {"player_id": "waiver:unsupported", "source": "waiver_pool", "career_supported": False, "opportunity_score": 100},
+        {"player_id": "rostered", "source": "exact_state_roster", "career_supported": True, "opportunity_score": 200},
+    ]
+    selected = select_explore_career_cohort(candidate_rows=candidates, max_candidates=2)
+    assert [row["player_id"] for row in selected] == ["waiver:a", "waiver:c"]
+    assert len(selected) <= 2
+    assert all(row["source"] == "waiver_pool" and row["career_supported"] for row in selected)
+
+
+def test_explore_career_cohort_fails_closed_on_missing_or_invalid_signal():
+    import pytest
+
+    base = {"player_id": "waiver:x", "source": "waiver_pool", "career_supported": True}
+    with pytest.raises(ValueError, match="requires governed opportunity_score"):
+        select_explore_career_cohort(candidate_rows=[base])
+    with pytest.raises(ValueError, match="invalid opportunity_score"):
+        select_explore_career_cohort(candidate_rows=[{**base, "opportunity_score": float("nan")}])
+    with pytest.raises(ValueError, match="between 1 and 100"):
+        select_explore_career_cohort(candidate_rows=[], max_candidates=101)
