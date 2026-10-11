@@ -90,3 +90,8 @@ The saved 11 P0 packets were composed with the existing full Shapley/Career cont
 Private artifact: `/FSFFL NEXT/_implementation_temp/CAREER_COMPOSED_SUPPORTED_ROSTER_11_FULL_COHORT.json`, SHA-256 `2379c42b84116707d92e387e74f05097d13925a80b8dbb34476f47935a1da894`; sibling manifest records State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`, State-as-of `2026-10-08T16:20:14.036832Z`, evaluation `2026-10-11T14:12:26.851497Z`, hashes and parity diagnostics. It carries the 16 player-specific Year-1 evidence failures from P0 unchanged; no zeros or synthetic values were added. The earlier checkpoint’s claim that full-cohort inputs were unavailable is superseded: the canonical accepted frozen 335 artifacts were located and used.
 
 **Next:** attach the composition code and focused numeric parity test to the branch/CI, then continue State publication and outside-cohort acquisition test plus the complete materializer RSS gate. Keep waiver work limited to a supported bounded Explore cohort. Do not rerun provider acquisition; keep #454 draft.
+
+
+## CI follow-up — 2026-10-11
+
+On commit `437a141a60a40f1f4e39e0e0cf083cdf6fdab753`, PR CI run `38160778083` completed successfully: focused 335-player Career composer RSS benchmark passed and focused Dynasty/persistence/provider/Career regressions passed. PR164 focused corrective regression (`38160778034`) and Live Forecast corrective trace (`38160778044`) also passed; stable full suite (`38160778041`) was skipped under draft-PR policy. These checks do not add branch CI coverage for the private full-cohort numeric composition verifier; its parity assertions were executed in the composition run described above. The successful benchmark remains composer-only, not the full materializer RSS gate.
