@@ -1,5 +1,10 @@
 # FSFFL NEXT — Product Roadmap
 
+## 2026-10-11 — Documentation reconciliation for #450–#452
+
+Independent Forecast research remains strategic and separately governed. Experiments 1–2 are accepted as evidence with the model at REVISE; neither changes P0/Career authority or delays Career #405 → Explore → Trade. The architecture assessment remains a reference, while its proposed initial research gate has been completed. No further Year 1 experiment is automatic; preserve history-first dynasty/career as a separate objective.
+
+
 ## 2026-10-11 — Independent Year 1 research checkpoint; dynasty remains separate
 
 Management accepts bounded Independent Year 1 Experiments 1 and 2 as empirical research while retaining **REVISE** and no production promotion. Experiment 1 found modest history-only signal on observed returning-player outcomes; Experiment 2's point calibration regressed slightly overall and on one-season history, while its split-conformal bands improved pooled coverage but remained position-miscalibrated and wider. A quarter of held-out origins lacked an explicit next-season row; selection weighting is conditional-MAR sensitivity, not a recovered target. Full scorecards and rights/PIT limits: [Independent Year 1 Experiments](../research/INDEPENDENT_YEAR1_EXPERIMENTS_20261011.md).
