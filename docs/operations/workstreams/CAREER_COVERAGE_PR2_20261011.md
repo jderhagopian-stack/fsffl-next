@@ -243,3 +243,22 @@ Private artifact `/FSFFL NEXT/rostered-p0-y8-plus.json`, Library ID `libfile_05f
 Accepted input inventory now recovered: artifact `10899387479.zip` SHA `ea72f312148f01b8066419e8f12cb3a04a4dbbd99fd6e0b7dc975c65cc2446b5` contains Model-A repair/residual/innovation files and seasonal player cache; `10912862252.zip` SHA `6dd664b632f4897f286a99794e10df29be21bf8c6cae70e526ea807470fdcb0e` contains raw player seasons and players; `10916355135.zip` SHA `63520ddb60a8ed12724fa21e8d276c4e3e7d5587162aade92ba7afaa3796ced2` contains current route and rolling policy outputs/metrics. Y4–Y7 cannot be safely regenerated yet: the existing adapter's required `development-module` and `route-module` code, exact `qb-results` input, and `policy-freeze` configuration are absent from those archives/repository. Do not reuse previous components. Current-State refresh and the accepted per-player acquisition route for the 18 failures also remain unavailable here.
 
 Roster counts remain **10 P0-supported, 18 explicit Year-1 failures, 0 waivers processed**. No complete Career result is claimed yet. Full materializer's last known peak remains **490,928 KiB**; the current 195.7 MiB is a separate composer benchmark. Next gate: recover the already accepted route module/development module, QB result input and policy freeze, run the existing dynamic materializer on current P0 and fresh exact-State roster, then compose complete Career and resolve each failure only through the accepted source path. No provider acquisition, broad cohort, or waiver run occurred.
+
+
+## 2026-10-11 — Management correction: live persisted roster coverage audit
+
+A read-only audit of the existing Supabase production artifacts supersedes any claim in this checkpoint that accepted Career model inputs or Y4–Y7/Y8+ outputs are unavailable. The database already contains the production `career_intrinsic_v1` artifact for Sleeper league `1312071960615731200`, computed 2026-10-06, status `shadow_ready`, with 335 estimates. Those persisted rows include the accepted Y4–Y7 Shapley contributions and Y8+ tail authority. The model outputs exist; the issue is that production Career coverage has not been extended to every rostered identity.
+
+Against the exact saved roster State hash `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (State as-of 2026-10-08T16:20:14.036832Z), the roster contains 250 QB/RB/WR/TE players. The persisted production Career artifact has rows for 223 and none for 27:
+
+| Position | Rostered | Production Career row | Missing |
+|---|---:|---:|---:|
+| QB | 49 | 44 | 5 |
+| RB | 78 | 69 | 9 |
+| TE | 28 | 26 | 2 |
+| WR | 95 | 84 | 11 |
+| **Total** | **250** | **223** | **27** |
+
+This supersedes the narrower 16/17/18-player framings as the product coverage denominator. Candidate P0 artifacts are private research/checkpoint outputs and do not count as production Career rows. Their reported 10/11 success and 16/18 failure totals differ across checkpoints and must be reconciled by canonical player ID against these 27 exact-State gaps before using them to claim progress.
+
+**Next implementation action:** build a canonical per-player coverage reconciliation for all 27 from the exact saved State; connect the existing regularly generated canonical player forecasts and accepted Career/Shapley components to the established full-cohort Career composer; emit one completed Career result or a specific player-level failure for every one of the 27; then verify frozen-335 numeric parity, exact-State Position & Depth publication, and new-player resolution. Do not restart/recover accepted model inputs, refit models, or evaluate the 480 nonrostered players. Keep unsupported-player evidence explicit and limited to IDs whose required canonical model output is actually absent after querying the existing runtime records. No merge, deployment, model change, or infrastructure purchase.
