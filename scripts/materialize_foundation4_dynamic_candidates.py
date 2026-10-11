@@ -281,6 +281,9 @@ def main():
     for name in ("development-module", "route-module", "model-a-rows", "qb-results", "raw-seasons", "players", "residual-states", "innovation-states", "reference-board", "current-route", "cell-metrics", "policy-freeze", "connected-rules", "candidate-input", "state-roster", "out-dir"):
         ap.add_argument("--" + name, required=True)
     ap.add_argument("--state-player-universe", help="exact-State JSON with the complete canonical players list")
+    ap.add_argument("--durable-roster-checkpoint", help="absolute private path for atomic roster-only derived output")
+    ap.add_argument("--evaluation-as-of", help="timezone-aware evaluation timestamp required for a durable roster checkpoint")
+    ap.add_argument("--candidate-failures", help="CSV of explicit per-player P0 failure details and provenance")
     a = ap.parse_args()
     out = Path(a.out_dir); out.mkdir(parents=True, exist_ok=True)
     dev = load_module("dynamic_career_dev", a.development_module)
@@ -384,6 +387,41 @@ def main():
         partial_authority=partial_by_id, failures=failure_by_id,
     )
     pd.DataFrame(depth_refresh).to_csv(out / "CAREER_POSITION_DEPTH_EXACT_STATE.csv", index=False)
+    if not a.state_player_universe and not a.durable_roster_checkpoint:
+        raise ValueError("roster-only mode requires --durable-roster-checkpoint")
+    if a.durable_roster_checkpoint:
+        if not a.evaluation_as_of or not a.candidate_failures:
+            raise ValueError("durable roster output requires evaluation cutoff and explicit failure CSV")
+        failure_frame = pd.read_csv(a.candidate_failures)
+        failure_fields = {"player_id", "failure_code", "failure_detail", "evidence_checked", "provenance"}
+        if failure_fields - set(failure_frame.columns):
+            raise ValueError("candidate failure CSV is missing required player-level detail")
+        failure_records = {}
+        for row in failure_frame.to_dict("records"):
+            player_id = str(row["player_id"])
+            failure_records[player_id] = {
+                "failure_code": str(row["failure_code"]),
+                "failure_detail": str(row["failure_detail"]),
+                "evidence_checked": json.loads(row["evidence_checked"]),
+                "provenance": json.loads(row["provenance"]),
+            }
+        state_times = pd.to_datetime(roster_frame.state_as_of, utc=True, errors="coerce").dropna().unique()
+        if len(state_times) != 1:
+            raise ValueError("durable roster output requires one exact State timestamp")
+        dynamic_roster_rows = roster_frame[
+            ~roster_frame.player_id.astype(str).isin(reference_ids)
+        ].to_dict("records")
+        checkpoint_sha256 = write_durable_roster_checkpoint(
+            a.durable_roster_checkpoint,
+            state_hash=exact_state_hash,
+            state_as_of=str(state_times[0]),
+            evaluation_as_of=a.evaluation_as_of,
+            roster_rows=dynamic_roster_rows,
+            candidate_inputs=candidates,
+            y4_y7_rows=result,
+            y8_plus_rows=pd.DataFrame(tails),
+            failures=failure_records,
+        )
     (out / "FOUNDATION4_DYNAMIC_CANDIDATE_SUMMARY.json").write_text(json.dumps({
         "evaluation_season": 2026, "reference_player_count": reference_player_count,
         "candidate_count": int(candidates.player_id.nunique()), "y4_y7_policy_rows": int(len(result)),
@@ -398,6 +436,7 @@ def main():
         "accepted_model_authority": "Foundation4 frozen route / policy / uncertainty cells + Career Tail v1",
         "reference_board_modified": False, "full_career_composed": False,
         "full_career_gate": "exact Current Y1-Y3 Shapley contract required for full Career Forward aggregation",
+        "durable_roster_checkpoint_sha256": checkpoint_sha256 if a.durable_roster_checkpoint else None,
     }, indent=2) + "\n")
 
 
