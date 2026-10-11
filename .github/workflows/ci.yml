@@ -25,6 +25,50 @@ jobs:
         run: python -m pip install 'pandas>=2.2,<3'
       - name: Focused 335-player Career composer RSS benchmark
         run: pytest -q -s tests/test_career_forward_intrinsic.py -k career_composer_materializer_peak_rss_below_budget
+      - name: Restore accepted frozen references and materializer inputs
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/career405/semantic /tmp/career405/foundation4
+          mkdir -p /tmp/career405/panel /tmp/career405/term /tmp/career405/route
+          git fetch origin be2541a496227b33c12c755f576843dc4ab5a0bb --depth=1
+          git show be2541a496227b33c12c755f576843dc4ab5a0bb:scripts/run_intrinsic_comprehensive_development.py > /tmp/career405/dev.py
+          git show be2541a496227b33c12c755f576843dc4ab5a0bb:scripts/run_intrinsic_cell_routing_validation.py > /tmp/career405/route.py
+          gh api repos/${{ github.repository }}/actions/artifacts/11526021872/zip > /tmp/career405/semantic.zip
+          unzip -oq /tmp/career405/semantic.zip -d /tmp/career405/semantic
+          gh api repos/${{ github.repository }}/actions/artifacts/11263913850/zip > /tmp/career405/foundation4.zip
+          unzip -oq /tmp/career405/foundation4.zip -d /tmp/career405/foundation4
+          gh api repos/${{ github.repository }}/actions/artifacts/10912862252/zip > /tmp/career405/panel.zip
+          unzip -oq /tmp/career405/panel.zip -d /tmp/career405/panel
+          gh api repos/${{ github.repository }}/actions/artifacts/10899387479/zip > /tmp/career405/term.zip
+          unzip -oq /tmp/career405/term.zip -d /tmp/career405/term
+          gh api repos/${{ github.repository }}/actions/artifacts/10916355135/zip > /tmp/career405/route.zip
+          unzip -oq /tmp/career405/route.zip -d /tmp/career405/route
+          python -m pip install scikit-learn
+      - name: Focused numeric frozen 335 Career and Shapley parity
+        env:
+          CAREER_PR1_SEMANTIC_DIR: /tmp/career405/semantic
+          CAREER_FOUNDATION4_DIR: /tmp/career405/foundation4
+        run: pytest -q -s tests/test_career_frozen_reference_parity.py
+      - name: Full Foundation 4 materializer peak RSS benchmark
+        run: |
+          set -euo pipefail
+          /usr/bin/time -f '%M' -o /tmp/career405/materializer_peak_rss_kib.txt \
+            python scripts/materialize_foundation4_current_long_horizon_board.py \
+              --development-module /tmp/career405/dev.py \
+              --route-module /tmp/career405/route.py \
+              --model-a-rows /tmp/career405/term/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+              --qb-results /tmp/career405/term/frozen/qb/qb_career_state_deployment_results.json \
+              --raw-seasons /tmp/career405/panel/RAW_PLAYER_SEASONS_RICH.csv \
+              --players /tmp/career405/panel/PLAYERS.csv \
+              --residual-states /tmp/career405/term/frozen/modela/multiyear-intrinsic-model-a/player_specific_trajectory_residual_states.csv \
+              --innovation-states /tmp/career405/term/frozen/modela/multiyear-intrinsic-model-a/within_player_trajectory_innovation_states.csv \
+              --board artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_CONNECTED_LEAGUE_BOARD_335.csv \
+              --current-route /tmp/career405/route/CURRENT_RESEARCH_ROUTE.csv \
+              --cell-metrics /tmp/career405/route/FSFFL_ROLLING_POLICY_CELL_METRICS.csv \
+              --policy-freeze artifacts/research/intrinsic_cell_routing_y4_y8_20260926/CELL_ROUTING_POLICY_FREEZE.json \
+              --out-dir /tmp/career405/materialized
+          career_peak_kib="$(cat /tmp/career405/materializer_peak_rss_kib.txt)"
+          python -c 'import sys; value=int(sys.argv[1]); print(f"full_materializer_peak_rss_kib={value}"); print(f"full_materializer_peak_rss_mib={value/1024:.1f}"); sys.exit(0 if value < 419840 else 1)' "$career_peak_kib"
       - name: Focused numeric Shapley and Career contract parity
         run: pytest -q tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity
       - name: Focused Dynasty, persistence, provider, and Career regressions
