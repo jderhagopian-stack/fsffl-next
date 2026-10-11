@@ -157,11 +157,24 @@ def write_durable_roster_checkpoint(
         if str(row.get("state_hash", state_hash)) != state_hash:
             raise ValueError("roster row State mismatch in durable checkpoint")
     for player_id, row in candidate_by_id.items():
+        roster = roster_by_id[player_id]
         if str(row.get("state_hash", "")) != state_hash:
             raise ValueError(f"candidate State mismatch for {player_id}")
+        for field in ("position", "team_id", "roster_slot"):
+            if str(row.get(field, "")) != str(roster.get(field, "")):
+                raise ValueError(f"candidate {field} differs from exact State for {player_id}")
+        row_state_time = pd.to_datetime(row.get("state_as_of"), utc=True, errors="coerce")
+        if pd.isna(row_state_time) or row_state_time != state_time:
+            raise ValueError(f"candidate State timestamp mismatch for {player_id}")
         row_evaluation = pd.to_datetime(row.get("evaluation_as_of"), utc=True, errors="coerce")
         if pd.isna(row_evaluation) or row_evaluation != evaluation_time:
             raise ValueError(f"candidate evaluation cutoff mismatch for {player_id}")
+        for field in ("forecast_as_of", "identity_as_of"):
+            evidence_time = pd.to_datetime(row.get(field), utc=True, errors="coerce")
+            if pd.isna(evidence_time) or evidence_time > evaluation_time:
+                raise ValueError(f"candidate {field} is invalid or after cutoff for {player_id}")
+        if not str(row.get("evidence_source", "")).strip() or not str(row.get("evidence_version", "")).strip():
+            raise ValueError(f"candidate provenance is incomplete for {player_id}")
 
     y4_by_id = {
         player_id: rows
@@ -171,6 +184,10 @@ def write_durable_roster_checkpoint(
         str(row["player_id"]): row
         for row in json.loads(y8_plus_rows.to_json(orient="records"))
     } if not y8_plus_rows.empty else {}
+    if candidate_ids and (
+        set(y4_by_id) != candidate_ids or set(tail_by_id) != candidate_ids
+    ):
+        raise ValueError("durable Career component player sets differ from successful P0 inputs")
     records = []
     for player_id in sorted(roster_ids):
         roster = roster_by_id[player_id]
@@ -183,6 +200,9 @@ def write_durable_roster_checkpoint(
                 raise ValueError(f"failure record is incomplete for {player_id}")
             records.append({
                 "player_id": player_id,
+                "position": str(roster["position"]),
+                "team_id": str(roster["team_id"]),
+                "roster_slot": str(roster["roster_slot"]),
                 "state_hash": state_hash,
                 "state_as_of": state_time.isoformat(),
                 "evaluation_as_of": evaluation_time.isoformat(),
