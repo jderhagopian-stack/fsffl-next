@@ -111,3 +111,24 @@ def test_explore_career_cohort_fails_closed_on_missing_or_invalid_signal():
         select_explore_career_cohort(candidate_rows=[{**base, "opportunity_score": float("nan")}])
     with pytest.raises(ValueError, match="between 1 and 100"):
         select_explore_career_cohort(candidate_rows=[], max_candidates=101)
+
+
+
+def test_position_depth_publication_fails_closed_on_state_mismatch():
+    import pytest
+
+    subjects = select_career_coverage(
+        state_players=[{"player_id": "p1", "position": "WR"}],
+        roster_rows=[{"player_id": "p1", "position": "WR", "team_id": "t1",
+                      "roster_slot": "IR", "state_hash": "state-2"}],
+        state_hash="state-2",
+    )
+    with pytest.raises(ValueError, match="another State"):
+        build_career_position_depth_refresh(
+            state_hash="state-2",
+            roster_rows=[{"player_id": "p1", "position": "WR", "team_id": "t1",
+                          "roster_slot": "IR", "state_hash": "state-1"}],
+            subjects=subjects,
+            authority={"p1": {"career": 42.0}},
+            failures={},
+        )
