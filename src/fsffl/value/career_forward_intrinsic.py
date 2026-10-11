@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from typing import Annotated, Literal, Mapping
+from typing import Annotated, Iterable, Literal, Mapping
 
 from pydantic import Field, model_validator
 
@@ -378,4 +378,71 @@ def build_career_forward_intrinsic_shadow(
         lineup_capacity_signature=lineup_signature,
         estimates=tuple(estimates),
         player_count=len(estimates),
+    )
+
+
+def append_dynamic_career_estimates(
+    frozen_reference: CareerForwardIntrinsicShadowContract,
+    expanded_cohort: CareerForwardIntrinsicShadowContract,
+    *,
+    candidate_player_ids: Iterable[str],
+) -> CareerForwardIntrinsicShadowContract:
+    """Append only roster-candidate estimates from a full expanded Shapley run.
+
+    Adding candidates to a cooperative Shapley game reallocates marginal values
+    across the original members. The accepted frozen Career rows are therefore
+    retained verbatim, while candidate rows come from the expanded-cohort result.
+    Both inputs must be complete Career contracts; this function never computes
+    a candidate-alone value or fills a missing component.
+    """
+    if frozen_reference.evaluation_season != expanded_cohort.evaluation_season:
+        raise ValueError("Career append contracts must share evaluation season")
+    if (
+        frozen_reference.current_intrinsic_contract_version
+        != expanded_cohort.current_intrinsic_contract_version
+        or frozen_reference.long_horizon_contract_version
+        != expanded_cohort.long_horizon_contract_version
+        or frozen_reference.long_horizon_value_model_version
+        != expanded_cohort.long_horizon_value_model_version
+        or frozen_reference.career_tail_model_version
+        != expanded_cohort.career_tail_model_version
+        or frozen_reference.lineup_capacity_signature
+        != expanded_cohort.lineup_capacity_signature
+    ):
+        raise ValueError("Career append contracts use incompatible model authorities")
+
+    frozen_by_id = {row.player_id: row for row in frozen_reference.estimates}
+    expanded_by_id = {row.player_id: row for row in expanded_cohort.estimates}
+    requested = {str(player_id).strip() for player_id in candidate_player_ids}
+    if not requested or "" in requested:
+        raise ValueError("Career append requires non-empty canonical candidate IDs")
+    if not set(frozen_by_id).issubset(expanded_by_id):
+        raise ValueError("expanded Career cohort is missing frozen reference players")
+    actual_candidates = set(expanded_by_id) - set(frozen_by_id)
+    if requested != actual_candidates:
+        raise ValueError(
+            "Career append candidate IDs must exactly match the expanded cohort; "
+            f"missing={sorted(actual_candidates - requested)}; "
+            f"unexpected={sorted(requested - actual_candidates)}"
+        )
+
+    estimates = tuple(
+        [frozen_by_id[player_id] for player_id in sorted(frozen_by_id)]
+        + [expanded_by_id[player_id] for player_id in sorted(requested)]
+    )
+    fingerprint_payload = {
+        "append_contract_version": "career-frozen-reference-append-v1",
+        "frozen_reference_input_fingerprint": frozen_reference.input_fingerprint,
+        "expanded_cohort_input_fingerprint": expanded_cohort.input_fingerprint,
+        "candidate_player_ids": sorted(requested),
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(fingerprint_payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return frozen_reference.model_copy(
+        update={
+            "input_fingerprint": fingerprint,
+            "estimates": estimates,
+            "player_count": len(estimates),
+        }
     )
