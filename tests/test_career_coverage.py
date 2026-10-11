@@ -63,6 +63,19 @@ def test_missing_evidence_is_explicit_and_never_sent_as_zero():
     assert calls == []
 
 
+def test_unknown_on_demand_identity_is_explicit_without_fabricated_subject():
+    called = []
+    result = resolve_career_coverage(
+        state_players=[], roster_rows=[], state_hash="s", evidence_by_player={},
+        on_demand_player_ids=iter(["sleeper:player:outside"]),
+        materialize_batch=lambda subjects, evidence: called.append(subjects) or {},
+    )
+    assert result.missing == {
+        "sleeper:player:outside": "canonical_player_absent_from_exact_state_identity_universe"
+    }
+    assert called == []
+
+
 def test_cache_fingerprint_is_dependency_scoped_and_bounded():
     packet = {"source": "approved", "as_of": "2026-10-08", "stats": [1, 2]}
     key = evidence_fingerprint(model_digest="m", scoring_digest="s", evidence_packet=packet)

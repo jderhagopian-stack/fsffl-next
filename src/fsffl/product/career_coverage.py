@@ -146,6 +146,8 @@ def resolve_career_coverage(
     """Make one shared batch call; preserve missing-input failures per player."""
     state_players = tuple(state_players)
     roster_rows = tuple(roster_rows)
+    precomputed_player_ids = tuple(precomputed_player_ids)
+    on_demand_player_ids = tuple(on_demand_player_ids)
     subjects = select_career_coverage(
         state_players=state_players, roster_rows=roster_rows, state_hash=state_hash,
         precomputed_player_ids=precomputed_player_ids,
