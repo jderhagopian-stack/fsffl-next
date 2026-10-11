@@ -132,24 +132,24 @@ The exact identity in these records is a canonical Sleeper ID plus exact-State p
 
 | Sleeper ID | Exact-State identity | CBS status | Razzball status | Exact missing evidence |
 |---|---|---|---|---|
-| `sleeper:player:11638` | WR, team 3, IR | no canonical row | no canonical row recorded | No complete Year-1 row; no two-source ensemble |
-| `sleeper:player:12484` | WR, team 7, IR | none | none | No complete Year-1 row; no two-source ensemble |
-| `sleeper:player:12510` | QB, team 4, BENCH | no canonical row | partial canonical row recorded in private artifact | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:13268` | WR, team 12, TAXI | no canonical row | partial canonical row recorded in private artifact | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:13270` | WR, team 2, TAXI | none | `rec_td`, `rec_yards`, `receptions`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:13289` | QB, team 10, TAXI | none | `fumbles_lost`, `interceptions`, `pass_td`, `pass_yards`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:13306` | QB, team 1, TAXI | none | `fumbles_lost`, `interceptions`, `pass_td`, `pass_yards`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:13353` | WR, team 11, IR | none | none | No complete Year-1 row; no two-source ensemble |
-| `sleeper:player:13402` | WR, team 4, TAXI | none | `rec_td`, `rec_yards`, `receptions`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:13411` | WR, team 11, TAXI | none | `rec_td`, `rec_yards`, `receptions`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:13418` | RB, team 5, BENCH | none | none | No complete Year-1 row; no two-source ensemble |
-| `sleeper:player:3321` | WR, team 1, BENCH | none | none | No complete Year-1 row; no two-source ensemble |
-| `sleeper:player:4018` | RB, team 1, BENCH | none | none | No complete Year-1 row; no two-source ensemble |
-| `sleeper:player:6803` | WR, team 1, BENCH | none | none | No complete Year-1 row; no two-source ensemble |
-| `sleeper:player:7567` | RB, team 5, BENCH | none | `rec_td`, `rec_yards`, `receptions`, `rush_td`, `rush_yards` | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
-| `sleeper:player:8210` | TE, team 4, BENCH | none | none | No complete Year-1 row; no two-source ensemble |
+| sleeper:player:11638 | WR, team 3, IR | no canonical row | no metrics recorded | No complete Year-1 row; no two-source ensemble |
+| sleeper:player:12484 | WR, team 7, IR | no canonical row | no metrics recorded | No complete Year-1 row; no two-source ensemble |
+| sleeper:player:12510 | QB, team 4, BENCH | no canonical row | partial row recorded | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| sleeper:player:13268 | WR, team 12, TAXI | no canonical row | partial row recorded | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| sleeper:player:13270 | WR, team 2, TAXI | no canonical row | partial row recorded | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| sleeper:player:13289 | QB, team 10, TAXI | no canonical row | partial row recorded | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| sleeper:player:13306 | QB, team 1, TAXI | no canonical row | partial row recorded | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| sleeper:player:13353 | WR, team 11, IR | no canonical row | no metrics recorded | No complete Year-1 row; no two-source ensemble |
+| sleeper:player:13402 | WR, team 4, TAXI | no canonical row | partial row recorded | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| sleeper:player:13411 | WR, team 11, TAXI | no canonical row | partial row recorded | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| sleeper:player:13418 | RB, team 5, BENCH | no canonical row | no metrics recorded | No complete Year-1 row; no two-source ensemble |
+| sleeper:player:3321 | WR, team 1, BENCH | no canonical row | no metrics recorded | No complete Year-1 row; no two-source ensemble |
+| sleeper:player:4018 | RB, team 1, BENCH | no canonical row | no metrics recorded | No complete Year-1 row; no two-source ensemble |
+| sleeper:player:6803 | WR, team 1, BENCH | no canonical row | no metrics recorded | No complete Year-1 row; no two-source ensemble |
+| sleeper:player:7567 | RB, team 5, BENCH | no canonical row | partial row recorded | CBS canonical row absent; no two-source ensemble or complete Year-1 row |
+| sleeper:player:8210 | TE, team 4, BENCH | no canonical row | no metrics recorded | No complete Year-1 row; no two-source ensemble |
 
-For all 16, the named missing contract input is the complete canonical P0 Year-1 fantasy-points packet, sourced under the accepted Year-1 path (Sleeper completed-week actuals plus the governed CBS/Razzball ROS ensemble). The retained failure rows do not specify a full required-metric schema for the empty provider rows, so no unrecorded metric names are asserted. The rows record the exact-State coverage gate and Year-1 scoring-completeness gate as checked; they do not contain source-specific evidence beyond the provider field lists above.
+For all 16, the named missing contract input is the complete canonical P0 Year-1 fantasy-points packet, sourced under the accepted Year-1 path (Sleeper completed-week actuals plus the governed CBS/Razzball ROS ensemble). The retained failure rows do not specify a full required-metric schema for the empty provider rows, so no unrecorded metric names are asserted. The rows record the exact-State coverage gate and Year-1 scoring-completeness gate as checked. Field-level provider details remain in the private P0 packet; they are intentionally not reproduced here.
 
 No player-specific live lookup occurred: this environment exposes no Sleeper/CBS/Razzball acquisition action, workflow-dispatch action, or repository checkout/runner; only previously recorded P0 evidence was available. No single-player request was sent, and the 507 cohort was not rerun. Thus the row review confirms each existing failure and its missing input, but does not satisfy a fresh approved-provider recheck. All 16 remain explicit failures and no Career output was created for them. Do not use any alternative source or change the established source/rights decision to fill these fields.
 
