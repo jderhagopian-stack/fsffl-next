@@ -5,6 +5,10 @@ from fastapi.responses import JSONResponse
 
 from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
 from .foundation4_career_forward_runtime import CareerIntrinsicLoader
+from .career_coverage import (
+    build_career_position_depth_refresh,
+    select_career_coverage,
+)
 from .intrinsic_background import IntrinsicBuildStatus, ShapleyIntrinsicBackgroundCoordinator
 from .presentation_continuity import LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE
 from .runtime import PrivateBetaRuntimeStore
@@ -73,6 +77,53 @@ def _dynasty_publication_payload(
     return result
 
 
+def _career_position_depth_rows(state, career_forward) -> list[dict[str, object]]:
+    """Publish exact-State roster coverage beside Career and Dynasty evidence.
+
+    Career contracts can legitimately have a narrower frozen cohort than the
+    connected league State. Emit one QB/RB/WR/TE row per roster identity so a
+    missing Career estimate stays visible for that player and cannot suppress
+    the rest of the matching-State publication.
+    """
+    player_by_id = {player.player_id: player for player in state.players}
+    roster_rows: list[dict[str, object]] = []
+    for team_state in state.team_states:
+        for entry in team_state.roster:
+            player = player_by_id.get(entry.player_id)
+            position = str(player.position.value) if player is not None else ""
+            roster_rows.append({
+                "player_id": entry.player_id,
+                "position": position,
+                "team_id": team_state.team_id,
+                "roster_slot": str(entry.slot.value),
+                "state_hash": state.state_id,
+            })
+
+    state_players = [
+        {"player_id": player.player_id, "position": str(player.position.value)}
+        for player in state.players
+    ]
+    subjects = select_career_coverage(
+        state_players=state_players,
+        roster_rows=roster_rows,
+        state_hash=state.state_id,
+    )
+    estimate_ids = {row.player_id for row in career_forward.estimates}
+    roster_ids = {str(row["player_id"]) for row in roster_rows}
+    failures = {
+        player_id: "career_estimate_missing_from_exact_state_contract"
+        for player_id in roster_ids - estimate_ids
+    }
+    rows = build_career_position_depth_refresh(
+        state_hash=state.state_id,
+        roster_rows=roster_rows,
+        subjects=subjects,
+        authority={player_id: True for player_id in estimate_ids},
+        failures=failures,
+    )
+    return [dict(row) for row in rows]
+
+
 def install_career_intrinsic_routes(
     app: FastAPI,
     *,
@@ -113,6 +164,9 @@ def install_career_intrinsic_routes(
             )
         payload = record.contract.model_dump(mode="json")
         payload["league_state_id"] = record.league_state_id
+        payload["career_position_depth"] = _career_position_depth_rows(
+            _context.league_state, record.contract
+        )
         payload["capability"] = "career_intrinsic"
         payload["value_label"] = "Career Intrinsic"
         if request.url.path == CAREER_INTRINSIC_ENDPOINT:
@@ -172,6 +226,9 @@ def install_career_intrinsic_routes(
                     "input_fingerprint": record.intrinsic_input_fingerprint,
                     "model_version": rooms[0].model_version if rooms else None,
                     "rooms": [row.model_dump(mode="json") for row in rooms],
+                    "career_position_depth": _career_position_depth_rows(
+                        state, record.contract
+                    ),
                 },
             )
 
@@ -237,6 +294,9 @@ def install_career_intrinsic_routes(
                 "input_fingerprint": record.intrinsic_input_fingerprint,
                 "model_version": rooms[0].model_version if rooms else None,
                 "rooms": [row.model_dump(mode="json") for row in rooms],
+                "career_position_depth": _career_position_depth_rows(
+                    state, record.contract
+                ),
             },
         )
 
