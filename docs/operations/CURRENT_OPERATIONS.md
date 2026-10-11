@@ -1,5 +1,10 @@
 # Current Operations
 
+## 2026-10-11 — Documentation reconciliation for #450–#452
+
+Research status is governed by Experiments 1–2: accepted as research evidence, challenger REVISE, no production promotion. The architecture assessment from #450 is retained as background; its prior proposed next gate is superseded by completed experiments. History-first dynasty forecasting remains separate, and Career #405 → Explore → Trade remains the product order. The consolidated report and workstream are linked in Management Continuity.
+
+
 ## 2026-10-11 — Independent Year 1 Experiment 2 complete; REVISE / nonproduction
 
 Management accepts Experiments 1 and 2 as research evidence and retains **REVISE**. The rolling held-out population is unchanged: source origins 2014–2024, target seasons 2015–2025; 6,548 origins, 4,862 explicit target rows, 1,686 missing outcomes (25.7%) left missing. Experiment 2 preserved Experiment 1's exact history-only base forecasts, added a prior-feature observation-propensity/IPW sensitivity, and separately trained/scored prequential point/interval calibration blocks. Pooled MAE/RMSE moved from Experiment 1 35.61/50.76 to Experiment 2 36.01/51.17 vs persistence 37.11/56.22. E2 intervals cover 82.5% pooled, but QB remains 76.7%; WR/TE over-cover, with wider bands. One-history MAE worsened to 34.52 (E1 33.34; persistence 31.52); QB one-history MAE 73.47 (E1 72.73; persistence 68.49). Propensity weighting is only a conditional-MAR sensitivity; absent outcomes/reasons remain unknown. No target converted to zero.
