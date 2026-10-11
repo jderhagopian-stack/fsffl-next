@@ -262,3 +262,40 @@ Against the exact saved roster State hash `e431b5cb9e340e0f9a93e4433cafe51974fc8
 This supersedes the narrower 16/17/18-player framings as the product coverage denominator. Candidate P0 artifacts are private research/checkpoint outputs and do not count as production Career rows. Their reported 10/11 success and 16/18 failure totals differ across checkpoints and must be reconciled by canonical player ID against these 27 exact-State gaps before using them to claim progress.
 
 **Next implementation action:** build a canonical per-player coverage reconciliation for all 27 from the exact saved State; connect the existing regularly generated canonical player forecasts and accepted Career/Shapley components to the established full-cohort Career composer; emit one completed Career result or a specific player-level failure for every one of the 27; then verify frozen-335 numeric parity, exact-State Position & Depth publication, and new-player resolution. Do not restart/recover accepted model inputs, refit models, or evaluate the 480 nonrostered players. Keep unsupported-player evidence explicit and limited to IDs whose required canonical model output is actually absent after querying the existing runtime records. No merge, deployment, model change, or infrastructure purchase.
+
+
+## 2026-10-11 — Canonical identity list for the 27 production gaps
+
+The exact-State roster-to-production-artifact join identifies these 27 uncovered players (team number and roster slot are from the same saved State). All remain absent from production Career output; candidate/private composition artifacts are not publication.
+
+| Position | Player | Sleeper ID | Team | Slot |
+|---|---|---|---:|---|
+| QB | Anthony Richardson | 9229 | 1 | BENCH |
+| QB | Athan Kaliakmanis | 13557 | 5 | TAXI |
+| QB | Drew Allar | 13289 | 10 | TAXI |
+| QB | Jalen Milroe | 12510 | 4 | BENCH |
+| QB | Taylen Green | 13306 | 1 | TAXI |
+| RB | Adam Randall | 13302 | 3 | TAXI |
+| RB | Austin Ekeler | 4663 | 12 | BENCH |
+| RB | Dameon Pierce | 8129 | 3 | BENCH |
+| RB | Eli Heidenreich | 13423 | 1 | BENCH |
+| RB | Joe Mixon | 4018 | 1 | BENCH |
+| RB | Kaleb Johnson | 12504 | 1 | RB |
+| RB | Kenny Gainwell | 7567 | 5 | BENCH |
+| RB | Robert Henry | 13418 | 5 | BENCH |
+| RB | Sione Vaki | 11729 | 6 | BENCH |
+| TE | Chig Okonkwo | 8210 | 4 | BENCH |
+| TE | Eli Raridon | 13421 | 1 | FLEX |
+| WR | Brandon Aiyuk | 6803 | 1 | BENCH |
+| WR | Chris Brazzell | 13353 | 11 | IR |
+| WR | CJ Daniels | 13270 | 2 | TAXI |
+| WR | Dohnte Meyers | 13264 | 4 | BENCH |
+| WR | Elijah Sarratt | 13268 | 12 | TAXI |
+| WR | Jayden Higgins | 12484 | 7 | IR |
+| WR | Ricky Pearsall | 11638 | 3 | IR |
+| WR | Roman Wilson | 11630 | 10 | BENCH |
+| WR | Skyler Bell | 13402 | 4 | TAXI |
+| WR | Tyreek Hill | 3321 | 1 | BENCH |
+| WR | Zavion Thomas | 13411 | 11 | TAXI |
+
+The 16 IDs with explicit P0 Year-1 evidence failures in the retained failure packet are all present in this exact 27-player production gap. The remaining 11 also lack production Career rows. A prior 11-player private composition and a later 10-success/18-failure P0 artifact do not reconcile one-to-one; inspect and join the actual artifact records by canonical ID before marking any candidate completed. The workstream acceptance condition stays 27/27 matching-State published Career rows (or explicit per-player failures only if their regular governed forecast output truly lacks a required field), with frozen-335 parity and future-player resolution.
