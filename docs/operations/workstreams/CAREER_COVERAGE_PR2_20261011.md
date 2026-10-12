@@ -386,3 +386,16 @@ This direction supersedes earlier implementation interpretations in this checkpo
 - Completion evidence is actual player-level outcomes from the real producer-to-composition-to-publication path, frozen-335 numeric parity, and a full-path memory measurement. Fixture-only tests and composer-only RSS do not establish end-to-end completion.
 
 No merge, deployment, production-model change, or infrastructure purchase is authorized by this correction.
+
+
+## 2026-10-12 — Year-1 actuals-plus-ROS input path and player isolation
+
+PR #454 remains draft. Code commits in this tranche: 94b965b adds a per-player season roll-forward wrapper; 14e1abe wires it into the regular in-season orchestration; 9eeec6c exposes player failures in the forecast response; 6fa5d9c adds the per-player isolation fixture; 7eefc7b makes the accepted full-cohort P0 composer accept full-season ForecastObservation inputs directly; 40571b3 and c56ff67 isolate malformed Y2/Y3 candidate distributions; f407ae1 and ac1c638 add finite-value and candidate-isolation tests; 846cb3c cleans up source-version fallback.
+
+Year 1 now follows the existing regular Forecast math: finalized YTD actual points plus the non-overlapping REST_OF_SEASON projection yields a SEASON ForecastObservation. The accepted composer can take these observations in memory; it does not require a separate full-season projection artifact. It validates canonical player ID, position, horizon, metric, finite points, provenance, and each candidate's accepted Y2/Y3 six-state inputs independently. A bad candidate is retained in year_one_failures; valid candidates continue through the 335 + successful-candidate Shapley cohort. Frozen-base parity remains guarded.
+
+The regular outlook now reports season_outlook_failures by player, and one overlapping/missing/mismatched input does not raise across other players. The exact-State route still emits roster Position & Depth rows independently. Focused full-cohort execution against real saved candidate inputs has not run in this chat: GitHub Actions is only running PR CI and has no command/workflow-dispatch interface here. No current player is newly marked resolved and no production Career/Position & Depth row was written.
+
+Latest code head before checkpoint update: 846cb3cefa6fbf06e1e0274638089501281f0963. CI run 38190390342 was queued at checkpoint time; PR164 38190390413, Live Forecast 38190390356, and corrective provider trace 38190390348 were queued. Stable suite skipped because PR is draft. Previously measured composer RSS 195.9 MiB is not full materializer memory; full materializer peak remains 490,928 KiB, above the ~410 MiB target.
+
+Exact remaining gate: invoke the regular in-season outlook and pass its in-memory season_outlook to the new composer argument together with the already accepted candidate Y2/Y3 and Y4–Y7/tail inputs; route its per-player failures into exact-State Career Position & Depth publication. Then verify actual covered/failure IDs, frozen-335 numeric parity, and full-path RSS. No provider refresh, new source acquisition, production write, merge, deployment, or model change occurred.
