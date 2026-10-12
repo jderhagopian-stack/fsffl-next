@@ -169,12 +169,48 @@ def _candidate_future_rows(artifact: dict[str, object]) -> list[FuturePlayerHori
     return output
 
 
+
+def _candidate_year_one_index(
+    observations: tuple[ForecastObservation, ...],
+    *,
+    candidate_ids: set[str],
+    expected_positions: dict[str, str],
+) -> tuple[dict[str, ForecastObservation], dict[str, str]]:
+    """Index full-season Year-1 points from completed actuals plus regular ROS."""
+    indexed: dict[str, ForecastObservation] = {}
+    failures: dict[str, str] = {}
+    for observation in observations:
+        player_id = str(observation.player_id)
+        if player_id not in candidate_ids:
+            continue
+        if player_id in indexed or player_id in failures:
+            indexed.pop(player_id, None)
+            failures[player_id] = "duplicate_full_season_year_one_input"
+            continue
+        if observation.horizon != ForecastHorizon.SEASON:
+            failures[player_id] = "year_one_input_is_not_full_season"
+        elif observation.metric != ForecastMetric.FANTASY_POINTS:
+            failures[player_id] = "year_one_input_metric_is_not_fantasy_points"
+        elif observation.position.value != expected_positions.get(player_id):
+            failures[player_id] = "year_one_input_position_mismatch_exact_state"
+        elif not math.isfinite(float(observation.distribution.mean)):
+            failures[player_id] = "year_one_full_season_points_are_not_finite"
+        elif not observation.source or not observation.model_version:
+            failures[player_id] = "year_one_input_provenance_missing"
+        else:
+            indexed[player_id] = observation
+    for player_id in candidate_ids:
+        if player_id not in indexed and player_id not in failures:
+            failures[player_id] = "full_season_year_one_input_missing"
+    return indexed, failures
+
 def compose_saved_rostered_p0(
     *,
     artifact_path: Path,
     frozen_board_path: Path,
     frozen_shapley_path: Path,
     rules_path: Path,
+    candidate_year_one_forecasts: tuple[ForecastObservation, ...] | None = None,
 ) -> dict[str, object]:
     artifact_bytes = artifact_path.read_bytes()
     artifact = json.loads(artifact_bytes)
@@ -213,22 +249,64 @@ def compose_saved_rostered_p0(
         )
         for row in base
     ]
-    year_one_points = artifact["year_one_points"]
-    for player_id in sorted(candidate_ids):
-        points = year_one_points[player_id].get("league")
-        if points is None:
-            raise ValueError(f"complete governed Year-1 league points missing for {player_id}")
-        source_row = source_rows[player_id]
-        observations.append(_make_observation(
-            player_id=player_id,
-            position=str(source_row["position"]),
-            points=float(points),
-            as_of=evaluation_as_of,
-            source="fsffl:p0_live_rostered_candidate",
-            model_version=str(source_row["evidence_source_version"]),
-        ))
+    if candidate_year_one_forecasts is not None:
+        candidate_year_one_by_id, year_one_failures = _candidate_year_one_index(
+            candidate_year_one_forecasts,
+            candidate_ids=candidate_ids,
+            expected_positions={
+                player_id: str(source_rows[player_id]["position"])
+                for player_id in candidate_ids
+            },
+        )
+        composed_candidate_ids = set(candidate_year_one_by_id)
+        observations.extend(
+            candidate_year_one_by_id[player_id]
+            for player_id in sorted(composed_candidate_ids)
+        )
+    else:
+        # Compatibility path for saved governed P0 artifacts. The regular runtime
+        # passes its in-memory completed-actuals + ROS season outlook above and does
+        # not require a separate full-season projection artifact.
+        year_one_points = artifact.get("year_one_points", {})
+        year_one_failures = {}
+        candidate_year_one_by_id = {}
+        for player_id in sorted(candidate_ids):
+            source_row = source_rows[player_id]
+            points = (
+                year_one_points.get(player_id, {}).get("league")
+                if isinstance(year_one_points, dict)
+                else None
+            )
+            if points is None:
+                points = source_row.get("connected_league_y1_points")
+            try:
+                points = float(points)
+                if not math.isfinite(points):
+                    raise ValueError("non_finite")
+            except (TypeError, ValueError):
+                year_one_failures[player_id] = "full_season_year_one_input_missing_or_invalid"
+                continue
+            observation = _make_observation(
+                player_id=player_id,
+                position=str(source_row["position"]),
+                points=points,
+                as_of=evaluation_as_of,
+                source="fsffl:p0_live_rostered_candidate",
+                model_version=str(source_row.get("evidence_source_version") or source_row.get("evidence_source_version", "accepted-p0")),
+            )
+            candidate_year_one_by_id[player_id] = observation
+        composed_candidate_ids = set(candidate_year_one_by_id)
+        observations.extend(candidate_year_one_by_id[player_id] for player_id in sorted(composed_candidate_ids))
 
-    future_rows = _base_future_rows(base) + _candidate_future_rows(artifact)
+    future_rows = _base_future_rows(base) + _candidate_future_rows(
+        {
+            **artifact,
+            "future_forecasts": [
+                row for row in artifact.get("future_forecasts", [])
+                if str(row.get("player_id")) in composed_candidate_ids
+            ],
+        }
+    )
     contract = FutureForecastContract(
         evaluation_season=2026,
         scoring_coordinate="connected_league_fantasy_points",
@@ -301,10 +379,13 @@ def compose_saved_rostered_p0(
         build_live_calendar_shapley_estimates(calendar, rules=rules)
     )
     actual_by_id = {row.player_id: row for row in current.estimates}
-    if len(actual_by_id) != 345:
-        raise ValueError(f"full-cohort Shapley expected 345 players, got {len(actual_by_id)}")
+    expected_expanded_count = len(base_ids) + len(composed_candidate_ids)
+    if len(actual_by_id) != expected_expanded_count:
+        raise ValueError(
+            f"full-cohort Shapley expected {expected_expanded_count} players, got {len(actual_by_id)}"
+        )
     candidate_estimates = []
-    for player_id in sorted(candidate_ids):
+    for player_id in sorted(composed_candidate_ids):
         estimate = actual_by_id[player_id]
         candidate_estimates.append({
             "player_id": player_id,
@@ -331,8 +412,9 @@ def compose_saved_rostered_p0(
         "frozen_shapley_sha256": _sha256(frozen_shapley_path),
         "frozen_reference_count": len(base_ids),
         "expanded_full_cohort_count": len(actual_by_id),
-        "candidate_count": len(candidate_ids),
-        "candidate_ids": sorted(candidate_ids),
+        "candidate_count": len(composed_candidate_ids),
+        "candidate_ids": sorted(composed_candidate_ids),
+        "year_one_failures": year_one_failures,
         "frozen_base_max_abs_component_delta": max_frozen_base_delta,
         "frozen_base_preserved_in_outputs": True,
         "candidate_current_y1_y3": candidate_estimates,
