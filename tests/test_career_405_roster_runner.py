@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import io
 import json
 import zipfile
@@ -111,11 +112,46 @@ def test_runner_rejects_state_mismatch_and_outside_roster_player():
     artifact["state_hash"] = "another-state"
     with pytest.raises(ValueError, match="State hash differs"):
         validate_exact_roster(artifact, state)
-
     artifact, state = _checkpoint()
     artifact["players"][0]["player_id"] = "sleeper:player:not-rostered"
     with pytest.raises(ValueError, match="outside the latest State roster"):
         validate_exact_roster(artifact, state)
+
+
+def test_invalid_fringe_packet_does_not_suppress_other_rostered_candidates():
+    artifact, state = _checkpoint()
+    source = artifact["players"][0]
+    good = copy.deepcopy(source)
+    good_id = "sleeper:player:second-supported-fixture"
+    good["player_id"] = good_id
+    good["p0_input"]["p0_canonical_packets"]["Y2"]["player_id"] = good_id
+    good["p0_input"]["p0_canonical_packets"]["Y3"]["player_id"] = good_id
+
+    bad = copy.deepcopy(source)
+    bad_id = "sleeper:player:invalid-fringe-fixture"
+    bad["player_id"] = bad_id
+    bad["p0_input"]["p0_canonical_packets"]["Y2"]["player_id"] = bad_id
+    bad["p0_input"]["p0_canonical_packets"]["Y2"]["probabilities"].pop("elite")
+    bad["p0_input"]["p0_canonical_packets"]["Y3"]["player_id"] = bad_id
+    artifact["players"].extend((good, bad))
+
+    extra_players = tuple(
+        SimpleNamespace(player_id=player_id, position=SimpleNamespace(value="QB"))
+        for player_id in (good_id, bad_id)
+    )
+    extra_entries = tuple(
+        SimpleNamespace(player_id=player_id, slot=SimpleNamespace(value="BENCH"))
+        for player_id in (good_id, bad_id)
+    )
+    state.players = (*state.players, *extra_players)
+    state.team_states = (SimpleNamespace(
+        team_id="team-fixture",
+        roster=(*state.team_states[0].roster, *extra_entries),
+    ),)
+
+    converted = to_composer_artifact(artifact, validate_exact_roster(artifact, state))
+    assert {PLAYER_ID, good_id} <= set(converted["candidate_source_rows"])
+    assert converted["failures"][bad_id]["failure_code"] == "accepted_candidate_input_invalid"
 
 
 def test_private_input_zip_is_bounded_and_has_one_json_file():
