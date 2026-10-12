@@ -411,3 +411,22 @@ The normal in-season code now forms Year 1 as actual YTD fantasy points + the re
 **Memory:** 195.4 MiB is composer-only. The last known complete materializer measurement is **490,928 KiB (~479.4 MiB)**, above the ~410 MiB budget; no full-path measurement or reduction is established here.
 
 **Next gate:** in an authorized nonproduction runtime, invoke the regular forecast producer for the exact roster, pass each resulting YTD+ROS Year-1 value plus existing accepted future inputs to Career composition, preserve exact-State per-player failure publication, and capture player-level outputs. Then reduce and benchmark the complete Career materializer below budget. This chat exposes PR branch writes and CI, but no command/workflow-dispatch route for that runtime invocation. No merge, deployment, model/refit, source/rights, or infrastructure change occurred.
+
+
+## 2026-10-12 — Hosted producer-to-Career execution boundary
+
+PR #454 remains draft. At entry, head was `19d0f969ee9b00c6b305ad516b32c28baabc985e`. A writable checkout was available earlier in this execution but expired before a local edit could be retained; this checkpoint is recorded through the verified GitHub branch-write path. No code, provider outputs, or publication rows were changed, and no provider acquisition was issued.
+
+### Exact-State recomputation
+
+Read-only queries of the newest persisted 2026 `user_runtime_context` and matching `state_snapshot_history` select State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`, as-of `2026-10-08T16:20:14.036832Z` (runtime context updated `2026-10-09T23:02:07.133946Z`). Joining canonical State player positions to all roster IDs and Career artifact #10829 recomputes **250 rostered QB/RB/WR/TE; 223 covered; 27 gaps (QB 5, RB 9, TE 2, WR 11)**. This is the latest persisted State, not a newly refreshed current State. No live roster refresh or publication occurred.
+
+### Producer/consumer boundary and validation
+
+`in_season_forecast_routes.py` calls `build_governed_in_season_outlook`; its producer composes finalized YTD actuals with regular ROS and persists provider revisions through the projection-history writer. `persistent_webapp.py` constructs `_career_intrinsic_loader` without `expanded_career_contract_loader` or its fingerprint resolver. The loader therefore uses only its frozen Current/Y4–Y7/tail contracts. The offline `compose_rostered_p0_expanded_shapley.py` accepts Year-1 observations and emits full-cohort Y1–Y3 Shapley rows; it is not called by the hosted loader and is not a complete Career contract. `materialize_foundation4_dynamic_candidates.py` separately consumes explicit local input files and emits Y4–Y7/Y8+ candidate components; it does not persist or expose those through the hosted callback. There is no single callable in this runtime joining the regular season outlook to accepted candidate Y2/Y3 and dynamic long-horizon components to produce a complete expanded Career contract.
+
+GitHub CI head run `38191426584` succeeded, including focused regressions; Stable full suite was skipped because the PR remains draft. Existing evidence remains frozen-335 Shapley/Career max numeric deltas `0`, 139 focused tests passed, and **195.4 MiB composer-only** peak. This is not the full materializer. Full-path RSS has not been remeasured; last recorded peak is **490,928 KiB**, above the ~410 MiB target. Local pytest could not start because the checkout environment lacked pytest/NumPy and offline uv had no NumPy wheel cached.
+
+**Live result:** zero players newly resolved or failed in a live Career run; no matching-State Career/Position & Depth write. Historical private P0 packet success/failure counts are not counted against this State/current roster.
+
+**Specific next gate:** invoke `build_governed_in_season_outlook` against an exact hosted `UserRuntimeContext`, make the accepted dynamic Y2/Y3 plus Y4–Y7/tail records available to that same process under an exact-State fingerprint, wire the resulting complete contract into the existing loader callback, then invoke matching-State publication. Available repository tools expose PR file/CI/comment writes but no Render exec/shell or workflow-dispatch operation, so CI cannot invoke the provider-backed outlook/current-State runtime. Keep provider acquisition stopped until an authorized invocation is available. No production write, merge, deployment, model/refit, waiver work, source/rights change, or infrastructure purchase occurred.
