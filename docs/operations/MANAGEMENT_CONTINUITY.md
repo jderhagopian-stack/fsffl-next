@@ -1,5 +1,19 @@
 # FSFFL NEXT — Management Continuity
 
+
+## 2026-10-11 20:46 ET — Management correction: Career Year 1 and resilient roster coverage
+
+Career Coverage #405 remains the first product delivery priority before Explore and Trade Center. Management owns reconciling conflicting implementation reports with accepted decisions; an implementation checkpoint does not change product authority or roadmap by itself.
+
+- The frozen 335-player cohort is the numeric parity reference, not a production eligibility limit.
+- Career Year 1 projected full-season points are actual Year-to-Date points plus the regularly generated Rest-of-Season projection in the connected league scoring coordinate. Do not require a separate full-season artifact when those components exist.
+- Use the already accepted Career/Shapley and future-year outputs. Trace and connect the existing calculated outputs; do not restart provider acquisition, historical/model recovery, settled source/rights review, or a broad waiver run.
+- Recompute the exact current roster-to-production-Career difference before reporting a gap count. Cover rostered QB/RB/WR/TE across all roster slots.
+- Process candidates independently. A missing or invalid input for one fringe player must produce an explicit player-level status without aborting other valid Career results or suppressing the matching-State Position & Depth response. Never zero-fill or invent a value.
+- Accept completion only on actual producer-to-composition-to-publication results, frozen-335 numeric parity, automatic handling of a newly rostered player, and a full-path memory measurement. Fixture-only tests and composer-only RSS are not end-to-end completion.
+
+This decision supersedes implementation interpretations that ROS cannot contribute to Year 1 or that the frozen 335 is a hard candidate boundary. Those reports may describe current code wiring; they do not reopen Management decisions. No merge, deployment, production-model change, or infrastructure purchase is authorized.
+
 ## 2026-10-10 — Management correction: existing-model-first universal Forecast
 
 **Management decision:** The accepted Forecast/P0 and Career models are the production modeling authority for **any eligible player at any supported point in time**, not only the 335-player research cohort. The 335 embedded P0 source rows and exact parity gate are historical validation fixtures, **not** a perpetual production identity allowlist or evidence ceiling. Do not equate absence from the embedded CSV with absence of player data.
