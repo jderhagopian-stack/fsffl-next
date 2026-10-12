@@ -7,6 +7,9 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from types import SimpleNamespace
+
+from fsffl.product.foundation4_dynamic_candidate_runtime import _candidate_rows
 
 FILE = Path(__file__).parents[1] / "scripts/materialize_foundation4_dynamic_candidates.py"
 SPEC = importlib.util.spec_from_file_location("career_dynamic", FILE)
@@ -37,6 +40,28 @@ def test_dynamic_input_is_canonical_and_point_in_time():
         MOD.validate_candidates(pd.DataFrame([row(forecast_as_of="2026-10-11T00:00:00Z")]), set(), 2026, roster)
     with pytest.raises(ValueError, match="overlaps frozen"):
         MOD.validate_candidates(pd.DataFrame([row(player_id="frozen")]), {"frozen"}, 2026, roster)
+
+
+def test_invalid_fringe_candidate_is_failed_without_dropping_valid_roster_input():
+    valid_id, invalid_id = "sleeper:player:9001", "sleeper:player:9002"
+    roster = pd.DataFrame([
+        {"state_hash":"state-1", "player_id":valid_id, "position":"QB", "team_id":"team-1", "roster_slot":"BENCH", "age":24.0, "state_as_of":"2026-10-08T00:00:00Z"},
+        {"state_hash":"state-1", "player_id":invalid_id, "position":"WR", "team_id":"team-2", "roster_slot":"TAXI", "age":22.0, "state_as_of":"2026-10-08T00:00:00Z"},
+    ])
+    frame = pd.DataFrame([
+        row(player_id=valid_id),
+        row(player_id=invalid_id, position="WR", team_id="team-2", roster_slot="TAXI", age=22, experience=0, y2_player_league_expected_points=None),
+    ])
+    valid, failures = MOD.validate_candidates_per_player(frame, set(), 2026, roster)
+    assert valid.player_id.tolist() == [valid_id]
+    assert set(failures) == {invalid_id}
+    assert failures[invalid_id]["failure_code"] == "candidate_input_invalid"
+    status = MOD.build_roster_authority_status(
+        roster, set(), {valid_id}, failures
+    ).set_index("player_id")
+    assert status.loc[valid_id, "coverage_status"] == "partial_authority"
+    assert status.loc[invalid_id, "coverage_status"] == "unavailable"
+    assert "invalid candidate y2_player_league_expected_points" in status.loc[invalid_id, "full_career_failure"]
 
 
 def test_candidate_y1_percentile_uses_frozen_reference():
@@ -89,6 +114,52 @@ def test_roster_authority_status_covers_reference_partial_and_missing_subjects()
     assert result.set_index("player_id").loc["ref", "coverage_status"] == "reference_estimate_available"
     assert result.set_index("player_id").loc["candidate", "coverage_status"] == "partial_authority"
     assert result.set_index("player_id").loc["missing", "coverage_status"] == "unavailable"
+
+
+def test_dynamic_materializer_input_failure_isolated_to_missing_future_player():
+    good, missing = "sleeper:player:9001", "sleeper:player:9002"
+    state = SimpleNamespace(
+        state_id="state-1",
+        as_of=pd.Timestamp("2026-10-08T00:00:00Z").to_pydatetime(),
+        players=[
+            SimpleNamespace(player_id=good, position=SimpleNamespace(value="QB")),
+            SimpleNamespace(player_id=missing, position=SimpleNamespace(value="WR")),
+        ],
+        player_states=[
+            SimpleNamespace(player_id=good, age_years=24.0),
+            SimpleNamespace(player_id=missing, age_years=22.0),
+        ],
+        team_states=[
+            SimpleNamespace(team_id="t1", roster=[SimpleNamespace(player_id=good, slot=SimpleNamespace(value="BENCH"))]),
+            SimpleNamespace(team_id="t2", roster=[SimpleNamespace(player_id=missing, slot=SimpleNamespace(value="TAXI"))]),
+        ],
+    )
+    future_rows = {
+        (good, 2): SimpleNamespace(central_expectation=30.0),
+        (good, 3): SimpleNamespace(central_expectation=35.0),
+    }
+    live = SimpleNamespace(
+        future=SimpleNamespace(contract=SimpleNamespace(
+            forecast_model_version="accepted-v1",
+            scoring_coordinate="connected_league_fantasy_points",
+        )),
+        candidate_source_rows={
+            player_id: SimpleNamespace(
+                historical_gsis_id=None,
+                experience=1,
+                connected_league_y1_points=20.0,
+            )
+            for player_id in (good, missing)
+        },
+        evaluation_as_of=pd.Timestamp("2026-10-10T00:00:00Z").to_pydatetime(),
+    )
+    rows, failures = _candidate_rows(
+        SimpleNamespace(league_state=state), live, (good, missing), future_rows
+    )
+    assert [row["player_id"] for row in rows] == [good]
+    assert failures == {
+        missing: "dynamic candidate inputs invalid: ValueError: accepted P0 Y2/Y3 FutureForecastContract rows missing"
+    }
 
 
 
@@ -178,38 +249,3 @@ def test_durable_roster_checkpoint_rejects_candidate_identity_drift(tmp_path):
             y8_plus_rows=pd.DataFrame(),
             failures={},
         )
-
-
-
-def test_invalid_fringe_candidate_is_failed_without_dropping_valid_roster_input():
-    valid_id, invalid_id = "sleeper:player:9001", "sleeper:player:9002"
-    roster = pd.DataFrame([
-        {"state_hash": "state-1", "player_id": valid_id, "position": "QB", "team_id": "team-1", "roster_slot": "BENCH", "age": 24.0, "state_as_of": "2026-10-08T00:00:00Z"},
-        {"state_hash": "state-1", "player_id": invalid_id, "position": "WR", "team_id": "team-2", "roster_slot": "TAXI", "age": 22.0, "state_as_of": "2026-10-08T00:00:00Z"},
-    ])
-    frame = pd.DataFrame([
-        row(player_id=valid_id),
-        row(
-            player_id=invalid_id,
-            position="WR",
-            team_id="team-2",
-            roster_slot="TAXI",
-            age=22,
-            experience=0,
-            y2_player_league_expected_points=None,
-        ),
-    ])
-
-    valid, failures = MOD.validate_candidates_per_player(frame, set(), 2026, roster)
-
-    assert valid.player_id.tolist() == [valid_id]
-    assert set(failures) == {invalid_id}
-    assert failures[invalid_id]["failure_code"] == "candidate_input_invalid"
-    status = MOD.build_roster_authority_status(
-        roster, set(), {valid_id}, failures
-    ).set_index("player_id")
-    assert status.loc[valid_id, "coverage_status"] == "partial_authority"
-    assert status.loc[invalid_id, "coverage_status"] == "unavailable"
-    assert "invalid candidate y2_player_league_expected_points" in status.loc[
-        invalid_id, "full_career_failure"
-    ]
