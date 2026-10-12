@@ -817,3 +817,12 @@ The provider sources were available globally, but the exact-State canonical join
 PR #454 now includes commit `a5a26fa577edb545275d1d7d6d5a9e3a231cfa38`. Projection normalization first matches a unique `(provider, external_id)` mapping already present in exact canonical State and requires position agreement; it rejects ambiguous/stale mappings and retains the existing unique name/team fallback when no mapping exists. A focused regression fixture covers provider alias and team drift.
 
 Actual verification: local Python compile check passed for the source and new test. Focused pytest was unavailable in this workspace (`No module named pytest`), and the GitHub commit workflow lookup returned no run. The hosted Career loader callback and full-cohort composer are still disconnected; matching-State Position & Depth E2E, frozen-335 parity, and full materializer memory gate are not yet verified. Prior materializer peak remains 490,928 KiB. The Oct. 12 16-player findings remain snapshot-specific as recorded above. No provider acquisition, production refresh, or production write occurred.
+
+
+## 2026-10-12 — Career #405 dynamic hosted bridge
+
+PR #454 code commit `a662ab2d05621381b1d61e720d62e703574496d8` connects the hosted Career loader to the accepted dynamic P0 Y1–Y3 path. The adapter builds Year 1 from completed Sleeper actuals plus governed ROS, passes dynamic source rows through the unchanged P0 future scorer, and runs full-cohort calendar/Shapley composition with the configured base cohort. Failures remain per player and matching-State Position & Depth keeps roster rows.
+
+The remaining exact candidate contract is Y4–Y7 `LongHorizonForecastAuthorityContract` rows plus Y8+ `CareerTailFeatures` in the accepted FSFFL coordinate. Current hosted Foundation 4 providers expose these inputs for the frozen 335 only; no replacement artifact or inferred values were used. See `docs/operations/workstreams/CAREER_COVERAGE_PR2_20261011.md` for implementation details.
+
+Actual checks: Python `compileall` **passed** and `git diff --check` **passed**. Focused pytest could not run locally because pytest and required packages are unavailable offline. GitHub reported **no workflow run** for this code head at checkpoint time; frozen-335 parity and full materializer memory gate therefore remain **unverified** on this commit. No production operation, merge, or deployment occurred.
