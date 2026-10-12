@@ -783,3 +783,7 @@ On the draft PR #454 branch, a focused Position & Depth regression exposed and f
 ### 2026-10-12 Career #405 persisted-input reconciliation
 
 Read-only Supabase metadata confirms the accepted production `career_intrinsic_v1`, Y4–Y7, and Shapley input artifacts are present for league `sleeper:1312071960615731200`; the latest exact-State `current_forecast_evidence` is for State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (computed 2026-10-09). State history confirms it remains the latest persisted State, as-of 2026-10-08 16:20:14 UTC. This corrects any implication that the accepted baseline inputs are missing. The hosted loader still has no expanded-contract callback to join these accepted authorities with the regular YTD+ROS result for exact roster candidates. No payload export, new roster build, publication, or production write was performed. Per latest tests, the failure metadata remains compatible with legacy contract-shaped objects; frozen-335 parity remains exact within floating-point tolerance. Full materializer RSS remains last measured at 490,928 KiB (>~410 MiB).
+
+### 2026-10-12 Career #405 composer memory follow-up
+
+The focused 335-player Career composer-only RSS test passed at **185.6 MiB**. This does not satisfy the full materializer memory gate; the last full-path peak remains **490,928 KiB**, above the ~410 MiB target. No roster build, exact-State publication, provider acquisition, or production write occurred.
