@@ -11,7 +11,11 @@ from .fumbles_lost_first_party import build_first_party_fumbles_lost_supplement
 from .in_season_runtime import InSeasonForecastRuntimeResult, ProjectionHistoryWriter, build_in_season_forecasts
 from .league_scoring import derive_league_scoring_result
 from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
-from .season_rollforward import compose_completed_actuals_only, compose_completed_actuals_with_ros
+from .season_rollforward import (
+    compose_completed_actuals_only,
+    compose_completed_actuals_with_ros,
+    compose_completed_actuals_with_ros_per_player,
+)
 
 
 NFL_REGULAR_SEASON_WEEKS = 18
@@ -384,6 +388,7 @@ class GovernedInSeasonResult:
         evidence_basis: str,
         current_runtime: InSeasonForecastRuntimeResult | None,
         current_failure: str | None,
+        season_outlook_failures: dict[str, str] | None = None,
     ) -> None:
         self.completed_through_week = completed_through_week
         self.season_outlook = season_outlook
@@ -391,6 +396,7 @@ class GovernedInSeasonResult:
         self.evidence_basis = evidence_basis
         self.current_runtime = current_runtime
         self.current_failure = current_failure
+        self.season_outlook_failures = dict(season_outlook_failures or {})
 
 
 def build_governed_in_season_outlook(
@@ -491,10 +497,20 @@ def build_governed_in_season_outlook(
         )
         basis = "preseason_remaining_prior"
 
-    season_outlook = compose_completed_actuals_with_ros(
+    player_by_id = {player.player_id: player for player in league_state.players}
+    roster_positions = {
+        entry.player_id: player_by_id[entry.player_id].position
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.player_id in player_by_id
+        and player_by_id[entry.player_id].position
+        in {Position.QB, Position.RB, Position.WR, Position.TE}
+    }
+    season_outlook, season_outlook_failures = compose_completed_actuals_with_ros_per_player(
         completed_actuals=actuals,
         ros_forecasts=forward,
         season_start=canonical_week_window(league_state.league.season, 1)[0],
+        expected_roster_positions=roster_positions,
     )
     return GovernedInSeasonResult(
         completed_through_week=completed,
@@ -503,4 +519,5 @@ def build_governed_in_season_outlook(
         evidence_basis=basis,
         current_runtime=current_runtime,
         current_failure=current_failure,
+        season_outlook_failures=season_outlook_failures,
     )
