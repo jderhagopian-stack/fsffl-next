@@ -132,7 +132,7 @@ def test_year_one_full_season_and_future_inputs_fail_per_player():
                 "position": "RB",
                 "year_index": year_index,
                 "target_season": 2026 + year_index - 1,
-                "central_expectation": 50.0,
+                "central_expectation": 55.5,
                 "scoring_coordinate": "connected_league_fantasy_points",
                 "model_version": "fixture-p0-v1",
                 "source": "fixture:accepted-p0",
