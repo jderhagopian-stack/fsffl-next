@@ -99,6 +99,7 @@ def install_in_season_forecast_routes(
             "forward_count": len(result.forward_forecasts),
             "season_outlook_count": len(result.season_outlook),
             "season_outlook": [_obs_payload(item) for item in result.season_outlook],
+            "season_outlook_failures": dict(result.season_outlook_failures),
         }
 
     @app.get("/api/forecast/in-season/week/{week}")
