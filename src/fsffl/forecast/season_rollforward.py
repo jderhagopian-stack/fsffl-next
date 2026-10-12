@@ -194,3 +194,66 @@ def compose_completed_actuals_with_ros(
             key=lambda item: (item.player_id, item.metric.value, item.source),
         )
     )
+
+
+def compose_completed_actuals_with_ros_per_player(
+    *,
+    completed_actuals: tuple[RealizedOutcome, ...],
+    ros_forecasts: tuple[ForecastObservation, ...],
+    season_start: datetime,
+    expected_roster_positions: dict[str, object] | None = None,
+) -> tuple[tuple[ForecastObservation, ...], dict[str, str]]:
+    """Roll forward each player independently and preserve exact input failures.
+
+    The strict composer above remains the single-player calculation contract. This
+    wrapper scopes actual validation to each forecast identity, so one bad/overlap
+    row cannot abort other players. When supplied, exact-State roster identities
+    without a usable ROS row receive explicit failures.
+    """
+    positions = expected_roster_positions or {}
+    failures: dict[str, str] = {}
+    forecast_by_player: dict[str, ForecastObservation] = {}
+    duplicate_ids: set[str] = set()
+    for forecast in ros_forecasts:
+        player_id = str(forecast.player_id)
+        if player_id in forecast_by_player:
+            duplicate_ids.add(player_id)
+            failures[player_id] = "duplicate_rest_of_season_forecast"
+            continue
+        forecast_by_player[player_id] = forecast
+
+    output: list[ForecastObservation] = []
+    for player_id, forecast in forecast_by_player.items():
+        if player_id in duplicate_ids:
+            continue
+        expected_position = positions.get(player_id)
+        if expected_position is not None and forecast.position != expected_position:
+            failures[player_id] = (
+                f"rest_of_season_position_mismatch:"
+                f"{forecast.position.value}!={getattr(expected_position, 'value', expected_position)}"
+            )
+            continue
+        matching_actuals = tuple(
+            actual
+            for actual in completed_actuals
+            if actual.player_id == forecast.player_id
+            and actual.position == forecast.position
+            and actual.metric == forecast.metric
+        )
+        try:
+            output.extend(
+                compose_completed_actuals_with_ros(
+                    completed_actuals=matching_actuals,
+                    ros_forecasts=(forecast,),
+                    season_start=season_start,
+                )
+            )
+        except Exception as exc:
+            failures[player_id] = f"{type(exc).__name__}: {exc}"
+
+    for player_id in positions:
+        if player_id not in forecast_by_player:
+            failures.setdefault(player_id, "rest_of_season_forecast_missing")
+
+    output.sort(key=lambda item: (item.player_id, item.metric.value, item.source))
+    return tuple(output), failures
