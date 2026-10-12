@@ -136,10 +136,9 @@ def test_private_input_zip_is_bounded_and_has_one_json_file():
 
 def test_output_is_authenticated_ciphertext_and_never_plaintext():
     pytest.importorskip("cryptography")
-    secret = base64.b64encode(bytes(range(32))).decode()
     plaintext = b'{"career":"private fixture"}'
-    encrypted = encrypt_result(plaintext, secret)
+    encrypted = encrypt_result(plaintext, "a-long-random-test-passphrase-405")
     assert encrypted.startswith(b"C405AESGCM1")
     assert plaintext not in encrypted
-    with pytest.raises(ValueError, match="32 bytes"):
-        encrypt_result(plaintext, base64.b64encode(b"short").decode())
+    with pytest.raises(ValueError, match="at least 20"):
+        encrypt_result(plaintext, "too-short")
