@@ -24,6 +24,7 @@ from fsffl.forecast.models import (
 from fsffl.forecast.season_rollforward import (
     compose_completed_actuals_only,
     compose_completed_actuals_with_ros,
+    compose_completed_actuals_with_ros_per_player,
 )
 from fsffl.forecast.backtest import RealizedOutcome
 from fsffl.providers.current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
@@ -269,6 +270,42 @@ def test_season_roll_forward_adds_completed_actual_and_shifts_distribution_witho
     assert season.distribution.p10 == pytest.approx(735.0)
     assert season.period_start == datetime(2026, 9, 1, tzinfo=UTC)
     assert season.source == "fsffl:completed-actuals-plus-ros"
+
+
+
+def test_player_roll_forward_isolates_invalid_and_missing_roster_inputs():
+    good_ros = _forecast().model_copy(update={"player_id": "p2"})
+    bad_ros = _forecast()
+    overlap_actuals = (
+        _actual(
+            start=datetime(2026, 9, 1, tzinfo=UTC),
+            end=datetime(2026, 9, 15, tzinfo=UTC),
+            value=12.0,
+        ),
+        _actual(
+            start=datetime(2026, 9, 8, tzinfo=UTC),
+            end=datetime(2026, 9, 22, tzinfo=UTC),
+            value=8.0,
+        ),
+    )
+
+    outlook, failures = compose_completed_actuals_with_ros_per_player(
+        completed_actuals=overlap_actuals,
+        ros_forecasts=(bad_ros, good_ros),
+        season_start=datetime(2026, 9, 1, tzinfo=UTC),
+        expected_roster_positions={
+            "p1": Position.RB,
+            "p2": Position.RB,
+            "p3": Position.WR,
+        },
+    )
+
+    assert [row.player_id for row in outlook] == ["p2"]
+    assert outlook[0].horizon == ForecastHorizon.SEASON
+    assert outlook[0].distribution.mean == pytest.approx(good_ros.distribution.mean)
+    assert failures["p1"].startswith("ValueError: completed actual periods overlap")
+    assert failures["p3"] == "rest_of_season_forecast_missing"
+
 
 
 def test_week4_acceptance_gate_counts_weeks_1_to_4_once_then_ros_only():
