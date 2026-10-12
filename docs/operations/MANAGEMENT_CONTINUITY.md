@@ -5,7 +5,7 @@
 
 Career Coverage #405 remains the first product delivery priority before Explore and Trade Center. Management owns reconciling conflicting implementation reports with accepted decisions; an implementation checkpoint does not change product authority or roadmap by itself.
 
-- The frozen 335-player cohort is the numeric parity reference, not a production eligibility limit.
+- Those 335 players were simply the cohort initially modeled. They are not unique, special, or an eligibility limit; preserve their outputs as a regression comparison while extending the same accepted models to other eligible players.
 - Career Year 1 projected full-season points are actual Year-to-Date points plus the regularly generated Rest-of-Season projection in the connected league scoring coordinate. Do not require a separate full-season artifact when those components exist.
 - Use the already accepted Career/Shapley and future-year outputs. Trace and connect the existing calculated outputs; do not restart provider acquisition, historical/model recovery, settled source/rights review, or a broad waiver run.
 - Recompute the exact current roster-to-production-Career difference before reporting a gap count. Cover rostered QB/RB/WR/TE across all roster slots.
