@@ -787,3 +787,10 @@ Read-only Supabase metadata confirms the accepted production `career_intrinsic_v
 ### 2026-10-12 Career #405 composer memory follow-up
 
 The focused 335-player Career composer-only RSS test passed at **185.6 MiB**. This does not satisfy the full materializer memory gate; the last full-path peak remains **490,928 KiB**, above the ~410 MiB target. No roster build, exact-State publication, provider acquisition, or production write occurred.
+
+
+### 2026-10-12 — Reconciled saved exact-State roster composition
+
+Read-only validation of the existing `CAREER_COMPOSED_SUPPORTED_ROSTER_11_FULL_COHORT.json` reconciles the full 27-player exact-State gap set for State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (roster identity as-of 2026-10-08; composition evaluated 2026-10-11 14:12:26 UTC). It contains 11 `career_composed` results and 16 explicit `p0_failure` results. Combined with the previously verified 223/250 production rows, this yields 234/250 Career-covered players for that saved State; 16 remain uncovered. Among the 27 gaps: QB 2/5 supported, RB 6/9, TE 1/2, WR 2/11. All 16 failures are `p0_year1_evidence_incomplete`: no complete Year-1 raw scoring row; CBS ROS metrics are empty, Razzball ROS metrics are either empty or missing the position-required canonical metrics, and no two-source raw ensemble exists. No zero-fill was applied. The exact 16 IDs and per-player metric details are in the source artifact's `players` records.
+
+The artifact reports frozen-335 parity unchanged: append delta 0 across 335 rows, max Career numeric delta 9.09e-13, and max Shapley component delta 5.97e-13. Provider acquisition was not repeated and waiver rows were excluded. This is saved artifact validation, not a new roster run or publication. It remains bound to the Oct 8 State; Oct 12 provider snapshots/current-State roster coverage and matching-State Position & Depth publication remain unverified. The production operation still blocked by the standing Management directive is a normal-path State refresh followed by publishing the Career/Position & Depth rows; no such production write was attempted.
