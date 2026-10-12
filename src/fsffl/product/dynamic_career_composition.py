@@ -9,14 +9,26 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Callable
+from dataclasses import dataclass
+from typing import Callable, Mapping
 
 from fsffl.forecast.future_contract import FutureForecastContract
+from fsffl.forecast.long_horizon_contract import (
+    LongHorizonForecastAuthorityContract,
+    LongHorizonPolicyForecast,
+)
 from fsffl.value.live_intrinsic_calendar import (
     build_live_calendar_shapley_estimates,
     compose_live_intrinsic_calendar_from_forecast_contract,
 )
 from fsffl.value.shapley_intrinsic_contract import build_shapley_intrinsic_contract
+from fsffl.value.career_forward_intrinsic import build_career_forward_intrinsic_shadow
+from fsffl.value.career_tail import CareerTailAuthority
+from fsffl.value.long_term_intrinsic import build_long_term_intrinsic_shadow
+from fsffl.product.foundation4_shadow_inputs import (
+    provide_foundation4_long_horizon_forecast_contract_for_rules,
+    provide_foundation4_terminal_features,
+)
 
 from .foundation4_career_forward_runtime import ExpandedCareerContractResult
 from .p0_live_candidate_runtime import (
@@ -27,16 +39,31 @@ from .private_beta_shapley_runtime import _year_one_forecasts
 from .runtime import UserRuntimeContext
 
 
+@dataclass(frozen=True)
+class DynamicCareerComponents:
+    """Accepted Foundation 4 rows produced for dynamic candidates."""
+
+    y4_y7: Mapping[str, tuple[LongHorizonPolicyForecast, ...]]
+    y8_plus: Mapping[str, CareerTailAuthority]
+    failures: Mapping[str, str]
+
+
+DynamicCareerMaterializer = Callable[
+    [UserRuntimeContext, P0LiveCandidateResult, tuple[str, ...]],
+    DynamicCareerComponents,
+]
+
+
 def _merge_candidate_inputs(
     *,
     base_year_one,
     base_future: FutureForecastContract,
     candidate: P0LiveCandidateResult,
     rules,
-) -> tuple[tuple, FutureForecastContract, tuple[str, ...]]:
+) -> tuple[tuple, FutureForecastContract, tuple[str, ...], object | None]:
     failures = dict(candidate.failures)
     if candidate.future is None:
-        return tuple(base_year_one), base_future, tuple(sorted(failures))
+        return tuple(base_year_one), base_future, tuple(sorted(failures)), None
 
     candidate_future = candidate.future.contract
     dynamic_ids = set(candidate.candidate_source_rows) - set(failures)
@@ -50,6 +77,7 @@ def _merge_candidate_inputs(
             player_id,
             "accepted P0 future contract lacks complete Year-1 and Y2/Y3 rows",
         )
+    expanded_current = None
     if ready_ids:
         frozen_ids = set(base_future.player_ids)
         if ready_ids & frozen_ids:
@@ -82,10 +110,72 @@ def _merge_candidate_inputs(
         )
         # Run the actual full-cohort Shapley composer before reporting later Career
         # component gaps. This ensures candidates are never valued in isolation.
-        build_shapley_intrinsic_contract(
+        expanded_current = build_shapley_intrinsic_contract(
             build_live_calendar_shapley_estimates(calendar, rules=rules)
         )
-    return tuple(base_year_one), base_future, tuple(sorted(failures))
+    return tuple(base_year_one), base_future, tuple(sorted(failures)), expanded_current
+
+
+def _compose_dynamic_career_contract(
+    *,
+    context: UserRuntimeContext,
+    frozen_reference,
+    expanded_current,
+    candidate_ids: tuple[str, ...],
+    components: DynamicCareerComponents,
+):
+    """Apply accepted Y4-Y7 and Y8+ authorities to the full expanded Shapley game."""
+    state = context.league_state
+    if state is None or expanded_current is None:
+        raise ValueError("dynamic Career composition requires exact State and full Shapley result")
+    expected = set(candidate_ids)
+    component_ids = set(components.y4_y7)
+    tail_ids = set(components.y8_plus)
+    failures = dict(components.failures)
+    unexpected = (component_ids | tail_ids | set(failures)) - expected
+    if unexpected:
+        raise ValueError(
+            "Foundation 4 dynamic materializer returned players outside the exact-State "
+            f"candidate batch: {', '.join(sorted(unexpected))}"
+        )
+    for player_id in expected - component_ids - set(failures):
+        failures[player_id] = "accepted Foundation 4 materializer returned no complete Y4-Y7 contract"
+    for player_id in expected - tail_ids - set(failures):
+        failures[player_id] = "accepted Foundation 4 materializer returned no Y8+ tail authority"
+    ready = expected - set(failures)
+    if not ready:
+        return None, failures
+    if ready != component_ids & tail_ids:
+        raise ValueError("dynamic Foundation 4 materializer returned an unaccounted candidate")
+
+    frozen_long = provide_foundation4_long_horizon_forecast_contract_for_rules(
+        state.league.rules
+    )
+    candidate_long_rows = tuple(
+        row for player_id in sorted(ready) for row in components.y4_y7[player_id]
+    )
+    if set(failures) & (component_ids | tail_ids):
+        raise ValueError("Foundation 4 materializer returned components for a failed player")
+    long_contract = LongHorizonForecastAuthorityContract.model_validate(
+        {
+            **frozen_long.model_dump(),
+            "forecasts": tuple(frozen_long.forecasts) + candidate_long_rows,
+            "provenance": {
+                **frozen_long.provenance,
+                "dynamic_candidate_ids": sorted(ready),
+                "dynamic_materializer": "accepted-foundation4-dynamic-candidate-materializer",
+            },
+        }
+    )
+    long_term = build_long_term_intrinsic_shadow(
+        long_contract, rules=state.league.rules
+    )
+    tails: dict[str, CareerTailAuthority] = provide_foundation4_terminal_features()
+    tails.update({player_id: components.y8_plus[player_id] for player_id in ready})
+    expanded = build_career_forward_intrinsic_shadow(
+        expanded_current, long_term, tails
+    )
+    return expanded, failures
 
 
 def dynamic_career_fingerprint(context: UserRuntimeContext) -> str:
@@ -113,6 +203,7 @@ def build_dynamic_rostered_career_contract(
     frozen_reference,
     *,
     current_intrinsic_loader,
+    materializer: DynamicCareerMaterializer | None = None,
     candidate_builder: Callable[..., P0LiveCandidateResult] = (
         build_live_p0_rostered_candidate_forecasts
     ),
@@ -135,7 +226,7 @@ def build_dynamic_rostered_career_contract(
         year_one=base_year_one,
     )
     live = candidate_builder(state)
-    _, _, composition_failures = _merge_candidate_inputs(
+    _, _, composition_failures, expanded_current = _merge_candidate_inputs(
         base_year_one=base_year_one,
         base_future=base_future,
         candidate=live,
@@ -147,11 +238,32 @@ def build_dynamic_rostered_career_contract(
         set(live.candidate_source_rows)
         - set(failures)
     )
-    for player_id in sorted(composed):
-        failures[player_id] = (
-            "missing accepted dynamic Career component contract: candidate-specific "
-            "Y4-Y7 LongHorizonForecastAuthorityContract rows and Y8+ CareerTailFeatures "
-            "in the frozen FSFFL scoring coordinate; the hosted Foundation 4 providers "
-            "currently expose those contracts only for the frozen 335 IDs"
+    if not composed:
+        return ExpandedCareerContractResult(contract=None, failures=failures)
+    if materializer is None:
+        for player_id in sorted(composed):
+            failures[player_id] = (
+                "accepted Foundation 4 dynamic materializer input bundle is not configured "
+                "for the hosted process (route/development modules, frozen route inputs, "
+                "and point-in-time historical panel)"
+            )
+        return ExpandedCareerContractResult(contract=None, failures=failures)
+    try:
+        components = materializer(context, live, tuple(sorted(composed)))
+    except Exception as exc:
+        # The materializer is allowed to fail per candidate; a batch-level
+        # infrastructure/configuration error is reflected on each eligible row.
+        detail = f"accepted Foundation 4 dynamic materializer failed: {type(exc).__name__}: {exc}"
+        return ExpandedCareerContractResult(
+            contract=None,
+            failures={**failures, **{player_id: detail for player_id in sorted(composed)}},
         )
-    return ExpandedCareerContractResult(contract=None, failures=failures)
+    expanded, component_failures = _compose_dynamic_career_contract(
+        context=context,
+        frozen_reference=frozen_reference,
+        expanded_current=expanded_current,
+        candidate_ids=tuple(sorted(composed)),
+        components=components,
+    )
+    failures.update(component_failures)
+    return ExpandedCareerContractResult(contract=expanded, failures=failures)

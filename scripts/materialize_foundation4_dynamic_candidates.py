@@ -447,6 +447,7 @@ def main():
     from fsffl.value.career_tail import CAREER_TAIL_SCORING_COORDINATE, CareerTailFeatures, build_career_tail_authority
     rules = LeagueRules.model_validate(json.loads(Path(a.connected_rules).read_text()))
     tails = []
+    tail_authorities = []
     for row in candidates.itertuples():
         features = CareerTailFeatures(
             player_id=str(row.player_id), position=Position(str(row.position)),
@@ -458,12 +459,17 @@ def main():
             live_feature_transport_limitation="Governed P0 Y1 and completed 2025 FSFFL production; absent prior remains missing.",
         )
         authority = build_career_tail_authority(features, rules=rules)
+        tail_authorities.append(authority.model_dump(mode="json"))
         tails.append({"player_id": authority.player_id, "position": authority.position.value,
                       "prior_points": features.prior_points, "model_authority_low": authority.model_authority_low,
                       "reference_center": authority.reference_center, "model_authority_high": authority.model_authority_high,
                       "outcome_outer_80": authority.outcome_outer_80, "outcome_outer_90": authority.outcome_outer_90,
                       "model_version": authority.model_version})
     pd.DataFrame(tails).to_csv(out / "FOUNDATION4_DYNAMIC_CANDIDATE_Y8_PLUS.csv", index=False)
+    (out / "FOUNDATION4_DYNAMIC_CANDIDATE_Y8_PLUS_AUTHORITY.json").write_text(
+        json.dumps(tail_authorities, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
     roster_status = build_roster_authority_status(
         roster_frame,
         reference_ids,

@@ -40,6 +40,9 @@ from .dynamic_career_composition import (
     build_dynamic_rostered_career_contract,
     dynamic_career_fingerprint,
 )
+from .foundation4_dynamic_candidate_runtime import (
+    materialize_foundation4_dynamic_candidates,
+)
 from .foundation4_shadow_routes import install_career_intrinsic_routes
 from .hosted_connect import install_hosted_connect_routes
 from .current_position_depth import build_governed_current_position_depth
@@ -278,6 +281,7 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
             context,
             frozen,
             current_intrinsic_loader=_shapley_intrinsic_loader,
+            materializer=materialize_foundation4_dynamic_candidates,
         )
     ),
     expanded_career_contract_fingerprint_resolver=dynamic_career_fingerprint,

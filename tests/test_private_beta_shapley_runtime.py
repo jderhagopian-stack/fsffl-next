@@ -334,8 +334,8 @@ def test_hosted_dynamic_career_bridge_composes_candidate_with_full_shapley_cohor
     assert composed_player_counts == [2]
     assert result.contract is None
     assert set(result.failures) == {candidate_id}
-    assert "Y4-Y7 LongHorizonForecastAuthorityContract rows" in result.failures[candidate_id]
-    assert "Y8+ CareerTailFeatures" in result.failures[candidate_id]
+    assert "Foundation 4 dynamic materializer input bundle is not configured" in result.failures[candidate_id]
+    assert "route/development modules" in result.failures[candidate_id]
 
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
