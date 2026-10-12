@@ -148,7 +148,6 @@ def test_ambiguous_or_unmatched_identity_is_not_guessed() -> None:
     assert observations == ()
 
 
-
 def test_asserted_provider_identity_resolves_changed_name_and_team() -> None:
     state = _state().model_copy(update={
         "players": (

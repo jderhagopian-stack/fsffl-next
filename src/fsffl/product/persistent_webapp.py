@@ -36,6 +36,10 @@ from .forecast_resilience import (
 from .foundation4_career_forward_runtime import (
     CareerIntrinsicLoader,
 )
+from .dynamic_career_composition import (
+    build_dynamic_rostered_career_contract,
+    dynamic_career_fingerprint,
+)
 from .foundation4_shadow_routes import install_career_intrinsic_routes
 from .hosted_connect import install_hosted_connect_routes
 from .current_position_depth import build_governed_current_position_depth
@@ -269,6 +273,14 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
         _shapley_intrinsic_loader.intrinsic_input_fingerprint
     ),
     persistence_store=_persistence_store,
+    expanded_career_contract_loader=lambda context, frozen: (
+        build_dynamic_rostered_career_contract(
+            context,
+            frozen,
+            current_intrinsic_loader=_shapley_intrinsic_loader,
+        )
+    ),
+    expanded_career_contract_fingerprint_resolver=dynamic_career_fingerprint,
 )
 _career_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     _career_intrinsic_loader,

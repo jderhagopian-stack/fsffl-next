@@ -591,6 +591,7 @@ def build_p0_standard_future_materialization(
     *,
     league_state: LeagueState,
     standard_year_one: tuple[ForecastObservation, ...],
+    dynamic_source_rows: Mapping[str, P0SourceRow] | None = None,
 ) -> P0FutureMaterialization:
     year_one = _year_one_index(standard_year_one)
     if not year_one:
@@ -598,7 +599,11 @@ def build_p0_standard_future_materialization(
 
     players: dict[str, P0PlayerForecast] = {}
     for player_id, observation in sorted(year_one.items()):
-        source = _source_for_player(league_state, player_id)
+        source = (dynamic_source_rows or {}).get(player_id)
+        if source is None:
+            source = _source_for_player(league_state, player_id)
+        elif source.player_id != player_id or source.current_player_id != player_id:
+            raise ValueError(f"P0 dynamic source row identity mismatch for {player_id}")
         if observation.position.value != source.position:
             raise ValueError(
                 f"P0 current source position mismatch for {player_id}: "
@@ -606,7 +611,9 @@ def build_p0_standard_future_materialization(
             )
         actual = float(observation.distribution.mean)
         expected = float(source.standard_y1_points)
-        if not math.isclose(actual, expected, rel_tol=0.0, abs_tol=P0_STANDARD_PARITY_TOLERANCE):
+        if player_id not in (dynamic_source_rows or {}) and not math.isclose(
+            actual, expected, rel_tol=0.0, abs_tol=P0_STANDARD_PARITY_TOLERANCE
+        ):
             raise ValueError(
                 f"P0 standard/non-PPR Year-1 parity failure for {player_id}: "
                 f"{actual} != {expected}"

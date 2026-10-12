@@ -241,6 +241,103 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
     assert abs(reconstructed - contract.estimates[0].raw_intrinsic_value) <= 1e-9
 
 
+def test_hosted_dynamic_career_bridge_composes_candidate_with_full_shapley_cohort(
+    monkeypatch,
+) -> None:
+    from fsffl.product import dynamic_career_composition as bridge
+    from fsffl.product.p0_live_candidate_runtime import P0LiveCandidateResult
+    from fsffl.product.p0_forecast_runtime import frozen_p0_source_rows
+
+    state, base_year_one = _fixture()
+    candidate_id = "sleeper:player:dynamic-career-fixture"
+    candidate_player = Player(
+        player_id=candidate_id,
+        full_name="Dynamic Career Fixture",
+        position=Position.QB,
+    )
+    candidate_as_of = base_year_one.as_of
+    candidate_y1 = base_year_one.model_copy(update={
+        "player_id": candidate_id,
+        "source": "fsffl:sleeper-actuals-plus-governed-ros",
+        "model_version": "p0-live-y1-raw-v1",
+    })
+    dynamic_row = next(
+        row for row in frozen_p0_source_rows() if row.position == "QB"
+    )
+    dynamic_row = dynamic_row.__class__(**{
+        **dynamic_row.__dict__,
+        "player_id": candidate_id,
+        "current_player_id": candidate_id,
+        "player_name": candidate_player.full_name,
+    })
+    players = tuple(state.players) + (candidate_player,)
+    roster = RosterEntry(
+        player_id=candidate_id,
+        slot=RosterSlot.BENCH,
+    )
+    team_states = tuple(
+        row.model_copy(update={"roster": (roster,)})
+        if row.team_id == "a" else row
+        for row in state.team_states
+    )
+    state = state.model_copy(update={
+        "players": players,
+        "team_states": team_states,
+        "player_states": tuple(state.player_states) + (
+            PlayerState(
+                player_id=candidate_id,
+                age_years=25.0,
+                as_of=candidate_as_of,
+                provenance=base_year_one.provenance,
+            ),
+        ),
+    })
+    raw = _raw_forecasts(candidate_y1)
+    dynamic_future = build_p0_future_forecast_contract(
+        league_state=state,
+        raw_forecasts=raw,
+        league_year_one=(candidate_y1,),
+        candidate_source_rows={candidate_id: dynamic_row},
+    )
+    candidate = P0LiveCandidateResult(
+        evaluation_as_of=candidate_as_of,
+        completed_through_week=4,
+        candidate_ids=(candidate_id,),
+        candidate_source_rows={candidate_id: dynamic_row},
+        year_one_standard={candidate_id: candidate_y1},
+        year_one_league={candidate_id: candidate_y1},
+        future=dynamic_future,
+        failures={},
+        ros_runtime=SimpleNamespace(),
+    )
+    evidence = _authority_evidence(base_year_one)
+    base_loader = _legacy_p0_loader(
+        year_one_loader=lambda _state: evidence,
+    )
+    context = UserRuntimeContext(user_id="dynamic", league_state=state)
+
+    original = bridge.build_live_calendar_shapley_estimates
+    composed_player_counts = []
+
+    def record_full_cohort(calendar, *, rules):
+        composed_player_counts.append(calendar.player_count)
+        return original(calendar, rules=rules)
+
+    monkeypatch.setattr(bridge, "build_live_calendar_shapley_estimates", record_full_cohort)
+    result = bridge.build_dynamic_rostered_career_contract(
+        context,
+        SimpleNamespace(),
+        current_intrinsic_loader=base_loader,
+        candidate_builder=lambda _state: candidate,
+    )
+
+    assert composed_player_counts == [2]
+    assert result.contract is None
+    assert set(result.failures) == {candidate_id}
+    assert "Y4-Y7 LongHorizonForecastAuthorityContract rows" in result.failures[candidate_id]
+    assert "Y8+ CareerTailFeatures" in result.failures[candidate_id]
+
+
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
     state, observation = _fixture()
     loader = _legacy_p0_loader(

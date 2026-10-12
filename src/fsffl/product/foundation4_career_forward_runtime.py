@@ -53,7 +53,8 @@ LEGACY_FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
 FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = CAREER_INTRINSIC_ARTIFACT_KIND
 FOUNDATION4_SCOPE_KIND = CAREER_INTRINSIC_SCOPE_KIND
 FOUNDATION4_RUNTIME_VERSION = (
-    "foundation4-career-forward-runtime-v3:"
+    "foundation4-career-forward-runtime-v4:"
+    "dynamic-rostered-y1-y3-shapley-bridge:"
     "fsffl-material-scoring-with-rare-residual-omission"
 )
 
@@ -460,7 +461,23 @@ class CareerIntrinsicLoader:
 
         restored = self.restore_compatible(context)
         if restored is not None:
-            return restored
+            expanded_restored = self._append_expanded_rostered_contract(
+                context, restored
+            )
+            if expanded_restored != restored:
+                component = self.restore_component(context)
+                if component is not None:
+                    self._persist(
+                        context,
+                        dependency_fingerprint=dependency_fingerprint,
+                        component=component,
+                        contract=expanded_restored,
+                    )
+            with self._lock:
+                self._cached_user_id = context.user_id
+                self._cached_fingerprint = dependency_fingerprint
+                self._cached_contract = expanded_restored
+            return expanded_restored
 
         # Scoring-coordinate compatibility is an authority precondition for the
         # holistic sum.  Validate it before loading Current Intrinsic so an

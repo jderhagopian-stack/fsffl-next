@@ -23,6 +23,7 @@ from .i1_player_scoring import (
     translate_future_i1_result_for_player,
 )
 from .p0_forecast_runtime import (
+    P0SourceRow,
     P0_CONNECTED_LEAGUE_Y1_BOARD_SHA256,
     P0_CURRENT_SOURCE_CSV_SHA256,
     P0_FINAL_ROUTE_AUTHORITY_SHA256,
@@ -65,6 +66,7 @@ def build_p0_future_forecast_contract(
     league_state: LeagueState,
     raw_forecasts: tuple[ForecastObservation, ...],
     league_year_one: tuple[ForecastObservation, ...],
+    candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
 ) -> P0FutureForecastContractMaterialization:
     """Materialize current P0 Y2/Y3 authority behind a model-agnostic contract.
 
@@ -74,7 +76,17 @@ def build_p0_future_forecast_contract(
     requiring downstream product code to know D0/D1 internals.
     """
 
+    dynamic_rows = dict(candidate_source_rows or {})
     governed_ids = set(governed_p0_player_ids(league_state))
+    dynamic_ids = set(dynamic_rows)
+    if dynamic_ids & governed_ids:
+        raise ValueError("dynamic P0 rows cannot replace frozen reference players")
+    for player_id, row in dynamic_rows.items():
+        if player_id != row.player_id or player_id != row.current_player_id:
+            raise ValueError(f"dynamic P0 row identity mismatch for {player_id}")
+        if player_id not in {player.player_id for player in league_state.players}:
+            raise ValueError(f"dynamic P0 row is outside canonical State: {player_id}")
+    governed_ids.update(dynamic_ids)
     if not governed_ids:
         raise ValueError("frozen P0/H3 authority has no mapped subjects in current State")
 
@@ -114,6 +126,7 @@ def build_p0_future_forecast_contract(
     p0 = build_p0_standard_future_materialization(
         league_state=league_state,
         standard_year_one=standard_year_one,
+        dynamic_source_rows=dynamic_rows,
     )
 
     if set(p0.players) != set(scoring_multipliers):
