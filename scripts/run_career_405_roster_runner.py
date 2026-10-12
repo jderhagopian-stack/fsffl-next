@@ -120,6 +120,10 @@ def _future_row(player_id: str, packet: dict) -> dict:
         or abs(expectation - supplied_expectation) > 1e-7
     ):
         raise ValueError("accepted Y2/Y3 expectation does not reconcile to its six-state packet")
+    if any(not 0.0 <= item["probability"] <= 1.0 for item in scenarios):
+        raise ValueError("accepted Y2/Y3 state probability is outside [0, 1]")
+    if abs(sum(item["probability"] for item in scenarios) - 1.0) > 1e-8:
+        raise ValueError("accepted Y2/Y3 state probabilities do not sum to one")
     return {
         "player_id": player_id,
         "position": str(packet["position"]),
@@ -148,6 +152,14 @@ def to_composer_artifact(artifact: dict, exact_rows: dict[str, dict]) -> dict:
                 "failure_detail": "Saved per-player evidence failure is malformed.",
                 "evidence_checked": [],
                 "provenance": {},
+            }
+            continue
+        if row.get("status") != "p0_inputs_available_career_partial":
+            failures[player_id] = {
+                "failure_code": "unsupported_roster_checkpoint_status",
+                "failure_detail": "Saved roster checkpoint status is not recognized.",
+                "evidence_checked": ["private_rostered_p0_checkpoint"],
+                "provenance": row.get("provenance", {}),
             }
             continue
         source = row.get("p0_input")
@@ -304,4 +316,11 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        # This repository is public. Never let provider payloads or player IDs
+        # escape through Python exception reprs in Action logs.
+        raise SystemExit(
+            f"roster runner failed ({type(exc).__name__}); protected details withheld"
+        ) from None
