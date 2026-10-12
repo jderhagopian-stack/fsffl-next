@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install package and focused test tooling
-        run: python -m pip install -e '.[web]' pytest
+        run: python -m pip install -e '.[web]' pytest cryptography
       - name: Test roster-only input, State, and encryption guards
         run: pytest -q tests/test_career_405_roster_runner.py
 
