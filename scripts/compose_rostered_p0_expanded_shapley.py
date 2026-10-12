@@ -331,7 +331,7 @@ def compose_saved_rostered_p0(
                 points=points,
                 as_of=evaluation_as_of,
                 source="fsffl:p0_live_rostered_candidate",
-                model_version=str(source_row.get("evidence_source_version") or source_row.get("evidence_source_version", "accepted-p0")),
+                model_version=str(source_row.get("evidence_source_version") or "accepted-p0"),
             )
             candidate_year_one_by_id[player_id] = observation
         composed_candidate_ids = set(candidate_year_one_by_id)
