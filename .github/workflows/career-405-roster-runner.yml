@@ -1,0 +1,82 @@
+name: Career #405 roster-only composition runner
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/career-405-roster-runner.yml'
+      - 'scripts/run_career_405_roster_runner.py'
+      - 'tests/test_career_405_roster_runner.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: career-405-roster-runner-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  focused-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and focused test tooling
+        run: python -m pip install -e '.[web]' pytest
+      - name: Test roster-only input, State, and encryption guards
+        run: pytest -q tests/test_career_405_roster_runner.py
+
+  roster-run:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FSFFL_DATABASE_URL: ${{ secrets.FSFFL_DATABASE_URL }}
+      CAREER_ROSTER_P0_ZIP_B64: ${{ secrets.CAREER_ROSTER_P0_ZIP_B64 }}
+      CAREER_RUN_OUTPUT_KEY_B64: ${{ secrets.CAREER_RUN_OUTPUT_KEY_B64 }}
+      FSFFL_DIAGNOSTIC_LEAGUE_ID: ${{ vars.FSFFL_DIAGNOSTIC_LEAGUE_ID }}
+      CAREER_CODE_REF: career/dynamic-materializer-20261011
+    steps:
+      - name: Checkout the runner
+        uses: actions/checkout@v4
+      - name: Checkout current Career PR code by branch ref
+        uses: actions/checkout@v4
+        with:
+          repository: jderhagopian-stack/fsffl-next
+          ref: career/dynamic-materializer-20261011
+          path: career-source
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Career runtime dependencies
+        run: python -m pip install -e './career-source[web]' cryptography
+      - name: Verify required bindings without displaying values
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FSFFL_DATABASE_URL" || { echo 'Missing Actions secret: FSFFL_DATABASE_URL'; exit 2; }
+          test -n "$CAREER_ROSTER_P0_ZIP_B64" || { echo 'Missing Actions secret: CAREER_ROSTER_P0_ZIP_B64'; exit 2; }
+          test -n "$CAREER_RUN_OUTPUT_KEY_B64" || { echo 'Missing Actions secret: CAREER_RUN_OUTPUT_KEY_B64'; exit 2; }
+          test -n "$FSFFL_DIAGNOSTIC_LEAGUE_ID" || { echo 'Missing Actions variable: FSFFL_DIAGNOSTIC_LEAGUE_ID'; exit 2; }
+          echo 'Required bindings present; values withheld.'
+      - name: Record selected code revision
+        run: echo "CAREER_CODE_SHA=$(git -C career-source rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Compose exact-State roster Shapley values (no provider or production writes)
+        working-directory: career-source
+        run: >-
+          python ../scripts/run_career_405_roster_runner.py
+          --league-id "$FSFFL_DIAGNOSTIC_LEAGUE_ID"
+          --source-root .
+          --output ../career-405-roster.enc
+      - name: Upload encrypted roster result only
+        uses: actions/upload-artifact@v4
+        with:
+          name: career-405-roster-encrypted-${{ github.run_id }}
+          path: career-405-roster.enc
+          if-no-files-found: error
+          retention-days: 90
