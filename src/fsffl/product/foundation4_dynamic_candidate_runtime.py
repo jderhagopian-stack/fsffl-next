@@ -39,7 +39,7 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
-def _roster_inputs(context, candidate_ids: tuple[str, ...]) -> list[dict[str, Any]]:
+def _roster_input(context, player_id: str) -> dict[str, Any]:
     state = context.league_state
     assert state is not None
     players = {row.player_id: row for row in state.players}
@@ -49,23 +49,56 @@ def _roster_inputs(context, candidate_ids: tuple[str, ...]) -> list[dict[str, An
         for team_state in state.team_states
         for entry in team_state.roster
     }
-    rows = []
+    player = players.get(player_id)
+    player_state = player_states.get(player_id)
+    roster = roster_by_id.get(player_id)
+    if player is None or player_state is None or player_state.age_years is None or roster is None:
+        raise ValueError(f"exact-State materializer identity/age/roster missing for {player_id}")
+    return {
+        "state_hash": state.state_id,
+        "player_id": player_id,
+        "position": player.position.value,
+        "team_id": roster[0],
+        "roster_slot": roster[1],
+        "age": float(player_state.age_years),
+        "state_as_of": state.as_of.isoformat(),
+    }
+
+
+def _roster_inputs(context, candidate_ids: tuple[str, ...]) -> list[dict[str, Any]]:
+    return [_roster_input(context, player_id) for player_id in candidate_ids]
+
+
+def _candidate_rows(context, live, candidate_ids: tuple[str, ...], forecasts):
+    """Build valid materializer inputs independently; retain bad IDs as failures."""
+    rows: list[dict[str, Any]] = []
+    failures: dict[str, str] = {}
+    future = live.future
+    assert future is not None
     for player_id in candidate_ids:
-        player = players.get(player_id)
-        player_state = player_states.get(player_id)
-        roster = roster_by_id.get(player_id)
-        if player is None or player_state is None or player_state.age_years is None or roster is None:
-            raise ValueError(f"exact-State materializer identity/age/roster missing for {player_id}")
-        rows.append({
-            "state_hash": state.state_id,
-            "player_id": player_id,
-            "position": player.position.value,
-            "team_id": roster[0],
-            "roster_slot": roster[1],
-            "age": float(player_state.age_years),
-            "state_as_of": state.as_of.isoformat(),
-        })
-    return rows
+        try:
+            source = live.candidate_source_rows[player_id]
+            y2, y3 = forecasts.get((player_id, 2)), forecasts.get((player_id, 3))
+            if y2 is None or y3 is None:
+                raise ValueError("accepted P0 Y2/Y3 FutureForecastContract rows missing")
+            roster = _roster_input(context, player_id)
+            rows.append({
+                **roster,
+                "historical_gsis_id": source.historical_gsis_id or "",
+                "experience": source.experience,
+                "league_y1_points": source.connected_league_y1_points,
+                "y2_player_league_expected_points": y2.central_expectation,
+                "y3_player_league_expected_points": y3.central_expectation,
+                "evaluation_as_of": live.evaluation_as_of.isoformat(),
+                "forecast_as_of": live.evaluation_as_of.isoformat(),
+                "identity_as_of": live.evaluation_as_of.isoformat(),
+                "evidence_source": "accepted-p0-live-rostered-candidate",
+                "evidence_version": future.contract.forecast_model_version,
+                "scoring_coordinate": future.contract.scoring_coordinate,
+            })
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            failures[player_id] = f"dynamic candidate inputs invalid: {type(exc).__name__}: {exc}"
+    return rows, failures
 
 
 def materialize_foundation4_dynamic_candidates(context, live, candidate_ids):
@@ -94,33 +127,16 @@ def materialize_foundation4_dynamic_candidates(context, live, candidate_ids):
         raise ValueError("accepted P0 Y2/Y3 FutureForecastContract is unavailable")
     if future.contract.scoring_coordinate != CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE:
         raise ValueError("accepted P0 Y2/Y3 scoring coordinate differs from Foundation 4 FSFFL")
-    candidate_rows = []
     forecasts = {
         (row.player_id, int(row.year_index)): row
         for row in future.contract.forecasts
         if row.player_id in candidate_ids
     }
+    candidate_rows, failures = _candidate_rows(context, live, tuple(candidate_ids), forecasts)
+    if not candidate_rows:
+        return DynamicCareerComponents(y4_y7={}, y8_plus={}, failures=failures)
+    candidate_ids = tuple(row["player_id"] for row in candidate_rows)
     roster_rows = {row["player_id"]: row for row in _roster_inputs(context, candidate_ids)}
-    for player_id in candidate_ids:
-        source = live.candidate_source_rows[player_id]
-        y2, y3 = forecasts.get((player_id, 2)), forecasts.get((player_id, 3))
-        if y2 is None or y3 is None:
-            raise ValueError(f"accepted P0 Y2/Y3 rows missing for {player_id}")
-        roster = roster_rows[player_id]
-        candidate_rows.append({
-            **roster,
-            "historical_gsis_id": source.historical_gsis_id or "",
-            "experience": source.experience,
-            "league_y1_points": source.connected_league_y1_points,
-            "y2_player_league_expected_points": y2.central_expectation,
-            "y3_player_league_expected_points": y3.central_expectation,
-            "evaluation_as_of": live.evaluation_as_of.isoformat(),
-            "forecast_as_of": live.evaluation_as_of.isoformat(),
-            "identity_as_of": live.evaluation_as_of.isoformat(),
-            "evidence_source": "accepted-p0-live-rostered-candidate",
-            "evidence_version": future.contract.forecast_model_version,
-            "scoring_coordinate": future.contract.scoring_coordinate,
-        })
 
     script = Path(__file__).resolve().parents[3] / "scripts" / "materialize_foundation4_dynamic_candidates.py"
     with tempfile.TemporaryDirectory(prefix="career405-foundation4-") as temporary:
@@ -164,5 +180,5 @@ def materialize_foundation4_dynamic_candidates(context, live, candidate_ids):
     return DynamicCareerComponents(
         y4_y7={key: tuple(value) for key, value in by_player.items()},
         y8_plus=tails,
-        failures={},
+        failures=failures,
     )
