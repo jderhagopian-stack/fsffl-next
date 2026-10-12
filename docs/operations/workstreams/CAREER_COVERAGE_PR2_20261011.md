@@ -580,3 +580,8 @@ Actual checks: `compileall`, imports for both new/changed runtime modules, missi
 
 
 Follow-up commit `6d216fca2b9636ea2e121c622422b6ec39827812` corrected the strict Y4–Y7 CSV adapter: it parses only governed contract fields, ignores adjacent provenance columns, and converts numeric CSV fields before Pydantic validation. A typed materializer-row smoke test passed. GitHub reports no Actions run for this head. No production execution occurred; frozen-reference parity and full-path memory remain unverified on the implementation head.
+
+
+## 2026-10-12 — Focused hosted bridge CI selection
+
+Commit `c7044e760330e176e6cb9bc9f46d60965d7ceedf` adds a separate CI selection for `test_hosted_dynamic_career_bridge_composes_candidate_with_full_shapley_cohort` and `test_foundation4_hosted_dynamic_materializer_names_exact_missing_manifest`. The implementation branch still has **no GitHub Actions run/status**. The connector exposes read and rerun operations but no workflow dispatch; therefore this CI step is configured but not executed here. Local pytest is unavailable. Compile/import/missing-manifest/typed-row smoke and whitespace checks passed. Frozen-335 parity and the full-path materializer memory gate are not verified on this implementation head; prior full-path peak remains 490,928 KiB. No live State or publication was run.
