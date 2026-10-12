@@ -178,3 +178,38 @@ def test_durable_roster_checkpoint_rejects_candidate_identity_drift(tmp_path):
             y8_plus_rows=pd.DataFrame(),
             failures={},
         )
+
+
+
+def test_invalid_fringe_candidate_is_failed_without_dropping_valid_roster_input():
+    valid_id, invalid_id = "sleeper:player:9001", "sleeper:player:9002"
+    roster = pd.DataFrame([
+        {"state_hash": "state-1", "player_id": valid_id, "position": "QB", "team_id": "team-1", "roster_slot": "BENCH", "age": 24.0, "state_as_of": "2026-10-08T00:00:00Z"},
+        {"state_hash": "state-1", "player_id": invalid_id, "position": "WR", "team_id": "team-2", "roster_slot": "TAXI", "age": 22.0, "state_as_of": "2026-10-08T00:00:00Z"},
+    ])
+    frame = pd.DataFrame([
+        row(player_id=valid_id),
+        row(
+            player_id=invalid_id,
+            position="WR",
+            team_id="team-2",
+            roster_slot="TAXI",
+            age=22,
+            experience=0,
+            y2_player_league_expected_points=None,
+        ),
+    ])
+
+    valid, failures = MOD.validate_candidates_per_player(frame, set(), 2026, roster)
+
+    assert valid.player_id.tolist() == [valid_id]
+    assert set(failures) == {invalid_id}
+    assert failures[invalid_id]["failure_code"] == "candidate_input_invalid"
+    status = MOD.build_roster_authority_status(
+        roster, set(), {valid_id}, failures
+    ).set_index("player_id")
+    assert status.loc[valid_id, "coverage_status"] == "partial_authority"
+    assert status.loc[invalid_id, "coverage_status"] == "unavailable"
+    assert "invalid candidate y2_player_league_expected_points" in status.loc[
+        invalid_id, "full_career_failure"
+    ]
