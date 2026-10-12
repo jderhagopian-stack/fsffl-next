@@ -204,6 +204,40 @@ def _candidate_year_one_index(
             failures[player_id] = "full_season_year_one_input_missing"
     return indexed, failures
 
+
+def _candidate_future_rows_per_player(
+    artifact: dict[str, object],
+    *,
+    candidate_ids: set[str],
+) -> tuple[list[FuturePlayerHorizonForecast], dict[str, str]]:
+    """Validate Y2/Y3 state distributions independently for each candidate."""
+    valid_rows: list[FuturePlayerHorizonForecast] = []
+    failures: dict[str, str] = {}
+    all_rows = artifact.get("future_forecasts", [])
+    if not isinstance(all_rows, list):
+        return [], {player_id: "future_forecast_rows_invalid" for player_id in candidate_ids}
+    for player_id in sorted(candidate_ids):
+        player_rows = [
+            row for row in all_rows
+            if isinstance(row, dict) and str(row.get("player_id")) == player_id
+        ]
+        years = [int(row.get("year_index", -1)) for row in player_rows]
+        if len(player_rows) != 2 or sorted(years) != [2, 3]:
+            failures[player_id] = "accepted_future_years_y2_y3_missing_or_duplicated"
+            continue
+        try:
+            converted = _candidate_future_rows({
+                "saved_state_hash": artifact.get("saved_state_hash", ""),
+                "evaluation_as_of": artifact.get("evaluation_as_of", ""),
+                "future_forecasts": player_rows,
+            })
+        except Exception as exc:
+            failures[player_id] = f"{type(exc).__name__}: {exc}"
+            continue
+        valid_rows.extend(converted)
+    return valid_rows, failures
+
+
 def compose_saved_rostered_p0(
     *,
     artifact_path: Path,
@@ -298,15 +332,26 @@ def compose_saved_rostered_p0(
         composed_candidate_ids = set(candidate_year_one_by_id)
         observations.extend(candidate_year_one_by_id[player_id] for player_id in sorted(composed_candidate_ids))
 
-    future_rows = _base_future_rows(base) + _candidate_future_rows(
-        {
-            **artifact,
-            "future_forecasts": [
-                row for row in artifact.get("future_forecasts", [])
-                if str(row.get("player_id")) in composed_candidate_ids
-            ],
-        }
+    candidate_future_rows, future_failures = _candidate_future_rows_per_player(
+        artifact,
+        candidate_ids=composed_candidate_ids,
     )
+    year_one_failures.update(future_failures)
+    composed_candidate_ids.difference_update(future_failures)
+    candidate_year_one_by_id = {
+        player_id: forecast
+        for player_id, forecast in candidate_year_one_by_id.items()
+        if player_id in composed_candidate_ids
+    }
+    observations = observations[: len(base)]
+    observations.extend(
+        candidate_year_one_by_id[player_id]
+        for player_id in sorted(composed_candidate_ids)
+    )
+    future_rows = _base_future_rows(base) + [
+        row for row in candidate_future_rows
+        if row.player_id in composed_candidate_ids
+    ]
     contract = FutureForecastContract(
         evaluation_season=2026,
         scoring_coordinate="connected_league_fantasy_points",
