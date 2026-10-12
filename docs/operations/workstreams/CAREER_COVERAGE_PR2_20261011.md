@@ -374,3 +374,15 @@ The exact producer/consumer boundary is confirmed in branch code:
 Therefore the regular runtime producer cannot currently furnish the callback's complete expanded Career contract. Existing tests prove append and matching-State publication seams with fixtures, but not an actual producer-to-publication run. Feeding ROS rows into this seam or broadening the frozen vNext identity table would cross accepted authority. The authorized fix must occur at the producer/persistence boundary: publish the already accepted candidate contract under a private runtime-readable artifact keyed to exact State and input fingerprint, then configure the loader callback to read and validate it. The current chat has no authorized workflow/command execution path to run that producer or publish its private output; no code path can manufacture the missing contract.
 
 Coverage remains 223/250 production rows for saved State e431b5...; no production row changed. Full materializer RSS remains last measured at 490,928 KiB; 195.9 MiB is composer-only. Exact next action: enable the accepted candidate producer to persist its complete full-cohort candidate Career contract privately, then wire that artifact reader into the hosted loader and run the exact-State append/publication integration fixture against those real records. Do not repeat provider acquisition.
+
+## 2026-10-12 — Management correction: Year 1 composition and player-level resilience
+
+This direction supersedes earlier implementation interpretations in this checkpoint that treated ROS projections as unusable for Year 1 or treated the frozen 335-player cohort as a limit on candidate calculation.
+
+- For Career Year 1, use actual year-to-date fantasy points plus the regularly generated rest-of-season projection, in the same accepted league scoring coordinate, to obtain projected full-season points. Do not require a separate full-season artifact when these components are available.
+- Feed those Year 1 values and the already accepted future-year/Shapley Career outputs through the existing Career composition. Trace and wire the regular producer outputs into the existing runtime append path; do not restart provider acquisition or historical/model recovery.
+- Recompute the exact current roster against persisted Career rows before processing. Work all rostered QB/RB/WR/TE players only; the frozen 335 remains a parity reference, not an eligible-player ceiling.
+- Process candidate outcomes independently. A missing or invalid input for one fringe player must produce that player's explicit status and must not abort valid player calculations or suppress the matching-State Career/Position & Depth response. Never zero-fill or fabricate an estimate.
+- Completion evidence is actual player-level outcomes from the real producer-to-composition-to-publication path, frozen-335 numeric parity, and a full-path memory measurement. Fixture-only tests and composer-only RSS do not establish end-to-end completion.
+
+No merge, deployment, production-model change, or infrastructure purchase is authorized by this correction.
