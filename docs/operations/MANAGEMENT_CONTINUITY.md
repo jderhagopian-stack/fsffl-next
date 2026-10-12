@@ -770,3 +770,8 @@ Next gate: wire the hosted exact-State accepted-evidence loader (YTD+ROS plus ex
 ### 2026-10-12 parity follow-up
 
 After commit 035b07734d0cc0c0004813979fcfa5d16d248c57, tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity passed (1 passed). This confirms the existing frozen-reference numerical parity fixture; it does not demonstrate candidate append or live roster coverage.
+
+
+## 2026-10-12 — Career #405 exact-State artifact recheck
+
+Private saved artifacts confirm 11 complete dynamic Career compositions and 16 explicit Year-1 evidence failures for the Oct. 8 State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`; evaluation was Oct. 11 14:12:26Z. The 335 frozen Career base is numerically unchanged (max output delta 0.0; Shapley delta <6e-13; Career parity delta <1e-12). These are not current-State publication rows. Read-only Supabase inspection shows the latest State is still Oct. 8 (250 roster entries) and the latest Career artifact remains the frozen 335-player artifact. Render is running `main` at `2f89e83` with auto-deploy off; current tools provide neither hosted execution nor Actions dispatch. PR #454 head `fd1fec24` has no current CI run/status. Full materializer peak remains last measured at 490,928 KiB, above ~410 MiB. No State refresh, P&D publication, production write, provider acquisition, deployment, or model change occurred. Next gate remains a same-State accepted-input reader and a safe nonproduction invocation of the existing hosted path; then verify roster outcomes, publication identity, parity and full-path RSS. Details: [Career Coverage PR2 checkpoint](workstreams/CAREER_COVERAGE_PR2_20261011.md).

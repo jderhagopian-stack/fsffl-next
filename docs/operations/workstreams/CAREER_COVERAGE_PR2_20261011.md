@@ -503,3 +503,12 @@ Next: wire a hosted, exact-State evidence loader that consumes the normal YTD+RO
 ## 2026-10-12 — Post-commit numeric parity verification
 
 After commit 035b07734d0cc0c0004813979fcfa5d16d248c57, ran tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity: 1 passed. This verifies the frozen-reference numeric parity fixture remains green. It does not claim expanded candidate composition or live roster coverage.
+
+
+## 2026-10-12 — exact-State and accepted artifact recheck
+
+The private durable artifacts were re-read and reconciled by their saved State fingerprint. For saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (as of `2026-10-08T16:20:14.036832Z`), the 27 out-of-reference roster records still contain 11 complete Career compositions and 16 explicit `p0_year1_evidence_incomplete` failures. Evaluation time is `2026-10-11T14:12:26.851497Z`; private composition artifact SHA-256 `2379c42b84116707d92e387e74f05097d13925a80b8dbb34476f47935a1da894`. The 335-player frozen base remains exact after append (max delta 0.0); base Shapley max delta `5.97e-13`, frozen Career max delta `9.10e-13`. The artifact contains no waivers. These remain saved-State results, not current coverage or production rows.
+
+Read-only Supabase inspection confirms the newest persisted league State is still the October 8 snapshot (250 roster entries); the latest stored Career artifact is still the frozen 335-player authority. No matching-State Career/Position & Depth publication was written. Render inspection confirms the hosted service is on `main` at commit `2f89e83`, auto-deploy is off, and this session exposes no service command/exec or workflow-dispatch capability. GitHub reports no workflow run/status attached to PR head `fd1fec24`. The runtime path therefore cannot be exercised against a refreshed exact State here without a production State refresh/publication, which is out of scope.
+
+Full Career materializer RSS is still last measured at 490,928 KiB; it has not passed the ~410 MiB gate. The 195.4 MiB composer-only figure is not a substitute. **Next gate:** wire a same-State durable reader for accepted candidate Y2/Y3 and Y4–Y7/Y8+ inputs into the hosted loader, then run the existing product flow in an authorized nonproduction execution context and verify current roster outcomes, matching-State publication, parity, and full-path RSS. No provider acquisition, production write, deploy, or model change occurred in this checkpoint.
