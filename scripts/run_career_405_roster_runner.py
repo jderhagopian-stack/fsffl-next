@@ -204,17 +204,16 @@ def to_composer_artifact(artifact: dict, exact_rows: dict[str, dict]) -> dict:
     }
 
 
-def encrypt_result(payload: bytes, key_b64: str) -> bytes:
-    try:
-        key = base64.b64decode(key_b64, validate=True)
-    except (ValueError, base64.binascii.Error) as exc:
-        raise ValueError("CAREER_RUN_OUTPUT_KEY_B64 is not valid base64") from exc
-    if len(key) != 32:
-        raise ValueError("CAREER_RUN_OUTPUT_KEY_B64 must decode to 32 bytes")
+def encrypt_result(payload: bytes, passphrase: str) -> bytes:
+    if len(passphrase) < 20:
+        raise ValueError("CAREER_RUN_OUTPUT_KEY must contain at least 20 characters")
     try:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     except ImportError as exc:
         raise RuntimeError("encrypted output requires the cryptography package") from exc
+    key = hashlib.pbkdf2_hmac(
+        "sha256", passphrase.encode("utf-8"), b"career-405-roster-output-v1", 400_000, dklen=32
+    )
     nonce = os.urandom(12)
     return b"C405AESGCM1" + nonce + AESGCM(key).encrypt(nonce, payload, b"career-405-roster")
 
@@ -286,7 +285,7 @@ def main() -> None:
     result["provider_acquisition_performed"] = False
     result["production_write_performed"] = False
     plaintext = (json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
-    output_key = os.environ.get("CAREER_RUN_OUTPUT_KEY_B64", "")
+    output_key = os.environ.get("CAREER_RUN_OUTPUT_KEY", "")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(encrypt_result(plaintext, output_key))
     args.output.chmod(0o600)
