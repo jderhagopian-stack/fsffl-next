@@ -338,6 +338,28 @@ def test_hosted_dynamic_career_bridge_composes_candidate_with_full_shapley_cohor
     assert "route/development modules" in result.failures[candidate_id]
 
 
+def test_hosted_dynamic_career_bridge_scalarizes_structured_provenance() -> None:
+    from fsffl.product.dynamic_career_composition import _scalar_provenance
+
+    encoded = _scalar_provenance(
+        {
+            "dynamic_candidate_ids": ["sleeper:player:b", "sleeper:player:a"],
+            "route_inputs": {"version": 1, "families": ["Y4", "Y5"]},
+            "accepted": True,
+        }
+    )
+
+    assert encoded == {
+        "dynamic_candidate_ids": '["sleeper:player:b","sleeper:player:a"]',
+        "route_inputs": '{"families":["Y4","Y5"],"version":1}',
+        "accepted": True,
+    }
+    assert all(
+        value is None or isinstance(value, (str, bool, int, float))
+        for value in encoded.values()
+    )
+
+
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
     state, observation = _fixture()
     loader = _legacy_p0_loader(
