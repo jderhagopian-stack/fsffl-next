@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from fsffl.forecast.long_horizon_contract import LongHorizonPolicyForecast
+from fsffl.forecast.future_contract import CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE
 from fsffl.value.career_tail import CareerTailAuthority
 
 from .dynamic_career_composition import DynamicCareerComponents
@@ -91,6 +92,8 @@ def materialize_foundation4_dynamic_candidates(context, live, candidate_ids):
     future = live.future
     if future is None:
         raise ValueError("accepted P0 Y2/Y3 FutureForecastContract is unavailable")
+    if future.contract.scoring_coordinate != CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE:
+        raise ValueError("accepted P0 Y2/Y3 scoring coordinate differs from Foundation 4 FSFFL")
     candidate_rows = []
     forecasts = {
         (row.player_id, int(row.year_index)): row
@@ -142,7 +145,19 @@ def materialize_foundation4_dynamic_candidates(context, live, candidate_ids):
             y4_rows = list(csv.DictReader(handle))
         by_player: dict[str, list[LongHorizonPolicyForecast]] = {}
         for row in y4_rows:
-            typed = LongHorizonPolicyForecast.model_validate(row)
+            # The materializer CSV intentionally carries exact-State provenance
+            # columns beside the typed Forecast contract. Only parse the fields
+            # owned by LongHorizonPolicyForecast (which forbids extras).
+            parsed = {
+                key: row[key]
+                for key in LongHorizonPolicyForecast.model_fields
+                if key in row
+            }
+            for field in ("evaluation_season", "year_index", "target_season"):
+                parsed[field] = int(parsed[field])
+            for field in ("central_expectation", "absolute_error_80", "absolute_error_90"):
+                parsed[field] = float(parsed[field])
+            typed = LongHorizonPolicyForecast.model_validate(parsed)
             by_player.setdefault(typed.player_id, []).append(typed)
         tail_payload = json.loads((output / "FOUNDATION4_DYNAMIC_CANDIDATE_Y8_PLUS_AUTHORITY.json").read_text(encoding="utf-8"))
         tails = {str(row["player_id"]): CareerTailAuthority.model_validate(row) for row in tail_payload}
