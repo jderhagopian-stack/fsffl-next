@@ -1,3 +1,15 @@
+## 2026-10-12 — Career #405 checkpoint: regression work passed; runtime delivery still unproven
+
+PR #454 remains draft and unmerged at `19d0f969ee9b00c6b305ad516b32c28baabc985e`. Management reviewed the latest implementation checkpoint:
+
+- The Year-1 bridge now has a regression proving projected full-season points = actual YTD + regular ROS (37.5 + 100.0 = 137.5); no separate full-season artifact is required.
+- CI run `38191001697` passed 139 focused tests, including frozen-335 Shapley/Career parity (max numeric delta 0) and a 335-player composer-only memory result of 195.4 MiB.
+- These are code/fixture results, not live coverage. No current-roster run occurred: 0 newly resolved, 0 new live failures evaluated, and 0 publication writes. The often-repeated 223/250 count is from saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` as of Oct 8; it is not a refreshed current-State count.
+- The full-path materializer gate remains open: last measured 490,928 KiB (~479.4 MiB), above the ~410 MiB target. Composer-only RSS does not close it.
+- Runtime integration is the actual blocker: the hosted app does not configure the expanded-contract callback, and the accepted regular YTD+ROS / future-year candidate outputs are not connected to a runtime-readable composition/publication path. This is an integration gap, not a decision to recover or recreate accepted models.
+
+**Management direction:** Continue #405 from this exact checkpoint. Wire the already accepted, regularly generated outputs into the existing Career composition and matching-State publication path; preserve Year 1 = YTD + ROS, accepted future-year/Shapley authority, exact-State identity, and independent per-player failure status. Recompute roster coverage from the actual State used by that run. A missing fringe-player input must not abort valid players or blank Position & Depth; never invent or zero-fill. The 335 are a parity baseline, not an eligibility or coverage boundary. Do not expand to all 480 nonrostered players or restart provider acquisition/history recovery. Completion still requires actual rostered-player results/statuses, matching-State publication, automatic new-roster resolution, frozen-335 parity, and full-path memory within budget. No merge, deployment, production-model change, infrastructure purchase, or settled source/rights review is authorized.
+
 # FSFFL NEXT — Management Continuity
 
 
