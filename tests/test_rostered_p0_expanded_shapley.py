@@ -93,18 +93,28 @@ def test_year_one_full_season_and_future_inputs_fail_per_player():
         source="fsffl:completed-actuals-plus-ros",
         model_version="next2-completed-actuals-plus-ros-v1",
     ).model_copy(update={"horizon": ForecastHorizon.REST_OF_SEASON})
+    wrong_source = helpers["_make_observation"](
+        player_id="sleeper:player:bad-source",
+        position="TE",
+        points=40.0,
+        as_of=as_of,
+        source="provider:uncomposed-ros",
+        model_version="fixture-v1",
+    )
     year_one, failures = helpers["_candidate_year_one_index"](
-        (good, wrong_horizon),
-        candidate_ids={"sleeper:player:good", "sleeper:player:bad-y1", "sleeper:player:missing"},
+        (good, wrong_horizon, wrong_source),
+        candidate_ids={"sleeper:player:good", "sleeper:player:bad-y1", "sleeper:player:bad-source", "sleeper:player:missing"},
         expected_positions={
             "sleeper:player:good": "RB",
             "sleeper:player:bad-y1": "WR",
+            "sleeper:player:bad-source": "TE",
             "sleeper:player:missing": "TE",
         },
     )
     assert set(year_one) == {"sleeper:player:good"}
     assert year_one["sleeper:player:good"].distribution.mean == 88.5
     assert failures["sleeper:player:bad-y1"] == "year_one_input_is_not_full_season"
+    assert failures["sleeper:player:bad-source"] == "year_one_input_not_governed_actuals_plus_ros"
     assert failures["sleeper:player:missing"] == "full_season_year_one_input_missing"
 
     states = [
