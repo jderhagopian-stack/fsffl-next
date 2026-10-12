@@ -221,7 +221,11 @@ def _candidate_future_rows_per_player(
             row for row in all_rows
             if isinstance(row, dict) and str(row.get("player_id")) == player_id
         ]
-        years = [int(row.get("year_index", -1)) for row in player_rows]
+        try:
+            years = [int(row.get("year_index", -1)) for row in player_rows]
+        except (TypeError, ValueError):
+            failures[player_id] = "accepted_future_year_identity_invalid"
+            continue
         if len(player_rows) != 2 or sorted(years) != [2, 3]:
             failures[player_id] = "accepted_future_years_y2_y3_missing_or_duplicated"
             continue
