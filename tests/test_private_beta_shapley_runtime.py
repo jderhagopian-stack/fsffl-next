@@ -1803,3 +1803,14 @@ def test_intrinsic_loader_drops_stale_durable_restore_after_cache_epoch_advance(
     assert not thread.is_alive()
     assert result["contract"] is None
     assert loader.clear_user_cache(context.user_id) == 0
+
+
+def test_foundation4_hosted_dynamic_materializer_names_exact_missing_manifest(monkeypatch):
+    from fsffl.product.foundation4_dynamic_candidate_runtime import (
+        _MANIFEST_ENV,
+        materialize_foundation4_dynamic_candidates,
+    )
+
+    monkeypatch.delenv(_MANIFEST_ENV, raising=False)
+    with pytest.raises(ValueError, match=_MANIFEST_ENV):
+        materialize_foundation4_dynamic_candidates(None, None, ())

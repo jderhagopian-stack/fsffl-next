@@ -133,8 +133,10 @@ def materialize_foundation4_dynamic_candidates(context, live, candidate_ids):
                         "--state-roster", str(roster_path), "--out-dir", str(root / "out")))
         completed = subprocess.run(command, capture_output=True, text=True, check=False)
         if completed.returncode:
-            detail = (completed.stderr or completed.stdout).strip()[-1200:]
-            raise RuntimeError(f"accepted Foundation 4 materializer exit={completed.returncode}: {detail}")
+            raise RuntimeError(
+                "accepted Foundation 4 materializer returned nonzero exit "
+                f"status {completed.returncode}; child output is suppressed"
+            )
         output = root / "out"
         with (output / "FOUNDATION4_DYNAMIC_CANDIDATE_Y4_Y7.csv").open(newline="", encoding="utf-8") as handle:
             y4_rows = list(csv.DictReader(handle))
