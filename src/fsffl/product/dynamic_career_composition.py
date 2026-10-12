@@ -23,7 +23,7 @@ from fsffl.value.live_intrinsic_calendar import (
 )
 from fsffl.value.shapley_intrinsic_contract import build_shapley_intrinsic_contract
 from fsffl.value.career_forward_intrinsic import build_career_forward_intrinsic_shadow
-from fsffl.value.career_tail import CareerTailAuthority
+from fsffl.value.career_tail import CareerTailAuthority, build_career_tail_authority
 from fsffl.value.long_term_intrinsic import build_long_term_intrinsic_shadow
 from fsffl.product.foundation4_shadow_inputs import (
     provide_foundation4_long_horizon_forecast_contract_for_rules,
@@ -52,6 +52,16 @@ DynamicCareerMaterializer = Callable[
     [UserRuntimeContext, P0LiveCandidateResult, tuple[str, ...]],
     DynamicCareerComponents,
 ]
+
+
+def _scalar_provenance(values: Mapping[str, object]) -> dict[str, object]:
+    """Encode structured source provenance inside the scalar contract schema."""
+    return {
+        key: value
+        if value is None or isinstance(value, (str, bool, int, float))
+        else json.dumps(value, sort_keys=True, separators=(",", ":"))
+        for key, value in values.items()
+    }
 
 
 def _merge_candidate_inputs(
@@ -98,9 +108,11 @@ def _merge_candidate_inputs(
             forecast_source="accepted-base-plus-dynamic-rostered-p0",
             forecasts=future_rows,
             provenance={
-                **base_future.provenance,
+                **_scalar_provenance(base_future.provenance),
                 "dynamic_candidate_count": len(ready_ids),
-                "dynamic_candidate_ids": sorted(ready_ids),
+                "dynamic_candidate_ids": json.dumps(
+                    sorted(ready_ids), separators=(",", ":")
+                ),
             },
         )
         expanded_year_one = tuple(base_year_one) + years
@@ -158,11 +170,13 @@ def _compose_dynamic_career_contract(
         raise ValueError("Foundation 4 materializer returned components for a failed player")
     long_contract = LongHorizonForecastAuthorityContract.model_validate(
         {
-            **frozen_long.model_dump(),
+            **frozen_long.model_dump(exclude={"provenance"}),
             "forecasts": tuple(frozen_long.forecasts) + candidate_long_rows,
             "provenance": {
-                **frozen_long.provenance,
-                "dynamic_candidate_ids": sorted(ready),
+                **_scalar_provenance(frozen_long.provenance),
+                "dynamic_candidate_ids": json.dumps(
+                    sorted(ready), separators=(",", ":")
+                ),
                 "dynamic_materializer": "accepted-foundation4-dynamic-candidate-materializer",
             },
         }
@@ -170,7 +184,13 @@ def _compose_dynamic_career_contract(
     long_term = build_long_term_intrinsic_shadow(
         long_contract, rules=state.league.rules
     )
-    tails: dict[str, CareerTailAuthority] = provide_foundation4_terminal_features()
+    terminal_features = provide_foundation4_terminal_features()
+    tails: dict[str, CareerTailAuthority] = {
+        player_id: build_career_tail_authority(
+            terminal_features[player_id], rules=state.league.rules
+        )
+        for player_id in sorted(terminal_features)
+    }
     tails.update({player_id: components.y8_plus[player_id] for player_id in ready})
     expanded = build_career_forward_intrinsic_shadow(
         expanded_current, long_term, tails
@@ -209,7 +229,6 @@ def build_dynamic_rostered_career_contract(
     ),
 ) -> ExpandedCareerContractResult:
     """Run live Y1 and accepted Y2/Y3 scoring, then isolate later Career gaps."""
-    del frozen_reference  # The accepted base inputs come from the configured loader.
     state = context.league_state
     if state is None:
         raise ValueError("dynamic Career bridge requires canonical State")
