@@ -112,7 +112,7 @@ def _career_position_depth_rows(state, career_forward) -> list[dict[str, object]
     )
     estimate_ids = {row.player_id for row in career_forward.estimates}
     roster_ids = {str(row["player_id"]) for row in roster_rows}
-    failures = dict(career_forward.player_coverage_failures)
+    failures = dict(getattr(career_forward, "player_coverage_failures", {}))
     failures.update({
         player_id: "career_estimate_missing_from_exact_state_contract"
         for player_id in roster_ids - estimate_ids
