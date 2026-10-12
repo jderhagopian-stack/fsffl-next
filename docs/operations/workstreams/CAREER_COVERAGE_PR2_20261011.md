@@ -522,3 +522,7 @@ No hosted Career producer callback is configured in `persistent_webapp.py`, so n
 ### 2026-10-12 — Persisted input inventory correction
 
 Read-only Supabase metadata confirms the accepted production artifacts are present: for league `sleeper:1312071960615731200`, active `career_intrinsic_v1` and `foundation4_long_horizon_y4_y7_shadow` artifacts were computed 2026-10-06, alongside the accepted `shapley_intrinsic_contract`; the exact-State `current_forecast_evidence` for `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` was computed 2026-10-09. The State history still identifies that same State as the latest persisted State (as-of 2026-10-08 16:20:14 UTC). This confirms the accepted baseline inputs exist; it does **not** establish a refreshed State, a complete expanded candidate contract for that State, or current roster coverage. No artifact payload was exported or changed. The application still has no configured expanded-contract callback or execution that joins the normal YTD+ROS producer with candidate inputs. Do not describe the accepted baseline artifacts as absent; the remaining gap is their State-bound dynamic runtime integration and safe execution.
+
+### 2026-10-12 — Composer RSS measurement
+
+The focused 335-player composer-only memory benchmark passed at **185.6 MiB** peak RSS. This is below the ~410 MiB budget for that isolated composer; it is not a full Career materializer measurement. The full materializer remains at its previous measured **490,928 KiB**, above target. No current-State roster composition was performed.
