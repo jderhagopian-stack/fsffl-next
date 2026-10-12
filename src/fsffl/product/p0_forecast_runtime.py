@@ -6,6 +6,7 @@ import io
 import json
 import math
 from dataclasses import dataclass
+from datetime import datetime
 from types import SimpleNamespace
 from typing import Mapping
 
@@ -153,6 +154,9 @@ class P0SourceRow:
     prior2_gap_age_state_z: float | None
     source_percentile: float
     state_percentile: float
+    evidence_as_of: str | None = None
+    evidence_source_version: str | None = None
+    evidence_sha256: str | None = None
 
     @property
     def sleeper_external_id(self) -> str:
@@ -569,13 +573,83 @@ def _source_for_player(league_state: LeagueState, player_id: str) -> P0SourceRow
     return next(iter(candidates.values()))
 
 
-def governed_p0_player_ids(league_state: LeagueState) -> tuple[str, ...]:
-    """Return canonical current player ids owned by the frozen P0/H3 authority.
+def _validate_candidate_sources(
+    league_state: LeagueState,
+    candidate_source_rows: Mapping[str, P0SourceRow] | None,
+) -> dict[str, P0SourceRow]:
+    """Validate caller-built, point-in-time feature rows for dynamic State players.
 
-    Membership is determined only by the frozen P0 identity table and canonical
-    player/provider refs. Current State size or provider Forecast coverage cannot
-    broaden this governed cohort.
+    Candidate rows are input evidence, not fitted parameters. Requiring a complete
+    row keeps the existing P0 missingness flags and route/model unchanged; this
+    boundary deliberately does not manufacture unavailable age, history, state,
+    percentile, or scoring features.
     """
+
+    if not candidate_source_rows:
+        return {}
+    state_players = {player.player_id: player for player in league_state.players}
+    result: dict[str, P0SourceRow] = {}
+    for player_id, source in candidate_source_rows.items():
+        canonical_id = str(player_id)
+        player = state_players.get(canonical_id)
+        if player is None:
+            raise ValueError(f"P0 candidate evidence is outside exact State: {canonical_id}")
+        if canonical_id in _SOURCE_BY_CURRENT_ID or canonical_id in _SOURCE_BY_PLAYER_ID:
+            raise ValueError(f"P0 candidate evidence cannot replace frozen reference row: {canonical_id}")
+        if source.current_player_id != canonical_id:
+            raise ValueError(f"P0 candidate evidence canonical identity mismatch for {canonical_id}")
+        if source.position != player.position.value:
+            raise ValueError(f"P0 candidate evidence position mismatch for {canonical_id}")
+        if source.position not in {Position.QB.value, Position.RB.value, Position.WR.value, Position.TE.value}:
+            raise ValueError(f"P0 candidate evidence has unsupported position for {canonical_id}")
+        if source.source_state not in STATE_NAMES:
+            raise ValueError(f"P0 candidate evidence has invalid source state for {canonical_id}")
+        if source.career_stage not in {"developmental", "established", "veteran"}:
+            raise ValueError(f"P0 candidate evidence has invalid career stage for {canonical_id}")
+        if not all(math.isfinite(float(value)) for value in (source.age, source.standard_y1_points, source.source_percentile, source.state_percentile)):
+            raise ValueError(f"P0 candidate evidence has non-finite required inputs for {canonical_id}")
+        if not (0.0 <= source.source_percentile <= 1.0 and 0.0 <= source.state_percentile <= 1.0):
+            raise ValueError(f"P0 candidate evidence has out-of-range percentiles for {canonical_id}")
+        optional_numeric = (
+            source.prior1_points,
+            source.games,
+            source.opportunity_per_game,
+            source.prior_age_state_resid_z,
+            source.prior2_mean_age_state_z,
+            source.prior2_gap_age_state_z,
+        )
+        if any(value is not None and not _finite(value) for value in optional_numeric):
+            raise ValueError(f"P0 candidate evidence has non-finite optional inputs for {canonical_id}")
+        if source.age < 0 or source.experience < 0 or source.standard_y1_points < 0:
+            raise ValueError(f"P0 candidate evidence has invalid age, experience, or Y1 for {canonical_id}")
+        if not source.evidence_as_of or not source.evidence_source_version or not source.evidence_sha256:
+            raise ValueError(f"P0 candidate evidence lacks source/PIT provenance for {canonical_id}")
+        try:
+            evidence_as_of = datetime.fromisoformat(source.evidence_as_of.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(f"P0 candidate evidence has invalid as-of timestamp for {canonical_id}") from exc
+        if evidence_as_of.tzinfo is None or evidence_as_of > league_state.as_of:
+            raise ValueError(f"P0 candidate evidence postdates or lacks PIT boundary for {canonical_id}")
+        if len(source.evidence_sha256) != 64 or any(ch not in "0123456789abcdef" for ch in source.evidence_sha256.lower()):
+            raise ValueError(f"P0 candidate evidence has invalid evidence digest for {canonical_id}")
+        if source.prior1_coverage not in (0, 1) or source.prior2_coverage not in (0, 1):
+            raise ValueError(f"P0 candidate evidence has invalid historical coverage flags for {canonical_id}")
+        if source.prior1_coverage and not _finite(source.prior1_points):
+            raise ValueError(f"P0 candidate prior1 coverage lacks a value for {canonical_id}")
+        if source.prior2_coverage and not all(
+            _finite(value)
+            for value in (source.prior2_mean_age_state_z, source.prior2_gap_age_state_z)
+        ):
+            raise ValueError(f"P0 candidate prior2 coverage lacks values for {canonical_id}")
+        result[canonical_id] = source
+    return result
+
+
+def governed_p0_player_ids(
+    league_state: LeagueState,
+    candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
+) -> tuple[str, ...]:
+    """Return reference and explicitly evidenced dynamic P0 subjects in exact State."""
 
     governed: list[str] = []
     for player in league_state.players:
@@ -584,6 +658,7 @@ def governed_p0_player_ids(league_state: LeagueState) -> tuple[str, ...]:
         except ValueError:
             continue
         governed.append(player.player_id)
+    governed.extend(_validate_candidate_sources(league_state, candidate_source_rows))
     return tuple(sorted(set(governed)))
 
 
@@ -591,19 +666,28 @@ def build_p0_standard_future_materialization(
     *,
     league_state: LeagueState,
     standard_year_one: tuple[ForecastObservation, ...],
+    candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
 ) -> P0FutureMaterialization:
     year_one = _year_one_index(standard_year_one)
     if not year_one:
         raise ValueError("P0 requires a non-empty frozen standard/non-PPR Year-1 coordinate")
 
+    candidates = _validate_candidate_sources(league_state, candidate_source_rows)
     players: dict[str, P0PlayerForecast] = {}
     for player_id, observation in sorted(year_one.items()):
-        source = _source_for_player(league_state, player_id)
+        source = candidates.get(player_id)
+        if source is None:
+            source = _source_for_player(league_state, player_id)
         if observation.position.value != source.position:
             raise ValueError(
                 f"P0 current source position mismatch for {player_id}: "
                 f"{observation.position.value} != {source.position}"
             )
+        if player_id in candidates and (
+            observation.as_of > league_state.as_of
+            or observation.provenance.effective_at > league_state.as_of
+        ):
+            raise ValueError(f"P0 candidate Year-1 Forecast postdates exact State for {player_id}")
         actual = float(observation.distribution.mean)
         expected = float(source.standard_y1_points)
         if not math.isclose(actual, expected, rel_tol=0.0, abs_tol=P0_STANDARD_PARITY_TOLERANCE):
