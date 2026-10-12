@@ -196,8 +196,13 @@ def _candidate_year_one_index(
             failures[player_id] = "year_one_input_position_mismatch_exact_state"
         elif not math.isfinite(float(observation.distribution.mean)):
             failures[player_id] = "year_one_full_season_points_are_not_finite"
-        elif not observation.source or not observation.model_version:
-            failures[player_id] = "year_one_input_provenance_missing"
+        elif observation.source not in {
+            "fsffl:completed-actuals-plus-ros",
+            "fsffl:completed-actuals-only",
+        }:
+            failures[player_id] = "year_one_input_not_governed_actuals_plus_ros"
+        elif not observation.model_version:
+            failures[player_id] = "year_one_input_model_provenance_missing"
         else:
             indexed[player_id] = observation
     for player_id in candidate_ids:
