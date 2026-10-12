@@ -765,3 +765,8 @@ No roster execution or live coverage change occurred. Saved State e431b5cb9e340e
 Frozen-335 numeric parity was not rerun. Full Career materializer memory remains last measured at 490,928 KiB (above ~410 MiB); this change does not claim to reduce it. No provider acquisition, production write, merge, deploy, or model change.
 
 Next gate: wire the hosted exact-State accepted-evidence loader (YTD+ROS plus existing future candidate inputs) into the callback, then run the normal nonproduction path on a refreshed State and verify per-player outcomes, matching-State publication, frozen-335 parity, and the full-path memory budget.
+
+
+### 2026-10-12 parity follow-up
+
+After commit 035b07734d0cc0c0004813979fcfa5d16d248c57, tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity passed (1 passed). This confirms the existing frozen-reference numerical parity fixture; it does not demonstrate candidate append or live roster coverage.

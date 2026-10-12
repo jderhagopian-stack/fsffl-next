@@ -498,3 +498,8 @@ Coverage/execution: no current roster run and no new Career values were produced
 Memory/parity: no full materializer benchmark was run. The latest full-materializer peak remains 490,928 KiB, above the ~410 MiB target. The failure-isolation test keeps frozen estimates unchanged by construction, but this turn did not rerun the numeric frozen-335 parity fixture.
 
 Next: wire a hosted, exact-State evidence loader that consumes the normal YTD+ROS result plus the already accepted candidate future inputs, isolate failures per player, then run against a refreshed State only in the established nonproduction execution path. Re-run numeric frozen-335 parity and the full materializer RSS benchmark. Keep the 480 waiver pool excluded.
+
+
+## 2026-10-12 — Post-commit numeric parity verification
+
+After commit 035b07734d0cc0c0004813979fcfa5d16d248c57, ran tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity: 1 passed. This verifies the frozen-reference numeric parity fixture remains green. It does not claim expanded candidate composition or live roster coverage.
