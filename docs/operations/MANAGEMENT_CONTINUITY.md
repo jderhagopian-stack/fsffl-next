@@ -1,3 +1,14 @@
+## 2026-10-12 — Career #405 saved-State end-to-end replay
+
+On PR #454, bridge serialization fixes are committed as `98da18bb561f64bf704131cdb95ebe959616acb2`; the focused structured-provenance regression is `7553b63e7cd912d4d727569b994d3b1835ebb6a9`. The saved-State nonproduction replay used the retained P0 roster packet and State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (2026-10-08T16:20:14Z), with no provider acquisition or production write.
+
+Replay result: 346 Career estimates (frozen 335 + 11 dynamic), 11/11 candidates complete, 16/16 Y1 failures remain individually explicit, and all 250 rostered QB/RB/WR/TE rows remain in matching-State Position & Depth (234 available, 16 failure). Frozen Career-335 max delta was 0.0; frozen Shapley-335 max component delta was 5.97e-13; retained Y8+ replay max center/bound delta was 6.31e-11. Peak process RSS was 402,588 KiB (393.2 MiB). The 176 accepted Y4–Y7 policy rows came from the retained P0 packet; Y8+ was recalculated using the accepted tail builder and checked against that packet. This replay verifies the hosted loader/composer/response memory footprint, not a fresh execution of the route-based Foundation 4 Y4–Y7 materializer.
+
+The remaining 16 exact Year-1 failures are:
+`sleeper:player:11638`, `12484`, `12510`, `13268`, `13270`, `13289`, `13306`, `13353`, `13402`, `13411`, `13418`, `3321`, `4018`, `6803`, `7567`, `8210`. Their retained P0 packet records each preserve provider metric availability and the missing two-source raw-ensemble contract; no value was zero-filled.
+
+The focused provenance regression passed as a direct Python assertion. The environment has no pytest installation. GitHub Actions lookup for implementation head `7553b63e7cd912d4d727569b994d3b1835ebb6a9` returned no PR workflow runs; this GitHub connection exposes contents updates but no workflow dispatch, so CI confirmation and the repository Foundation 4 materializer-memory gate remain unverified. Saved-State replay log: `/tmp/career405-e2e.log`; result JSON: `/tmp/career405-saved-state-e2e.json`.
+
 
 ## 2026-10-11 — Career #405 roster run and implementation checkpoint
 
