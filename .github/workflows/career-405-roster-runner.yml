@@ -37,7 +37,7 @@ jobs:
     env:
       FSFFL_DATABASE_URL: ${{ secrets.FSFFL_DATABASE_URL }}
       CAREER_ROSTER_P0_ZIP_B64: ${{ secrets.CAREER_ROSTER_P0_ZIP_B64 }}
-      CAREER_RUN_OUTPUT_KEY_B64: ${{ secrets.CAREER_RUN_OUTPUT_KEY_B64 }}
+      CAREER_RUN_OUTPUT_KEY: ${{ secrets.CAREER_RUN_OUTPUT_KEY }}
       FSFFL_DIAGNOSTIC_LEAGUE_ID: ${{ vars.FSFFL_DIAGNOSTIC_LEAGUE_ID }}
       CAREER_CODE_REF: career/dynamic-materializer-20261011
     steps:
@@ -61,7 +61,7 @@ jobs:
           set -euo pipefail
           test -n "$FSFFL_DATABASE_URL" || { echo 'Missing Actions secret: FSFFL_DATABASE_URL'; exit 2; }
           test -n "$CAREER_ROSTER_P0_ZIP_B64" || { echo 'Missing Actions secret: CAREER_ROSTER_P0_ZIP_B64'; exit 2; }
-          test -n "$CAREER_RUN_OUTPUT_KEY_B64" || { echo 'Missing Actions secret: CAREER_RUN_OUTPUT_KEY_B64'; exit 2; }
+          test -n "$CAREER_RUN_OUTPUT_KEY" || { echo 'Missing Actions secret: CAREER_RUN_OUTPUT_KEY'; exit 2; }
           test -n "$FSFFL_DIAGNOSTIC_LEAGUE_ID" || { echo 'Missing Actions variable: FSFFL_DIAGNOSTIC_LEAGUE_ID'; exit 2; }
           echo 'Required bindings present; values withheld.'
       - name: Record selected code revision
