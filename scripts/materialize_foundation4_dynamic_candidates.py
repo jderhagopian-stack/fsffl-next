@@ -92,6 +92,67 @@ def validate_candidates(frame: pd.DataFrame, reference_ids: set[str], season: in
     return frame.sort_values("player_id").reset_index(drop=True)
 
 
+
+def validate_candidates_per_player(
+    frame: pd.DataFrame,
+    reference_ids: set[str],
+    season: int,
+    exact_roster: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[str, dict[str, object]]]:
+    """Validate rows independently; one malformed candidate cannot abort its cohort."""
+    if "player_id" not in frame.columns:
+        raise ValueError("candidate evidence has no player_id column")
+    player_ids = frame.player_id.astype(str).str.strip()
+    if player_ids.eq("").any():
+        raise ValueError("candidate evidence contains a row without a canonical player_id")
+    duplicate_ids = set(player_ids[player_ids.duplicated(keep=False)])
+    valid: list[pd.DataFrame] = []
+    failures: dict[str, dict[str, object]] = {}
+
+    def provenance_for(index: int) -> dict[str, str]:
+        row = frame.iloc[index]
+        fields = (
+            "state_hash", "state_as_of", "evaluation_as_of", "forecast_as_of",
+            "identity_as_of", "evidence_source", "evidence_version",
+            "scoring_coordinate",
+        )
+        return {
+            field: str(row[field])
+            for field in fields
+            if field in frame.columns and pd.notna(row[field])
+        }
+
+    for index, player_id in enumerate(player_ids):
+        if player_id in duplicate_ids:
+            failures[player_id] = {
+                "failure_code": "duplicate_candidate_input",
+                "failure_detail": "Candidate evidence contains more than one row for this canonical player ID.",
+                "evidence_checked": ["candidate_input_validation", "exact_state_roster"],
+                "provenance": provenance_for(index),
+            }
+            continue
+        try:
+            validated = validate_candidates(
+                frame.iloc[[index]].copy(), reference_ids, season, exact_roster
+            )
+        except (TypeError, ValueError, KeyError, OverflowError) as exc:
+            failures[player_id] = {
+                "failure_code": "candidate_input_invalid",
+                "failure_detail": f"{type(exc).__name__}: {exc}",
+                "evidence_checked": ["candidate_input_validation", "exact_state_roster"],
+                "provenance": provenance_for(index),
+            }
+            continue
+        valid.append(validated)
+
+    candidates = (
+        pd.concat(valid, ignore_index=True).sort_values("player_id").reset_index(drop=True)
+        if valid else frame.iloc[0:0].copy().reset_index(drop=True)
+    )
+    if set(candidates.player_id.astype(str)) & set(failures):
+        raise ValueError("candidate validation accounted for one player as both success and failure")
+    return candidates, failures
+
 def build_candidate_features(dev, candidates, reference, raw, players, residual, innovation):
     x = candidates.copy()
     x["output_player_id"] = x.player_id.astype(str)
@@ -268,9 +329,15 @@ def write_durable_roster_checkpoint(
     return hashlib.sha256(encoded).hexdigest()
 
 
-def build_roster_authority_status(roster, reference_ids: set[str], candidate_ids: set[str]):
+def build_roster_authority_status(
+    roster,
+    reference_ids: set[str],
+    candidate_ids: set[str],
+    candidate_failures: dict[str, dict[str, object]] | None = None,
+):
     """Account for every exact-State QB/RB/WR/TE without hiding missing subjects."""
     rows = []
+    candidate_failures = candidate_failures or {}
     for row in roster.sort_values("player_id").itertuples():
         player_id = str(row.player_id)
         if player_id in reference_ids:
@@ -280,7 +347,10 @@ def build_roster_authority_status(roster, reference_ids: set[str], candidate_ids
             failure = "exact_Current_Y1_Y3_Shapley_contract_absent"
         else:
             status, components = "unavailable", "none"
-            failure = "governed_dynamic_P0_candidate_packet_absent_for_this_exact_State"
+            failure = str(candidate_failures.get(player_id, {}).get(
+                "failure_detail",
+                "governed_dynamic_P0_candidate_packet_absent_for_this_exact_State",
+            ))
         rows.append({
             "player_id": player_id, "position": str(row.position),
             "team_id": str(row.team_id), "roster_slot": str(row.roster_slot),
@@ -344,7 +414,12 @@ def main():
     reference = source.build_current(dev, reference_board, raw, players, residual, innovation)
     reference_player_count = int(reference.output_player_id.nunique())
     reference_ids = set(reference.output_player_id.astype(str))
-    candidates = validate_candidates(pd.read_csv(a.candidate_input), set(reference.output_player_id.astype(str)), 2026, roster_frame)
+    candidates, candidate_input_failures = validate_candidates_per_player(
+        pd.read_csv(a.candidate_input),
+        set(reference.output_player_id.astype(str)),
+        2026,
+        roster_frame,
+    )
     current = build_candidate_features(dev, candidates, reference, raw, players, residual, innovation)
     # Drop materialization-only wide tables before loading/using the accepted
     # route-training panel; this bounds the scorer phase to one historical panel.
@@ -393,6 +468,7 @@ def main():
         roster_frame,
         reference_ids,
         set(candidates.player_id.astype(str)),
+        candidate_input_failures,
     )
     roster_status.to_csv(out / "CAREER_EXACT_STATE_ROSTER_AUTHORITY.csv", index=False)
     authority_by_id = {
@@ -428,6 +504,16 @@ def main():
                 "evidence_checked": json.loads(row["evidence_checked"]),
                 "provenance": json.loads(row["provenance"]),
             }
+        for player_id, failure in candidate_input_failures.items():
+            if player_id in failure_records:
+                failure_records[player_id] = {
+                    "failure_code": "conflicting_candidate_input_records",
+                    "failure_detail": "Candidate input validation failure conflicts with a separate source failure record.",
+                    "evidence_checked": ["candidate_input_validation", "candidate_failure_record"],
+                    "provenance": failure.get("provenance", {}),
+                }
+            else:
+                failure_records[player_id] = failure
         state_times = pd.to_datetime(roster_frame.state_as_of, utc=True, errors="coerce").dropna().unique()
         if len(state_times) != 1:
             raise ValueError("durable roster output requires one exact State timestamp")
