@@ -549,3 +549,22 @@ Ran the existing nonproduction roster-only P0 adapter against the exact persiste
 The provider sources were available globally, but the exact-State canonical join had no CBS metrics for these 16, and no complete two-source ROS ensemble for any of them. The old 11 composed roster Career values remain unchanged; frozen-base parity results remain as previously recorded (append delta 0, Shapley max delta 5.97e-13, Career max delta 9.10e-13). This run did not publish Career or Position & Depth rows. No source authority, scoring rule, or accepted future model was changed.
 
 **Still open:** `persistent_webapp.py` continues to construct `CareerIntrinsicLoader` without an expanded-contract callback, so the hosted Career route is not yet connected end-to-end. The full materializer still has no new below-budget measurement (last recorded full-path peak 490,928 KiB versus ~410 MiB); the 195.6 MiB composer benchmark is not a full-path result. The precise production operation remains prohibited: refreshing/publishing a new State and writing matching-State Career/Position & Depth rows. The code-path integration and full materializer gate remain PR work; this bounded run itself made no production write.
+
+
+## 2026-10-12 — Hosted dynamic Y1–Y3 Career bridge
+
+Implementation commit: `a662ab2d05621381b1d61e720d62e703574496d8`.
+
+The hosted `CareerIntrinsicLoader` now has a dynamic roster callback and semantic fingerprint. It invokes the accepted P0 live candidate producer, which aggregates completed Sleeper weekly actuals, joins the governed CBS/Razzball ROS ensemble, scores standard and connected-league Year 1, and passes successful candidate source rows through the unchanged accepted P0 Y2/Y3 scorer. Dynamic source rows are additive; frozen-source parity validation remains unchanged for the accepted reference IDs. Exact-State provider identity joins are retained.
+
+Successful dynamic candidates are composed alongside the configured base future cohort through the full calendar/Shapley composer before any Career estimate is considered. Each exact-State roster player remains isolated. Candidate rows currently stop with the explicit missing contract: candidate-specific `LongHorizonForecastAuthorityContract` Y4–Y7 rows and Y8+ `CareerTailFeatures` in the accepted FSFFL coordinate. The hosted accepted Y4–Y7 and terminal providers currently expose rows only for the frozen 335. No candidate-alone Shapley, invented input, or zero-fill is used. Existing loader failure propagation preserves each roster row in matching-State Position & Depth.
+
+### Verification on code head `a662ab2`
+
+- Python `compileall` for the changed production and test modules: **passed**.
+- `git diff --check`: **passed**.
+- Focused local pytest: **not run**; this workspace's Python has no `pytest` module, and the offline package cache lacks project dependencies.
+- GitHub Actions for `a662ab2d05621381b1d61e720d62e703574496d8`: **no workflow run returned** by the PR-run lookup at documentation time.
+- Frozen-335 numeric parity and full materializer memory gate: **not verified on this head**. Existing CI defines the 335 parity and full dynamic-materializer regression gates; rerun/trigger CI and record the actual outcome before calling either gate passed.
+
+No production source acquisition, refresh, publication, write, merge, or deployment was performed. The bounded missing-input contract above is the remaining product limitation for candidates with successful Y1–Y3 inputs.
