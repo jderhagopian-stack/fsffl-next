@@ -868,3 +868,73 @@ def test_current_ros_fumbles_gap_stays_fail_closed_for_multi_coordinate_partial(
     assert forward == ()
     assert filled == 0
     assert called is False
+
+
+def test_completed_actuals_plus_ros_is_accepted_as_career_year_one_input():
+    import runpy
+    from pathlib import Path
+
+    from fsffl.forecast.backtest import RealizedOutcome
+    from fsffl.forecast.season_rollforward import (
+        compose_completed_actuals_with_ros_per_player,
+    )
+
+    start = datetime(2026, 9, 1, tzinfo=UTC)
+    actual_end = datetime(2026, 9, 8, tzinfo=UTC)
+    ros_start = actual_end
+    season_end = datetime(2027, 1, 5, tzinfo=UTC)
+    cutoff = datetime(2026, 10, 12, tzinfo=UTC)
+    actual = RealizedOutcome(
+        player_id="sleeper:player:career-bridge",
+        position=Position.RB,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=start,
+        period_end=actual_end,
+        actual=37.5,
+        finalized_at=actual_end,
+        provenance=Provenance(
+            source="sleeper:weekly_nfl_stats",
+            retrieved_at=actual_end,
+            effective_at=actual_end,
+        ),
+    )
+    ros = ForecastObservation(
+        player_id=actual.player_id,
+        position=Position.RB,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=ros_start,
+        period_end=season_end,
+        distribution=ForecastDistribution(mean=100.0, stddev=18.0),
+        source="fsffl:in-season-league-scored",
+        model_version="accepted-current-ros-fixture",
+        as_of=cutoff,
+        provenance=Provenance(
+            source="fsffl:in-season-league-scored",
+            retrieved_at=cutoff,
+            effective_at=cutoff,
+        ),
+    )
+
+    full_season, failures = compose_completed_actuals_with_ros_per_player(
+        completed_actuals=(actual,),
+        ros_forecasts=(ros,),
+        season_start=start,
+        expected_roster_positions={actual.player_id: Position.RB},
+    )
+    assert failures == {}
+    assert len(full_season) == 1
+    assert full_season[0].distribution.mean == pytest.approx(137.5)
+    assert full_season[0].source == "fsffl:completed-actuals-plus-ros"
+
+    composer = runpy.run_path(
+        str(Path(__file__).parents[1] / "scripts/compose_rostered_p0_expanded_shapley.py")
+    )
+    accepted, candidate_failures = composer["_candidate_year_one_index"](
+        full_season,
+        candidate_ids={actual.player_id},
+        expected_positions={actual.player_id: "RB"},
+    )
+    assert candidate_failures == {}
+    assert set(accepted) == {actual.player_id}
+    assert accepted[actual.player_id].distribution.mean == pytest.approx(137.5)
