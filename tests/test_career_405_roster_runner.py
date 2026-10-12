@@ -43,7 +43,7 @@ def _checkpoint():
             "position": "QB",
             "year_index": year,
             "target_season": 2026 + year - 1,
-            "central_expectation": 10.0,
+            "central_expectation": 2.5,
             "scoring_coordinate": "connected_league_fantasy_points",
             "model_version": "fixture-model",
             "source": "accepted-fixture",
