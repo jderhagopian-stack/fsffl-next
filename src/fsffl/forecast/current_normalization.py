@@ -82,6 +82,18 @@ def _player_indexes(players: tuple[Player, ...]) -> tuple[
     return exact, loose
 
 
+def _provider_identity_index(players: tuple[Player, ...]) -> dict[tuple[str, str], list[Player]]:
+    """Index only provider identities already asserted by canonical State."""
+
+    result: dict[tuple[str, str], list[Player]] = {}
+    for player in players:
+        for reference in player.provider_refs:
+            key = (reference.provider.strip().lower(), reference.external_id.strip())
+            if key[0] and key[1]:
+                result.setdefault(key, []).append(player)
+    return result
+
+
 def _float_or_none(value: str | None) -> float | None:
     raw = (value or "").replace(",", "").strip()
     if not raw:
@@ -170,22 +182,34 @@ def normalize_projection_snapshot(
     if player_universe is None:
         raise ValueError("canonical player universe is unavailable")
     exact_index, loose_index = _player_indexes(tuple(player_universe))
+    provider_index = _provider_identity_index(tuple(player_universe))
     observations: list[ForecastObservation] = []
 
     for index, row in enumerate(snapshot.rows):
         cooperative_cpu_yield(index)
-        name = _normalize_name(row.player_name)
-        team = _normalize_team(row.nfl_team)
-        exact = exact_index.get((name, row.position, team), [])
-        if len(exact) == 1:
-            player = exact[0]
-        elif len(exact) > 1:
-            continue
-        else:
-            loose = loose_index.get((name, row.position), [])
-            if len(loose) != 1:
+        provider_matches = provider_index.get(
+            (snapshot.provider.strip().lower(), row.external_id.strip()), []
+        )
+        if provider_matches:
+            # An asserted provider identity is authoritative only when unique and
+            # consistent with canonical State position. Do not silently fall back
+            # to a name match when the explicit mapping is ambiguous or stale.
+            if len(provider_matches) != 1 or provider_matches[0].position != row.position:
                 continue
-            player = loose[0]
+            player = provider_matches[0]
+        else:
+            name = _normalize_name(row.player_name)
+            team = _normalize_team(row.nfl_team)
+            exact = exact_index.get((name, row.position, team), [])
+            if len(exact) == 1:
+                player = exact[0]
+            elif len(exact) > 1:
+                continue
+            else:
+                loose = loose_index.get((name, row.position), [])
+                if len(loose) != 1:
+                    continue
+                player = loose[0]
 
         provenance = Provenance(
             source=snapshot.provider,
