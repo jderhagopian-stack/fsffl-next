@@ -56,6 +56,7 @@ def _checkpoint():
         "team_id": "team-fixture",
         "roster_slot": "BENCH",
         "state_hash": STATE_ID,
+        "status": "p0_inputs_available_career_partial",
         "p0_input": {
             "league_y1_points": 15.0,
             "p0_canonical_packets": packets,
