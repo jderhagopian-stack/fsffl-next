@@ -157,6 +157,9 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
     lineup_capacity_signature: str
     estimates: tuple[CareerForwardIntrinsicPlayerEstimate, ...]
     player_count: Annotated[int, Field(ge=1)]
+    # Product evidence failures are carried beside (never as fabricated values
+    # inside) the accepted Career estimates. This is coverage metadata only.
+    player_coverage_failures: dict[str, str] = Field(default_factory=dict)
     model_version: str = CAREER_FORWARD_INTRINSIC_MODEL_VERSION
     contract_version: str = CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION
     raw_quantity: str = CAREER_FORWARD_RAW_QUANTITY
@@ -183,6 +186,10 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
             raise ValueError("career-forward shadow is raw economic authority")
         if self.market_inputs_used:
             raise ValueError("career-forward shadow cannot consume Market")
+        if set(self.player_coverage_failures) & {row.player_id for row in self.estimates}:
+            raise ValueError("Career player cannot be both estimated and failed")
+        if any(not str(reason).strip() for reason in self.player_coverage_failures.values()):
+            raise ValueError("Career player coverage failures require explicit reasons")
         if self.ignored_long_term_residual_rule_stats and not (
             self.scoring_coordinate_limitation or ""
         ).strip():

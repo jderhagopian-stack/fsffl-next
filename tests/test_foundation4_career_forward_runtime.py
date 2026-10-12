@@ -17,6 +17,7 @@ from fsffl.product.foundation4_career_forward_runtime import (
     FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
     FOUNDATION4_Y4_Y7_ARTIFACT_KIND,
     CareerIntrinsicLoader,
+    ExpandedCareerContractResult,
     Foundation4CareerForwardShadowLoader,
 )
 from fsffl.product.foundation4_shadow_inputs import (
@@ -41,8 +42,13 @@ from fsffl.state.models import (
     LeagueRules,
     LeagueState,
     LineupRequirement,
+    Player,
+    Position,
     RosterSlot,
+    RosterEntry,
     ScoringRule,
+    Team,
+    TeamState,
 )
 from fsffl.value.shapley_intrinsic_contract import (
     CompletedSourceFactProvenance,
@@ -731,3 +737,53 @@ def test_runtime_rejects_expanded_candidates_outside_exact_roster(materialized) 
     )
     with pytest.raises(ValueError, match="outside exact-State roster"):
         loader(context)
+
+
+def test_expanded_roster_failure_is_visible_without_blocking_frozen_career(materialized) -> None:
+    _persistence, _calls, _base_loader, context, frozen = materialized
+    candidate_id = "sleeper:player:fringe-explicit-failure"
+    state_player = Player(
+        player_id=candidate_id,
+        full_name="Fringe Fixture",
+        position=Position.WR,
+    )
+    roster_entry = RosterEntry(player_id=candidate_id, slot=RosterSlot.TAXI)
+    team = Team(
+        team_id="team-1",
+        league_id="sleeper:foundation4-test",
+        display_name="Team 1",
+    )
+    team_state = TeamState(team_id="team-1", roster=(roster_entry,))
+    exact_state = context.league_state.model_copy(
+        update={
+            "teams": (team,),
+            "players": context.league_state.players + (state_player,),
+            "team_states": (team_state,),
+        }
+    )
+    exact_context = UserRuntimeContext(user_id=context.user_id, league_state=exact_state)
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _context: _current_intrinsic(),
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        expanded_career_contract_loader=lambda _context, _frozen: (
+            ExpandedCareerContractResult(
+                contract=None,
+                failures={candidate_id: "year_one_ros_fantasy_points_missing"},
+            )
+        ),
+        expanded_career_contract_fingerprint_resolver=lambda _context: "per-player-failure-fixture-v1",
+    )
+
+    result = loader(exact_context)
+    assert result.player_count == frozen.player_count
+    assert result.player_coverage_failures == {
+        candidate_id: "year_one_ros_fantasy_points_missing"
+    }
+    rows = _career_position_depth_rows(exact_state, result)
+    by_id = {row["player_id"]: row for row in rows}
+    assert by_id[candidate_id]["state_hash"] == exact_state.state_id
+    assert by_id[candidate_id]["career_coverage_status"] == "career_authority_failure"
+    assert (
+        by_id[candidate_id]["career_failure_reason"]
+        == "year_one_ros_fantasy_points_missing"
+    )

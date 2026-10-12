@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass, field
 from threading import RLock
-from typing import Callable
+from typing import Callable, Mapping
 
 from fsffl.persistence.contracts import (
     ArtifactKey,
@@ -59,9 +60,22 @@ FOUNDATION4_RUNTIME_VERSION = (
 
 CurrentIntrinsicLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
 CurrentIntrinsicFingerprintResolver = Callable[[UserRuntimeContext], str]
+@dataclass(frozen=True)
+class ExpandedCareerContractResult:
+    """Per-State append result with explicit failures for unsupported subjects.
+
+    The callback composes valid candidates together in the full accepted cohort,
+    while recording invalid/missing candidate evidence independently. No metric is
+    supplied for a failed player.
+    """
+
+    contract: CareerForwardIntrinsicShadowContract | None
+    failures: Mapping[str, str] = field(default_factory=dict)
+
+
 ExpandedCareerContractLoader = Callable[
     [UserRuntimeContext, CareerForwardIntrinsicShadowContract],
-    CareerForwardIntrinsicShadowContract | None,
+    ExpandedCareerContractResult | CareerForwardIntrinsicShadowContract | None,
 ]
 ExpandedCareerContractFingerprintResolver = Callable[[UserRuntimeContext], str]
 
@@ -341,22 +355,60 @@ class CareerIntrinsicLoader:
             return frozen_reference
         if context.league_state is None:
             raise ValueError("dynamic Career append requires canonical league State")
-        expanded = loader(context, frozen_reference)
+        loaded = loader(context, frozen_reference)
+        if isinstance(loaded, ExpandedCareerContractResult):
+            expanded = loaded.contract
+            failures = dict(loaded.failures)
+        else:
+            expanded = loaded
+            failures = {}
+        state_players = {row.player_id: row for row in context.league_state.players}
+        roster_ids = {
+            entry.player_id
+            for team_state in context.league_state.team_states
+            for entry in team_state.roster
+        }
+        if failures:
+            invalid_failure_ids = set(failures) - roster_ids
+            if invalid_failure_ids:
+                raise ValueError(
+                    "expanded Career failures include players outside exact-State roster: "
+                    + ", ".join(sorted(invalid_failure_ids))
+                )
+            for player_id, reason in failures.items():
+                player = state_players.get(player_id)
+                position = str(player.position.value) if player is not None else ""
+                if position not in {"QB", "RB", "WR", "TE"}:
+                    raise ValueError(
+                        f"expanded Career failure has unsupported exact-State roster identity {player_id}"
+                    )
+                if not str(reason).strip():
+                    raise ValueError(
+                        f"expanded Career failure reason is empty for {player_id}"
+                    )
+            frozen_ids = {row.player_id for row in frozen_reference.estimates}
+            if set(failures) & frozen_ids:
+                raise ValueError("expanded Career failure overlaps frozen reference")
         if expanded is None:
-            return frozen_reference
+            if not failures:
+                return frozen_reference
+            return frozen_reference.model_copy(
+                update={
+                    "player_coverage_failures": {
+                        **frozen_reference.player_coverage_failures,
+                        **failures,
+                    }
+                }
+            )
         frozen_ids = {row.player_id for row in frozen_reference.estimates}
         expanded_ids = {row.player_id for row in expanded.estimates}
         candidate_ids = expanded_ids - frozen_ids
         if not candidate_ids:
             return frozen_reference
 
-        state_players = {row.player_id: row for row in context.league_state.players}
         expanded_by_id = {row.player_id: row for row in expanded.estimates}
-        roster_ids = {
-            entry.player_id
-            for team_state in context.league_state.team_states
-            for entry in team_state.roster
-        }
+        if set(failures) & candidate_ids:
+            raise ValueError("expanded Career player cannot have both value and failure")
         outside_roster = candidate_ids - roster_ids
         if outside_roster:
             raise ValueError(
@@ -374,10 +426,18 @@ class CareerIntrinsicLoader:
                 raise ValueError(
                     f"expanded Career position differs from exact-State roster for {player_id}"
                 )
-        return append_dynamic_career_estimates(
+        appended = append_dynamic_career_estimates(
             frozen_reference,
             expanded,
             candidate_player_ids=candidate_ids,
+        )
+        return appended.model_copy(
+            update={
+                "player_coverage_failures": {
+                    **frozen_reference.player_coverage_failures,
+                    **failures,
+                }
+            }
         )
 
     def __call__(
