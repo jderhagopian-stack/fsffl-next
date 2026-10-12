@@ -838,3 +838,8 @@ Verification on the code commits: Python `compileall`, product-module import smo
 
 
 Follow-up implementation correction on `6d216fca2b9636ea2e121c622422b6ec39827812`: the hosted adapter now strips materializer provenance-only columns before parsing the strict Y4–Y7 contract and converts CSV numeric fields to their typed forms. This avoids accepting an invalid payload shape or rejecting the materializer's provenance columns. The typed CSV parsing smoke test passed. GitHub Actions still reports no runs for the implementation heads; parity and full materializer RSS remain open as recorded above.
+
+
+## 2026-10-12 — Focused hosted bridge CI selection
+
+Commit `c7044e760330e176e6cb9bc9f46d60965d7ceedf` adds a dedicated CI step for the hosted dynamic loader → full Shapley bridge and accepted-materializer missing-contract regression. The current branch head has **no GitHub Actions run/status**; this connector can read/rerun existing jobs but has no dispatch action, and repository API commits have not produced a run. The focused step is configured for the next PR-triggered run, but no pass is claimed. Current local checks remain compile/import/typed-row/missing-manifest smoke and `git diff --check`; local pytest is unavailable. Frozen-reference parity and full materializer RSS remain unverified on this head. No production action occurred.
