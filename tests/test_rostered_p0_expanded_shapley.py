@@ -68,6 +68,76 @@ def test_saved_p0_forecasts_convert_to_six_state_future_contract() -> None:
         ) <= 1e-9
 
 
+
+def test_year_one_full_season_and_future_inputs_fail_per_player():
+    from datetime import datetime, timezone
+    from fsffl.forecast.models import ForecastHorizon
+
+    helpers = runpy.run_path(
+        str(ROOT / "scripts/compose_rostered_p0_expanded_shapley.py")
+    )
+    as_of = datetime(2026, 10, 12, tzinfo=timezone.utc)
+    good = helpers["_make_observation"](
+        player_id="sleeper:player:good",
+        position="RB",
+        points=88.5,
+        as_of=as_of,
+        source="fsffl:completed-actuals-plus-ros",
+        model_version="next2-completed-actuals-plus-ros-v1",
+    )
+    wrong_horizon = helpers["_make_observation"](
+        player_id="sleeper:player:bad-y1",
+        position="WR",
+        points=24.0,
+        as_of=as_of,
+        source="fsffl:completed-actuals-plus-ros",
+        model_version="next2-completed-actuals-plus-ros-v1",
+    ).model_copy(update={"horizon": ForecastHorizon.REST_OF_SEASON})
+    year_one, failures = helpers["_candidate_year_one_index"](
+        (good, wrong_horizon),
+        candidate_ids={"sleeper:player:good", "sleeper:player:bad-y1", "sleeper:player:missing"},
+        expected_positions={
+            "sleeper:player:good": "RB",
+            "sleeper:player:bad-y1": "WR",
+            "sleeper:player:missing": "TE",
+        },
+    )
+    assert set(year_one) == {"sleeper:player:good"}
+    assert year_one["sleeper:player:good"].distribution.mean == 88.5
+    assert failures["sleeper:player:bad-y1"] == "year_one_input_is_not_full_season"
+    assert failures["sleeper:player:missing"] == "full_season_year_one_input_missing"
+
+    states = [
+        {"scenario_id": state, "probability": probability, "fantasy_points": points}
+        for state, probability, points in (
+            ("out", 0.1, 0.0), ("depth", 0.1, 5.0), ("usable", 0.2, 15.0),
+            ("starter", 0.2, 40.0), ("premium", 0.2, 80.0), ("elite", 0.2, 140.0),
+        )
+    ]
+    future = []
+    for player_id in ("sleeper:player:good", "sleeper:player:bad-future"):
+        for year_index in (2, 3):
+            future.append({
+                "player_id": player_id,
+                "position": "RB",
+                "year_index": year_index,
+                "target_season": 2026 + year_index - 1,
+                "central_expectation": 50.0,
+                "scoring_coordinate": "connected_league_fantasy_points",
+                "model_version": "fixture-p0-v1",
+                "source": "fixture:accepted-p0",
+                "scenarios": states if player_id == "sleeper:player:good" else states[:1],
+            })
+    valid_future, future_failures = helpers["_candidate_future_rows_per_player"](
+        {"saved_state_hash": "state-hash", "evaluation_as_of": as_of.isoformat(), "future_forecasts": future},
+        candidate_ids={"sleeper:player:good", "sleeper:player:bad-future", "sleeper:player:no-future"},
+    )
+    assert {row.player_id for row in valid_future} == {"sleeper:player:good"}
+    assert future_failures["sleeper:player:bad-future"].startswith("ValueError: state geometry mismatch")
+    assert future_failures["sleeper:player:no-future"] == "accepted_future_years_y2_y3_missing_or_duplicated"
+
+
+
 def test_candidate_forecast_conversion_rejects_missing_state() -> None:
     helpers = runpy.run_path(
         str(ROOT / "scripts/compose_rostered_p0_expanded_shapley.py")
