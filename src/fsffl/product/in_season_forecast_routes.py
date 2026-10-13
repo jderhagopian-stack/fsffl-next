@@ -85,6 +85,7 @@ def install_in_season_forecast_routes(
                 state,
                 preseason_season_forecasts=baseline,
                 history_writer=projection_history_store,
+                allow_governed_fumbles_ros_gap=True,
             )
         except Exception as exc:
             raise HTTPException(
