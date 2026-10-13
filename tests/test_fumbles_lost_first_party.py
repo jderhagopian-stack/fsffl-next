@@ -263,6 +263,27 @@ def test_wr_shadow_formula_reproduces_accepted_week2_output() -> None:
     assert evidence.evidence_tier == FirstPartyFumblesLostEvidenceTier.HISTORY_PLUS_CURRENT
 
 
+def test_unmatched_provider_subject_does_not_abort_canonical_fumbles_supplement() -> None:
+    player_id = "sleeper:player:10213"
+    unmatched_provider_id = "provider:unresolved-player"
+    base = _base(player_id, Position.WR) + _base(unmatched_provider_id, Position.WR)
+    supplement = build_first_party_fumbles_lost_supplement(
+        _state(player_id, Position.WR),
+        base_observations=base,
+        stats_source=FakeSleeperStats(
+            {
+                1: (_line(player_id, 1, rush_att=1.0, rec=3.0),),
+                2: (_line(player_id, 2, rec=3.0),),
+            }
+        ),  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    )
+
+    assert supplement.subject_universe_player_ids == (player_id,)
+    assert tuple(row.player_id for row in supplement.observations) == (player_id,)
+    assert tuple(row.player_id for row in supplement.player_evidence) == (player_id,)
+
+
 def test_qb_opportunity_uses_offensive_sack_not_idp_sack() -> None:
     player_id = "sleeper:player:11256"
     source = FakeSleeperStats(
