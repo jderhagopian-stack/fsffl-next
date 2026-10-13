@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Mapping
 
 from fsffl.forecast.current_normalization import _STAT_METRICS
+from fsffl.forecast.fumbles_lost_first_party import FIRST_PARTY_FUMBLES_LOST_SOURCE
 from fsffl.forecast.in_season_runtime import (
     ProjectionHistoryReader,
     build_in_season_forecasts,
@@ -377,23 +378,51 @@ def _score_complete_single_source_year_one(
     source_rows: tuple[ForecastObservation, ...],
     completed_actuals: tuple[ForecastObservation, ...],
     league_state: LeagueState,
+    supplemental_rows: tuple[ForecastObservation, ...] = (),
 ) -> tuple[
     tuple[ForecastObservation, ...],
     ForecastObservation | None,
     ForecastObservation | None,
 ] | None:
-    """Return a complete low-confidence Y1 only for one complete ROS source."""
-    if not source_rows or any(
+    """Score one provider's complete ROS plus the accepted FUMBLES_LOST coordinate.
+
+    The first-party coordinate remains separately sourced and validated; it does
+    not count as a second provider or make an otherwise partial provider estimate
+    eligible. It only closes the single missing fum_lost scoring coordinate.
+    """
+    if not source_rows:
+        return None
+    provider_id = source_rows[0].source
+    if any(
         item.player_id != player_id
         or item.horizon != ForecastHorizon.REST_OF_SEASON
-        or item.source != source_rows[0].source
+        or item.source != provider_id
         for item in source_rows
     ):
+        return None
+    supplement_keys = {
+        (item.player_id, item.position, item.metric, item.period_start, item.period_end)
+        for item in source_rows
+    }
+    if any(
+        item.player_id != player_id
+        or item.position != source_rows[0].position
+        or item.horizon != ForecastHorizon.REST_OF_SEASON
+        or item.metric != ForecastMetric.FUMBLES_LOST
+        or item.source != FIRST_PARTY_FUMBLES_LOST_SOURCE
+        or item.period_start != source_rows[0].period_start
+        or item.period_end != source_rows[0].period_end
+        or (item.player_id, item.position, item.metric, item.period_start, item.period_end)
+        in supplement_keys
+        for item in supplemental_rows
+    ):
+        return None
+    if len(supplemental_rows) > 1:
         return None
     raw = _year_one_raw_forecasts(
         league_state=league_state,
         completed_actuals=completed_actuals,
-        ros_forecasts=source_rows,
+        ros_forecasts=source_rows + supplemental_rows,
     )
     try:
         standard, _ = _score_season_points(raw, league_state=league_state, standard=True)
@@ -742,11 +771,17 @@ def build_live_p0_rostered_candidate_forecasts(
                 for (source_player, source_id), source_rows in sorted(one_source_rows.items()):
                     if source_player != player_id:
                         continue
+                    fumbles_rows = tuple(
+                        item
+                        for item in ros_fumbles_lost
+                        if item.player_id == player_id
+                    )
                     candidate_year_one = _score_complete_single_source_year_one(
                         player_id=player_id,
                         source_rows=source_rows,
                         completed_actuals=completed_raw,
                         league_state=league_state,
+                        supplemental_rows=fumbles_rows,
                     )
                     if candidate_year_one is None:
                         continue
@@ -754,6 +789,8 @@ def build_live_p0_rostered_candidate_forecasts(
                     if standard_item is None or league_item is None:
                         continue
                     evidence_mode = f"single_source_low_confidence:{source_id}"
+                    if fumbles_rows:
+                        evidence_mode += "+first_party_fumbles_lost"
                     y1_raw = tuple(
                         item for item in y1_raw if item.player_id != player_id
                     ) + source_raw
