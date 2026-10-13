@@ -94,6 +94,47 @@ def _provider_identity_index(players: tuple[Player, ...]) -> dict[tuple[str, str
     return result
 
 
+def map_projection_rows(
+    snapshot: CurrentProjectionSnapshot,
+    *,
+    players: tuple[Player, ...],
+) -> tuple[tuple[CurrentProjectionRow, Player], ...]:
+    """Map provider rows to any supplied canonical player universe.
+
+    This is shared by normal forecast ingestion and bounded acquisition packets.
+    The frozen Career reference cohort is deliberately not consulted here.
+    Explicit canonical provider references win; otherwise only unique exact
+    name/position/team or unique name/position matches are accepted.
+    """
+    exact_index, loose_index = _player_indexes(players)
+    provider_index = _provider_identity_index(players)
+    mapped: list[tuple[CurrentProjectionRow, Player]] = []
+    for index, row in enumerate(snapshot.rows):
+        cooperative_cpu_yield(index)
+        provider_matches = provider_index.get(
+            (snapshot.provider.strip().lower(), row.external_id.strip()), []
+        )
+        if provider_matches:
+            if len(provider_matches) != 1 or provider_matches[0].position != row.position:
+                continue
+            player = provider_matches[0]
+        else:
+            name = _normalize_name(row.player_name)
+            team = _normalize_team(row.nfl_team)
+            exact = exact_index.get((name, row.position, team), [])
+            if len(exact) == 1:
+                player = exact[0]
+            elif len(exact) > 1:
+                continue
+            else:
+                loose = loose_index.get((name, row.position), [])
+                if len(loose) != 1:
+                    continue
+                player = loose[0]
+        mapped.append((row, player))
+    return tuple(mapped)
+
+
 def _float_or_none(value: str | None) -> float | None:
     raw = (value or "").replace(",", "").strip()
     if not raw:
@@ -181,36 +222,10 @@ def normalize_projection_snapshot(
     player_universe = league_state.players if league_state is not None else players
     if player_universe is None:
         raise ValueError("canonical player universe is unavailable")
-    exact_index, loose_index = _player_indexes(tuple(player_universe))
-    provider_index = _provider_identity_index(tuple(player_universe))
     observations: list[ForecastObservation] = []
 
-    for index, row in enumerate(snapshot.rows):
-        cooperative_cpu_yield(index)
-        provider_matches = provider_index.get(
-            (snapshot.provider.strip().lower(), row.external_id.strip()), []
-        )
-        if provider_matches:
-            # An asserted provider identity is authoritative only when unique and
-            # consistent with canonical State position. Do not silently fall back
-            # to a name match when the explicit mapping is ambiguous or stale.
-            if len(provider_matches) != 1 or provider_matches[0].position != row.position:
-                continue
-            player = provider_matches[0]
-        else:
-            name = _normalize_name(row.player_name)
-            team = _normalize_team(row.nfl_team)
-            exact = exact_index.get((name, row.position, team), [])
-            if len(exact) == 1:
-                player = exact[0]
-            elif len(exact) > 1:
-                continue
-            else:
-                loose = loose_index.get((name, row.position), [])
-                if len(loose) != 1:
-                    continue
-                player = loose[0]
-
+    mapped_rows = map_projection_rows(snapshot, players=tuple(player_universe))
+    for row, player in mapped_rows:
         provenance = Provenance(
             source=snapshot.provider,
             retrieved_at=snapshot.captured_at,
