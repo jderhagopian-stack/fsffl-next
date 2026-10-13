@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import importlib.util
 import json
 import os
@@ -9,7 +10,11 @@ import pandas as pd
 import pytest
 from types import SimpleNamespace
 
-from fsffl.product.foundation4_dynamic_candidate_runtime import _candidate_rows
+from fsffl.product.foundation4_dynamic_candidate_runtime import (
+    _accepted_materializer_manifest,
+    _candidate_rows,
+    _write_candidate_failures,
+)
 
 FILE = Path(__file__).parents[1] / "scripts/materialize_foundation4_dynamic_candidates.py"
 SPEC = importlib.util.spec_from_file_location("career_dynamic", FILE)
@@ -40,6 +45,27 @@ def test_dynamic_input_is_canonical_and_point_in_time():
         MOD.validate_candidates(pd.DataFrame([row(forecast_as_of="2026-10-11T00:00:00Z")]), set(), 2026, roster)
     with pytest.raises(ValueError, match="overlaps frozen"):
         MOD.validate_candidates(pd.DataFrame([row(player_id="frozen")]), {"frozen"}, 2026, roster)
+
+
+def test_raw_history_reader_limits_columns_to_accepted_feature_contract(tmp_path):
+    required = {
+        "player_id": ["gsis-1"], "season": [2025], "position": ["QB"],
+        "team": ["TST"], "fantasy_points": [10.0], "fantasy_points_ppr": [10.0],
+        "receptions": [0], "passing_interceptions": [0], "sack_fumbles_lost": [0],
+        "rushing_fumbles_lost": [0], "receiving_fumbles_lost": [0],
+    }
+    source = tmp_path / "wide-history.csv"
+    pd.DataFrame({**required, "unconsumed_column": ["unused"]}).to_csv(source, index=False)
+    frame = MOD.read_raw_history(source)
+    assert "unconsumed_column" not in frame
+    assert set(required).issubset(frame.columns)
+
+
+def test_raw_history_reader_fails_closed_when_scoring_evidence_missing(tmp_path):
+    source = tmp_path / "incomplete-history.csv"
+    pd.DataFrame({"player_id": ["gsis-1"], "season": [2025]}).to_csv(source, index=False)
+    with pytest.raises(ValueError, match="raw scoring evidence missing required columns"):
+        MOD.read_raw_history(source)
 
 
 def test_invalid_fringe_candidate_is_failed_without_dropping_valid_roster_input():
@@ -162,17 +188,59 @@ def test_dynamic_materializer_input_failure_isolated_to_missing_future_player():
     }
 
 
+def test_hosted_materializer_resolves_manifest_from_mounted_bundle_root(tmp_path, monkeypatch):
+    manifest = {"model-a-rows": str(tmp_path / "model-a.csv")}
+    (tmp_path / "foundation4_dynamic_materializer_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+    monkeypatch.delenv("FSFFL_FOUNDATION4_DYNAMIC_MATERIALIZER_MANIFEST", raising=False)
+    monkeypatch.setenv("FSFFL_FOUNDATION4_DYNAMIC_MATERIALIZER_ROOT", str(tmp_path))
+    loaded, path = _accepted_materializer_manifest()
+    assert loaded == manifest
+    assert path == tmp_path / "foundation4_dynamic_materializer_manifest.json"
+
+
+def test_hosted_materializer_rejects_unconfigured_bundle(monkeypatch):
+    monkeypatch.delenv("FSFFL_FOUNDATION4_DYNAMIC_MATERIALIZER_MANIFEST", raising=False)
+    monkeypatch.delenv("FSFFL_FOUNDATION4_DYNAMIC_MATERIALIZER_ROOT", raising=False)
+    with pytest.raises(ValueError, match="accepted Foundation 4 materializer bundle is not configured"):
+        _accepted_materializer_manifest()
+
+
+def test_hosted_materializer_checkpoint_receives_explicit_candidate_failures(tmp_path):
+    live = SimpleNamespace(
+        evaluation_as_of=pd.Timestamp("2026-10-11T14:12:26.851497Z").to_pydatetime(),
+        future=SimpleNamespace(contract=SimpleNamespace(
+            forecast_model_version="accepted-p0-v1",
+            scoring_coordinate="connected_league_fantasy_points",
+        )),
+        failures={"sleeper:player:9002": "accepted Y1 raw metrics incomplete"},
+    )
+    target = tmp_path / "candidate-failures.csv"
+    _write_candidate_failures(
+        target, {"sleeper:player:9002": "candidate row unavailable"}, live
+    )
+    failure = next(csv.DictReader(target.open(encoding="utf-8")))
+    assert failure["failure_detail"] == "accepted Y1 raw metrics incomplete"
+    assert json.loads(failure["evidence_checked"]) == [
+        "accepted_p0_year1", "accepted_p0_y2_y3", "exact_state_roster"
+    ]
+    assert json.loads(failure["provenance"])["future_forecast_model_version"] == "accepted-p0-v1"
+
+
 
 def test_durable_roster_checkpoint_atomically_accounts_for_success_and_failure(tmp_path):
     success = "sleeper:player:9001"
     failed = "sleeper:player:9002"
     roster = [
         {"player_id": success, "position": "QB", "team_id": "t1", "roster_slot": "BENCH",
-         "state_hash": "state-1"},
+         "state_hash": "state-1", "state_as_of": "2026-10-08T00:00:00.036832Z"},
         {"player_id": failed, "position": "RB", "team_id": "t2", "roster_slot": "IR",
-         "state_hash": "state-1"},
+         "state_hash": "state-1", "state_as_of": "2026-10-08T00:00:00.036832Z"},
     ]
-    candidate_inputs = pd.DataFrame([row(team_id="t1")])
+    candidate_inputs = pd.DataFrame([row(
+        team_id="t1", state_as_of="2026-10-08T00:00:00.036832Z"
+    )])
     y4_y7 = pd.DataFrame([
         {"player_id": success, "year_index": year, "policy_id": policy,
          "central_expectation": 10.0 + year}
@@ -192,7 +260,7 @@ def test_durable_roster_checkpoint_atomically_accounts_for_success_and_failure(t
     digest = MOD.write_durable_roster_checkpoint(
         path,
         state_hash="state-1",
-        state_as_of="2026-10-08T00:00:00Z",
+        state_as_of="2026-10-08T00:00:00.036832Z",
         evaluation_as_of="2026-10-10T00:00:00Z",
         roster_rows=roster,
         candidate_inputs=candidate_inputs,
