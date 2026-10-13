@@ -1,3 +1,23 @@
+## 2026-10-13 — Management handoff: roster + Explore + on-demand Career coverage
+
+**Current work:** Career Coverage #405, draft PR #454, branch `career/dynamic-materializer-20261011`, latest observed head `17b2f73438acc1f5a00194dd8db85b2026847c09`. The exact-State test roster is still State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`, as-of 2026-10-08. This is the latest persisted league State, not a current-day roster refresh.
+
+**New Management read-only evidence (Supabase, 2026-10-13):** Projection snapshots are newer than that State. The latest saved 2026 rest-of-season snapshots are Razzball #68 and CBS #69, both retrieved 2026-10-12 02:27 UTC. Their payload manifests report 1,633 Razzball and 1,960 CBS source observations, while retaining only 327 and 280 mapped player rows. Both state that mapping was performed by unique normalized player name + position against the governed current 335-player board; raw HTML was not retained. The 16 roster-gap IDs have zero canonical observation rows in both mapped snapshots. Therefore the saved database proves that the app retained no rows for those players; it does not prove the provider source had no rows. The 335-board mapping boundary is a concrete coverage defect. No provider request, production refresh, or write was made during this inspection.
+
+**Product target (latest Management correction, comments #6135898625 and #6136252650):**
+- Calculate and maintain Career values for every player in the exact current roster.
+- Support Explore with a bounded cohort: 50 by default, 100 maximum.
+- Calculate other players on demand; newly rostered waiver pickups must enter the roster path automatically.
+- Do not bulk-calculate the remaining ~480 waiver players.
+- Frozen 335 is a parity reference, not the subject-eligibility limit.
+- Preserve fail-closed identity matching and individual player failure isolation.
+
+**Implementation evidence:** The route-based Foundation 4 path ran successfully against the Oct. 8 saved State: 11 dynamic candidates received values; Position & Depth retained all 250 rows (234 values, 16 individual failures); frozen Career delta was 0.0; full-path RSS was 397.54 MiB. A later selection correction passed focused local tests 27/27 and confirms all 16 exact-State gap IDs are selected. No fresh materializer run followed that selection change, and GitHub Actions has no run/status for the current head. Thus this work has not achieved complete roster coverage, a current-State run, or CI confirmation.
+
+**Next execution:** Remove the fixed 335-player limit at the shared source identity/mapping boundary while limiting Career computation to exact-State roster players, the bounded Explore cohort, and explicit on-demand requests. Preserve canonical source identity/provenance for eligible selection; never map ambiguities by guess. After the fix, use the previously authorized bounded roster-only acquisition to capture rows the 335-only mapper discarded (not the broad 507-player run or all waivers). Compose complete YTD actuals + ROS Year 1 and accepted future inputs through Career/Shapley → matching-State Position & Depth. Test newly rostered and Explore candidates through the same path. Update the player ledger, run focused GitHub CI, verify parity and full-path memory, and record a current-State result when a current State is available.
+
+**Release:** Management comment #6134676365 conditionally authorizes mark-ready, merge, and normal deployment after the agreed gates pass; no release has occurred. Older blanket no-merge/no-deploy wording is superseded. No model/source authority change, infrastructure purchase, broad waiver batch, or production write is authorized by this handoff.
+
 ## 2026-10-13 — Exact-State dynamic roster selection fix
 
 Implementation commit: `a4403800e430d7bd8295d72f95a892c465c04837`. Regression-test commit: `d0d2382b55dec660bd79bf64a11afba5fb130e2f`.
