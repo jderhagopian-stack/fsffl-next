@@ -15,6 +15,11 @@ from fsffl.forecast.in_season_runtime import (
     build_in_season_forecasts,
     default_in_season_projection_fetchers,
 )
+from fsffl.forecast.projection_history import (
+    ProjectionObservationRecord,
+    ProjectionRevision,
+    ProjectionSnapshotRecord,
+)
 from fsffl.forecast.models import (
     ForecastDistribution,
     ForecastHorizon,
@@ -194,6 +199,45 @@ def test_ros_runtime_ensembles_scores_and_persists_source_evidence_without_simul
     assert rush.horizon == ForecastHorizon.REST_OF_SEASON
     assert result.fantasy_point_forecasts
     assert all(item.horizon == ForecastHorizon.REST_OF_SEASON for item in result.fantasy_point_forecasts)
+
+
+def test_saved_ros_revisions_preserve_canonical_ids_without_provider_name_rematching():
+    revisions = []
+    metrics = (
+        (ForecastMetric.RUSH_YARDS, 700.0),
+        (ForecastMetric.RUSH_TD, 4.0),
+        (ForecastMetric.RECEPTIONS, 30.0),
+        (ForecastMetric.REC_YARDS, 250.0),
+        (ForecastMetric.REC_TD, 2.0),
+    )
+    for provider, delta in (("cbs", 0.0), ("razzball", 200.0)):
+        effective = NOW - timedelta(hours=2)
+        revisions.append(ProjectionRevision(
+            snapshot=ProjectionSnapshotRecord(
+                provider=provider, season=2026,
+                horizon=ForecastHorizon.REST_OF_SEASON, week=None,
+                period_start=PERIOD_START, period_end=PERIOD_END,
+                effective_at=effective, retrieved_at=effective,
+                source_version=f"{provider}-saved-v1", usage_class="test",
+                content_fingerprint=f"{provider}-fingerprint", snapshot_id=None,
+            ),
+            observations=tuple(ProjectionObservationRecord(
+                player_id="p1", external_id=f"stale:{provider}:name-key",
+                position=Position.RB, metric=metric, mean=value + delta,
+            ) for metric, value in metrics),
+        ))
+
+    result = build_in_season_forecasts(
+        _state(), horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        source_revisions=tuple(revisions), fetchers=(), clock=lambda: NOW,
+    )
+
+    assert result.successful_source_ids == ("cbs", "razzball")
+    assert {row.player_id for row in result.source_observations} == {"p1"}
+    rush = next(row for row in result.raw_ensemble if row.metric == ForecastMetric.RUSH_YARDS)
+    assert rush.player_id == "p1"
+    assert rush.distribution.mean == pytest.approx(800.0)
 
 
 def test_week_runtime_requires_week_and_never_relabels_as_ros():
