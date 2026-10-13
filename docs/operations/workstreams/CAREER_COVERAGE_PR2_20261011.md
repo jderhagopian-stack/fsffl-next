@@ -775,3 +775,10 @@ The shared helper was previously referenced by the P0 live runtime but did not e
 
 GitHub Actions workflow and combined-status lookups for code/test head `29a76f1fe972fc88cb8cc34ff21e8ecd1103c5d5` returned **0 runs / 0 checks**. Focused CI has not passed. PR #454 remains draft; no provider acquisition, production write, waiver processing, merge, or deployment occurred.
 
+
+
+## 2026-10-13 — Management release-gate clarification for low-availability gaps
+
+Management clarifies that a missing provider projection for an injured, inactive, or otherwise low-availability rostered player must not hold the entire Career product and development work hostage. Preserve every exact-State roster/Position & Depth row and calculate Career wherever the governed evidence supports it. Use the existing evidence-labeled status-based or single-source paths where their criteria are met. If neither is defensible, retain a clear per-player unavailable/unresolved result; never invent a projection or silently use zero.
+
+Release acceptance is therefore not an all-or-nothing requirement that every rostered player have a numeric Career value when evidence is genuinely unavailable. The global release gates remain: correct end-to-end Career/Shapley/Position & Depth path, all roster rows preserved, frozen-335 parity, full-path memory, focused CI, and clear player-level outcomes. Unresolved low-availability exceptions must be visible and must not be described as complete coverage. The existing conditional release authorization in Management comment #6134676365 applies once those global gates pass. This clarification supersedes any interpretation that a small number of individually unsupported players alone blocks release.
