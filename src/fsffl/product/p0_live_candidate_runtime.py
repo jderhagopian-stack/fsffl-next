@@ -660,6 +660,52 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     ros_fumbles_lost: tuple[ForecastObservation, ...] = ()
     fumbles_supplement_failure: str | None = None
+    rostered_dynamic_ids = set(exact_state_rostered_p0_subject_ids(league_state))
+    configured_coefficients: dict[ForecastMetric, float] = {}
+    for rule in league_state.league.rules.scoring:
+        metric = _STAT_METRICS.get(rule.stat)
+        if metric is not None:
+            configured_coefficients[metric] = (
+                configured_coefficients.get(metric, 0.0) + float(rule.points)
+            )
+    metric_domains = (
+        frozenset({
+            ForecastMetric.PASS_YARDS,
+            ForecastMetric.PASS_TD,
+            ForecastMetric.INTERCEPTIONS,
+        }),
+        frozenset({ForecastMetric.RUSH_YARDS, ForecastMetric.RUSH_TD}),
+        frozenset({
+            ForecastMetric.RECEPTIONS,
+            ForecastMetric.REC_YARDS,
+            ForecastMetric.REC_TD,
+        }),
+    )
+    provider_metrics: dict[tuple[str, str], set[ForecastMetric]] = {}
+    for item in ros_runtime.source_observations:
+        if (
+            item.horizon == ForecastHorizon.REST_OF_SEASON
+            and item.player_id in rostered_dynamic_ids
+        ):
+            provider_metrics.setdefault((item.player_id, item.source), set()).add(item.metric)
+    fumbles_eligible_player_ids: set[str] = set()
+    if configured_coefficients.get(ForecastMetric.FUMBLES_LOST, 0.0) != 0.0:
+        for (player_id, _source), metrics in provider_metrics.items():
+            if ForecastMetric.FUMBLES_LOST in metrics:
+                continue
+            complete_other_domains = all(
+                not (metrics.intersection(domain))
+                or {
+                    metric
+                    for metric in domain
+                    if configured_coefficients.get(metric, 0.0) != 0.0
+                }.issubset(metrics)
+                for domain in metric_domains
+            )
+            if complete_other_domains and any(
+                metric != ForecastMetric.FUMBLES_LOST for metric in metrics
+            ):
+                fumbles_eligible_player_ids.add(player_id)
     try:
         ros_fumbles_lost = build_current_ros_fumbles_lost_supplement_observations(
             league_state,
@@ -667,6 +713,7 @@ def build_live_p0_rostered_candidate_forecasts(
             stats_source=cached_stats,  # type: ignore[arg-type]
             completed_through_week=completed,
             as_of=cutoff,
+            eligible_player_ids=fumbles_eligible_player_ids,
         )
     except Exception as exc:
         fumbles_supplement_failure = f"{type(exc).__name__}: {exc}"
