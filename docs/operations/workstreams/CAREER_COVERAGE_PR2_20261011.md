@@ -6,7 +6,31 @@ Implementation commits on `career/dynamic-materializer-20261011`: mapper `7b1443
 
 **Bounded acquisition (nonproduction):** Ran once against saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`, completed through Week 4, allowlisting only the 16 gap IDs. Capture key `20261013T020621Z-9cbc64dc18d60d94`; SHA-256 `8d401e7ec9edb6467d042261ac20e8fbdc761b280d25acc96abd21b224d07d2b`. Razzball mapped 7: complete raw projection metrics for 12510 Jalen Milroe, 13289 Drew Allar, 13306 Taylen Green; missing `fum_lost` for 7567 Kenny Gainwell, 13402 Skyler Bell, 13411 Zavion Thomas, 13268 Elijah Sarratt. Razzball mapped no row for 11638 Ricky Pearsall, 12484 Jayden Higgins, 13353 Chris Brazzell, 13418 Robert Henry, 3321 Tyreek Hill, 4018 Joe Mixon, 6803 Brandon Aiyuk, 8210 Chig Okonkwo, 13270 CJ Daniels. CBS mapped no row for all 16. Thus all 16 remain individually incomplete under the unchanged two-source Year 1 contract. The retained packet omits raw HTML; unmatched source absence is not inferred. No repeated acquisition.
 
-**Verification:** Focused local suite `tests/test_current_projection_normalization.py tests/test_career_coverage.py tests/test_projection_career_scope.py tests/test_in_season_forecast.py`: **40 passed in 2.15 s**; capture script `py_compile` passed. Regression coverage includes a provider-ID-only newly rostered player outside the frozen reference universe, a safe name/team Explore match, 50/100 Explore bounds, and matching-State response rows. GitHub Actions lookup for code/test head `cfb6937efbe59ff5776497e18005e273405720f9`: **0 workflow runs**, so no CI result is claimed.
+**Per-player acquisition ledger:**
+
+| Sleeper ID | Player | Razzball mapped result | CBS mapped result | Career result |
+|---|---|---|---|---|
+| 11638 | Ricky Pearsall | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 12484 | Jayden Higgins | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 12510 | Jalen Milroe | Required metric set present | No mapped row | Explicit Y1 two-source failure |
+| 13268 | Elijah Sarratt | Missing `fum_lost` | No mapped row | Explicit Y1 metric/source failure |
+| 13270 | CJ Daniels | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 13289 | Drew Allar | Required metric set present | No mapped row | Explicit Y1 two-source failure |
+| 13306 | Taylen Green | Required metric set present | No mapped row | Explicit Y1 two-source failure |
+| 13353 | Chris Brazzell | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 13402 | Skyler Bell | Missing `fum_lost` | No mapped row | Explicit Y1 metric/source failure |
+| 13411 | Zavion Thomas | Missing `fum_lost` | No mapped row | Explicit Y1 metric/source failure |
+| 13418 | Robert Henry | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 3321 | Tyreek Hill | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 4018 | Joe Mixon | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 6803 | Brandon Aiyuk | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 7567 | Kenny Gainwell | Missing `fum_lost` | No mapped row | Explicit Y1 metric/source failure |
+| 8210 | Chig Okonkwo | No mapped row | No mapped row | Explicit Y1 two-source failure |
+
+“No mapped row” describes the retained canonical projection packet only; raw HTML was intentionally not retained, so it does not prove the provider lacked a source row.
+
+
+**Verification:** Focused local suite `tests/test_current_projection_normalization.py tests/test_career_coverage.py tests/test_projection_career_scope.py tests/test_in_season_forecast.py`: **40 passed in 2.15 s**; capture script `py_compile` passed. The repo CI parity test passed with frozen Shapley max delta **0** and Career numeric max delta **9.09e-13**; canonical P0 numeric parity passed **1/1**, the 335 composer RSS benchmark passed at **177.2 MiB**, and the Foundation 4 memory-contract test passed **1/1**. The saved-State complete Career/P&D replay measured **398.99 MiB** full-path RSS. GitHub Actions lookup for code/test head `cfb6937efbe59ff5776497e18005e273405720f9`: **0 workflow runs**; the separate local CI regression group stalled without results and was stopped, so neither is claimed as a CI pass.
 
 Full saved-State replay after the fix: full Shapley/Career context `346 estimates` (335 reference + 11 dynamic); Foundation 4 materialized `176 Y4–Y7 rows` and `11 Y8+ authorities`; matching-State Position & Depth preserved `250/250` roster rows with `234 career_authority_available` and `16 career_authority_failure`; frozen Career max numeric delta **0.0**; full-path peak RSS **398.99 MiB** (below ~410 MiB). The separate isolated materializer/checkpoint run measured **388.85 MiB**. The synthetic end-to-end regression verifies newly rostered and Explore candidates flow through the same mapper/coverage/response boundary; it does not claim new numeric Career authorities for the 16.
 
