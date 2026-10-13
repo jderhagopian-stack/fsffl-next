@@ -112,6 +112,9 @@ class P0LiveCandidateResult:
     failures: Mapping[str, str]
     ros_runtime: Any
     year_one_evidence_modes: Mapping[str, str]
+    ros_fumbles_lost: tuple[ForecastObservation, ...] = ()
+    fumbles_eligible_player_ids: tuple[str, ...] = ()
+    fumbles_supplement_failure: str | None = None
 
 
 @dataclass(frozen=True)
@@ -710,21 +713,35 @@ def build_live_p0_rostered_candidate_forecasts(
         build_current_ros_fumbles_lost_supplement_observations,
     )
 
+    # Rebind the acquired weeks to the exact saved-State boundary. Sleeper's
+    # live calendar may have advanced, but this run contains only Week 1 through
+    # the State's completed week and the accepted model requires that exact cut.
     cached_stats = _CachedSleeperWeeklyStatsSource(
-        nfl_state=nfl_state,
+        nfl_state=SleeperNflState(
+            season=nfl_state.season,
+            week=completed + 1,
+            season_type=nfl_state.season_type,
+            captured_at=nfl_state.captured_at,
+            display_week=completed + 1,
+            leg=completed + 1,
+        ),
         lines_by_week=weekly,
     )
     ros_fumbles_lost: tuple[ForecastObservation, ...] = ()
     fumbles_supplement_failure: str | None = None
+    available_ros_rows = tuple(ros_runtime.source_observations) + tuple(fallback_ros_observations)
     fumbles_eligible_player_ids = _single_source_fumbles_gap_player_ids(
         league_state=league_state,
         candidate_ids=set(exact_state_rostered_p0_subject_ids(league_state)),
-        source_observations=ros_runtime.source_observations,
+        source_observations=available_ros_rows,
     )
     try:
+        ros_for_fumbles = ros_runtime.model_copy(update={
+            "source_observations": available_ros_rows,
+        })
         ros_fumbles_lost = build_current_ros_fumbles_lost_supplement_observations(
             league_state,
-            current_runtime=ros_runtime,
+            current_runtime=ros_for_fumbles,
             stats_source=cached_stats,  # type: ignore[arg-type]
             completed_through_week=completed,
             as_of=cutoff,
@@ -895,7 +912,7 @@ def build_live_p0_rostered_candidate_forecasts(
                     source_id: sorted(
                         {
                             item.metric.value
-                            for item in ros_runtime.source_observations
+                            for item in available_ros_rows
                             if item.player_id == player_id and item.source == source_id
                         }
                     )
@@ -995,5 +1012,8 @@ def build_live_p0_rostered_candidate_forecasts(
         failures=failures,
         ros_runtime=ros_runtime,
         year_one_evidence_modes=evidence_modes,
+        ros_fumbles_lost=ros_fumbles_lost,
+        fumbles_eligible_player_ids=tuple(sorted(fumbles_eligible_player_ids)),
+        fumbles_supplement_failure=fumbles_supplement_failure,
     )
 
