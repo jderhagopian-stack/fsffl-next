@@ -782,3 +782,35 @@ GitHub Actions workflow and combined-status lookups for code/test head `29a76f1f
 Management clarifies that a missing provider projection for an injured, inactive, or otherwise low-availability rostered player must not hold the entire Career product and development work hostage. Preserve every exact-State roster/Position & Depth row and calculate Career wherever the governed evidence supports it. Use the existing evidence-labeled status-based or single-source paths where their criteria are met. If neither is defensible, retain a clear per-player unavailable/unresolved result; never invent a projection or silently use zero.
 
 Release acceptance is therefore not an all-or-nothing requirement that every rostered player have a numeric Career value when evidence is genuinely unavailable. The global release gates remain: correct end-to-end Career/Shapley/Position & Depth path, all roster rows preserved, frozen-335 parity, full-path memory, focused CI, and clear player-level outcomes. Unresolved low-availability exceptions must be visible and must not be described as complete coverage. The existing conditional release authorization in Management comment #6134676365 applies once those global gates pass. This clarification supersedes any interpretation that a small number of individually unsupported players alone blocks release.
+
+
+## 2026-10-13 — Fresh exact-State Year 1 replay: modeled fumbles verified, hosted handoff still open
+
+Run used exact saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (completed Week 4), current Sleeper weekly actuals, and the existing targeted roster ROS capture; no acquisition rerun. The accepted FUMBLES_LOST model was run against current Week 1–4 actual opportunity inputs. Direct model output for the four provider-missing coordinates was: Gainwell 0.3380850158 season-equivalent / 0.2585356004 remaining-season; Sarratt 0.1208089375 / 0.0923833051; Bell 0.1331111495 / 0.1017908790; Thomas 0.0906067031 / 0.0692874788. This confirms artifact/model 11539 supplies the stat coordinate, not a second projection provider.
+
+**Player ledger (this run):**
+
+| Sleeper ID | Player | Fresh Y1 result | Candidate/F4/Career result |
+|---|---|---|---|
+| 11638 | Ricky Pearsall | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+| 12484 | Jayden Higgins | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+| 12510 | Jalen Milroe | 0.208 league points; single-source low-confidence Razzball | Dynamic P0 source row produced; full Career not run |
+| 13268 | Elijah Sarratt | 0.1156166949 league points; accepted fumbles ROS handoff absent in hosted result | P0 invalid age/experience/Y1 facts; no Career value |
+| 13270 | CJ Daniels | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+| 13289 | Drew Allar | 0.158 league points; single-source low-confidence Razzball | Dynamic P0 source row produced; full Career not run |
+| 13306 | Taylen Green | 0.158 league points; single-source low-confidence Razzball | Dynamic P0 source row produced; full Career not run |
+| 13353 | Chris Brazzell | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+| 13402 | Skyler Bell | 0.106209121 league points; accepted fumbles ROS handoff absent in hosted result | P0 invalid age/experience/Y1 facts; no Career value |
+| 13411 | Zavion Thomas | 0.1387125212 league points; accepted fumbles ROS handoff absent in hosted result | P0 invalid age/experience/Y1 facts; no Career value |
+| 13418 | Robert Henry | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+| 3321 | Tyreek Hill | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+| 4018 | Joe Mixon | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+| 6803 | Brandon Aiyuk | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+| 7567 | Kenny Gainwell | -0.0505356004 league points; accepted fumbles ROS handoff absent in hosted result | P0 invalid age/experience/Y1 facts; no Career value |
+| 8210 | Chig Okonkwo | No complete retained Year-1 source contract | Explicit individual failure; no Career value |
+
+The four direct model coordinates did not appear in the hosted replay's `ros_fumbles_lost` output, and therefore their displayed Year-1 scoring values are not treated as resolved fumbles-backed inputs. The three complete single-provider results meet the provider completeness check but are not counted as Career values because this run stopped before F4/Career composition. A fresh matching-State Position & Depth response was not generated; prior 250-row results are not carried forward as this run's acceptance evidence.
+
+Focused local validation: **70 passed** (hosted bridge, P0 candidate, Career coverage, FUMBLES_LOST, F4 memory-contract tests). Frozen-335 parity: **2 passed**, Shapley max delta **0**, Career max numeric delta **9.09e-13**. No full-path RSS measurement. Exact-head GitHub workflow lookup: **0 runs** for code head `e149f39c9e7226c2c348144a5d3f8bef3015f603`. These results do not pass CI or full-path gates. PR remains draft.
+
+**Next fix and run:** trace why the P0 dynamic caller's fumbles-eligible rows fail to reach `ros_fumbles_lost`; keep the supplement separate from source-provider counts; resolve the required age/experience/Y1 facts only through existing exact-State evidence (no invented defaults); then rerun all 16 through complete Year 1→Foundation 4→full Shapley/Career→matching-State Position & Depth. Verify all 250 rows, parity, full-path memory, and focused CI on the final code head before release actions.
