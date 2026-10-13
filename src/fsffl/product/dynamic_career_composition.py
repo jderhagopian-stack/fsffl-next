@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Mapping
 
 from fsffl.forecast.future_contract import FutureForecastContract
@@ -23,6 +23,7 @@ from fsffl.value.live_intrinsic_calendar import (
 )
 from fsffl.value.shapley_intrinsic_contract import build_shapley_intrinsic_contract
 from fsffl.value.career_forward_intrinsic import build_career_forward_intrinsic_shadow
+from fsffl.value.career_forward_intrinsic import append_dynamic_career_estimates
 from fsffl.value.career_tail import CareerTailAuthority, build_career_tail_authority
 from fsffl.value.long_term_intrinsic import build_long_term_intrinsic_shadow
 from fsffl.product.foundation4_shadow_inputs import (
@@ -195,7 +196,14 @@ def _compose_dynamic_career_contract(
     expanded = build_career_forward_intrinsic_shadow(
         expanded_current, long_term, tails
     )
-    return expanded, failures
+    # Expanded-cohort Shapley reallocates marginal values across all game
+    # members. The accepted frozen cohort remains the numerical parity
+    # reference; append only the dynamic roster rows from the expanded result.
+    return append_dynamic_career_estimates(
+        frozen_reference,
+        expanded,
+        candidate_player_ids=ready,
+    ), failures
 
 
 def dynamic_career_fingerprint(context: UserRuntimeContext) -> str:
@@ -245,22 +253,34 @@ def build_dynamic_rostered_career_contract(
         year_one=base_year_one,
     )
     live = candidate_builder(state)
-    _, _, composition_failures, expanded_current = _merge_candidate_inputs(
-        base_year_one=base_year_one,
-        base_future=base_future,
-        candidate=live,
-        rules=state.league.rules,
-    )
     failures = dict(live.failures)
-    failures.update({player_id: "accepted Y1/Y2/Y3 inputs could not enter full-cohort Shapley" for player_id in composition_failures if player_id not in failures})
-    composed = (
-        set(live.candidate_source_rows)
-        - set(failures)
-    )
-    if not composed:
+    future = live.future
+    if future is None:
+        return ExpandedCareerContractResult(contract=None, failures=failures)
+    future_rows = {
+        (row.player_id, int(row.year_index)): row
+        for row in future.contract.forecasts
+    }
+    frozen_ids = set(base_future.player_ids)
+    if frozen_ids & set(live.candidate_source_rows):
+        raise ValueError("dynamic Career candidate overlaps accepted future cohort")
+    eligible = {
+        player_id
+        for player_id in live.candidate_source_rows
+        if player_id not in failures
+        and player_id in live.year_one_league
+        and player_id in live.year_one_standard
+        and (player_id, 2) in future_rows
+        and (player_id, 3) in future_rows
+    }
+    for player_id in set(live.candidate_source_rows) - eligible - set(failures):
+        failures[player_id] = (
+            "accepted P0 candidate lacks canonical full-season Year-1 and Y2/Y3 rows"
+        )
+    if not eligible:
         return ExpandedCareerContractResult(contract=None, failures=failures)
     if materializer is None:
-        for player_id in sorted(composed):
+        for player_id in sorted(eligible):
             failures[player_id] = (
                 "accepted Foundation 4 dynamic materializer input bundle is not configured "
                 "for the hosted process (route/development modules, frozen route inputs, "
@@ -268,21 +288,82 @@ def build_dynamic_rostered_career_contract(
             )
         return ExpandedCareerContractResult(contract=None, failures=failures)
     try:
-        components = materializer(context, live, tuple(sorted(composed)))
+        components = materializer(context, live, tuple(sorted(eligible)))
     except Exception as exc:
         # The materializer is allowed to fail per candidate; a batch-level
         # infrastructure/configuration error is reflected on each eligible row.
         detail = f"accepted Foundation 4 dynamic materializer failed: {type(exc).__name__}: {exc}"
         return ExpandedCareerContractResult(
             contract=None,
-            failures={**failures, **{player_id: detail for player_id in sorted(composed)}},
+            failures={**failures, **{player_id: detail for player_id in sorted(eligible)}},
         )
+    unexpected_components = (
+        set(components.y4_y7) | set(components.y8_plus) | set(components.failures)
+    ) - eligible
+    if unexpected_components:
+        raise ValueError(
+            "Foundation 4 dynamic materializer returned players outside the eligible "
+            "exact-State batch: " + ", ".join(sorted(unexpected_components))
+        )
+    complete = eligible & set(components.y4_y7) & set(components.y8_plus)
+    complete -= set(components.failures)
+    for player_id in eligible - complete:
+        failures[player_id] = components.failures.get(
+            player_id,
+            "accepted Foundation 4 materializer returned an incomplete Y4-Y7/Y8+ contract",
+        )
+    if not complete:
+        return ExpandedCareerContractResult(contract=None, failures=failures)
+
+    # Materialize accepted Foundation 4 components before expanding the
+    # Shapley cohort. This keeps the wide materializer's RSS bounded and means
+    # candidates missing later Career inputs never perturb another player's
+    # full-cohort Shapley calculation.
+    candidate_future = future.contract.model_copy(
+        update={
+            "forecasts": tuple(
+                row for row in future.contract.forecasts if row.player_id in complete
+            )
+        }
+    )
+    composition_candidate = replace(
+        live,
+        candidate_ids=tuple(sorted(complete)),
+        candidate_source_rows={
+            player_id: live.candidate_source_rows[player_id]
+            for player_id in complete
+        },
+        year_one_standard={
+            player_id: live.year_one_standard[player_id] for player_id in complete
+        },
+        year_one_league={
+            player_id: live.year_one_league[player_id] for player_id in complete
+        },
+        future=replace(future, contract=candidate_future),
+        failures={},
+    )
+    _, _, composition_failures, expanded_current = _merge_candidate_inputs(
+        base_year_one=base_year_one,
+        base_future=base_future,
+        candidate=composition_candidate,
+        rules=state.league.rules,
+    )
+    if composition_failures or expanded_current is None:
+        raise ValueError(
+            "complete dynamic Career inputs failed full-cohort Shapley composition: "
+            + ", ".join(composition_failures)
+        )
+    complete_components = DynamicCareerComponents(
+        y4_y7={player_id: components.y4_y7[player_id] for player_id in complete},
+        y8_plus={player_id: components.y8_plus[player_id] for player_id in complete},
+        failures={},
+    )
     expanded, component_failures = _compose_dynamic_career_contract(
         context=context,
         frozen_reference=frozen_reference,
         expanded_current=expanded_current,
-        candidate_ids=tuple(sorted(composed)),
-        components=components,
+        candidate_ids=tuple(sorted(complete)),
+        components=complete_components,
     )
     failures.update(component_failures)
     return ExpandedCareerContractResult(contract=expanded, failures=failures)
