@@ -35,6 +35,7 @@ from fsffl.providers.sleeper_weekly_stats import (
 )
 from fsffl.state.models import LeagueState, Provenance, ProviderRef
 from fsffl.forecast.projection_history import ProjectionSelector
+from fsffl.forecast.in_season_orchestration import canonical_week_window
 
 from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 from .p0_candidate_evidence import (
@@ -81,12 +82,14 @@ def out_of_cohort_p0_subject_ids(
     reference_ids = {row.player_id for row in frozen_p0_source_rows()}
     return tuple(sorted(set(canonical_player_ids) - reference_ids))
 
+
 def exact_state_rostered_p0_subject_ids(league_state: LeagueState) -> tuple[str, ...]:
     """Return dynamic P0 candidates from the exact State being materialized.
 
-    A fresh Sleeper snapshot validates the live identity universe, but is not
-    the roster authority for a State-bound Career calculation. Its roster can
-    omit players rostered in the requested saved State who have since moved.
+    A fresh Sleeper snapshot is used to validate the live identity universe, but
+    it is not the roster authority for a State-bound Career calculation. Using
+    its roster can silently omit players who were rostered in the requested
+    saved State but have since been dropped or moved.
     """
     rostered_ids = {
         entry.player_id
@@ -107,6 +110,90 @@ class P0LiveCandidateResult:
     future: P0FutureForecastContractMaterialization | None
     failures: Mapping[str, str]
     ros_runtime: Any
+    year_one_evidence_modes: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class StatusBasedZeroRosEvidence:
+    """Explicit recorded evidence that a player has no expected 2026 participation."""
+
+    player_id: str
+    status: str
+    source: str
+    source_version: str
+    observed_at: datetime
+    no_expected_2026_participation: bool
+
+    def validate(self) -> None:
+        if self.status not in {"out_for_season", "unsigned_no_expected_2026_participation"}:
+            raise ValueError("status evidence does not establish season-long nonparticipation")
+        if not self.source.strip() or not self.source_version.strip():
+            raise ValueError("status evidence lacks source provenance")
+        if self.observed_at.tzinfo is None:
+            raise ValueError("status evidence timestamp must be timezone-aware")
+        if not self.no_expected_2026_participation:
+            raise ValueError("status evidence does not confirm no expected 2026 participation")
+
+
+def _metrics_for_zero_ros(league_state: LeagueState) -> tuple[ForecastMetric, ...]:
+    stats = {rule.stat for rule in FROZEN_I1_STANDARD_SCORING}
+    stats.update(rule.stat for rule in league_state.league.rules.scoring)
+    metrics = {_STAT_METRICS[stat] for stat in stats if stat in _STAT_METRICS}
+    if not metrics:
+        raise ValueError("no governed scoring metrics available for status-based ROS")
+    return tuple(sorted(metrics, key=lambda item: item.value))
+
+
+def _status_based_zero_ros(
+    *,
+    league_state: LeagueState,
+    evidence: StatusBasedZeroRosEvidence,
+    as_of: datetime,
+) -> tuple[ForecastObservation, ...]:
+    evidence.validate()
+    if evidence.player_id not in {item.player_id for item in league_state.players}:
+        raise ValueError("status evidence identity is outside the exact State")
+    if evidence.observed_at.astimezone(UTC) > as_of.astimezone(UTC):
+        raise ValueError("status evidence postdates the Year-1 evaluation")
+    player = next(item for item in league_state.players if item.player_id == evidence.player_id)
+    period_start, _ = canonical_week_window(league_state.league.season, 1)
+    _, period_end = canonical_week_window(league_state.league.season, 18)
+    return tuple(
+        ForecastObservation(
+            player_id=player.player_id,
+            position=player.position,
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            metric=metric,
+            period_start=period_start,
+            period_end=period_end,
+            distribution=_constant_distribution(0.0),
+            source=f"fsffl:status-based-zero-ros:{evidence.source}",
+            model_version=f"status-based-zero-ros-v1:{evidence.source_version}",
+            as_of=evidence.observed_at.astimezone(UTC),
+            provenance=Provenance(
+                source=evidence.source,
+                retrieved_at=evidence.observed_at.astimezone(UTC),
+                effective_at=evidence.observed_at.astimezone(UTC),
+                source_version=evidence.source_version,
+            ),
+        )
+        for metric in _metrics_for_zero_ros(league_state)
+    )
+
+
+def _active_bench_player_ids(league_state: LeagueState) -> set[str]:
+    """State-bound active bench candidates eligible for the low-confidence path."""
+    active = {
+        item.player_id
+        for item in league_state.player_states
+        if item.status.value == "active" and item.nfl_team
+    }
+    return {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.slot.value in {"BENCH", "TAXI"} and entry.player_id in active
+    }
 
 
 def _weekly_actual_observations(
@@ -283,6 +370,7 @@ def _candidate_facts(
     year_one_actual_inputs: tuple[ForecastObservation, ...],
     year_one_raw_inputs: tuple[ForecastObservation, ...],
     evaluation_as_of: datetime,
+    year_one_evidence_mode: str = "two_source",
 ) -> P0CandidateFacts:
     player = next(item for item in league_state.players if item.player_id == player_id)
     player_state = next(item for item in league_state.player_states if item.player_id == player_id)
@@ -345,6 +433,7 @@ def _candidate_facts(
             for item in sorted(year_one_raw_inputs, key=lambda row: row.metric.value)
         ],
         "role_and_age_state_features": "unavailable_in_live_source_contract; accepted model missingness path",
+        "year_one_evidence_mode": year_one_evidence_mode,
         "evaluation_as_of": evaluation_as_of.isoformat(),
     }
     digest = hashlib.sha256(
@@ -374,7 +463,8 @@ def _candidate_facts(
         prior2_gap_age_state_z=None,
         facts_as_of=evaluation_as_of,
         facts_source_version=(
-            "sleeper-nfl-stats-v2:season-aggregate+current-cbs-razzball-ros-v1"
+            "sleeper-nfl-stats-v2:season-aggregate+"
+            f"{year_one_evidence_mode}:current-cbs-razzball-ros-v1"
         ),
         facts_digest=digest,
     )
@@ -388,6 +478,8 @@ def build_live_p0_rostered_candidate_forecasts(
     evaluation_as_of: datetime | None = None,
     authority: P0SourceStateAuthority | None = None,
     projection_history_reader: ProjectionHistoryReader | None = None,
+    status_based_zero_ros_evidence: Mapping[str, StatusBasedZeroRosEvidence] | None = None,
+    fallback_ros_observations: tuple[ForecastObservation, ...] = (),
 ) -> P0LiveCandidateResult:
     """Acquire current inputs once and score rostered non-reference subjects.
 
@@ -509,6 +601,27 @@ def build_live_p0_rostered_candidate_forecasts(
         y1_raw, league_state=league_state, standard=False
     )
 
+    # The normal two-source ensemble remains authoritative whenever it yields
+    # both Year-1 coordinates. Explicit status evidence is a narrowly scoped
+    # fallback; complete one-source rows are considered only for active exact-
+    # State bench/taxi players. No missing metric is synthesized.
+    evidence_modes: dict[str, str] = {}
+    fallback_status_evidence = status_based_zero_ros_evidence or {}
+    one_source_rows: dict[tuple[str, str], tuple[ForecastObservation, ...]] = {}
+    for item in (*ros_runtime.source_observations, *fallback_ros_observations):
+        if item.horizon != ForecastHorizon.REST_OF_SEASON:
+            continue
+        state_player = next(
+            (player for player in league_state.players if player.player_id == item.player_id),
+            None,
+        )
+        if state_player is None or state_player.position != item.position:
+            continue
+        if item.as_of.astimezone(UTC) > cutoff:
+            continue
+        one_source_rows.setdefault((item.player_id, item.source), ())
+        one_source_rows[(item.player_id, item.source)] += (item,)
+
     positions = {
         player.player_id: player.position.value
         for player in league_state.players
@@ -526,6 +639,7 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     facts: dict[str, P0CandidateFacts] = {}
     failures: dict[str, str] = {}
+    active_bench_ids = _active_bench_player_ids(league_state)
     for player_id in candidates:
         if player_id not in positions:
             failures[player_id] = "live roster candidate is absent from governed State identity universe"
@@ -535,21 +649,103 @@ def build_live_p0_rostered_candidate_forecasts(
             continue
         standard_item = y1_standard.get(player_id)
         league_item = y1_league.get(player_id)
+        evidence_mode = "two_source"
         if standard_item is None or league_item is None:
-            standard_missing = y1_standard_partial.get(player_id)
-            league_missing = y1_league_partial.get(player_id)
-            if standard_missing or league_missing:
-                failures[player_id] = (
-                    "Year-1 raw evidence failed strict scoring coverage; "
-                    f"standard_missing_rule_stats={list(standard_missing.omitted_rule_stats) if standard_missing else []}; "
-                    f"league_missing_rule_stats={list(league_missing.omitted_rule_stats) if league_missing else []}"
-                )
-                if fumbles_supplement_failure and "fum_lost" in failures[player_id]:
-                    failures[player_id] += (
-                        "; accepted first-party FUMBLES_LOST supplement unavailable: "
-                        f"{fumbles_supplement_failure}"
+            status_evidence = fallback_status_evidence.get(player_id)
+            if status_evidence is not None:
+                try:
+                    zero_ros = _status_based_zero_ros(
+                        league_state=league_state,
+                        evidence=status_evidence,
+                        as_of=cutoff,
                     )
+                    status_raw = _year_one_raw_forecasts(
+                        league_state=league_state,
+                        completed_actuals=completed_raw,
+                        ros_forecasts=zero_ros,
+                    )
+                    status_standard, _ = _score_season_points(
+                        tuple(item for item in status_raw if item.player_id == player_id),
+                        league_state=league_state,
+                        standard=True,
+                    )
+                    status_league, _ = _score_season_points(
+                        tuple(item for item in status_raw if item.player_id == player_id),
+                        league_state=league_state,
+                        standard=False,
+                    )
+                    standard_item = status_standard.get(player_id)
+                    league_item = status_league.get(player_id)
+                    if standard_item is None or league_item is None:
+                        raise ValueError("status-based Year-1 scoring remains incomplete")
+                    evidence_mode = f"status_based_zero_ros:{status_evidence.status}"
+                    y1_raw = tuple(
+                        item for item in y1_raw if item.player_id != player_id
+                    ) + tuple(item for item in status_raw if item.player_id == player_id)
+                    y1_standard[player_id] = standard_item
+                    y1_league[player_id] = league_item
+                    evidence_modes[player_id] = evidence_mode
+                except ValueError as exc:
+                    failures[player_id] = f"status-based Year-1 fallback rejected: {exc}"
+                    continue
+            elif player_id in active_bench_ids:
+                accepted = False
+                for (source_player, source_id), source_rows in sorted(one_source_rows.items()):
+                    if source_player != player_id:
+                        continue
+                    source_raw = _year_one_raw_forecasts(
+                        league_state=league_state,
+                        completed_actuals=completed_raw,
+                        ros_forecasts=source_rows,
+                    )
+                    try:
+                        source_standard, _ = _score_season_points(
+                            source_raw, league_state=league_state, standard=True
+                        )
+                        source_league, _ = _score_season_points(
+                            source_raw, league_state=league_state, standard=False
+                        )
+                    except ValueError:
+                        continue
+                    standard_item = source_standard.get(player_id)
+                    league_item = source_league.get(player_id)
+                    if standard_item is None or league_item is None:
+                        continue
+                    evidence_mode = f"single_source_low_confidence:{source_id}"
+                    y1_raw = tuple(
+                        item for item in y1_raw if item.player_id != player_id
+                    ) + source_raw
+                    y1_standard[player_id] = standard_item
+                    y1_league[player_id] = league_item
+                    evidence_modes[player_id] = evidence_mode
+                    accepted = True
+                    break
+                if accepted:
+                    pass
+                else:
+                    standard_missing = y1_standard_partial.get(player_id)
+                    league_missing = y1_league_partial.get(player_id)
+                    failures[player_id] = (
+                        "active bench player lacks a complete single-source Year-1 projection; "
+                        f"standard_missing_rule_stats={list(standard_missing.omitted_rule_stats) if standard_missing else []}; "
+                        f"league_missing_rule_stats={list(league_missing.omitted_rule_stats) if league_missing else []}"
+                    )
+                    continue
             else:
+                standard_missing = y1_standard_partial.get(player_id)
+                league_missing = y1_league_partial.get(player_id)
+                if standard_missing or league_missing:
+                    failures[player_id] = (
+                        "Year-1 raw evidence failed strict scoring coverage; "
+                        f"standard_missing_rule_stats={list(standard_missing.omitted_rule_stats) if standard_missing else []}; "
+                        f"league_missing_rule_stats={list(league_missing.omitted_rule_stats) if league_missing else []}"
+                    )
+                    if fumbles_supplement_failure and "fum_lost" in failures[player_id]:
+                        failures[player_id] += (
+                            "; accepted first-party FUMBLES_LOST supplement unavailable: "
+                            f"{fumbles_supplement_failure}"
+                        )
+                    continue
                 source_metrics = {
                     source_id: sorted(
                         {
@@ -570,6 +766,11 @@ def build_live_p0_rostered_candidate_forecasts(
                     f"per-provider canonical ROS metrics={source_metrics}; "
                     f"two-source raw-ensemble metrics={raw_metrics or 'none'}"
                 )
+                continue
+        if standard_item is None or league_item is None:
+            # This is reachable only if a supplied fallback contract was
+            # malformed; retain a player-specific failure rather than aborting.
+            failures[player_id] = "Year-1 fallback did not produce both scoring coordinates"
             continue
         try:
             facts[player_id] = _candidate_facts(
@@ -586,7 +787,9 @@ def build_live_p0_rostered_candidate_forecasts(
                     item for item in y1_raw if item.player_id == player_id
                 ),
                 evaluation_as_of=cutoff,
+                year_one_evidence_mode=evidence_mode,
             )
+            evidence_modes.setdefault(player_id, evidence_mode)
         except ValueError as exc:
             failures[player_id] = str(exc)
 
@@ -646,5 +849,6 @@ def build_live_p0_rostered_candidate_forecasts(
         future=future,
         failures=failures,
         ros_runtime=ros_runtime,
+        year_one_evidence_modes=evidence_modes,
     )
 
