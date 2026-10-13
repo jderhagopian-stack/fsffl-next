@@ -750,7 +750,7 @@ These are accepted model outputs, not zeros. Artifact 11539 is season-coordinate
 
 ### Saved-State loader/materializer replay
 
-Re-ran the retained nonproduction roster packet through Foundation 4 dynamic materialization, full-cohort Shapley/Career composition, and exact-State Position & Depth construction. State hash: `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`; as-of `2026-10-08T16:20:14.036832Z`.
+Replayed the retained nonproduction P0 outcome packet through Foundation 4 dynamic materialization, full-cohort Shapley/Career composition, and exact-State Position & Depth construction. This replay reused the packet's existing 11 Year-1 successes and 16 Year-1 failures; it did not regenerate Year 1. The saved State JSON has no retained Week 1–4 stat lines, and the candidate failure packet has no Y1 score inputs for those 16, so the hosted actuals-plus-ROS producer could not be honestly replayed from the saved files alone. The accepted FUMBLES_LOST artifact supplies only that metric, not the missing non-fumble actuals. State hash: `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`; as-of `2026-10-08T16:20:14.036832Z`.
 
 - Foundation 4: **11** dynamic candidates; **176** Y4–Y7 rows and **11** Y8+ authorities.
 - Career/Shapley: **346** estimates (frozen 335 plus 11 dynamic); frozen Career maximum absolute delta **0.0**.
