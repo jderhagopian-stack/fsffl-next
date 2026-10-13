@@ -81,6 +81,20 @@ def out_of_cohort_p0_subject_ids(
     reference_ids = {row.player_id for row in frozen_p0_source_rows()}
     return tuple(sorted(set(canonical_player_ids) - reference_ids))
 
+def exact_state_rostered_p0_subject_ids(league_state: LeagueState) -> tuple[str, ...]:
+    """Return dynamic P0 candidates from the exact State being materialized.
+
+    A fresh Sleeper snapshot validates the live identity universe, but is not
+    the roster authority for a State-bound Career calculation. Its roster can
+    omit players rostered in the requested saved State who have since moved.
+    """
+    rostered_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+    }
+    return out_of_cohort_p0_subject_ids(rostered_ids)
+
 
 @dataclass(frozen=True)
 class P0LiveCandidateResult:
@@ -495,11 +509,6 @@ def build_live_p0_rostered_candidate_forecasts(
         y1_raw, league_state=league_state, standard=False
     )
 
-    live_rostered_ids = {
-        entry.player_id
-        for team_state in current_state.team_states
-        for entry in team_state.roster
-    }
     positions = {
         player.player_id: player.position.value
         for player in league_state.players
@@ -510,8 +519,10 @@ def build_live_p0_rostered_candidate_forecasts(
         for player in current_state.players
         if player.position.value in {"QB", "RB", "WR", "TE"}
     }
-    candidates = out_of_cohort_p0_subject_ids(
-        live_rostered_ids & set(current_positions)
+    candidates = tuple(
+        player_id
+        for player_id in exact_state_rostered_p0_subject_ids(league_state)
+        if player_id in current_positions
     )
     facts: dict[str, P0CandidateFacts] = {}
     failures: dict[str, str] = {}
