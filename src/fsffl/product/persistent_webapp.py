@@ -43,6 +43,7 @@ from .dynamic_career_composition import (
 from .foundation4_dynamic_candidate_runtime import (
     materialize_foundation4_dynamic_candidates,
 )
+from .p0_live_candidate_runtime import build_live_p0_rostered_candidate_forecasts
 from .foundation4_shadow_routes import install_career_intrinsic_routes
 from .hosted_connect import install_hosted_connect_routes
 from .current_position_depth import build_governed_current_position_depth
@@ -282,6 +283,10 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
             frozen,
             current_intrinsic_loader=_shapley_intrinsic_loader,
             materializer=materialize_foundation4_dynamic_candidates,
+            candidate_builder=lambda state: build_live_p0_rostered_candidate_forecasts(
+                state,
+                projection_history_reader=_projection_history_store,
+            ),
         )
     ),
     expanded_career_contract_fingerprint_resolver=dynamic_career_fingerprint,
