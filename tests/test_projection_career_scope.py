@@ -25,29 +25,38 @@ def test_shared_projection_mapping_feeds_new_roster_and_explore_career_subjects(
             nfl_team="BUF",
         ),
     )
-    snapshot = CurrentProjectionSnapshot(
-        provider="CBS",
-        captured_at=datetime(2026, 10, 12, 2, tzinfo=UTC),
-        effective_at=datetime(2026, 10, 12, 2, tzinfo=UTC),
-        rows=(
-            CurrentProjectionRow(
-                provider="CBS", external_id="cbs:roster", player_name="Provider Alias",
-                position=Position.WR, nfl_team="NYJ", stats={"rec_yd": 820.0},
+    snapshots = tuple(
+        CurrentProjectionSnapshot(
+            provider=provider,
+            captured_at=datetime(2026, 10, 12, 2, tzinfo=UTC),
+            effective_at=datetime(2026, 10, 12, 2, tzinfo=UTC),
+            rows=(
+                CurrentProjectionRow(
+                    provider=provider,
+                    external_id=f"{provider.lower()}:roster",
+                    player_name="Provider Alias" if provider == "CBS" else "New Roster Player",
+                    position=Position.WR, nfl_team="NYJ" if provider == "CBS" else "SEA",
+                    stats={"rec_yd": 820.0 if provider == "CBS" else 800.0},
+                ),
+                CurrentProjectionRow(
+                    provider=provider, external_id=f"{provider.lower()}:explore",
+                    player_name="Explore Candidate", position=Position.RB, nfl_team="BUF",
+                    stats={"rush_yd": 640.0 if provider == "CBS" else 620.0},
+                ),
             ),
-            CurrentProjectionRow(
-                provider="CBS", external_id="cbs:explore", player_name="Explore Candidate",
-                position=Position.RB, nfl_team="BUF", stats={"rush_yd": 640.0},
-            ),
-        ),
-        source_version="cbs-ros-test",
-        usage_class="test",
+            source_version=f"{provider.lower()}-ros-test",
+            usage_class="test",
+        )
+        for provider in ("CBS", "Razzball")
     )
-    mapped = map_projection_rows(snapshot, players=players)
-    evidence = {
-        player.player_id: {"provider": snapshot.provider, "external_id": row.external_id,
-                           "stats": dict(row.stats)}
-        for row, player in mapped
-    }
+    mapped = tuple(
+        pair for snapshot in snapshots for pair in map_projection_rows(snapshot, players=players)
+    )
+    evidence = {}
+    for row, player in mapped:
+        evidence.setdefault(player.player_id, []).append(
+            {"provider": row.provider, "external_id": row.external_id, "stats": dict(row.stats)}
+        )
     state_players = [
         {"player_id": player.player_id, "position": player.position.value,
          "nfl_team": player.nfl_team}
@@ -64,14 +73,21 @@ def test_shared_projection_mapping_feeds_new_roster_and_explore_career_subjects(
         precomputed_player_ids={"sleeper:player:explore"},
         evidence_by_player=evidence,
         materialize_batch=lambda subjects, packets: {
-            subject.player_id: {"career_value": float(packets[subject.player_id]["stats"].get("rec_yd", 0)
-                                                          + packets[subject.player_id]["stats"].get("rush_yd", 0))}
+            subject.player_id: {
+                "career_value": float(sum(
+                    row["stats"].get("rec_yd", 0) + row["stats"].get("rush_yd", 0)
+                    for row in packets[subject.player_id]
+                ) / 2),
+                "providers": sorted(row["provider"] for row in packets[subject.player_id]),
+            }
             for subject in subjects
         },
     )
     assert set(result.authority) == {player.player_id for player in players}
-    assert result.authority["sleeper:player:new-roster"]["career_value"] == 820.0
-    assert result.authority["sleeper:player:explore"]["career_value"] == 640.0
+    assert result.authority["sleeper:player:new-roster"]["career_value"] == 810.0
+    assert result.authority["sleeper:player:explore"]["career_value"] == 630.0
+    assert result.authority["sleeper:player:new-roster"]["providers"] == ["CBS", "Razzball"]
+    assert result.authority["sleeper:player:explore"]["providers"] == ["CBS", "Razzball"]
 
     depth = build_career_position_depth_refresh(
         state_hash="state-1", roster_rows=roster_rows, subjects=result.subjects,
