@@ -6,7 +6,32 @@ Code/test commits: `7b1443954f964853f151f300efc89049dd4d3194` (shared mapper), `
 
 The authorized nonproduction CBS/Razzball ROS capture ran once on 2026-10-13 against saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (Week 4 complete), with a 16-ID allowlist and event enrichment disabled. Capture key `20261013T020621Z-9cbc64dc18d60d94`; packet SHA-256 `8d401e7ec9edb6467d042261ac20e8fbdc761b280d25acc96abd21b224d07d2b` (private nonproduction file `.tmp-foundation4/ros-16-gap-capture.json`). Razzball mapped 7 IDs; CBS mapped 0. The seven Razzball rows were: complete provider metric sets for Jalen Milroe (12510), Drew Allar (13289), and Taylen Green (13306); missing `fum_lost` for Kenny Gainwell (7567), Skyler Bell (13402), Zavion Thomas (13411), and Elijah Sarratt (13268). The other nine had no mapped Razzball row: Ricky Pearsall (11638), Jayden Higgins (12484), Chris Brazzell (13353), Robert Henry (13418), Tyreek Hill (3321), Joe Mixon (4018), Brandon Aiyuk (6803), Chig Okonkwo (8210), and CJ Daniels (13270). CBS had no mapped rows for any of the 16. The accepted two-source Year 1 ensemble is therefore still incomplete for each; the capture stores no raw HTML, so zero mapped rows are not reported as proof of provider absence. No values were invented or zero-filled.
 
+**Per-player acquisition ledger:**
+
+| Sleeper ID | Player | Razzball mapped result | CBS mapped result | Career result |
+|---|---|---|---|---|
+| 11638 | Ricky Pearsall | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 12484 | Jayden Higgins | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 12510 | Jalen Milroe | Required metric set present | No mapped row | Explicit Y1 two-source failure |
+| 13268 | Elijah Sarratt | Missing `fum_lost` | No mapped row | Explicit Y1 metric/source failure |
+| 13270 | CJ Daniels | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 13289 | Drew Allar | Required metric set present | No mapped row | Explicit Y1 two-source failure |
+| 13306 | Taylen Green | Required metric set present | No mapped row | Explicit Y1 two-source failure |
+| 13353 | Chris Brazzell | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 13402 | Skyler Bell | Missing `fum_lost` | No mapped row | Explicit Y1 metric/source failure |
+| 13411 | Zavion Thomas | Missing `fum_lost` | No mapped row | Explicit Y1 metric/source failure |
+| 13418 | Robert Henry | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 3321 | Tyreek Hill | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 4018 | Joe Mixon | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 6803 | Brandon Aiyuk | No mapped row | No mapped row | Explicit Y1 two-source failure |
+| 7567 | Kenny Gainwell | Missing `fum_lost` | No mapped row | Explicit Y1 metric/source failure |
+| 8210 | Chig Okonkwo | No mapped row | No mapped row | Explicit Y1 two-source failure |
+
+“No mapped row” describes the retained canonical projection packet only; raw HTML was intentionally not retained, so it does not prove the provider lacked a source row.
+
 Saved-State Foundation 4 → full Shapley/Career → matching-State Position & Depth replay completed after the mapping change. It composed 11 dynamic candidates in the complete 335+11 context, retained 346 Career estimates, preserved all 250 roster rows, returned 234 available Career values plus the same 16 explicit individual failures, and measured **398.99 MiB full-path RSS** (under the ~410 MiB gate). Frozen Career reference maximum numeric delta was **0.0**; the 176 Y4–Y7 policy rows and 11 Y8+ authorities were materialized. The isolated Foundation 4 materializer/checkpoint replay measured **388.85 MiB**. The new regression also sends a provider-ID-matched newly rostered player and a name-matched Explore candidate through shared mapping, bounded Career selection, materialization callback, and matching-State Position & Depth response. These are fixture-path checks, not new production Career values.
+
+**Additional focused gates:** The frozen-reference test passed with Shapley max delta **0** and Career numeric max delta **9.09e-13**; the canonical P0 numeric parity test passed **1/1**; the 335 composer RSS benchmark passed at **177.2 MiB**; and the Foundation 4 memory-contract test passed **1/1**. The exact focused regression group from `.github/workflows/ci.yml` was attempted locally but stalled without results and was stopped; it is not counted as passed. GitHub Actions still reports no run for the code/test head `cfb6937efbe59ff5776497e18005e273405720f9`.
 
 No production write, merge, deployment, waiver processing, or source/model change occurred. Remaining concrete work: obtain complete current accepted two-source Year 1 evidence for the 16 through the governed roster-only route, rerun their on-demand P0/Career composition and the focused GitHub CI when available, then verify all 250 roster entries show numeric Career authority. PR #454 remains open/draft.
 
