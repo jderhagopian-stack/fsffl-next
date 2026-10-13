@@ -80,8 +80,11 @@ def test_status_based_ros_zero_requires_recorded_no_participation_evidence():
             rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
         ),
         as_of=now,
-        teams=(Team(team_id="team-a", league_id="fixture-league", display_name="A"),),
-        team_states=(TeamState(team_id="team-a", roster=()),),
+        teams=(
+            Team(team_id="team-a", league_id="fixture-league", display_name="A"),
+            Team(team_id="team-b", league_id="fixture-league", display_name="B"),
+        ),
+        team_states=(TeamState(team_id="team-a", roster=()), TeamState(team_id="team-b", roster=())),
         players=(player,),
         player_states=(PlayerState(player_id=player_id, as_of=now, provenance=provenance),),
     )
@@ -139,7 +142,10 @@ def test_active_bench_eligibility_is_exact_state_bound():
             rules=LeagueRules(team_count=2, roster_size=3, lineup=(), scoring=()),
         ),
         as_of=now,
-        teams=(Team(team_id="team-a", league_id="fixture-league", display_name="A"),),
+        teams=(
+            Team(team_id="team-a", league_id="fixture-league", display_name="A"),
+            Team(team_id="team-b", league_id="fixture-league", display_name="B"),
+        ),
         team_states=(
             TeamState(
                 team_id="team-a",
@@ -149,6 +155,7 @@ def test_active_bench_eligibility_is_exact_state_bound():
                     RosterEntry(player_id=inactive_id, slot=RosterSlot.BENCH),
                 ),
             ),
+            TeamState(team_id="team-b", roster=()),
         ),
         players=players,
         player_states=(
@@ -179,8 +186,11 @@ def test_complete_single_source_year_one_is_labeled_eligible_and_missing_metrics
             ),
         ),
         as_of=now,
-        teams=(Team(team_id="team-a", league_id="fixture-league", display_name="A"),),
-        team_states=(TeamState(team_id="team-a", roster=()),),
+        teams=(
+            Team(team_id="team-a", league_id="fixture-league", display_name="A"),
+            Team(team_id="team-b", league_id="fixture-league", display_name="B"),
+        ),
+        team_states=(TeamState(team_id="team-a", roster=()), TeamState(team_id="team-b", roster=())),
         players=(player,),
         player_states=(PlayerState(player_id=player_id, as_of=now, provenance=provenance),),
     )
