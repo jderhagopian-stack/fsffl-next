@@ -11,6 +11,7 @@ from typing import Any, cast
 
 import pytest
 
+from fsffl.forecast.in_season_orchestration import build_current_ros_fumbles_lost_supplement_observations
 from fsffl.forecast.future_contract import (
     CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
     FUTURE_FORECAST_CONTRACT_VERSION,
@@ -1864,4 +1865,56 @@ def test_hosted_dynamic_career_bridge_rejects_unrelated_supplement_coordinate() 
         league_state=state,
         supplemental_rows=(other_player,),
     ) is None
+\n
+
+def test_hosted_dynamic_career_bridge_materializes_schedule_scaled_fumbles_ros(monkeypatch) -> None:
+    import fsffl.forecast.in_season_orchestration as orchestration
+
+    state, provider_observation = _fixture()
+    now = state.as_of
+    season_fumbles = ForecastObservation(
+        player_id=provider_observation.player_id,
+        position=provider_observation.position,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=datetime(2026, 9, 1, tzinfo=UTC),
+        period_end=datetime(2027, 3, 1, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=0.4, stddev=0.6),
+        source="fsffl:first_party:fumbles_lost",
+        model_version="accepted-fumbles-lost-rolling-v1",
+        as_of=now,
+        provenance=Provenance(
+            source="fsffl:first_party:fumbles_lost",
+            retrieved_at=now,
+            effective_at=now,
+            source_version="accepted-fumbles-lost-rolling-v1",
+        ),
+    )
+    monkeypatch.setattr(
+        orchestration,
+        "build_first_party_fumbles_lost_supplement",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            observations=(season_fumbles,), authority_valid_from=now
+        ),
+    )
+    runtime = SimpleNamespace(
+        partial_fantasy_point_forecasts=(),
+        source_observations=(provider_observation,),
+    )
+
+    ros_rows = build_current_ros_fumbles_lost_supplement_observations(
+        state,
+        current_runtime=runtime,
+        stats_source=cast(Any, object()),
+        completed_through_week=4,
+        as_of=now,
+        eligible_player_ids={provider_observation.player_id},
+    )
+
+    assert len(ros_rows) == 1
+    assert ros_rows[0].horizon == ForecastHorizon.REST_OF_SEASON
+    assert ros_rows[0].source == "fsffl:first_party:fumbles_lost"
+    assert ros_rows[0].distribution.mean == pytest.approx(0.4 * 13 / 17)
+    assert ros_rows[0].distribution.stddev == pytest.approx(0.6 * 13 / 17)
+    assert "remaining_games=13" in ros_rows[0].provenance.source_version
 \n
