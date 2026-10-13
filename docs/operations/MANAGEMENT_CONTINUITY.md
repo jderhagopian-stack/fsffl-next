@@ -1018,3 +1018,13 @@ Local direct scorer check passed (fixture standard/league Year 1 = 12.0 with acc
 
 **Next authorized work:** obtain an actual focused CI run on the current code head, then execute the hosted dynamic Year 1 producer with accepted actual/ROS inputs and current depth-chart evidence for candidates eligible for the one-source path. Re-run full Career and matching-State Position & Depth using those fresh in-memory results; retain explicit per-player failures where second-source or status/role evidence remains absent. No production write or release is authorized by this checkpoint.
 
+## 2026-10-13 — Career Coverage shared fumbles bridge follow-up
+
+Additional PR #454 commits fixed a missing hosted integration helper: dynamic P0 referenced a ROS FUMBLES_LOST converter that was absent. Commit `5b3cbf1bbad6d32e36653b61a7d01b410580e845` now exposes the schedule-scaled first-party observation builder to both the standard ROS scoring path and dynamic P0; `bfae8cfdfbb0b9bf4f32c4b975ab7e0d3423d607` supplies exact-State roster candidates only when one provider has all other required metrics; `9070009d30f3014a8209d507d95747535d39e46a` makes that rule testable. Tests were committed in `6983003fa0866928d5ba66a970f4c013589afa6a` and `29a76f1fe972fc88cb8cc34ff21e8ecd1103c5d5`.
+
+Direct local Python checks passed for selector behavior, schedule-scaled ROS conversion/provenance, and single-source scoring with versus without the accepted coordinate. These are focused direct checks, not pytest or GitHub CI. CI lookups for code/test head `29a76f1fe972fc88cb8cc34ff21e8ecd1103c5d5` returned zero workflow runs and checks. Local pytest is unavailable.
+
+The accepted exact-State supplement artifact 11539 has a FUMBLES_LOST coordinate for each of Gainwell, Sarratt, Bell, and Thomas. This clears their model-coordinate gap but does not create a complete Career value from the retained P0 packet. The full saved-State continuation reported 11 dynamic F4 candidates, 346 Career estimates, 250/250 roster rows (234 available, 16 explicit Year 1 failures), frozen-335 max delta 0.0, and 387.45 MiB peak RSS. This replay reused retained Year 1 outcomes; it did **not** rerun the Year 1 producer because saved State JSON lacks Week 1–4 stat lines and the retained candidate failures lack Year 1 point inputs. All 16 Career results remain explicit failures; no player row was dropped.
+
+PR #454 remains draft. The focused CI and an actual hosted Year 1 replay with accepted current actuals/ROS rows remain open gates. No provider pull, State refresh, production write, waiver processing, merge, or deployment occurred.
+
