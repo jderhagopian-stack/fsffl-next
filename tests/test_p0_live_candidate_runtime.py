@@ -4,7 +4,7 @@ from fsffl.product.p0_forecast_runtime import frozen_p0_source_rows
 from fsffl.product.p0_live_candidate_runtime import exact_state_rostered_p0_subject_ids
 from fsffl.product.p0_live_candidate_runtime import (
     StatusBasedZeroRosEvidence,
-    _active_bench_player_ids,
+    _active_backup_player_ids,
     _score_complete_single_source_year_one,
     _status_based_zero_ros,
 )
@@ -124,7 +124,7 @@ def test_status_based_ros_rejects_unconfirmed_injury_status():
         raise AssertionError("temporary injury status must not authorize zero ROS")
 
 
-def test_active_bench_eligibility_is_exact_state_bound():
+def test_active_backup_eligibility_requires_exact_state_and_depth_chart_evidence():
     now = datetime(2026, 10, 8, tzinfo=UTC)
     active_id = "sleeper:player:11638"
     starter_id = "sleeper:player:12484"
@@ -165,7 +165,15 @@ def test_active_bench_eligibility_is_exact_state_bound():
         ),
     )
 
-    assert _active_bench_player_ids(state) == {active_id}
+    assert _active_backup_player_ids(
+        state,
+        {
+            "11638": {"team": "SEA", "depth_chart_order": "2"},
+            "12484": {"team": "BUF", "depth_chart_order": "1"},
+            "12510": {"team": "CHI", "depth_chart_order": "2"},
+        },
+    ) == {active_id}
+    assert _active_backup_player_ids(state, {"11638": {"team": "SEA"}}) == set()
 
 
 def test_complete_single_source_year_one_is_labeled_eligible_and_missing_metrics_fail():
