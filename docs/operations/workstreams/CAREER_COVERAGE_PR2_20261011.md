@@ -704,18 +704,18 @@ The live Year 1 producer now has two explicitly labeled fallback contracts. A su
 | 11638 | Ricky Pearsall | unknown / IR | no mapped row | unresolved; IR is not season-long status evidence |
 | 12484 | Jayden Higgins | unknown / IR | no mapped row | unresolved; IR is not season-long status evidence |
 | 12510 | Jalen Milroe | active / BENCH | complete Razzball | backup role not evidenced; no estimate applied |
-| 13268 | Elijah Sarratt | active / TAXI | Razzball missing `fum_lost` | explicit metric failure |
+| 13268 | Elijah Sarratt | active / TAXI | Razzball missing `fum_lost` | exact-State first-party coordinate exists in artifact 11539; Career Y1 still fails (no second-source row; no depth-chart backup evidence) |
 | 13270 | CJ Daniels | active / TAXI | no mapped row | explicit ROS input failure |
 | 13289 | Drew Allar | active / TAXI | complete Razzball | backup role not evidenced; no estimate applied |
 | 13306 | Taylen Green | active / TAXI | complete Razzball | backup role not evidenced; no estimate applied |
 | 13353 | Chris Brazzell | unknown / IR | no mapped row | unresolved; IR is not season-long status evidence |
-| 13402 | Skyler Bell | active / TAXI | Razzball missing `fum_lost` | explicit metric failure |
-| 13411 | Zavion Thomas | active / TAXI | Razzball missing `fum_lost` | explicit metric failure |
+| 13402 | Skyler Bell | active / TAXI | Razzball missing `fum_lost` | exact-State first-party coordinate exists in artifact 11539; Career Y1 still fails (no second-source row; no depth-chart backup evidence) |
+| 13411 | Zavion Thomas | active / TAXI | Razzball missing `fum_lost` | exact-State first-party coordinate exists in artifact 11539; Career Y1 still fails (no second-source row; no depth-chart backup evidence) |
 | 13418 | Robert Henry | active / BENCH | no mapped row | explicit ROS input failure |
 | 3321 | Tyreek Hill | active / BENCH; State team absent | no mapped row | unresolved; absent team is not unsigned evidence |
 | 4018 | Joe Mixon | active / BENCH; State team absent | no mapped row | unresolved; absent team is not unsigned evidence |
 | 6803 | Brandon Aiyuk | active / BENCH | no mapped row | explicit ROS input failure |
-| 7567 | Kenny Gainwell | active / BENCH | Razzball missing `fum_lost` | explicit metric failure |
+| 7567 | Kenny Gainwell | active / BENCH | Razzball missing `fum_lost` | exact-State first-party coordinate exists in artifact 11539; Career Y1 still fails (no second-source row; no depth-chart backup evidence) |
 | 8210 | Chig Okonkwo | active / BENCH | no mapped row | explicit ROS input failure |
 
 **Validation state:** Python 3.12 `compileall` for the changed runtime/test modules and `git diff --check` passed. Pytest could not run in this workspace: its repository `.venv` has no project dependencies/pytest, and the available runtime Python also has no pytest. Exact-head GitHub Actions and combined-status lookups for code/test head `fa28477a17700fd74cc8605af223bea8f34f9bde` returned zero runs/checks; no CI pass is claimed. The previously recorded non-fallback saved-State path remains 250/250 rows, 234 Career values plus 16 failures, frozen Career max delta 0.0, and 397.54 MiB full-path RSS. It is a prior baseline, not a rerun of this patch. No new Career value, full-path memory result, or matching-State response has been verified with the fallback applied.
@@ -728,3 +728,38 @@ The live Year 1 producer now has two explicitly labeled fallback contracts. A su
 The approved first-party FUMBLES_LOST supplement was already implemented and unit-tested, but the hosted in-season outlook route called the Year 1 orchestration with its opt-in disabled. PR #454 commit 70d39e2348f8d66c374977b2f3a1a03ee576d70a now enables that existing supplement on the normal in-season route. The helper only supplies the accepted model when FUMBLES_LOST is the sole omitted active scoring coordinate; it preserves provenance/uncertainty and does not treat missing provider data as zero. It does not change the two-source rule for other ROS stats.
 
 **Verification at checkpoint:** exact commit diff inspected; PR #454 remains open/draft. GitHub Actions and combined-status queries returned no runs or checks for this commit yet. No Year 1/Career/Position & Depth replay with this wiring has been reported, so the four fum_lost gaps are not yet counted resolved. Next: run focused CI, then the saved-State actuals + ROS → Foundation 4 → full-cohort Shapley/Career → matching-State Position & Depth path; record per-player outcomes, parity, memory, and update this ledger. Preserve all 250 roster rows and all unresolved evidence explicitly.
+
+## 2026-10-13 — FUMBLES_LOST single-source Year 1 handoff and saved-State replay
+
+Implementation commits: `578ab13d3113a3efe96e93cb8bc5b04304a2b969` connects the accepted first-party FUMBLES_LOST ROS coordinate to the rostered one-source fallback; `6c635e3afa8425dcba0014c6ebe1825e251e2b6e` makes incomplete scoring return an explicit fallback failure; `38f5dba6059d4476e5cffb645429a44110caf9de` adds focused regression tests. PR #454 remains draft.
+
+The route enabled in `70d39e2348f8d66c374977b2f3a1a03ee576d70a` supplied the supplement to strict ROS scoring, but the dynamic roster fallback only scored provider rows. The new bridge permits exactly one accepted first-party `fum_lost` coordinate to complete an otherwise score-complete single-provider projection. The source remains separately identified as `fsffl:first_party:fumbles_lost`; it does not count as a second projection source. Other missing coordinates still fail closed. Successful low-confidence results carry `single_source_low_confidence:<provider>+first_party_fumbles_lost`. Complete two-source rows retain their existing route.
+
+### Exact-State FUMBLES_LOST evidence
+
+Read-only inspection of accepted supplement artifact **11539**, keyed to the saved State hash `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`, confirmed current inputs for Weeks 1–4 and a model observation for each of the four rows whose Razzball packet lacked `fum_lost`:
+
+| Sleeper ID | Player | Model mean (season fumbles lost) | Predictive SD | Result |
+|---|---|---:|---:|---|
+| 7567 | Kenny Gainwell | 0.338085 | 0.778234 | Coordinate supplied |
+| 13268 | Elijah Sarratt | 0.120809 | 0.451556 | Coordinate supplied |
+| 13402 | Skyler Bell | 0.133111 | 0.451556 | Coordinate supplied |
+| 13411 | Zavion Thomas | 0.090607 | 0.451556 | Coordinate supplied |
+
+These are accepted model outputs, not zeros. Artifact 11539 is season-coordinate evidence; the ROS conversion remains schedule-bound in the hosted helper. This evidence resolves the four missing metric coordinates at the model layer. It does **not** establish a complete Year 1 provider ensemble or active-backup eligibility: the retained P0 packet has no CBS rows for these players, and its current saved identity evidence does not include a current depth-chart order. All four therefore remain explicit Career failures in the replay below.
+
+### Saved-State loader/materializer replay
+
+Re-ran the retained nonproduction roster packet through Foundation 4 dynamic materialization, full-cohort Shapley/Career composition, and exact-State Position & Depth construction. State hash: `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`; as-of `2026-10-08T16:20:14.036832Z`.
+
+- Foundation 4: **11** dynamic candidates; **176** Y4–Y7 rows and **11** Y8+ authorities.
+- Career/Shapley: **346** estimates (frozen 335 plus 11 dynamic); frozen Career maximum absolute delta **0.0**.
+- Position & Depth: **250/250** roster rows retained; **234 available**, **16 explicit Year 1 failures**.
+- Full-process peak RSS: **387.45 MiB**, below the approximately **410 MiB** memory gate.
+
+Player outcomes remain the ledger above: **0 of the 16** gained a complete Career value in this replay; **16** retain individual Year 1 failures. For the four fumbles gaps, the accepted coordinate is now available, but this retained Year 1 packet still lacks the second provider source and current catalog depth-chart evidence required to use the low-confidence fallback. The other 12 retain their documented source/identity failures. No row was dropped and no production write occurred.
+
+### Validation and CI
+
+A direct local invocation of the updated single-source scorer passed: with the first-party fumbles coordinate it produced standard and connected-league Year 1 scores of **12.0** for the isolated fixture; without it the candidate remained an explicit failure. The focused pytest regression was committed, but local pytest is unavailable in this workspace. GitHub Actions workflow-run and combined-status lookups for current code head `6c635e3afa8425dcba0014c6ebe1825e251e2b6e` returned **zero runs and zero checks**. Therefore focused CI is **not passed** and is the remaining validation gate. PR stays draft. No provider acquisition, waiver processing, State refresh, production write, merge, or deployment occurred.
+
