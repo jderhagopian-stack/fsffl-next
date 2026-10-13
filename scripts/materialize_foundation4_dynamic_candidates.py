@@ -16,6 +16,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from fsffl.product.resource_coordinator import release_unused_process_memory
+from fsffl.product.foundation4_matrix import bounded_feature_matrix
 
 REQUIRED = {
     "player_id", "position", "historical_gsis_id", "age", "experience",
@@ -85,10 +87,10 @@ def stage_projected_csv(path: str, destination: Path, columns: tuple[str, ...]) 
     return destination
 
 
-def compact_history_categories(frame: pd.DataFrame, dev) -> pd.DataFrame:
+def compact_history_categories(frame: pd.DataFrame, dev, *, copy: bool = True) -> pd.DataFrame:
     """Dictionary-encode repeated route labels without changing model inputs."""
     categorical = set(getattr(dev, "CATEGORICAL", ())) | {"position"}
-    out = frame.copy()
+    out = frame.copy() if copy else frame
     for column in sorted(categorical & set(out.columns)):
         values = out[column].astype("category")
         if "MISSING" not in values.cat.categories:
@@ -449,6 +451,9 @@ def main():
     a = ap.parse_args()
     out = Path(a.out_dir); out.mkdir(parents=True, exist_ok=True)
     dev = load_module("dynamic_career_dev", a.development_module)
+    accepted_matrix = dev.matrix
+    dev.matrix = lambda train, evaluation, features, architecture: bounded_feature_matrix(
+        accepted_matrix, dev.CATEGORICAL, train, evaluation, features, architecture)
     route = load_module("dynamic_career_route", a.route_module)
     source = load_module("foundation4_source", str(Path(__file__).with_name("materialize_foundation4_fsffl_coordinate.py")))
     from fsffl.product.career_coverage import (
@@ -498,7 +503,7 @@ def main():
     connected.to_csv(scoped_history_path, index=False)
     # Release current-board joins before the full accepted history panel is built.
     del connected, raw, players, residual, innovation, reference_board, reference
-    gc.collect()
+    release_unused_process_memory(label="foundation4-current-inputs-released")
     class Args: pass
     history = Args()
     history.model_a_rows = str(stage_projected_csv(
@@ -530,9 +535,16 @@ def main():
     history_innovation = pd.read_csv(history.innovation_states)
     history_base = dev.merge_trajectory(history_base, history_residual, history_innovation)
     del history_residual, history_innovation
+    model_features = {
+        column for feature_set in dev.FEATURE_SETS.values() for column in feature_set
+    }
+    base_columns = {"player_id", "base_season", "position"} | model_features
+    history_base = history_base.loc[:, [column for column in history_base.columns if column in base_columns]]
+    history_base = compact_history_categories(history_base, dev, copy=False)
+    release_unused_process_memory(label="foundation4-before-horizon-expansion")
     long = dev.build_long(history_base, history_raw)
     del history_base, history_raw
-    gc.collect()
+    release_unused_process_memory(label="foundation4-history-base-released")
     model_features = {
         column for feature_set in dev.FEATURE_SETS.values()
         for column in feature_set if column in long.columns
@@ -542,8 +554,8 @@ def main():
         if column in long.columns
     ] + [column for column in long.columns if column in model_features]
     long = long.loc[:, list(dict.fromkeys(retained_long_columns))]
-    long = compact_history_categories(long, dev)
-    gc.collect()
+    long = compact_history_categories(long, dev, copy=False)
+    release_unused_process_memory(label="foundation4-before-policy-materialization")
     result = source.current_policy_rows(
         route, dev, long, current, pd.read_csv(a.current_route),
         pd.read_csv(a.cell_metrics), json.loads(Path(a.policy_freeze).read_text()),

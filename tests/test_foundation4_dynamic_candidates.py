@@ -238,7 +238,7 @@ def test_hosted_materializer_checkpoint_receives_explicit_candidate_failures(tmp
     )
     target = tmp_path / "candidate-failures.csv"
     _write_candidate_failures(
-        target, {"sleeper:player:9002": "candidate row unavailable"}, live
+        target, {}, live
     )
     failure = next(csv.DictReader(target.open(encoding="utf-8")))
     assert failure["failure_detail"] == "accepted Y1 raw metrics incomplete"

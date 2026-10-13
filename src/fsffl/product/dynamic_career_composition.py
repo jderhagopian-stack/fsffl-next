@@ -38,6 +38,8 @@ from .p0_live_candidate_runtime import (
 )
 from .private_beta_shapley_runtime import _year_one_forecasts
 from .runtime import UserRuntimeContext
+from .foundation4_cohort import align_foundation4_cohort
+from .resource_coordinator import release_unused_process_memory
 
 
 @dataclass(frozen=True)
@@ -164,6 +166,13 @@ def _compose_dynamic_career_contract(
     frozen_long = provide_foundation4_long_horizon_forecast_contract_for_rules(
         state.league.rules
     )
+    base_ids = {row.player_id for row in frozen_reference.estimates}
+    if {row.player_id for row in expanded_current.estimates} != base_ids | ready:
+        raise ValueError("expanded Current differs from the selected reference plus dynamic cohort")
+    frozen_long, terminal_features = align_foundation4_cohort(
+        player_ids=base_ids, long_forecast=frozen_long,
+        terminal_features=provide_foundation4_terminal_features(),
+    )
     candidate_long_rows = tuple(
         row for player_id in sorted(ready) for row in components.y4_y7[player_id]
     )
@@ -185,7 +194,6 @@ def _compose_dynamic_career_contract(
     long_term = build_long_term_intrinsic_shadow(
         long_contract, rules=state.league.rules
     )
-    terminal_features = provide_foundation4_terminal_features()
     tails: dict[str, CareerTailAuthority] = {
         player_id: build_career_tail_authority(
             terminal_features[player_id], rules=state.league.rules
@@ -288,6 +296,7 @@ def build_dynamic_rostered_career_contract(
             )
         return ExpandedCareerContractResult(contract=None, failures=failures)
     try:
+        release_unused_process_memory(label="career-before-dynamic-foundation4")
         components = materializer(context, live, tuple(sorted(eligible)))
     except Exception as exc:
         # The materializer is allowed to fail per candidate; a batch-level

@@ -75,6 +75,7 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def _write_candidate_failures(path: Path, failures: dict[str, str], live) -> None:
     """Persist explicit player failures for the materializer's roster checkpoint."""
     source_failures = getattr(live, "failures", {})
+    failures = {**source_failures, **failures}
     rows = []
     for player_id, detail in sorted(failures.items()):
         source_detail = source_failures.get(player_id)

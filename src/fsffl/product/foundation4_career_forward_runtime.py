@@ -42,6 +42,7 @@ from .foundation4_shadow_inputs import (
     provide_foundation4_terminal_features,
 )
 from .runtime import UserRuntimeContext
+from .foundation4_cohort import align_foundation4_cohort
 
 
 FOUNDATION4_Y4_Y7_ARTIFACT_KIND = "foundation4_long_horizon_y4_y7_shadow"
@@ -53,7 +54,7 @@ LEGACY_FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
 FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = CAREER_INTRINSIC_ARTIFACT_KIND
 FOUNDATION4_SCOPE_KIND = CAREER_INTRINSIC_SCOPE_KIND
 FOUNDATION4_RUNTIME_VERSION = (
-    "foundation4-career-forward-runtime-v4:"
+    "foundation4-career-forward-runtime-v5:active-cohort:"
     "dynamic-rostered-y1-y3-shapley-bridge:"
     "fsffl-material-scoring-with-rare-residual-omission"
 )
@@ -268,6 +269,16 @@ class CareerIntrinsicLoader:
         forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
             context.league_state.league.rules
         )
+        # restore_compatible already retained the exact Career subject contract;
+        # use its reference IDs to locate the corresponding scoped component.
+        # This does not rebuild Current or reread the full Career payload.
+        with self._lock:
+            restored = self._cached_contract if self._cached_user_id == context.user_id else None
+        if restored is not None:
+            reference_ids = {row.player_id for row in forecast.forecasts}
+            active_ids = {row.player_id for row in restored.estimates} & reference_ids
+            forecast, _ = align_foundation4_cohort(player_ids=active_ids,
+                long_forecast=forecast, terminal_features=provide_foundation4_terminal_features())
         expected_input = long_term_intrinsic_input_fingerprint(
             forecast,
             rules=context.league_state.league.rules,
@@ -492,12 +503,15 @@ class CareerIntrinsicLoader:
                 "Foundation 4 requires ready governed Current Intrinsic Y1-Y3"
             )
 
+        player_ids = {item.player_id for item in current.estimates}
+        long_forecast, terminal_features = align_foundation4_cohort(
+            player_ids=player_ids, long_forecast=long_forecast,
+            terminal_features=provide_foundation4_terminal_features(),
+        )
         component = build_long_term_intrinsic_shadow(
             long_forecast,
             rules=context.league_state.league.rules,
         )
-        terminal_features = provide_foundation4_terminal_features()
-        player_ids = {item.player_id for item in current.estimates}
         component_player_ids = {item.player_id for item in component.estimates}
         if component_player_ids != player_ids or set(terminal_features) != player_ids:
             raise ValueError(
