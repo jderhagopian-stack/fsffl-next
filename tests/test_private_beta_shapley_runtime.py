@@ -43,6 +43,7 @@ from fsffl.product.p0_forecast_runtime import (
     frozen_p0_source_rows,
 )
 from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
+from fsffl.product.p0_live_candidate_runtime import _score_complete_single_source_year_one
 from fsffl.product.private_beta_shapley_runtime import (
     PrivateBetaShapleyContractLoader,
     intrinsic_input_fingerprint,
@@ -1745,3 +1746,122 @@ def test_intrinsic_loader_drops_stale_durable_restore_after_cache_epoch_advance(
     assert not thread.is_alive()
     assert result["contract"] is None
     assert loader.clear_user_cache(context.user_id) == 0
+
+def test_hosted_dynamic_career_bridge_scores_first_party_fumbles_for_complete_single_source_y1() -> None:
+    state, _ = _fixture()
+    player_id = "canonical-player"
+    player = state.players[0]
+    now = state.as_of
+    provenance = Provenance(
+        source="razzball",
+        retrieved_at=now,
+        effective_at=now,
+        source_version="captured-ros-v1",
+    )
+    period_start = datetime(2026, 10, 8, tzinfo=UTC)
+    period_end = datetime(2027, 1, 15, tzinfo=UTC)
+    metric_means = (
+        (ForecastMetric.PASS_YARDS, 100.0),
+        (ForecastMetric.PASS_TD, 1.0),
+        (ForecastMetric.INTERCEPTIONS, 1.0),
+        (ForecastMetric.RUSH_YARDS, 10.0),
+        (ForecastMetric.RUSH_TD, 1.0),
+    )
+    source_rows = tuple(
+        ForecastObservation(
+            player_id=player_id,
+            position=player.position,
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            metric=metric,
+            period_start=period_start,
+            period_end=period_end,
+            distribution=ForecastDistribution(mean=mean, stddev=0.0),
+            source="razzball",
+            model_version="captured-ros-v1",
+            as_of=now,
+            provenance=provenance,
+        )
+        for metric, mean in metric_means
+    )
+    fumbles = ForecastObservation(
+        player_id=player_id,
+        position=player.position,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=period_start,
+        period_end=period_end,
+        distribution=ForecastDistribution(mean=0.5, stddev=0.7),
+        source="fsffl:first_party:fumbles_lost",
+        model_version="accepted-fumbles-lost-rolling-v1",
+        as_of=now,
+        provenance=Provenance(
+            source="fsffl:first_party:fumbles_lost",
+            retrieved_at=now,
+            effective_at=now,
+            source_version="accepted-fumbles-lost-rolling-v1",
+        ),
+    )
+
+    without_supplement = _score_complete_single_source_year_one(
+        player_id=player_id,
+        source_rows=source_rows,
+        completed_actuals=(),
+        league_state=state,
+    )
+    with_supplement = _score_complete_single_source_year_one(
+        player_id=player_id,
+        source_rows=source_rows,
+        completed_actuals=(),
+        league_state=state,
+        supplemental_rows=(fumbles,),
+    )
+
+    assert without_supplement is None
+    assert with_supplement is not None
+    raw, standard, league = with_supplement
+    assert standard is not None and league is not None
+    assert standard.distribution.mean == pytest.approx(12.0)
+    assert league.distribution.mean == pytest.approx(12.0)
+    assert len([row for row in raw if row.metric == ForecastMetric.FUMBLES_LOST]) == 1
+    assert next(row for row in raw if row.metric == ForecastMetric.FUMBLES_LOST).model_version == "p0-live-y1-raw-v1"
+
+
+def test_hosted_dynamic_career_bridge_rejects_unrelated_supplement_coordinate() -> None:
+    state, _ = _fixture()
+    now = state.as_of
+    period_start = datetime(2026, 10, 8, tzinfo=UTC)
+    period_end = datetime(2027, 1, 15, tzinfo=UTC)
+    provider = ForecastObservation(
+        player_id="canonical-player",
+        position=Position.QB,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        metric=ForecastMetric.PASS_YARDS,
+        period_start=period_start,
+        period_end=period_end,
+        distribution=ForecastDistribution(mean=1.0, stddev=0.0),
+        source="razzball",
+        model_version="captured-ros-v1",
+        as_of=now,
+        provenance=Provenance(source="razzball", retrieved_at=now, effective_at=now),
+    )
+    other_player = ForecastObservation(
+        player_id="different-player",
+        position=Position.QB,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=period_start,
+        period_end=period_end,
+        distribution=ForecastDistribution(mean=0.2, stddev=0.4),
+        source="fsffl:first_party:fumbles_lost",
+        model_version="accepted-fumbles-lost-rolling-v1",
+        as_of=now,
+        provenance=Provenance(source="fsffl:first_party:fumbles_lost", retrieved_at=now, effective_at=now),
+    )
+    assert _score_complete_single_source_year_one(
+        player_id="canonical-player",
+        source_rows=(provider,),
+        completed_actuals=(),
+        league_state=state,
+        supplemental_rows=(other_player,),
+    ) is None
+\n
