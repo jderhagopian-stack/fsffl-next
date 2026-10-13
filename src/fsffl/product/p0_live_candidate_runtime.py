@@ -429,7 +429,11 @@ def _score_complete_single_source_year_one(
         league, _ = _score_season_points(raw, league_state=league_state, standard=False)
     except ValueError:
         return None
-    return raw, standard.get(player_id), league.get(player_id)
+    standard_item = standard.get(player_id)
+    league_item = league.get(player_id)
+    if standard_item is None or league_item is None:
+        return None
+    return raw, standard_item, league_item
 
 
 def _standard_score_stats(stats: Mapping[str, float]) -> float:
