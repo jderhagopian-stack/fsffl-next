@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 16778)
-Total output lines: 1825
-
 from __future__ import annotations
 
 import json
@@ -316,6 +313,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         future=dynamic_future,
         failures={},
         ros_runtime=SimpleNamespace(),
+        year_one_evidence_modes={},
     )
     evidence = _authority_evidence(base_year_one)
     base_loader = _legacy_p0_loader(
