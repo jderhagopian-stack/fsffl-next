@@ -68,6 +68,26 @@ def test_raw_history_reader_fails_closed_when_scoring_evidence_missing(tmp_path)
         MOD.read_raw_history(source)
 
 
+def test_route_label_compaction_preserves_model_category_values():
+    class Dev:
+        CATEGORICAL = ("trajectory_state",)
+
+    frame = pd.DataFrame({
+        "position": ["QB", "WR"] * 100,
+        "trajectory_state": ["stable", None] * 100,
+        "actual": [1.0, 2.0] * 100,
+    })
+    compact = MOD.compact_history_categories(frame, Dev())
+    assert compact.position.astype(str).tolist() == frame.position.astype(str).tolist()
+    assert (
+        compact.trajectory_state.fillna("MISSING").astype(str).tolist()
+        == frame.trajectory_state.fillna("MISSING").astype(str).tolist()
+    )
+    assert compact.memory_usage(index=True, deep=True).sum() < frame.memory_usage(
+        index=True, deep=True
+    ).sum()
+
+
 def test_invalid_fringe_candidate_is_failed_without_dropping_valid_roster_input():
     valid_id, invalid_id = "sleeper:player:9001", "sleeper:player:9002"
     roster = pd.DataFrame([
