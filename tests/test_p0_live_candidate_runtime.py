@@ -5,7 +5,9 @@ from fsffl.product.p0_live_candidate_runtime import exact_state_rostered_p0_subj
 from fsffl.product.p0_live_candidate_runtime import (
     StatusBasedZeroRosEvidence,
     _active_backup_player_ids,
+    _all_ros_source_observations,
     _score_complete_single_source_year_one,
+    _single_source_fumbles_gap_player_ids,
     _status_based_zero_ros,
 )
 from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
@@ -250,3 +252,67 @@ def test_complete_single_source_year_one_is_labeled_eligible_and_missing_metrics
     assert complete[1] is not None and complete[2] is not None
     assert {item.source for item in complete[0]} == {"razzball"}
     assert incomplete is None
+
+
+def test_retained_roster_ros_rows_enter_fumbles_gap_eligibility():
+    now = datetime(2026, 10, 8, tzinfo=UTC)
+    player_id = "sleeper:player:7567"
+    provenance = Provenance(source="razzball", retrieved_at=now, effective_at=now)
+    state = LeagueState(
+        league=League(
+            league_id="fixture-league",
+            name="Fixture",
+            season=2026,
+            rules=LeagueRules(
+                team_count=2,
+                roster_size=1,
+                lineup=(),
+                scoring=(*FROZEN_I1_STANDARD_SCORING, ScoringRule(stat="fum_lost", points=-2.0)),
+            ),
+        ),
+        as_of=now,
+        teams=(
+            Team(team_id="team-a", league_id="fixture-league", display_name="A"),
+            Team(team_id="team-b", league_id="fixture-league", display_name="B"),
+        ),
+        team_states=(
+            TeamState(
+                team_id="team-a",
+                roster=(RosterEntry(player_id=player_id, slot=RosterSlot.BENCH),),
+            ),
+            TeamState(team_id="team-b", roster=()),
+        ),
+        players=(Player(player_id=player_id, full_name="Kenny Gainwell", position=Position.RB),),
+        player_states=(PlayerState(player_id=player_id, as_of=now, provenance=provenance),),
+    )
+    fallback = tuple(
+        ForecastObservation(
+            player_id=player_id,
+            position=Position.RB,
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            metric=metric,
+            period_start=now,
+            period_end=datetime(2027, 1, 10, tzinfo=UTC),
+            distribution=ForecastDistribution(mean=1.0, stddev=0.0),
+            source="razzball",
+            model_version="retained-roster-capture-v1",
+            as_of=now,
+            provenance=provenance,
+        )
+        for metric in (
+            ForecastMetric.RUSH_YARDS,
+            ForecastMetric.RUSH_TD,
+            ForecastMetric.RECEPTIONS,
+            ForecastMetric.REC_YARDS,
+            ForecastMetric.REC_TD,
+        )
+    )
+    saved_runtime = type("SavedRuntime", (), {"source_observations": ()})()
+
+    runtime_rows = _all_ros_source_observations(saved_runtime, fallback)
+    assert runtime_rows == fallback
+    assert _single_source_fumbles_gap_player_ids(
+        league_state=state,
+        candidate_ids={player_id},
+        source_observations=runtime_rows,
+    ) == {player_id}
