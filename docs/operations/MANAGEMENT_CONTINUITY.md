@@ -1,3 +1,15 @@
+## 2026-10-13 — Exact-State dynamic roster selection fix
+
+Implementation commit: `a4403800e430d7bd8295d72f95a892c465c04837`. Regression-test commit: `d0d2382b55dec660bd79bf64a11afba5fb130e2f`.
+
+The hosted on-demand P0/Career candidate path previously selected out-of-reference subjects from the freshly fetched Sleeper snapshot's roster. That roster may have changed since the requested saved State, so a player on the State-bound roster could be silently excluded before actuals+ROS scoring and Career composition. Candidate selection now uses `league_state.team_states` (the exact State being materialized); the fresh Sleeper player catalog remains an identity/position validation source. This preserves independent player failure handling and leaves frozen-reference IDs outside dynamic scoring.
+
+Trace against State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670`: the 27 exact-State dynamic roster IDs are selected, including all 16 Career-gap IDs from Management comment #6126869312. Read-only projection-history inspection found no rows for those 16 in the latest persisted 2026 ROS revision per provider. Older retained history has only partial/single-source rows for some players; it does not satisfy the current two-independent-source Y1 contract. The existing weekly actual path canonicalizes Sleeper IDs as `sleeper:player:<id>`; the on-demand scorer combines completed-week actuals with the accepted ROS ensemble and fails the individual candidate when that ensemble is incomplete. No provider acquisition was repeated and no source/model rule changed.
+
+Validation: focused exact-State candidate-selection regression plus saved-ROS canonical-ID regression: **2 passed, 21 deselected**. The exact-State packet replayed through the selection helper: **27 dynamic roster candidates selected; all 16 gaps included**. GitHub Actions lookup for test head `d0d2382b55dec660bd79bf64a11afba5fb130e2f` returned **0 workflow runs and no status checks**; no CI pass is claimed. The earlier Foundation 4 full-path results remain 11 new Career values, 16 explicit Year-1 failures, 250/250 Position & Depth rows, frozen Career delta 0.0, and 397.54 MiB peak RSS. They have not been rerun with this selection correction.
+
+The coverage gate remains open: persisted accepted current revisions do not provide the two-source ROS contract for these 16. The candidate selection fix ensures those saved-State roster IDs reach the existing on-demand attempt and remain individually reported; complete Career values still require current governed Y1 inputs. Do not use stale single-source projections as current input.
+
 ## 2026-10-12 — Career #405 saved-State end-to-end replay
 
 On PR #454, bridge serialization fixes are committed as `98da18bb561f64bf704131cdb95ebe959616acb2`; the focused structured-provenance regression is `7553b63e7cd912d4d727569b994d3b1835ebb6a9`. The saved-State nonproduction replay used the retained P0 roster packet and State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (2026-10-08T16:20:14Z), with no provider acquisition or production write.
