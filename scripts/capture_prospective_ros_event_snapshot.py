@@ -15,12 +15,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from fsffl.forecast.current_normalization import current_snapshot_from_razzball
+from fsffl.forecast.current_normalization import current_snapshot_from_razzball, map_projection_rows
 from fsffl.providers.in_season_projection_sources import (
     CBSInSeasonProjectionSource,
     RazzballRestOfSeasonProjectionSource,
 )
 from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatsSource
+from fsffl.state.models import LeagueState, Player
 
 POSITIONS=("QB","RB","WR","TE")
 SCORING={
@@ -81,32 +82,33 @@ def board_indexes(board):
         loose.setdefault((norm_name(r.player_name),str(r.position)),[]).append(r)
     return loose
 
-def provider_payload(snapshot,board,season,week,captured_at):
-    loose=board_indexes(board)
+def provider_payload(snapshot,board,season,week,captured_at,*,players,player_ids=None):
+    selected_ids=set(player_ids) if player_ids is not None else None
+    board_by_id={str(r.player_id):r for r in board.itertuples()}
     mapped=[]
     observations=[]
-    for r in snapshot.rows:
-        hits=loose.get((norm_name(r.player_name),r.position.value),[])
-        if len(hits)!=1:
+    mapped_rows=map_projection_rows(snapshot,players=tuple(players))
+    for r,player in mapped_rows:
+        if selected_ids is not None and player.player_id not in selected_ids:
             continue
-        b=hits[0]
+        b=board_by_id.get(str(player.player_id))
         stats={str(k):float(v) for k,v in r.stats.items()}
         missing=sorted(REQ[r.position.value]-set(stats))
         score=sum(SCORING[k]*v for k,v in stats.items() if k in SCORING)
         mapped.append({
-            "player_id":str(b.player_id),
-            "historical_gsis_id":str(b.historical_gsis_id),
+            "player_id":str(player.player_id),
+            "historical_gsis_id":str(b.historical_gsis_id) if b is not None else None,
             "external_id":str(r.external_id),
-            "player_name":str(b.player_name),
+            "player_name":str(player.full_name),
             "position":r.position.value,
             "provider_team":str(r.nfl_team),
-            "mapping_method":"name_position_unique",
+            "mapping_method":"canonical_provider_ref_or_unique_name_position_team",
             "exact_standard_score":len(missing)==0,
             "missing_required_stats":missing,
         })
         for metric,value in sorted(stats.items()):
             observations.append({
-                "player_id":str(b.player_id),
+                "player_id":str(player.player_id),
                 "external_id":str(r.external_id),
                 "position":r.position.value,
                 "metric":metric,
@@ -116,7 +118,7 @@ def provider_payload(snapshot,board,season,week,captured_at):
             })
         if not missing:
             observations.append({
-                "player_id":str(b.player_id),
+                "player_id":str(player.player_id),
                 "external_id":str(r.external_id),
                 "position":r.position.value,
                 "metric":"standard_points",
@@ -131,7 +133,8 @@ def provider_payload(snapshot,board,season,week,captured_at):
         "season":season,
         "mapped_rows":mapped,
         "observation_count":len(observations),
-        "mapping_note":"unique normalized player name + position against governed current 335-player board",
+        "mapping_note":"shared canonical State provider-reference/name-position-team mapper; frozen 335 is parity context only",
+        "selected_player_ids":sorted(selected_ids) if selected_ids is not None else None,
         "raw_html_retained":False,
     }
     effective=snapshot.effective_at.astimezone(UTC)
@@ -219,23 +222,45 @@ def event_payloads(events,board,captured_at):
 
 def main():
     ap=argparse.ArgumentParser()
-    ap.add_argument("--research-root",type=Path,required=True)
+    ap.add_argument("--research-root",type=Path)
     ap.add_argument("--board",type=Path,required=True)
+    ap.add_argument("--state-json",type=Path,help="Canonical State JSON used as the shared identity universe")
+    ap.add_argument("--player-id",action="append",default=None,help="Limit retained Career inputs to this canonical player ID; repeat as needed")
+    ap.add_argument("--skip-events",action="store_true",help="Capture only projection inputs; do not run NFLverse event enrichment")
     ap.add_argument("--output",type=Path,required=True)
     args=ap.parse_args()
 
     captured_at=datetime.now(UTC)
     board=pd.read_csv(args.board)
     board=board[board.position.isin(POSITIONS)].copy()
-    if len(board)!=335:
-        raise RuntimeError(f"expected governed 335-player board, got {len(board)}")
-
-    state=SleeperWeeklyStatsSource().fetch_nfl_state()
-    if int(state.season)!=2026:
-        raise RuntimeError(f"unexpected Sleeper season {state.season}")
-    season=int(state.season)
-    week=int(state.week)
-    completed=int(state.completed_through_week)
+    if args.state_json is not None:
+        canonical_state=LeagueState.model_validate(json.loads(args.state_json.read_text(encoding="utf-8")))
+        canonical_players=canonical_state.players
+        season=canonical_state.league.season
+        completed=int(canonical_state.completed_through_week or 0)
+        week=completed+1
+    else:
+        canonical_players=tuple(
+            Player(
+                player_id=str(r.player_id),
+                full_name=str(r.player_name),
+                position=str(r.position),
+                nfl_team=(str(getattr(r,"nfl_team","")) or None),
+            )
+            for r in board.itertuples()
+        )
+        state=SleeperWeeklyStatsSource().fetch_nfl_state()
+        if int(state.season)!=2026:
+            raise RuntimeError(f"unexpected Sleeper season {state.season}")
+        season=int(state.season)
+        week=int(state.week)
+        completed=int(state.completed_through_week)
+    known_ids={player.player_id for player in canonical_players}
+    requested_ids=set(args.player_id) if args.player_id is not None else None
+    if requested_ids is not None:
+        unknown=sorted(requested_ids-known_ids)
+        if unknown:
+            raise RuntimeError(f"requested player IDs are absent from canonical universe: {unknown}")
 
     providers=[]
     failures=[]
@@ -246,20 +271,26 @@ def main():
         ("cbs",lambda:CBSInSeasonProjectionSource().fetch_rest_of_season(season=season)),
     ):
         try:
-            providers.append(provider_payload(fn(),board,season,week,captured_at))
+            providers.append(provider_payload(
+                fn(),board,season,week,captured_at,
+                players=canonical_players,player_ids=requested_ids,
+            ))
         except Exception as exc:
             failures.append({"source":name,"error_type":type(exc).__name__,"error":str(exc)[:1000]})
 
     events=[]
-    try:
-        evt=load_module(args.research_root/"scripts/reconstruct_event_time_absence_cause_evidence.py","evt_archive")
-        events=event_payloads(current_event_map(evt,season),board,captured_at)
-    except Exception as exc:
-        failures.append({
-            "source":"nflverse_current_event_state",
-            "error_type":type(exc).__name__,
-            "error":str(exc)[:1000],
-        })
+    if not args.skip_events:
+        if args.research_root is None:
+            raise RuntimeError("--research-root is required unless --skip-events is set")
+        try:
+            evt=load_module(args.research_root/"scripts/reconstruct_event_time_absence_cause_evidence.py","evt_archive")
+            events=event_payloads(current_event_map(evt,season),board,captured_at)
+        except Exception as exc:
+            failures.append({
+                "source":"nflverse_current_event_state",
+                "error_type":type(exc).__name__,
+                "error":str(exc)[:1000],
+            })
 
     board_fingerprint=digest([
         {
