@@ -45,6 +45,7 @@ from fsffl.product.p0_forecast_runtime import (
 )
 from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
 from fsffl.product.p0_live_candidate_runtime import _score_complete_single_source_year_one
+from fsffl.product.p0_live_candidate_runtime import _single_source_fumbles_gap_player_ids
 from fsffl.product.private_beta_shapley_runtime import (
     PrivateBetaShapleyContractLoader,
     intrinsic_input_fingerprint,
@@ -1925,4 +1926,45 @@ def test_hosted_dynamic_career_bridge_materializes_schedule_scaled_fumbles_ros(m
     assert ros_rows[0].distribution.mean == pytest.approx(0.4 * 13 / 17)
     assert ros_rows[0].distribution.stddev == pytest.approx(0.6 * 13 / 17)
     assert "remaining_games=13" in ros_rows[0].provenance.source_version
+\n
+
+def test_hosted_dynamic_career_bridge_selects_only_complete_provider_rows_missing_fumbles() -> None:
+    state, forecast = _fixture()
+    now = state.as_of
+    period_start = datetime(2026, 9, 29, tzinfo=UTC)
+    period_end = datetime(2027, 1, 26, tzinfo=UTC)
+    metrics = (
+        ForecastMetric.PASS_YARDS,
+        ForecastMetric.PASS_TD,
+        ForecastMetric.INTERCEPTIONS,
+        ForecastMetric.RUSH_YARDS,
+        ForecastMetric.RUSH_TD,
+    )
+
+    def rows(player_id: str, selected: tuple[ForecastMetric, ...]) -> tuple[ForecastObservation, ...]:
+        return tuple(
+            forecast.model_copy(
+                update={
+                    "player_id": player_id,
+                    "horizon": ForecastHorizon.REST_OF_SEASON,
+                    "metric": metric,
+                    "period_start": period_start,
+                    "period_end": period_end,
+                    "source": "razzball",
+                    "model_version": "captured-ros-v1",
+                }
+            )
+            for metric in selected
+        )
+
+    complete_except_fumbles = rows("canonical-player", metrics)
+    incomplete_other_metric = rows("incomplete-player", metrics[:-1])
+    outsider = rows("not-rostered", metrics)
+    selected = _single_source_fumbles_gap_player_ids(
+        league_state=state,
+        candidate_ids={"canonical-player", "incomplete-player"},
+        source_observations=complete_except_fumbles + incomplete_other_metric + outsider,
+    )
+
+    assert selected == {"canonical-player"}
 \n
