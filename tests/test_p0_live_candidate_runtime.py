@@ -5,8 +5,12 @@ from fsffl.product.p0_live_candidate_runtime import exact_state_rostered_p0_subj
 from fsffl.product.p0_live_candidate_runtime import (
     StatusBasedZeroRosEvidence,
     _active_bench_player_ids,
+    _score_complete_single_source_year_one,
     _status_based_zero_ros,
 )
+from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
+from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
+from fsffl.state.models import ScoringRule
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -155,3 +159,76 @@ def test_active_bench_eligibility_is_exact_state_bound():
     )
 
     assert _active_bench_player_ids(state) == {active_id}
+
+
+def test_complete_single_source_year_one_is_labeled_eligible_and_missing_metrics_fail():
+    now = datetime(2026, 10, 8, tzinfo=UTC)
+    player_id = "sleeper:player:11638"
+    player = Player(player_id=player_id, full_name="Dynamic Player", position=Position.WR)
+    provenance = Provenance(source="razzball", retrieved_at=now, effective_at=now)
+    state = LeagueState(
+        league=League(
+            league_id="fixture-league",
+            name="Fixture",
+            season=2026,
+            rules=LeagueRules(
+                team_count=2,
+                roster_size=1,
+                lineup=(),
+                scoring=(*FROZEN_I1_STANDARD_SCORING, ScoringRule(stat="rec", points=1.0)),
+            ),
+        ),
+        as_of=now,
+        teams=(Team(team_id="team-a", league_id="fixture-league", display_name="A"),),
+        team_states=(TeamState(team_id="team-a", roster=()),),
+        players=(player,),
+        player_states=(PlayerState(player_id=player_id, as_of=now, provenance=provenance),),
+    )
+    stat_metrics = {
+        "pass_yd": ForecastMetric.PASS_YARDS,
+        "pass_td": ForecastMetric.PASS_TD,
+        "pass_int": ForecastMetric.INTERCEPTIONS,
+        "rush_yd": ForecastMetric.RUSH_YARDS,
+        "rush_td": ForecastMetric.RUSH_TD,
+        "rec_yd": ForecastMetric.REC_YARDS,
+        "rec_td": ForecastMetric.REC_TD,
+        "fum_lost": ForecastMetric.FUMBLES_LOST,
+        "rec": ForecastMetric.RECEPTIONS,
+    }
+
+    def source_rows(*, include_fumbles: bool) -> tuple[ForecastObservation, ...]:
+        return tuple(
+            ForecastObservation(
+                player_id=player_id,
+                position=Position.WR,
+                horizon=ForecastHorizon.REST_OF_SEASON,
+                metric=metric,
+                period_start=datetime(2026, 10, 8, tzinfo=UTC),
+                period_end=datetime(2027, 1, 15, tzinfo=UTC),
+                distribution=ForecastDistribution(mean=1.0, stddev=0.0, p10=1.0, p50=1.0, p90=1.0),
+                source="razzball",
+                model_version="captured-v1",
+                as_of=now,
+                provenance=provenance,
+            )
+            for stat, metric in stat_metrics.items()
+            if include_fumbles or stat != "fum_lost"
+        )
+
+    complete = _score_complete_single_source_year_one(
+        player_id=player_id,
+        source_rows=source_rows(include_fumbles=True),
+        completed_actuals=(),
+        league_state=state,
+    )
+    incomplete = _score_complete_single_source_year_one(
+        player_id=player_id,
+        source_rows=source_rows(include_fumbles=False),
+        completed_actuals=(),
+        league_state=state,
+    )
+
+    assert complete is not None
+    assert complete[1] is not None and complete[2] is not None
+    assert {item.source for item in complete[0]} == {"razzball"}
+    assert incomplete is None
