@@ -245,7 +245,7 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
     assert abs(reconstructed - contract.estimates[0].raw_intrinsic_value) <= 1e-9
 
 
-def test_hosted_dynamic_career_bridge_composes_candidate_with_full_shapley_cohort(
+def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     monkeypatch,
 ) -> None:
     from fsffl.product import dynamic_career_composition as bridge
@@ -335,7 +335,7 @@ def test_hosted_dynamic_career_bridge_composes_candidate_with_full_shapley_cohor
         candidate_builder=lambda _state: candidate,
     )
 
-    assert composed_player_counts == [2]
+    assert composed_player_counts == []
     assert result.contract is None
     assert set(result.failures) == {candidate_id}
     assert "Foundation 4 dynamic materializer input bundle is not configured" in result.failures[candidate_id]
