@@ -153,6 +153,11 @@ class P0SourceRow:
     prior2_gap_age_state_z: float | None
     source_percentile: float
     state_percentile: float
+    # Dynamic rows retain their governed evidence identity alongside the same
+    # model features. Frozen reference rows have no dynamic evidence packet.
+    evidence_as_of: str | None = None
+    evidence_source_version: str | None = None
+    evidence_sha256: str | None = None
 
     @property
     def sleeper_external_id(self) -> str:

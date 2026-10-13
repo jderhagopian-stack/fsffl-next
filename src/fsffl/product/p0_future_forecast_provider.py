@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import hashlib
 import json
 from dataclasses import dataclass
@@ -67,6 +69,7 @@ def build_p0_future_forecast_contract(
     raw_forecasts: tuple[ForecastObservation, ...],
     league_year_one: tuple[ForecastObservation, ...],
     candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
+    evaluation_as_of: datetime | None = None,
 ) -> P0FutureForecastContractMaterialization:
     """Materialize current P0 Y2/Y3 authority behind a model-agnostic contract.
 
@@ -76,6 +79,12 @@ def build_p0_future_forecast_contract(
     requiring downstream product code to know D0/D1 internals.
     """
 
+    if evaluation_as_of is not None:
+        if evaluation_as_of.tzinfo is None:
+            raise ValueError("P0 future evaluation time must be timezone-aware")
+        cutoff = evaluation_as_of.astimezone(UTC)
+        if any(item.as_of.astimezone(UTC) > cutoff for item in (*raw_forecasts, *league_year_one)):
+            raise ValueError("P0 Year-1 evidence postdates evaluation cutoff")
     dynamic_rows = dict(candidate_source_rows or {})
     governed_ids = set(governed_p0_player_ids(league_state))
     dynamic_ids = set(dynamic_rows)

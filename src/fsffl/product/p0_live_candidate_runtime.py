@@ -295,21 +295,21 @@ def _year_one_raw_forecasts(
     actual_by_key = {
         (item.player_id, item.metric): item for item in completed_actuals
     }
+    # Scoring groups one complete coordinate by as_of. Weekly acquisitions can
+    # differ by metric/player, so use this assembly's common evaluation instant
+    # while preserving each input's effective/retrieved timestamps below.
+    evaluation_as_of = max(
+        (instant.astimezone(UTC)
+         for item in (*completed_actuals, *ros_forecasts)
+         for instant in (item.as_of, item.provenance.retrieved_at, item.provenance.effective_at)),
+        default=None,
+    )
     output: list[ForecastObservation] = []
     for ros in ros_forecasts:
         if ros.horizon != ForecastHorizon.REST_OF_SEASON:
             raise ValueError("live P0 Year-1 input requires ROS raw-stat observations")
         actual = actual_by_key.get((ros.player_id, ros.metric))
         actual_points = float(actual.distribution.mean) if actual is not None else 0.0
-        latest_actual_at = (
-            max(
-                actual.as_of.astimezone(UTC),
-                actual.provenance.retrieved_at.astimezone(UTC),
-                actual.provenance.effective_at.astimezone(UTC),
-            )
-            if actual is not None
-            else ros.as_of.astimezone(UTC)
-        )
         output.append(
             ros.model_copy(
                 update={
@@ -320,7 +320,7 @@ def _year_one_raw_forecasts(
                     ),
                     "source": "fsffl:sleeper-actuals-plus-governed-ros",
                     "model_version": "p0-live-y1-raw-v1",
-                    "as_of": max(ros.as_of.astimezone(UTC), latest_actual_at),
+                    "as_of": evaluation_as_of,
                     "provenance": Provenance(
                         source="fsffl:sleeper-actuals-plus-governed-ros",
                         retrieved_at=max(
@@ -618,6 +618,12 @@ def _all_ros_source_observations(
     return tuple(ros_runtime.source_observations) + tuple(fallback_ros_observations)
 
 
+def _ensemble_ros_with_fumbles(ensemble, supplement):
+    """The one-stat supplement cannot create a standalone Year-1 subject."""
+    player_ids = {item.player_id for item in ensemble}
+    return tuple(ensemble) + tuple(item for item in supplement if item.player_id in player_ids)
+
+
 def build_live_p0_rostered_candidate_forecasts(
     league_state: LeagueState,
     *,
@@ -757,10 +763,13 @@ def build_live_p0_rostered_candidate_forecasts(
         )
     except Exception as exc:
         fumbles_supplement_failure = f"{type(exc).__name__}: {exc}"
+    # A first-party coordinate is not a standalone provider projection. Join it
+    # only onto existing ensemble rows here; complete single-source fallbacks
+    # join it separately below after their eligibility check.
     y1_raw = _year_one_raw_forecasts(
         league_state=league_state,
         completed_actuals=completed_raw,
-        ros_forecasts=ros_runtime.raw_ensemble + ros_fumbles_lost,
+        ros_forecasts=_ensemble_ros_with_fumbles(ros_runtime.raw_ensemble, ros_fumbles_lost),
     )
     y1_standard, y1_standard_partial = _score_season_points(
         y1_raw, league_state=league_state, standard=True

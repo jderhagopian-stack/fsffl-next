@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from dataclasses import fields
 
 from fsffl.product.p0_forecast_runtime import frozen_p0_source_rows
 from fsffl.product.p0_live_candidate_runtime import exact_state_rostered_p0_subject_ids
@@ -26,6 +27,96 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
+
+
+def test_dynamic_p0_source_row_retains_candidate_evidence_identity():
+    from fsffl.product.p0_candidate_evidence import (
+        P0CandidateFacts, accepted_p0_source_state_authority,
+        build_p0_candidate_source_rows,
+    )
+
+    now = datetime(2026, 10, 13, tzinfo=UTC)
+    reference = next(row for row in frozen_p0_source_rows() if row.position == 'QB')
+    player_id = 'sleeper:player:dynamic-source-contract'
+    player = Player(player_id=player_id, full_name='Dynamic QB', position=Position.QB)
+    state = LeagueState(
+        league=League(league_id='fixture', name='Fixture', season=2026,
+            rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=())),
+        as_of=now,
+        teams=(Team(team_id='a', league_id='fixture', display_name='A'),
+               Team(team_id='b', league_id='fixture', display_name='B')),
+        team_states=(TeamState(team_id='a', roster=()), TeamState(team_id='b', roster=())),
+        players=(player,), player_states=(PlayerState(player_id=player_id, as_of=now,
+            provenance=Provenance(source='fixture', retrieved_at=now, effective_at=now)),),
+    )
+    values = {field.name: getattr(reference, field.name)
+        for field in fields(P0CandidateFacts) if hasattr(reference, field.name)}
+    facts = P0CandidateFacts(**{**values,
+        'player_id': player_id, 'current_player_id': player_id,
+        'player_name': player.full_name, 'facts_as_of': now,
+        'facts_source_version': 'accepted-live-y1-v1', 'facts_digest': 'a' * 64})
+    rows = build_p0_candidate_source_rows(league_state=state,
+        candidate_facts={player_id: facts},
+        source_state_authority=accepted_p0_source_state_authority(), evaluation_as_of=now)
+    assert rows[player_id].evidence_as_of == now.isoformat()
+    assert rows[player_id].evidence_source_version == facts.facts_source_version
+    assert len(rows[player_id].evidence_sha256) == 64
+    assert rows[player_id].standard_y1_points == reference.standard_y1_points
+    assert reference.evidence_as_of is None
+
+
+def test_p0_future_contract_rejects_evidence_after_explicit_cutoff():
+    import pytest
+    from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
+
+    now = datetime(2026, 10, 13, tzinfo=UTC)
+    row = ForecastObservation(player_id='sleeper:player:dynamic', position=Position.QB,
+        horizon=ForecastHorizon.SEASON, metric=ForecastMetric.FANTASY_POINTS,
+        period_start=now, period_end=datetime(2027, 1, 15, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=10, stddev=0),
+        source='fixture', model_version='fixture', as_of=now,
+        provenance=Provenance(source='fixture', retrieved_at=now, effective_at=now))
+    with pytest.raises(ValueError, match='postdates evaluation cutoff'):
+        build_p0_future_forecast_contract(league_state=None, raw_forecasts=(row,),
+            league_year_one=(row,), evaluation_as_of=datetime(2026, 10, 12, tzinfo=UTC))
+    with pytest.raises(ValueError, match='timezone-aware'):
+        build_p0_future_forecast_contract(league_state=None, raw_forecasts=(),
+            league_year_one=(), evaluation_as_of=datetime(2026, 10, 13))
+
+
+def test_actuals_plus_ros_scores_one_complete_coordinate_across_capture_times():
+    from fsffl.product.p0_live_candidate_runtime import _year_one_raw_forecasts, _score_season_points
+
+    now = datetime(2026, 10, 13, tzinfo=UTC)
+    player_id = 'sleeper:player:dynamic-qb'
+    provenance = Provenance(source='fixture', retrieved_at=now, effective_at=now)
+    state = LeagueState(league=League(league_id='fixture', name='Fixture', season=2026,
+        rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=FROZEN_I1_STANDARD_SCORING)),
+        as_of=now, teams=(), team_states=(),
+        players=(Player(player_id=player_id, full_name='Dynamic QB', position=Position.QB),),
+        player_states=(PlayerState(player_id=player_id, as_of=now, provenance=provenance),))
+    ros = tuple(ForecastObservation(player_id=player_id, position=Position.QB,
+        horizon=ForecastHorizon.REST_OF_SEASON, metric=metric,
+        period_start=now, period_end=datetime(2027, 1, 15, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=mean, stddev=0),
+        source='fixture', model_version='fixture', as_of=now + timedelta(seconds=index),
+        provenance=provenance)
+        for index, (metric, mean) in enumerate(((ForecastMetric.PASS_YARDS,100),
+            (ForecastMetric.PASS_TD,1), (ForecastMetric.INTERCEPTIONS,0),
+            (ForecastMetric.RUSH_YARDS,10), (ForecastMetric.RUSH_TD,0),
+            (ForecastMetric.FUMBLES_LOST,1))))
+    actual = ros[0].model_copy(update={'horizon': ForecastHorizon.SEASON,
+        'as_of': now + timedelta(seconds=10),
+        'distribution': ForecastDistribution(mean=25, stddev=0)})
+    raw = _year_one_raw_forecasts(league_state=state, completed_actuals=(actual,), ros_forecasts=ros)
+    assert {item.as_of for item in raw} == {actual.as_of}
+    complete, partial = _score_season_points(raw, league_state=state, standard=True)
+    assert not partial
+    assert complete[player_id].distribution.mean == 8.0
+    from fsffl.product.p0_live_candidate_runtime import _ensemble_ros_with_fumbles
+    fumbles = ros[-1]
+    assert _ensemble_ros_with_fumbles((), (fumbles,)) == ()
+    assert _ensemble_ros_with_fumbles(ros[:-1], (fumbles,)) == ros
 
 
 def test_dynamic_p0_selection_uses_exact_state_roster_and_excludes_frozen_reference():
@@ -250,7 +341,7 @@ def test_complete_single_source_year_one_is_labeled_eligible_and_missing_metrics
 
     assert complete is not None
     assert complete[1] is not None and complete[2] is not None
-    assert {item.source for item in complete[0]} == {"razzball"}
+    assert {item.source for item in complete[0]} == {"fsffl:sleeper-actuals-plus-governed-ros"}
     assert incomplete is None
 
 
