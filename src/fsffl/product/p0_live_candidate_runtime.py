@@ -181,19 +181,35 @@ def _status_based_zero_ros(
     )
 
 
-def _active_bench_player_ids(league_state: LeagueState) -> set[str]:
-    """State-bound active bench candidates eligible for the low-confidence path."""
+def _active_backup_player_ids(
+    league_state: LeagueState,
+    current_catalog: Mapping[str, Any],
+) -> set[str]:
+    """Require recorded NFL depth-chart evidence before single-source fallback."""
     active = {
         item.player_id
         for item in league_state.player_states
         if item.status.value == "active" and item.nfl_team
     }
-    return {
+    rostered = {
         entry.player_id
         for team_state in league_state.team_states
         for entry in team_state.roster
-        if entry.slot.value in {"BENCH", "TAXI"} and entry.player_id in active
     }
+    backups: set[str] = set()
+    for player_id in active & rostered:
+        catalog_row = current_catalog.get(player_id.rsplit(":", 1)[-1])
+        if not isinstance(catalog_row, Mapping):
+            continue
+        state = next(item for item in league_state.player_states if item.player_id == player_id)
+        try:
+            depth_order = int(catalog_row.get("depth_chart_order"))
+        except (TypeError, ValueError):
+            continue
+        catalog_team = str(catalog_row.get("team") or "").upper()
+        if depth_order > 1 and catalog_team == str(state.nfl_team).upper():
+            backups.add(player_id)
+    return backups
 
 
 def _weekly_actual_observations(
@@ -635,8 +651,9 @@ def build_live_p0_rostered_candidate_forecasts(
 
     # The normal two-source ensemble remains authoritative whenever it yields
     # both Year-1 coordinates. Explicit status evidence is a narrowly scoped
-    # fallback; complete one-source rows are considered only for active exact-
-    # State bench/taxi players. No missing metric is synthesized.
+    # fallback; complete one-source rows are considered only when the current
+    # accepted player catalog confirms an active NFL backup. No missing metric
+    # is synthesized, and a fantasy bench slot alone is not role evidence.
     evidence_modes: dict[str, str] = {}
     fallback_status_evidence = status_based_zero_ros_evidence or {}
     one_source_rows: dict[tuple[str, str], tuple[ForecastObservation, ...]] = {}
@@ -671,7 +688,7 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     facts: dict[str, P0CandidateFacts] = {}
     failures: dict[str, str] = {}
-    active_bench_ids = _active_bench_player_ids(league_state)
+    active_backup_ids = _active_backup_player_ids(league_state, catalog)
     for player_id in candidates:
         if player_id not in positions:
             failures[player_id] = "live roster candidate is absent from governed State identity universe"
@@ -720,7 +737,7 @@ def build_live_p0_rostered_candidate_forecasts(
                 except ValueError as exc:
                     failures[player_id] = f"status-based Year-1 fallback rejected: {exc}"
                     continue
-            elif player_id in active_bench_ids:
+            elif player_id in active_backup_ids:
                 accepted = False
                 for (source_player, source_id), source_rows in sorted(one_source_rows.items()):
                     if source_player != player_id:
@@ -751,7 +768,7 @@ def build_live_p0_rostered_candidate_forecasts(
                     standard_missing = y1_standard_partial.get(player_id)
                     league_missing = y1_league_partial.get(player_id)
                     failures[player_id] = (
-                        "active bench player lacks a complete single-source Year-1 projection; "
+                        "active backup lacks a complete single-source Year-1 projection; "
                         f"standard_missing_rule_stats={list(standard_missing.omitted_rule_stats) if standard_missing else []}; "
                         f"league_missing_rule_stats={list(league_missing.omitted_rule_stats) if league_missing else []}"
                     )
