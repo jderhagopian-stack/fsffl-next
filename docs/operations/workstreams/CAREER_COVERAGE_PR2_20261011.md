@@ -859,3 +859,20 @@ The current-state lifecycle record for `jimmy` completed job `intelligence:071d5
 - GitHub Actions returned **no PR-triggered run for the implementation head**, and the available GitHub connector has no workflow-dispatch action. No CI result is claimed. PR #454 remains draft.
 
 The exact next execution is a nonproduction runner invocation that reads the existing accepted current-State forecast and future Career inputs, rebuilds Year 1 through the State cutoff, composes all 252 roster outcomes independently, emits the matching-State Position & Depth response, and measures full-path RSS. The currently served GET route requests the background Career coordinator when no exact-State contract is available; it may persist derived Career artifacts, so it is not invoked against production under the no-production-write direction. Keep unresolved players explicit. Do not merge or deploy until current-State coverage, parity, Explore/on-demand, memory, and focused CI gates actually pass.
+
+
+## 2026-10-13 — Live FUMBLES_LOST failure traced and isolated
+
+A read-only Render log inspection of the live service `fsffl-next-private-beta` (resource `srv-dae6k7vqj5pc73af7bt0`) found a concrete failure on exact State `2fd788a858a6497425b2e066c77b3176e305030d6f7620cf25cf59ed3b30e061` at 16:55:44–16:55:46Z:
+
+- `FirstPartyFumblesLostSupplement` validation failed: “first-party observations must belong to the canonical subject universe.”
+- The first-party FUMBLES_LOST fallback was logged unavailable for this State.
+- The same live request reported `forecast_status=degraded`, `forecast_covered=219/252`, `intrinsic_status=unavailable`, and reason “Preserved preseason Year-1 Forecast evidence is empty.”
+
+The accepted model code was constructing its supplement subject list from canonical State players but also copying unmatched ordinary provider rows into the supplement target set. Those rows caused whole-supplement validation to fail, even though they were not canonical subjects. The PR fix filters ordinary rows against the exact State’s canonical QB/RB/WR/TE IDs before constructing the first-party supplement. It leaves model inputs, coefficients, source authority, and estimate math unchanged; unmatched rows still cannot create an estimate. Regression `test_unmatched_provider_subject_does_not_abort_canonical_fumbles_supplement` verifies the canonical player receives its supplement while the unmatched provider ID is excluded.
+
+Implementation commits: `1c9553bca4fc6a47b95c427c403bd5156c40915d` (runtime filter), `1e0c2658143c07631742e8286755447f1d38465d` (regression). Updated all-252 player ledger: `683f58e1dc0c3ac1712265db4f460aeb31d2ba93`.
+
+Post-fix local validation: focused runtime/forecast/Career suite **94 passed in 2.74s**. Frozen 335 plus Foundation 4 memory contract tests **2 passed in 40.47s**, with max Shapley delta **0** and Career numeric max delta **9.09e-13**. The Week 4-only replay remains **394.65 MiB** for the Foundation 4 materializer subprocess, with 223 reference available, 11 partial, and 16 explicit Y1 failures.
+
+This test proves the supplement boundary fix but does not rerun the live service. Current PR head `1e0c2658143c07631742e8286755447f1d38465d` has no GitHub workflow run or commit status; the connector has no dispatch capability. Current exact-State Career → Position & Depth, Explore/on-demand, full-path RSS, and live post-fix Intrinsic remain unverified. The live message “Preserved preseason Year-1 Forecast evidence is empty” remains a separate current-state Career input gap to close through the existing accepted actuals-plus-ROS loader path. No production route was invoked; its coordinator may persist a derived artifact. No provider acquisition or production write occurred.
