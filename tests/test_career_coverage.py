@@ -128,6 +128,18 @@ def test_explore_career_cohort_fails_closed_on_missing_or_invalid_signal():
         select_explore_career_cohort(candidate_rows=[], max_candidates=101)
 
 
+def test_explore_career_cohort_default_and_maximum_are_bounded():
+    candidates = [
+        {"player_id": f"waiver:{index:03d}", "source": "waiver_pool",
+         "career_supported": True, "opportunity_score": float(index)}
+        for index in range(120)
+    ]
+    default = select_explore_career_cohort(candidate_rows=candidates)
+    maximum = select_explore_career_cohort(candidate_rows=candidates, max_candidates=100)
+    assert len(default) == 50
+    assert len(maximum) == 100
+
+
 
 def test_position_depth_publication_fails_closed_on_state_mismatch():
     import pytest
