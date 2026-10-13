@@ -355,6 +355,38 @@ def _score_season_points(
     )
 
 
+def _score_complete_single_source_year_one(
+    *,
+    player_id: str,
+    source_rows: tuple[ForecastObservation, ...],
+    completed_actuals: tuple[ForecastObservation, ...],
+    league_state: LeagueState,
+) -> tuple[
+    tuple[ForecastObservation, ...],
+    ForecastObservation | None,
+    ForecastObservation | None,
+] | None:
+    """Return a complete low-confidence Y1 only for one complete ROS source."""
+    if not source_rows or any(
+        item.player_id != player_id
+        or item.horizon != ForecastHorizon.REST_OF_SEASON
+        or item.source != source_rows[0].source
+        for item in source_rows
+    ):
+        return None
+    raw = _year_one_raw_forecasts(
+        league_state=league_state,
+        completed_actuals=completed_actuals,
+        ros_forecasts=source_rows,
+    )
+    try:
+        standard, _ = _score_season_points(raw, league_state=league_state, standard=True)
+        league, _ = _score_season_points(raw, league_state=league_state, standard=False)
+    except ValueError:
+        return None
+    return raw, standard.get(player_id), league.get(player_id)
+
+
 def _standard_score_stats(stats: Mapping[str, float]) -> float:
     return sum(float(stats.get(rule.stat, 0.0)) * float(rule.points) for rule in FROZEN_I1_STANDARD_SCORING)
 
@@ -693,22 +725,15 @@ def build_live_p0_rostered_candidate_forecasts(
                 for (source_player, source_id), source_rows in sorted(one_source_rows.items()):
                     if source_player != player_id:
                         continue
-                    source_raw = _year_one_raw_forecasts(
-                        league_state=league_state,
+                    candidate_year_one = _score_complete_single_source_year_one(
+                        player_id=player_id,
+                        source_rows=source_rows,
                         completed_actuals=completed_raw,
-                        ros_forecasts=source_rows,
+                        league_state=league_state,
                     )
-                    try:
-                        source_standard, _ = _score_season_points(
-                            source_raw, league_state=league_state, standard=True
-                        )
-                        source_league, _ = _score_season_points(
-                            source_raw, league_state=league_state, standard=False
-                        )
-                    except ValueError:
+                    if candidate_year_one is None:
                         continue
-                    standard_item = source_standard.get(player_id)
-                    league_item = source_league.get(player_id)
+                    source_raw, standard_item, league_item = candidate_year_one
                     if standard_item is None or league_item is None:
                         continue
                     evidence_mode = f"single_source_low_confidence:{source_id}"
