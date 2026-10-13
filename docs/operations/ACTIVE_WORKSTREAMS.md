@@ -1,6 +1,6 @@
-## 2026-10-13 — Career #405 actual Week 5 execution checkpoint
+## 2026-10-13 — Career #405 saved Week 5 full path completed
 
-PR #454 remains draft. Code head `c862a71dfc964c1185896646282ca8798271f2c8` fixes live Year 1 contract/scoring defects. Current exact State `2fd788a8…` has 252 roster rows; 19/28 dynamic players now have valid P0 Y1–Y3 inputs, nine retain individual failures. The full loader ran and stopped at Current 334 versus Foundation 4/terminal 335; reference identity Emari Demercado (11199) is absent from the current State catalog. This is the immediate execution blocker. No full Career/P&D or complete-path memory pass is claimed. Follow [the Career PR2 checkpoint](workstreams/CAREER_COVERAGE_PR2_20261011.md) and the all-player ledger; reuse saved execution evidence instead of repeating acquisition. The release authorization remains conditional on actual gates.
+PR #454 remains draft. Code head `ae0269e0a83f269102510a973406fd0fc5f83820` resolves the active 334/reference 335 cohort mismatch. Full Career has 353 estimates; all 252 matching-State roster rows are retained (243 available, nine explicit unresolved). No new acquisition. Full-path RSS 536.676 MiB exceeds the 409.6 MiB gate; GitHub Actions has no exact-head run. Local focused workflow checks pass 164. See [the executed checkpoint](workstreams/CAREER_COVERAGE_PR2_20261011.md) and updated player ledger.
 
 # Superseded operations document
 
