@@ -26,6 +26,63 @@ REQUIRED = {
     "identity_as_of",
 }
 POSITIONS = {"QB", "RB", "WR", "TE"}
+RAW_HISTORY_COLUMNS = (
+    "player_id", "season", "position", "team", "games", "attempts", "carries",
+    "targets", "fantasy_points", "fantasy_points_ppr", "receptions",
+    "passing_interceptions", "sack_fumbles_lost", "rushing_fumbles_lost",
+    "receiving_fumbles_lost", "passing_yards", "passing_tds", "passing_epa",
+    "passing_cpoe", "rushing_yards", "rushing_tds", "rushing_epa",
+    "receiving_yards", "receiving_tds", "receiving_epa", "target_share",
+    "air_yards_share", "wopr", "fumbles", "sacks_suffered",
+)
+MODEL_A_COLUMNS = (
+    "fold_id", "target_season", "asset_id", "position", "season_offset",
+    "player_forecast_mean", "player_forecast_stddev",
+)
+PLAYER_METADATA_COLUMNS = (
+    "gsis_id", "birth_date", "height", "weight", "college_name",
+    "college_conference", "rookie_season", "draft_year", "draft_round",
+    "draft_pick", "draft_team",
+)
+RESIDUAL_COLUMNS = (
+    "forecast_fold", "player_id", "career_stage", "production_tier",
+    "prior_direction", "history_n", "reliability", "residual_mean",
+    "residual_sd", "residual_last", "production_history_n", "production_slope",
+    "production_volatility", "production_pattern", "career_high_recency",
+    "player_residual_component", "trajectory_state",
+)
+INNOVATION_COLUMNS = (
+    "forecast_fold", "player_id", "history_n", "stable_level_baseline",
+    "latest_residual", "latest_innovation", "innovation_slope",
+    "innovation_acceleration", "innovation_autocorrelation",
+    "innovation_volatility", "innovation_z", "same_sign_count",
+    "signed_same_sign_count", "innovation_state", "volatility_ratio",
+    "volatility_band", "level_component",
+)
+
+
+def read_raw_history(path: str | Path) -> pd.DataFrame:
+    """Read only columns consumed by the accepted F4 feature pipeline."""
+    header = pd.read_csv(path, nrows=0).columns
+    required_scoring = {
+        "fantasy_points", "fantasy_points_ppr", "receptions",
+        "passing_interceptions", "sack_fumbles_lost", "rushing_fumbles_lost",
+        "receiving_fumbles_lost",
+    }
+    missing = sorted(required_scoring - set(header))
+    if missing:
+        raise ValueError(f"raw scoring evidence missing required columns: {missing}")
+    return pd.read_csv(path, usecols=[column for column in RAW_HISTORY_COLUMNS if column in header])
+
+
+def stage_projected_csv(path: str, destination: Path, columns: tuple[str, ...]) -> Path:
+    """Stage a temporary, contract-scoped view of a governed input CSV."""
+    header = pd.read_csv(path, nrows=0).columns
+    selected = [column for column in columns if column in header]
+    if not selected:
+        raise ValueError(f"accepted Foundation 4 input has no expected feature columns: {path}")
+    pd.read_csv(path, usecols=selected).to_csv(destination, index=False)
+    return destination
 
 
 def validate_candidates(frame: pd.DataFrame, reference_ids: set[str], season: int,
@@ -204,7 +261,7 @@ def write_durable_roster_checkpoint(
         raise ValueError("durable roster checkpoint requires unique roster player IDs")
     candidate_by_id = {
         str(row["player_id"]): row
-        for row in json.loads(candidate_inputs.to_json(orient="records", date_format="iso"))
+        for row in json.loads(candidate_inputs.to_json(orient="records", date_format="iso", date_unit="ns"))
     }
     failure_ids = set(failures)
     candidate_ids = set(candidate_by_id)
@@ -404,12 +461,16 @@ def main():
     pd.DataFrame([subject.__dict__ for subject in coverage_subjects]).to_csv(
         out / "CAREER_EXACT_STATE_COVERAGE_SELECTION.csv", index=False
     )
-    connected = source.scored_raw_frame(pd.read_csv(a.raw_seasons))
+    connected = source.scored_raw_frame(read_raw_history(a.raw_seasons))
     previous = {(str(row.player_id), int(row.season)): float(row.fantasyPoints)
                 for row in connected.itertuples() if int(row.season) == 2025}
     raw = dev.prep_raw(connected.copy())
-    players = pd.read_csv(a.players)
-    residual, innovation = pd.read_csv(a.residual_states), pd.read_csv(a.innovation_states)
+    players_header = pd.read_csv(a.players, nrows=0).columns
+    players = pd.read_csv(a.players, usecols=[c for c in PLAYER_METADATA_COLUMNS if c in players_header])
+    residual_header = pd.read_csv(a.residual_states, nrows=0).columns
+    residual = pd.read_csv(a.residual_states, usecols=[c for c in RESIDUAL_COLUMNS if c in residual_header])
+    innovation_header = pd.read_csv(a.innovation_states, nrows=0).columns
+    innovation = pd.read_csv(a.innovation_states, usecols=[c for c in INNOVATION_COLUMNS if c in innovation_header])
     reference_board = pd.read_csv(a.reference_board)
     reference = source.build_current(dev, reference_board, raw, players, residual, innovation)
     reference_player_count = int(reference.output_player_id.nunique())
@@ -421,15 +482,55 @@ def main():
         roster_frame,
     )
     current = build_candidate_features(dev, candidates, reference, raw, players, residual, innovation)
-    # Drop materialization-only wide tables before loading/using the accepted
-    # route-training panel; this bounds the scorer phase to one historical panel.
+    scoped_history_path = out.parent / "accepted_raw_history.csv"
+    connected.to_csv(scoped_history_path, index=False)
+    # Release current-board joins before the full accepted history panel is built.
     del connected, raw, players, residual, innovation, reference_board, reference
     gc.collect()
     class Args: pass
     history = Args()
-    history.model_a_rows, history.qb_results, history.raw_seasons = a.model_a_rows, a.qb_results, a.raw_seasons
-    history.players, history.residual_states, history.innovation_states = a.players, a.residual_states, a.innovation_states
-    long = route.build_inputs(dev, history)
+    history.model_a_rows = str(stage_projected_csv(
+        a.model_a_rows, out.parent / "accepted_model_a_rows.csv", MODEL_A_COLUMNS
+    ))
+    history.qb_results = a.qb_results
+    history.raw_seasons = str(scoped_history_path)
+    history.players = str(stage_projected_csv(
+        a.players, out.parent / "accepted_player_metadata.csv", PLAYER_METADATA_COLUMNS
+    ))
+    history.residual_states = str(stage_projected_csv(
+        a.residual_states, out.parent / "accepted_residual_states.csv", RESIDUAL_COLUMNS
+    ))
+    history.innovation_states = str(stage_projected_csv(
+        a.innovation_states, out.parent / "accepted_innovation_states.csv", INNOVATION_COLUMNS
+    ))
+    model_a = pd.read_csv(history.model_a_rows)
+    qb_results = json.loads(Path(history.qb_results).read_text())
+    model_a = dev.add_qb_governed_path(model_a, qb_results)
+    del qb_results
+    history_base = dev.build_forecast_base(model_a)
+    del model_a
+    history_raw = dev.prep_raw(read_raw_history(history.raw_seasons))
+    history_base = dev.merge_lags(history_base, history_raw)
+    history_players = pd.read_csv(history.players)
+    history_base = dev.add_engineered_features(history_base, history_players)
+    del history_players
+    history_residual = pd.read_csv(history.residual_states)
+    history_innovation = pd.read_csv(history.innovation_states)
+    history_base = dev.merge_trajectory(history_base, history_residual, history_innovation)
+    del history_residual, history_innovation
+    long = dev.build_long(history_base, history_raw)
+    del history_base, history_raw
+    gc.collect()
+    model_features = {
+        column for feature_set in dev.FEATURE_SETS.values()
+        for column in feature_set if column in long.columns
+    }
+    retained_long_columns = [
+        column for column in ("position", "horizon", "target_season", "actual")
+        if column in long.columns
+    ] + [column for column in long.columns if column in model_features]
+    long = long.loc[:, list(dict.fromkeys(retained_long_columns))]
+    gc.collect()
     result = source.current_policy_rows(
         route, dev, long, current, pd.read_csv(a.current_route),
         pd.read_csv(a.cell_metrics), json.loads(Path(a.policy_freeze).read_text()),
