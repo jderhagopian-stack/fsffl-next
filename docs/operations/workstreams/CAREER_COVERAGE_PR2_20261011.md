@@ -814,3 +814,19 @@ The four direct model coordinates did not appear in the hosted replay's `ros_fum
 Focused local validation: **70 passed** (hosted bridge, P0 candidate, Career coverage, FUMBLES_LOST, F4 memory-contract tests). Frozen-335 parity: **2 passed**, Shapley max delta **0**, Career max numeric delta **9.09e-13**. No full-path RSS measurement. Exact-head GitHub workflow lookup: **0 runs** for code head `e149f39c9e7226c2c348144a5d3f8bef3015f603`. These results do not pass CI or full-path gates. PR remains draft.
 
 **Next fix and run:** trace why the P0 dynamic caller's fumbles-eligible rows fail to reach `ros_fumbles_lost`; keep the supplement separate from source-provider counts; resolve the required age/experience/Y1 facts only through existing exact-State evidence (no invented defaults); then rerun all 16 through complete Year 1→Foundation 4→full Shapley/Career→matching-State Position & Depth. Verify all 250 rows, parity, full-path memory, and focused CI on the final code head before release actions.
+
+
+## 2026-10-13 — Exact-State supplement handoff correction and verification status
+
+The preceding live-candidate diagnostic was executed from the workspace mirror, not the PR branch head, and its candidate numbers are not acceptance evidence for PR #454. Reviewing the actual branch source exposed the cause of missing fumbles rows: eligibility considered only `ros_runtime.source_observations`, excluding the retained roster-only fallback packet; additionally, the helper received the advanced Sleeper NFL calendar while the acquired weekly rows and exact State ended at Week 4.
+
+Implemented on PR #454:
+- `ffc4d3786fabf2c82efeeac6c0fa2abf58d5be16`: combine fallback roster ROS observations with persisted ROS rows for fumbles candidate selection and helper input; bind the cached Sleeper state to the exact State completed-week boundary; retain the supplement/failure diagnostics in the result.
+- `ba907ac3bfec2aaaf51a6956a5a70549f92def65`: centralize that ROS handoff helper.
+- `bfeae0c226e71d313e68b8d3dc097bf7bfbd2218`: regression showing retained roster-only ROS rows select a fumbles-gap candidate.
+
+Local Python validation on the workspace mirror: **93 focused tests passed**. Frozen 335 tests: **2 passed** (Shapley maximum component delta **0**; Career maximum numeric delta **9.09e-13**). Foundation 4 memory-contract test passed, but no full-path RSS was measured. The model can produce the previously recorded four season-equivalent values (Gainwell .3380850158, Sarratt .1208089375, Bell .1331111495, Thomas .0906067031); their new exact-State hosted handoff has not yet been replayed on the PR head and those values are not counted as Year 1 or Career outcomes.
+
+**Per-player status on this final code head:** all 16 require rerun before assigning new Career outcomes. Retained acquisition evidence is unchanged: Milroe/Allar/Green (12510/13289/13306) have complete Razzball-only projections; Gainwell/Sarratt/Bell/Thomas (7567/13268/13402/13411) are missing provider fum_lost, now addressed by the accepted supplement handoff; Pearsall/Higgins/Daniels/Brazzell/Henry/Hill/Mixon/Aiyuk/Okonkwo (11638/12484/13270/13353/13418/3321/4018/6803/8210) have no complete retained ROS contract. These describe evidence, not current result statuses; none is marked newly Career-covered.
+
+A new hosted run was not completed: local network policy denied direct Sleeper API access. The Actions connector has no workflow-dispatch operation, and exact-head GitHub workflow/status lookup for code/test head `bfeae0c226e71d313e68b8d3dc097bf7bfbd2218` returned **0 runs/checks**. The existing manual runner consumes a retained P0 artifact and cannot regenerate Year 1. Therefore the normal actuals+ROS→F4→full Shapley/Career→matching-State Position & Depth run, fresh 250-row verification, full-path RSS, and focused CI remain open. Keep #454 draft. No production write, waiver run, merge, or deployment occurred.
