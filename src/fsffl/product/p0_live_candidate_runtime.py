@@ -610,6 +610,14 @@ def _single_source_fumbles_gap_player_ids(
     return eligible
 
 
+def _all_ros_source_observations(
+    ros_runtime: Any,
+    fallback_ros_observations: tuple[ForecastObservation, ...],
+) -> tuple[ForecastObservation, ...]:
+    """Include retained roster-only rows in same-source supplement eligibility."""
+    return tuple(ros_runtime.source_observations) + tuple(fallback_ros_observations)
+
+
 def build_live_p0_rostered_candidate_forecasts(
     league_state: LeagueState,
     *,
@@ -729,7 +737,7 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     ros_fumbles_lost: tuple[ForecastObservation, ...] = ()
     fumbles_supplement_failure: str | None = None
-    available_ros_rows = tuple(ros_runtime.source_observations) + tuple(fallback_ros_observations)
+    available_ros_rows = _all_ros_source_observations(ros_runtime, fallback_ros_observations)
     fumbles_eligible_player_ids = _single_source_fumbles_gap_player_ids(
         league_state=league_state,
         candidate_ids=set(exact_state_rostered_p0_subject_ids(league_state)),
