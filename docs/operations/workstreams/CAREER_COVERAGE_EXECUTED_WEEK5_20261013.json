@@ -1,0 +1,51 @@
+{
+  "state_id": "2fd788a858a6497425b2e066c77b3176e305030d6f7620cf25cf59ed3b30e061",
+  "state_as_of": "2026-10-13T16:53:35.584876Z",
+  "completed_week": 5,
+  "rostered_players": 252,
+  "remote_code_head": "c862a71dfc964c1185896646282ca8798271f2c8",
+  "tested_code_tree": "9552096f47478b10aed89dae686a38b9143962ae",
+  "local_run_commit": "8346f29054517f0d952c2a2ea75e34c11d0de8d0",
+  "current_intrinsic_status": "ready",
+  "current_intrinsic_players": 334,
+  "foundation4_reference_players": 335,
+  "missing_reference_in_state": {
+    "player_id": "sleeper:player:11199",
+    "name": "Emari Demercado"
+  },
+  "dynamic_p0_inputs": 19,
+  "dynamic_future_rows": 38,
+  "dynamic_modes": {
+    "two_source": 10,
+    "single_source_low_confidence": 4,
+    "single_source_with_first_party_fumbles": 5
+  },
+  "dynamic_failures": {
+    "sleeper:player:11638": "no complete Year-1 raw scoring row; per-provider canonical ROS metrics={'cbs': [], 'razzball': []}; two-source raw-ensemble metrics=none",
+    "sleeper:player:12484": "no complete Year-1 raw scoring row; per-provider canonical ROS metrics={'cbs': [], 'razzball': []}; two-source raw-ensemble metrics=none",
+    "sleeper:player:13353": "no complete Year-1 raw scoring row; per-provider canonical ROS metrics={'cbs': [], 'razzball': []}; two-source raw-ensemble metrics=none",
+    "sleeper:player:3321": "no complete Year-1 raw scoring row; per-provider canonical ROS metrics={'cbs': [], 'razzball': []}; two-source raw-ensemble metrics=none",
+    "sleeper:player:4018": "no complete Year-1 raw scoring row; per-provider canonical ROS metrics={'cbs': [], 'razzball': []}; two-source raw-ensemble metrics=none",
+    "sleeper:player:6803": "active backup lacks a complete single-source Year-1 projection; standard_missing_rule_stats=[]; league_missing_rule_stats=[]",
+    "sleeper:player:8210": "no complete Year-1 raw scoring row; per-provider canonical ROS metrics={'cbs': [], 'razzball': []}; two-source raw-ensemble metrics=none",
+    "sleeper:player:13270": "P0 candidate has invalid age, experience, or Y1: sleeper:player:13270",
+    "sleeper:player:13418": "P0 benchmark percentile cell unavailable: RB/depth"
+  },
+  "career_results": 0,
+  "matching_state_ready_position_depth": false,
+  "blocked_accounting_rows": 252,
+  "full_path_status": "blocked",
+  "failing_step": "Career loader / Foundation 4",
+  "error": "ValueError: Foundation 4 requires Current, Y4-Y7 and terminal coverage for the identical full cohort",
+  "incomplete_path_peak_rss_mib": 395.36328125,
+  "incomplete_path_seconds": 50.829698667999764,
+  "full_path_memory_gate": "not_passed; execution stopped before full composition",
+  "local_focused_regressions": 62,
+  "frozen_shapley_delta": 0,
+  "frozen_career_delta": 9.09e-13,
+  "remote_ci": "no runs/checks observed",
+  "private_checkpoint_library_file_id": "libfile_ed63c42a722c81919f2789929a4ee23a",
+  "local_ci_steps_passed": 5,
+  "local_ci_checks": 158,
+  "composer_only_rss_mib": 152.0
+}
