@@ -85,6 +85,18 @@ def stage_projected_csv(path: str, destination: Path, columns: tuple[str, ...]) 
     return destination
 
 
+def compact_history_categories(frame: pd.DataFrame, dev) -> pd.DataFrame:
+    """Dictionary-encode repeated route labels without changing model inputs."""
+    categorical = set(getattr(dev, "CATEGORICAL", ())) | {"position"}
+    out = frame.copy()
+    for column in sorted(categorical & set(out.columns)):
+        values = out[column].astype("category")
+        if "MISSING" not in values.cat.categories:
+            values = values.cat.add_categories(["MISSING"])
+        out[column] = values
+    return out
+
+
 def validate_candidates(frame: pd.DataFrame, reference_ids: set[str], season: int,
                         exact_roster: pd.DataFrame) -> pd.DataFrame:
     missing = sorted(REQUIRED - set(frame.columns))
@@ -530,6 +542,7 @@ def main():
         if column in long.columns
     ] + [column for column in long.columns if column in model_features]
     long = long.loc[:, list(dict.fromkeys(retained_long_columns))]
+    long = compact_history_categories(long, dev)
     gc.collect()
     result = source.current_policy_rows(
         route, dev, long, current, pd.read_csv(a.current_route),
