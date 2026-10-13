@@ -16,7 +16,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Mapping
 
 from fsffl.forecast.current_normalization import _STAT_METRICS
-from fsffl.forecast.in_season_runtime import build_in_season_forecasts
+from fsffl.forecast.in_season_runtime import (
+    ProjectionHistoryReader,
+    build_in_season_forecasts,
+)
 from fsffl.forecast.league_scoring import (
     ScoringCoverageStatus,
     derive_league_scoring_result,
@@ -31,6 +34,7 @@ from fsffl.providers.sleeper_weekly_stats import (
     SleeperWeeklyStatsSource,
 )
 from fsffl.state.models import LeagueState, Provenance, ProviderRef
+from fsffl.forecast.projection_history import ProjectionSelector
 
 from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 from .p0_candidate_evidence import (
@@ -369,6 +373,7 @@ def build_live_p0_rostered_candidate_forecasts(
     sleeper_source: SleeperLiveSource | None = None,
     evaluation_as_of: datetime | None = None,
     authority: P0SourceStateAuthority | None = None,
+    projection_history_reader: ProjectionHistoryReader | None = None,
 ) -> P0LiveCandidateResult:
     """Acquire current inputs once and score rostered non-reference subjects.
 
@@ -430,12 +435,22 @@ def build_live_p0_rostered_candidate_forecasts(
 
     period_start, _ = canonical_week_window(league_state.league.season, next_week)
     _, period_end = canonical_week_window(league_state.league.season, 18)
+    saved_ros_revisions = None
+    if projection_history_reader is not None:
+        saved_ros_revisions = projection_history_reader.latest_revisions(
+            ProjectionSelector(
+                season=league_state.league.season,
+                horizon=ForecastHorizon.REST_OF_SEASON,
+                as_of=cutoff,
+            )
+        )
     ros_runtime = build_in_season_forecasts(
         league_state,
         horizon=ForecastHorizon.REST_OF_SEASON,
         period_start=period_start,
         period_end=period_end,
         clock=lambda: cutoff,
+        source_revisions=saved_ros_revisions,
     )
     cutoff = max(
         cutoff,
