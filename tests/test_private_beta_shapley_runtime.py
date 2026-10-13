@@ -1872,6 +1872,14 @@ def test_hosted_dynamic_career_bridge_materializes_schedule_scaled_fumbles_ros(m
 
     state, provider_observation = _fixture()
     now = state.as_of
+    provider_observation = provider_observation.model_copy(
+        update={
+            "horizon": ForecastHorizon.REST_OF_SEASON,
+            "metric": ForecastMetric.PASS_YARDS,
+            "period_start": datetime(2026, 9, 29, tzinfo=UTC),
+            "period_end": datetime(2027, 1, 26, tzinfo=UTC),
+        }
+    )
     season_fumbles = ForecastObservation(
         player_id=provider_observation.player_id,
         position=provider_observation.position,
