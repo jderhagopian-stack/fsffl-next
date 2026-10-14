@@ -1,3 +1,11 @@
+## 2026-10-14 UTC — Career #405 release decision
+
+For PR #454, the separate frozen I1 implementation-validation workflow is not a Career acceptance gate. The applicable documented Career gates are correct end-to-end Career/Shapley/Position & Depth output, all exact-State roster rows retained, frozen-335 parity, the accepted Career memory disposition, focused CI, and explicit outcomes for every player. The durable sanitized Career fixture and its parity checks pass. The current code head `92985bebdc3da8e10f4186bbdee1d17a3fc5541c` also passed focused CI run `38628957954` and Stable full suite run `38628996292` (2,351 tests).
+
+Historical I1 run `38628996240` failed downloading artifact `10318004415` (HTTP 410, expired). It was triggered by the PR dependency change in `pyproject.toml`; no I1 implementation files changed. No I1 result is claimed or substituted from the Career fixture. This archival limitation does not block this Career release under the explicit conditional authorization; retain it for future I1 work and recover only from an authoritative archive/backup. Do not disable or edit the old workflow to manufacture a passing result.
+
+The authorization in Management comments `6134676365` / `6154167179` permits the normal ready/merge/deploy path after exact-head gates pass. The required focused and stable checks must match the final PR head. Preserve 252 roster outcomes, 243 numeric Career values, and nine explicit unresolved cases. GitHub’s available branch protection response did not establish enforced status checks, so describe test and full-suite as release gates per Management/repository procedure, not as verified branch-protection enforcement.
+
 ## 2026-10-14 UTC — Stable-suite acceptance harness corrections
 
 The first stable run `38575401275` failed collection with `KeyError: CAREER_PR1_SEMANTIC_DIR`; the stable workflow now restores the same sanitized frozen fixture and environment used by passing focused CI. All 2,350 tests collect locally. The subsequent exact-head run `38576086876` passed 2,349 tests and failed only `test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layers`: accumulated whole-suite RSS 581,242,880 B exceeded the unchanged 536,870,900 B hard cap. This was the pytest process after unrelated model fixtures, not the measured saved-input Career run.
