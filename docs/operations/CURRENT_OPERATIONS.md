@@ -1,6 +1,6 @@
 ## 2026-10-14 UTC — Career #405 PR workflow repair and exact-head focused CI
 
-PR #454 remains draft on `career/dynamic-materializer-20261011`. Code head `054cfcf9c1117db81dce336e93f41aad97fefb98` passes exact-head `CI / test`, run `38653307881`: 152 tests passed, one existing Starlette deprecation warning. Frozen 335 Career/Shapley parity passed in that run. The Stable full suite was skipped because the PR remains draft. The current documentation handoff commit will be a later docs-only head; verify its CI before handoff.
+PR #454 remains draft on `career/dynamic-materializer-20261011`. Code head `054cfcf9c1117db81dce336e93f41aad97fefb98` passes exact-head `CI / test`, run `38653307881`: 152 tests passed, one existing Starlette deprecation warning. Frozen 335 Career/Shapley parity passed in that run. The Stable full suite was skipped because the PR remains draft. The continuity documentation is committed on head `380cce26906c6e36cc00fa22de8dffc709aabb9f`; exact-head focused CI run `38654162893` passed (152 tests, one existing warning). Stable full suite run `38654162654` was skipped because the PR remains draft.
 
 The collection failure in run `38650623671` was fixed in `fa1b2b499701ccc2c0dcc9719725d3d314817c08`: the existing regression imported `_carry_dynasty_last_good`, but the helper had not been added to `foundation4_shadow_routes.py`. The helper now preserves historical Dynasty evidence while dropping exact-State Career rows and stale publication metadata. Its direct regression passed locally, and the 152-test remote focused group passed.
 
