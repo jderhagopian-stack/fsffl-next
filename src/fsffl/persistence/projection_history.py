@@ -189,6 +189,29 @@ class PostgresProjectionHistoryStore:
             snapshots = cursor.fetchall()
             return tuple(self._revision_from_row(cursor, row) for row in snapshots)
 
+    def latest_revision_fingerprints(self, selector: ProjectionSelector) -> tuple[dict[str, object], ...]:
+        """Read only latest ROS revision identities for cache dependency keys."""
+        self._provider_selector(selector)
+        where, params = self._selector_where(selector)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""select distinct on (provider)
+                           provider, season, horizon, week, period_start, period_end,
+                           effective_at, source_version, content_fingerprint
+                    from fsffl.projection_snapshot
+                    where {where}
+                    order by provider, effective_at desc, id desc""",  # nosec B608 - fixed clauses only
+                params,
+            )
+            rows = cursor.fetchall()
+        return tuple({
+            key: row[key].isoformat() if hasattr(row[key], "isoformat") else row[key]
+            for key in (
+                "provider", "season", "horizon", "week", "period_start", "period_end",
+                "effective_at", "source_version", "content_fingerprint",
+            )
+        } for row in rows)
+
     def player_revisions(
         self,
         player_id: str,
@@ -261,8 +284,8 @@ class PostgresProjectionHistoryStore:
         return ProjectionRevision(snapshot=snapshot, observations=observations)
 
 
-def projection_history_store_from_env() -> PostgresProjectionHistoryStore | None:
+def projection_history_store_from_env(*, connect_factory: ConnectFactory | None = None) -> PostgresProjectionHistoryStore | None:
     database_url = os.getenv("FSFFL_DATABASE_URL", "").strip()
     if not database_url:
         return None
-    return PostgresProjectionHistoryStore(database_url)
+    return PostgresProjectionHistoryStore(database_url, connect_factory=connect_factory)
