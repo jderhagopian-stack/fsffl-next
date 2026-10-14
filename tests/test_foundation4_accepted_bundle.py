@@ -26,11 +26,16 @@ def test_restore_accepted_bundle_is_atomic_complete_and_shared(tmp_path, monkeyp
     root = tmp_path / 'model'
     manifest = bundle.restore_accepted_bundle(root)
     values = json.loads(manifest.read_text())
-    assert set(values) == set(runtime._BUNDLE_KEYS)
-    assert all(Path(p).is_file() for p in values.values())
+    assert set(runtime._BUNDLE_KEYS) <= set(values)
+    assert bundle._verified_cached_manifest(root)
+    assert all(Path(values[key]).is_file() for key in runtime._BUNDLE_KEYS)
     assert len(calls) == 8
     assert bundle.restore_accepted_bundle(root) == manifest
     assert len(calls) == 8
+    (root / 'dev.py').write_text('tampered')
+    assert bundle.restore_accepted_bundle(root) == manifest
+    assert len(calls) == 16
+    assert (root / 'dev.py').read_text() == 'accepted'
     assert list(tmp_path.iterdir()) == [root]
 
 
