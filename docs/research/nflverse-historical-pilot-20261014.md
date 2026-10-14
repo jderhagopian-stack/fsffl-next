@@ -5,48 +5,40 @@
 **Lane:** Independent ChatGPT research, separate from Career Coverage #405 / PR #454.  
 **Authority:** No changes to production Forecast, Foundation 4, Career, Simulation 2.0, Value, State, model version, provider weights, or live operation are authorized.
 
-## Mandatory commercial/proprietary-use hard gate — Management directive 2026-10-14
+## Commercial-use and proprietary-code eligibility — Management clarification 2026-10-14 (supersedes earlier blanket exclusions)
 
-**Management requirement: FSFFL NEXT must remain independently monetizable and proprietary.** The research may inspect documentation and implementation approaches, but **no third-party dataset, fitted model, library, copied code or retained derived dataset can become a production dependency unless all rights below are affirmatively verified for that exact item, version, source and intended use.** Unknown/ambiguous is a **FAIL CLOSED / HOLD**, not implicit permission.
+**Governing rule:** FSFFL NEXT may use free/open data, model methods, libraries and tools **if** their applicable rights already permit use in a paid commercial product at **no required license, royalty, per-user or special commercial-permission charge**, any attribution/notice obligations can be fulfilled, and the intended integration **does not obligate FSFFL NEXT to disclose, license openly, or distribute its proprietary application code**. Do not exclude a source simply because it is open source, GPL-labelled, or requires attribution. Do not conflate permission to charge with preservation of proprietary code.
 
-Pass criteria, ALL required:
-1. **Commercial permission already granted:** the exact code/data/model license or authorized terms explicitly allow our intended paid SaaS use, without additional negotiated licensing, per-user fees or special approvals; retaining/hosting derived results and model training must also be within those permissions.
-2. **Proprietary freedom:** no requirement to publish FSFFL NEXT application source, algorithms, model weights, training recipes, or proprietary derived datasets, or to license the FSFFL service under GPL/AGPL/CC BY-SA or a similar copyleft/share-alike condition. Attribution/notice obligations may be acceptable when clearly bounded and compatible with paid proprietary SaaS.
-3. **Upstream-chain verification:** a permissive *code loader* license is not a license to ingest third-party data. Every NFLverse release tag and upstream originating dataset must be assessed independently for the permitted acts (access, copy, automate, store, train, run paid forecasts, and commercial output display). NFL trademarks, footage and endorsements are outside assumed permissions.
-4. **No free-tier / redistribution obligation:** no term may require FSFFL NEXT subscriptions, dashboards, APIs, reports or application to be provided without charge; no obligation to redistribute restricted source or derived data.
-5. **Reproducibility and audit:** keep source URL, license text/location and version/date, underlying provider, relevant terms, permitted uses, any required notices, approval status and review owner. Document remaining issues for specialist counsel review before production promotion.
+**Fail closed on uncertainty:** no source becomes a production dependency merely because its files are publicly downloadable or its loader is MIT-licensed. Verify the exact dataset/model/code version, upstream rights, access restrictions, permitted processing and model-training uses, retention, paid-product display/derived outputs, attribution/notice, and redistribution or source-disclosure triggers. If unresolved, mark HOLD and do not promote; replace sources that would require negotiated fees or new commercial agreements. This is a source-by-source legal/technical screen, not a declaration of blanket commercial clearance.
 
-### Preliminary screening — not final legal clearance
+### Distinguish the obligations by artifact and use
 
-| Candidate | Published code/data license signals | Research disposition |
+| License / resource | Possible eligibility under clarified rule | Hard question before production use |
 |---|---|---|
-| `nflreadpy` code | MIT | **Candidate**, only as a loader; it cannot transfer rights to NFL/third-party content downloaded through it. |
-| General `nflverse-data` assets | Repository says CC BY 4.0; licenses may differ by dataset, and CC only licenses rights actually held by the licensor | **HOLD** for each selected upstream dataset and use. CC BY 4.0 itself permits paid use and has no share-alike requirement; attribution/notice still matter. |
-| `ffopportunity` code | GPL v3 | **EXCLUDE from any FSFFL product dependency** under conservative proprietary-only policy, even though private server use alone does not automatically trigger public-source release under standard GPL. Public paper/method ideas can be evaluated without incorporating code. |
-| `ffopportunity` model weights and expected-point data | CC BY-SA 4.0 per project README | **EXCLUDE from production/training and commercial data derivatives** until any separate counsel-cleared, compliant use can be demonstrated without conflicting with proprietary strategy. Not automatically a requirement to make the *whole application* free, but sharing adapted licensed data can trigger ShareAlike. |
-| `ffsimulator` code | MIT per README; separate upstream data rights | **METHODS-ONLY** research; no data copied and no product dependency until separate review. |
-| `nflseedR` | Exact installed code/asset licenses and provider rights not yet fully verified | **HOLD**; low-priority. |
-| FTN charting and other dataset-specific ShareAlike contents | CC BY-SA / other third-party terms may apply | **EXCLUDE by default**. |
+| MIT, BSD, Apache 2.0 code; e.g., `nflreadpy` (MIT), `ffsimulator` code (MIT) | **Eligible for consideration** with applicable attribution, notices and other license conditions | What distinct rights cover every data/model artifact downloaded by the code? |
+| CC0 / public domain evidence | **Eligible for consideration**, after origin and claimed status verification | Is the record actually in scope, and are third-party terms/access limits separate? |
+| CC BY 4.0 data; e.g., general `nflverse-data` repository label | **Eligible for consideration**: allows commercial reuse/adaptation with proper attribution and license notices, and does not itself require releasing proprietary source or share-alike adaptations | Did the licensor have rights to the particular upstream NFL/provider material for our exact uses, including paid SaaS, training, storage, and output displays? |
+| CC BY-SA 4.0 data or weights; e.g., `ffopportunity` prebuilt data/models | **Conditional / HOLD** rather than automatic exclusion. Commercial use is allowed. ShareAlike can apply to **adapted licensed material we share**; it does not automatically require making an independent application's source public. | Would our model weights, training data, feature table, player-level outputs or other proprietary assets be an adaptation that must be shared/licensed alike? Can boundaries be documented without disclosing proprietary material? |
+| GPLv3 software; e.g., `ffopportunity` code | **Conditional / HOLD** rather than blanket ban. GPL allows commercial use and, generally, running modified GPL code solely on a private server without conveying it does not itself trigger GPL source-distribution duties. | Would we convey/distribute a combined GPL-covered program (including JS/mobile/offline clients or components) or otherwise create a source-disclosure obligation for FSFFL proprietary code? If yes, NO-GO for that integration. |
+| AGPL software | **Presumptive HOLD / likely NO-GO for integrated network-service code** because relevant network interaction can create source-offer obligations. Not an unconditional ban on all theoretical uses. | Would actual hosted use require offering source of a combined or modified program or disclose any FSFFL proprietary code? If yes, NO-GO. |
+| CC BY-NC / other noncommercial-only data; royalty-bearing, premium-license, negotiated-approval sources | **NO-GO** for the proposed production use | Existing rights do not satisfy paid, zero-additional-license-cost and independent proprietary use. |
+| Unlicensed, unclear, prohibited-scrape or upstream-rights-unknown datasets | **HOLD**, not authorized | Obtain clear existing rights or substitute; no automatic acceptance from an open GitHub repo. |
 
-**Interpretation:** GPL, AGPL and CC BY-SA are not bans on charging money. GPL obligations typically attach to conveying/distributing software and AGPL adds an applicable network-use source condition; CC BY-SA's ShareAlike applies to adapted licensed material when shared. However, this project imposes the stricter policy of **no avoidable open-source or dataset-disclosure obligations**. The permissive status of `nflreadpy`/MIT and `nflverse-data`/CC BY does not establish upstream commercial clearance.
+**Important distinction:** GPL and ShareAlike do not require software or data to be offered for free. A licensing duty to share changes or source, where triggered, is separate from permission to charge for a product. We care about **our own application-code disclosure**, but must also explicitly assess any obligations affecting proprietary datasets or fitted-model artifacts before approval. No project source publication or unwanted model/data disclosure should be introduced inadvertently.
 
-### Execution gate for Pilot A/B/C
+### Concrete approval test (each item must pass)
 
-- **Until source-by-source commercial clearance is evidenced:** do only metadata/source-documentation/reproducibility research; do not ingest uncertain-rights releases into FSFFL production, train a product model on them, or redistribute their data. A bounded offline research experiment may be proposed separately, but do not assume research rights are automatic.
-- If a dataset cannot be affirmatively cleared under existing permissions, **drop it and find a suitable alternative**; do not seek paid/special commercial rights as part of this workstream.
-- No package/classifier copied from GPL/AGPL projects, no pretrained ShareAlike model/data import, and no default R ecosystem dependency. Independently implementing general statistical ideas is not the same as copying proprietary or copyleft implementations.
-- Before any code/data integration, Management receives a concise **GO / NO-GO rights ledger** reviewed by appropriate legal counsel for commercial deployment as needed. The research report alone is not legal assurance.
-- Career #405 remains independent and must not be delayed.
+1. **Paid service allowed:** the specific licensed material and upstream originating content are usable for a paid proprietary SaaS, including the actual access, copying, storage, training, and display/derived-output uses planned.
+2. **No mandatory commercial license payments:** no additional provider license fees, royalties, per-user data charges, minimums, special requests, or approvals. Normal self-incurred hosting/infrastructure costs and compliance work are not defined as third-party licensing costs.
+3. **No proprietary FSFFL code disclosure:** review the **actual integration/distribution architecture**, not only the package name. No requirement to publish/offer FSFFL application source, or relicense the FSFFL application as open source. Identify any separate restrictions on proprietary weights, model artifacts and derived datasets.
+4. **Attribution allowed:** retain notices, credit, modification indicators, license links and any attribution required by permitted resources. Paid product and attribution are compatible.
+5. **Prove rights chain and maintain ledger:** per-source license/source URL and dated version, originating rights holder, terms for each intended use, downstream propagation/attribution, technical boundary if a copyleft component is used, status GO / HOLD / NO-GO and evidence. Seek qualified legal review for unresolved or material edge cases; desk research is not legal assurance.
 
-Primary published references checked on 2026-10-14:
-- [nflreadpy licensing and upstream data note](https://nflreadpy.nflverse.com/)
-- [nflverse-data repo license](https://github.com/nflverse/nflverse-data/blob/main/LICENSE.md)
-- [ffopportunity source vs model/data terms](https://github.com/ffverse/ffopportunity#terms-of-use)
-- [ffsimulator code/data terms](https://github.com/ffverse/ffsimulator#terms-of-use)
-- [CC BY 4.0 terms](https://creativecommons.org/licenses/by/4.0/)
-- [CC BY-SA 4.0 terms](https://creativecommons.org/licenses/by-sa/4.0/)
-- [GNU GPL FAQ](https://www.gnu.org/licenses/gpl-faq.html)
-- [GNU AGPL explanation](https://www.gnu.org/licenses/why-affero-gpl.html)
+### Revised first-pilot order
+
+**First deliverable is an exact-data-source license/rights ledger, not a categorical license blacklist.** Examine `nflreadpy` loader code separately from nflverse released datasets, and assess `ffopportunity` code separately from its prebuilt model weights/data. Clear as many data sources as possible under their existing terms without opening FSFFL's code; use free commercially permitted sources with appropriate attribution. A HOLD source cannot be used for production or to train a product model until its use is cleared. Offline permitted testing may proceed on appropriately cleared research data. Career #405 remains nonblocking and unchanged.
+
+Official reference texts: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/), [GNU GPL FAQ](https://www.gnu.org/licenses/gpl-faq.html), [Open Source Initiative FAQ](https://opensource.org/faq), [ffopportunity terms](https://github.com/ffverse/ffopportunity#terms-of-use), [ffsimulator terms](https://github.com/ffverse/ffsimulator#terms-of-use).
 
 ---
 
@@ -103,7 +95,7 @@ At minimum: QB/RB/WR/TE MAE, bias, interval coverage/CRPS where distributions su
 ## Rights, resource and architectural gates
 
 - `nflreadpy` is MIT-coded; `nflverse-data` repository declares CC BY 4.0. Upstream dataset rights are separate and must be reviewed dataset-by-dataset before commercial use or redistribution.
-- `ffopportunity` code GPL v3, included models and expected points data CC BY-SA 4.0: investigate legal implications before code/model/data reuse. Studying published methods is not commercial clearance.
+- `ffopportunity` code GPL v3 and packaged models/data CC BY-SA 4.0: **conditional rights review**, not blanket exclusion. A valid server-only GPL use may not require source disclosure; any adapted CC BY-SA material that is shared may create distinct ShareAlike obligations. Explicitly document proprietary-code and proprietary-model/data boundaries before approval.
 - Do **not** install R, Polars, or bulk PBP into the production Render web runtime for a research test.
 - Do acquisition, joins, fits and benchmarks offline with bounded memory/transfer; retain versioned shared evidence outside browser requests.
 - No code changes, automatic PR merge, deployment, Career #405 interruption or new live provider source authority; one explicit Management gate if a promoted change is supported.
