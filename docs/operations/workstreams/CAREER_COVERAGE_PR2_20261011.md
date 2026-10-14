@@ -1,3 +1,39 @@
+## 2026-10-14 UTC — Replayed the recovered Week 5 checkpoint on PR #454
+
+The user attached the original saved checkpoint. It was replayed locally from the verified branch source at `774722c3677e878ad1fd6c5678e38d7bbb8c333d`, exact State `2fd788a858a6497425b2e066c77b3176e305030d6f7620cf25cf59ed3b30e061`, and saved evaluation cutoff `2026-10-13T19:38:00.425705Z`. The replay runner was made cache-only in scratch; no provider endpoint was called and the private archive was not uploaded.
+
+The four pinned Foundation 4 archives, dev/route/policy programs, and reference board all matched their accepted SHA-256 values. Corrected ROS window and WR/TE primary-domain regressions pass. The replay retained 19 valid dynamic P0 inputs plus nine explicit failures; candidate set, nine failures, evidence modes, future contract, and all Year-1 means match the earlier result. The WR/TE admission correction did not change availability for this State.
+
+The full path returned 353 Career estimates, all 252 roster outcomes, and 252 exact-State Position & Depth rows. There are still 243 numeric roster outcomes and the same nine unresolved players: Ricky Pearsall, Jayden Higgins, Chris Brazzell, Tyreek Hill, Joe Mixon, Brandon Aiyuk, Chig Okonkwo, CJ Daniels, and Robert Henry. Their prior per-player failure reasons remain unchanged: seven lack a complete Year-1 raw scoring row / two-source ensemble, Aiyuk lacks a complete single-source Year-1 fallback, Daniels has invalid age/experience/Y1, and Henry has no RB/depth percentile cell.
+
+The 334 frozen-reference Career estimates are unchanged; the durable frozen-335 test passes with Shapley delta 0 and Career numeric delta 9.09e-13. Seventeen of the 19 dynamic Career totals changed; two are unchanged. The updated Year-1 means are identical, so these changes are downstream Career/F4 output and are not explained by the WR/TE admission guard. Preserve the prior accepted ledger values until the new values receive review; do not force them back to match.
+
+Player-level numerical differences (replayed values are observed, not yet approved for release):
+
+| Player | Sleeper ID | Previous Career | Replayed Career | Change |
+|---|---|---:|---:|---:|
+| Roman Wilson | 11630 | 171.812840867 | 171.599911276 | -0.212929592 |
+| Kaleb Johnson | 12504 | 119.236759931 | 119.239961785 | +0.003201853 |
+| Jalen Milroe | 12510 | 249.504133260 | 251.804002823 | +2.299869564 |
+| Efton Chism | 12542 | 96.766896853 | 96.089970012 | -0.676926840 |
+| Darius Cooper | 13150 | 149.074595077 | 148.486433797 | -0.588161280 |
+| Dohnte Meyers | 13264 | 139.580360194 | 139.172688168 | -0.407672026 |
+| Elijah Sarratt | 13268 | 63.368094442 | 62.191696397 | -1.176398045 |
+| Drew Allar | 13289 | 310.296698991 | 308.183814652 | -2.112884340 |
+| Taylen Green | 13306 | 286.188061504 | 283.949703340 | -2.238358163 |
+| Skyler Bell | 13402 | 88.507305815 | 86.470921409 | -2.036384406 |
+| Zavion Thomas | 13411 | 91.272303703 | 89.322868889 | -1.949434814 |
+| Eli Raridon | 13421 | 187.381574726 | 187.454734677 | +0.073159951 |
+| Athan Kaliakmanis | 13557 | 452.448670202 | 453.549126810 | +1.100456608 |
+| Austin Ekeler | 4663 | 22.558173745 | 22.532416970 | -0.025756775 |
+| Kenny Gainwell | 7567 | 64.345958509 | 64.347486798 | +0.001528289 |
+| Dameon Pierce | 8129 | 26.349635713 | 26.322583423 | -0.027052290 |
+| Anthony Richardson | 9229 | 213.092456528 | 212.764229776 | -0.328226752 |
+
+The full replay used the unchanged safeguards and measured 477,331,456 B (455.21875 MiB), under the 536,870,900 B hard cap but above the 429,496,720 B working target and 40,599,552 B above the earlier accepted measurement. Frozen reference and browser memory thresholds were not changed.
+
+On exact code head `774722c...`, GitHub focused CI run `38637208950` succeeded; the stable full-suite run `38637209201` was skipped while the PR remained draft. A local Python 3.12 full suite passed 2,351 tests and failed one simulation digest test because only the Python 3.11 digest is frozen. Five P1 and two P2 review threads remain open, including the live-catalog evidence-cutoff issue. Keep PR #454 draft, withhold merge/deploy, and obtain review of the 17 changed numerical values before release.
+
 ## 2026-10-13 — Shared projection mapping, bounded acquisition, and full-path replay
 
 The concrete mapper defect was in `scripts/capture_prospective_ros_event_snapshot.py`: it required exactly 335 board rows and discarded provider rows unless a unique name/position matched that board. The shared `map_projection_rows` boundary now resolves asserted provider/external IDs first, then unique normalized name + position + team, then unique name + position; ambiguous asserted identities do not fall through. It accepts the complete exact-State player universe. Capture supports an explicit ID allowlist, while the Career selector continues to govern computation: every exact-State roster player, Explore 50 by default / 100 maximum, or explicit on-demand. It does not materialize the full waiver pool.
