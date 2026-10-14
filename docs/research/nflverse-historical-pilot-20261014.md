@@ -1,7 +1,9 @@
 # NFLverse historical evidence pilot — research-only checkpoint
 
+> **2026-10-14 RIGHTS REVIEW CHECKPOINT (CONTROLLING):** The [source-level licensing ledger](./nflverse-commercial-rights-ledger-20261014.md) has been completed as a *preliminary review*. Permissively MIT-licensed code can be considered in a paid proprietary FSFFL product with notices; some GPLv3 hosted use can be compliant if never conveyed; CC BY-SA data need derivative-material analysis. **BUT production/model-training rights to NFLverse's core player-statistics, PBP, and upstream PFR/NFL sourced datasets remain unproven.** The public NFLverse paid-product licensing question #101 closed without clarification. NFL.com and Sports Reference site terms contain directly relevant restrictions. **Do not begin source-data acquisition, training, or integration under #458 until exact existing rights and permitted acts are sufficiently evidenced.** No new fees/special licenses or proprietary FSFFL code release. Career #405 continues separately. This note supersedes any older text below implying a quantitative run is now approved.
+
 **Started:** 2026-10-14  
-**Status:** Source-release manifest audit completed; quantitative player-row and forecasting checks **not yet executed**.  
+**Status:** Source-release manifest audit and preliminary commercial-rights screen completed; quantitative audit not executed; NFLverse source-data gate on HOLD.  
 **Lane:** Independent ChatGPT research, separate from Career Coverage #405 / PR #454.  
 **Authority:** No changes to production Forecast, Foundation 4, Career, Simulation 2.0, Value, State, model version, provider weights, or live operation are authorized.
 
