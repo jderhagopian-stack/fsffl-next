@@ -1,5 +1,9 @@
 # Current Operations
 
+## 2026-10-14 UTC — Career #405 Week 5 rerun and CI trigger correction
+
+Draft PR #454 code head `09e7ea36cd139286bf13150a32a293be984f7106` completes the saved Week 5 path without new acquisition: 353 Career estimates, all 252 matching-State Position & Depth rows, 243 values and nine individual unresolved outcomes. The player ledger is updated. Training-column projection preserves exact values and reduces full-path RSS to 527.469 MiB, still above the 409.6 MiB gate. A Management Continuity merge conflict—not missing Actions access—prevented PR workflows; both histories are now preserved, main reconciled, and real focused CI run `38508053037` executes on the published code head. Local focused groups pass 168 tests. Final observed Actions conclusion is recorded in [Career PR2](workstreams/CAREER_COVERAGE_PR2_20261011.md). No merge/deploy; memory remains an open release gate.
+
 
 ## 2026-10-11 20:46 ET — Career #405 Management direction and current gate
 

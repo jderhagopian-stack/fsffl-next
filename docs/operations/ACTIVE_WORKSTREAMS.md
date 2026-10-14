@@ -1,6 +1,6 @@
-## 2026-10-13 — Career #405 saved Week 5 full path completed
+## 2026-10-14 UTC — Career #405 saved Week 5 rerun and real CI
 
-PR #454 remains draft. Code head `ae0269e0a83f269102510a973406fd0fc5f83820` resolves the active 334/reference 335 cohort mismatch. Full Career has 353 estimates; all 252 matching-State roster rows are retained (243 available, nine explicit unresolved). No new acquisition. Full-path RSS 536.676 MiB exceeds the 409.6 MiB gate; GitHub Actions has no exact-head run. Local focused workflow checks pass 164. See [the executed checkpoint](workstreams/CAREER_COVERAGE_PR2_20261011.md) and updated player ledger.
+PR #454 remains draft. Code `09e7ea36…` completes 353 Career estimates and all 252 matching-State roster rows (243 values, nine unresolved). No repeat acquisition. Training projection preserves exact values and reduces full-path RSS to 527.469 MiB, still above 409.6 MiB. The main continuity conflict is resolved and real GitHub focused CI run 38508053037 now executes. Local focused groups pass 168 tests. See [the current executed checkpoint](workstreams/CAREER_COVERAGE_PR2_20261011.md) and player ledger.
 
 # Superseded operations document
 
