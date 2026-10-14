@@ -255,11 +255,6 @@ def build_dynamic_rostered_career_contract(
     if year_one_evidence.evidence_basis != "preseason_baseline":
         raise ValueError("dynamic Career bridge requires accepted preseason base cohort")
     base_year_one = _year_one_forecasts(year_one_evidence)
-    base_future = current_intrinsic_loader._resolve_future_contract(
-        league_state=state,
-        evidence=year_one_evidence,
-        year_one=base_year_one,
-    )
     live = candidate_builder(state)
     failures = dict(live.failures)
     future = live.future
@@ -269,7 +264,7 @@ def build_dynamic_rostered_career_contract(
         (row.player_id, int(row.year_index)): row
         for row in future.contract.forecasts
     }
-    frozen_ids = set(base_future.player_ids)
+    frozen_ids = {row.player_id for row in base_year_one}
     if frozen_ids & set(live.candidate_source_rows):
         raise ValueError("dynamic Career candidate overlaps accepted future cohort")
     eligible = {
@@ -295,6 +290,11 @@ def build_dynamic_rostered_career_contract(
                 "and point-in-time historical panel)"
             )
         return ExpandedCareerContractResult(contract=None, failures=failures)
+    # ROS acquisition/scoring is complete. Career consumes the retained
+    # candidate source, Y1, future and failure contracts; it never consumes
+    # the whole-league ROS intermediate. Release this local working-set
+    # reference without mutating the builder's result or its evidence.
+    live = replace(live, ros_runtime=None)
     try:
         release_unused_process_memory(label="career-before-dynamic-foundation4")
         components = materializer(context, live, tuple(sorted(eligible)))
@@ -323,6 +323,17 @@ def build_dynamic_rostered_career_contract(
         )
     if not complete:
         return ExpandedCareerContractResult(contract=None, failures=failures)
+
+    # The large future scenario graph is needed only for downstream Shapley.
+    # Do not keep it resident alongside Foundation 4's fit workspaces.
+    release_unused_process_memory(label="career-foundation4-complete")
+    base_future = current_intrinsic_loader._resolve_future_contract(
+        league_state=state,
+        evidence=year_one_evidence,
+        year_one=base_year_one,
+    )
+    if set(base_future.player_ids) & set(live.candidate_source_rows):
+        raise ValueError("dynamic Career candidate overlaps accepted future cohort")
 
     # Materialize accepted Foundation 4 components before expanding the
     # Shapley cohort. This keeps the wide materializer's RSS bounded and means

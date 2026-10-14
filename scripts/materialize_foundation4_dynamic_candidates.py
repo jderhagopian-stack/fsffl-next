@@ -16,8 +16,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from threadpoolctl import threadpool_limits
 from fsffl.product.resource_coordinator import release_unused_process_memory
 from fsffl.product.foundation4_matrix import bounded_feature_matrix
+from fsffl.product.foundation4_history import BoundedHorizonHistory
 
 REQUIRED = {
     "player_id", "position", "historical_gsis_id", "age", "experience",
@@ -485,7 +487,14 @@ def main():
     connected = source.scored_raw_frame(read_raw_history(a.raw_seasons))
     previous = {(str(row.player_id), int(row.season)): float(row.fantasyPoints)
                 for row in connected.itertuples() if int(row.season) == 2025}
-    raw = dev.prep_raw(connected.copy())
+    scoped_history_path = out.parent / "accepted_raw_history.csv"
+    connected.to_csv(scoped_history_path, index=False)
+    # Current's accepted lag join uses only 2026 minus lags 1, 2 and 3.
+    # Rankings and team shares in prep_raw are season-local, so keep all
+    # players in those seasons and release older rows before current joins.
+    raw = dev.prep_raw(connected.loc[connected.season.isin((2023, 2024, 2025))])
+    del connected
+    release_unused_process_memory(label="foundation4-current-lag-history-scoped")
     players_header = pd.read_csv(a.players, nrows=0).columns
     players = pd.read_csv(a.players, usecols=[c for c in PLAYER_METADATA_COLUMNS if c in players_header])
     residual_header = pd.read_csv(a.residual_states, nrows=0).columns
@@ -503,10 +512,8 @@ def main():
         roster_frame,
     )
     current = build_candidate_features(dev, candidates, reference, raw, players, residual, innovation)
-    scoped_history_path = out.parent / "accepted_raw_history.csv"
-    connected.to_csv(scoped_history_path, index=False)
     # Release current-board joins before the full accepted history panel is built.
-    del connected, raw, players, residual, innovation, reference_board, reference
+    del raw, players, residual, innovation, reference_board, reference
     release_unused_process_memory(label="foundation4-current-inputs-released")
     class Args: pass
     history = Args()
@@ -530,11 +537,17 @@ def main():
     del qb_results
     history_base = dev.build_forecast_base(model_a)
     del model_a
+    release_unused_process_memory(label="foundation4-model-a-released")
     history_raw = dev.prep_raw(read_raw_history(history.raw_seasons))
     history_base = dev.merge_lags(history_base, history_raw)
     history_players = pd.read_csv(history.players)
     history_base = dev.add_engineered_features(history_base, history_players)
     del history_players
+    model_features = {column for features in dev.FEATURE_SETS.values() for column in features}
+    base_columns = {"player_id", "base_season", "position"} | model_features
+    history_base = history_base.loc[:, [column for column in history_base if column in base_columns]]
+    history_base = compact_history_categories(history_base, dev, copy=False)
+    release_unused_process_memory(label="foundation4-unused-engineered-columns-released")
     history_residual = pd.read_csv(history.residual_states)
     history_innovation = pd.read_csv(history.innovation_states)
     history_base = dev.merge_trajectory(history_base, history_residual, history_innovation)
@@ -546,24 +559,25 @@ def main():
     history_base = history_base.loc[:, [column for column in history_base.columns if column in base_columns]]
     history_base = compact_history_categories(history_base, dev, copy=False)
     release_unused_process_memory(label="foundation4-before-horizon-expansion")
-    long = dev.build_long(history_base, history_raw)
+    # Preserve the existing runtime projection exactly: generated horizon_sq
+    # was not part of that projection unless explicitly owned by a feature set.
+    # Exposing it now would change global-continuous model inputs.
+    long = BoundedHorizonHistory(
+        dev, history_base, history_raw, out.parent / 'accepted_feature_columns',
+        columns=model_features | {'position', 'horizon', 'target_season', 'actual'},
+    )
     del history_base, history_raw
     release_unused_process_memory(label="foundation4-history-base-released")
-    model_features = {
-        column for feature_set in dev.FEATURE_SETS.values()
-        for column in feature_set if column in long.columns
-    }
-    retained_long_columns = [
-        column for column in ("position", "horizon", "target_season", "actual")
-        if column in long.columns
-    ] + [column for column in long.columns if column in model_features]
-    long = long.loc[:, list(dict.fromkeys(retained_long_columns))]
-    long = compact_history_categories(long, dev, copy=False)
     release_unused_process_memory(label="foundation4-before-policy-materialization")
-    result = source.current_policy_rows(
-        route, dev, long, current, pd.read_csv(a.current_route),
-        pd.read_csv(a.cell_metrics), json.loads(Path(a.policy_freeze).read_text()),
-    )
+    # This admitted materializer already owns the heavy phase. Bound native
+    # fit workers to avoid one scratch workspace per available host core;
+    # restore the caller's thread limits afterward. Model parameters and
+    # accepted row/feature calculations remain unchanged.
+    with threadpool_limits(limits=1):
+        result = source.current_policy_rows(
+            route, dev, long, current, pd.read_csv(a.current_route),
+            pd.read_csv(a.cell_metrics), json.loads(Path(a.policy_freeze).read_text()),
+        )
     if set(result.player_id) != set(candidates.player_id) or not (result.groupby("player_id").size() == 16).all():
         raise ValueError("each candidate must receive all 16 accepted Y4-Y7 policy rows")
     evidence_digest = hashlib.sha256(json.dumps(candidates.to_dict("records"), sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()

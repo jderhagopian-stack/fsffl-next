@@ -323,6 +323,10 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
 
     original = bridge.build_live_calendar_shapley_estimates
     composed_player_counts = []
+    # Missing Foundation 4 must not construct and retain the future scenario
+    # graph before the materializer phase has completed.
+    monkeypatch.setattr(base_loader, "_resolve_future_contract", lambda **kwargs: pytest.fail(
+        "future scenarios were built before Foundation 4 completed"))
 
     def record_full_cohort(calendar, *, rules):
         composed_player_counts.append(calendar.player_count)
@@ -341,6 +345,21 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     assert set(result.failures) == {candidate_id}
     assert "Foundation 4 dynamic materializer input bundle is not configured" in result.failures[candidate_id]
     assert "route/development modules" in result.failures[candidate_id]
+
+    def no_components(_context, retained, ids):
+        assert retained.ros_runtime is None
+        assert retained.future is candidate.future
+        assert retained.candidate_source_rows == candidate.candidate_source_rows
+        assert retained.year_one_league == candidate.year_one_league
+        return bridge.DynamicCareerComponents({}, {}, {candidate_id: "no F4 components"})
+
+    result = bridge.build_dynamic_rostered_career_contract(
+        context, SimpleNamespace(), current_intrinsic_loader=base_loader,
+        candidate_builder=lambda _state: candidate, materializer=no_components,
+    )
+    assert candidate.ros_runtime is not None  # public builder result unchanged
+    assert result.contract is None
+    assert result.failures[candidate_id] == "no F4 components"
 
 
 def test_hosted_dynamic_career_bridge_scalarizes_structured_provenance() -> None:

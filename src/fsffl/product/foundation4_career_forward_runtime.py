@@ -543,6 +543,9 @@ class CareerIntrinsicLoader:
                 ),
             }
         )
+        # Reference aggregation is complete. The expanded phase reuses the
+        # typed contract/component, not these transient forecast/tail inputs.
+        del long_forecast, terminal_features, tails
         contract = self._append_expanded_rostered_contract(context, contract)
         self._persist(
             context,

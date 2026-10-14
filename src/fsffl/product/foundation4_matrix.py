@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import numpy as np
+from .resource_coordinator import release_unused_process_memory
 
 
 def bounded_candidate_fit(original, dev, long, candidate, origin, horizon, position, evaluation):
@@ -27,7 +28,9 @@ def bounded_candidate_fit(original, dev, long, candidate, origin, horizon, posit
                 raise TypeError("accepted Foundation 4 training selection must be Boolean")
             return long.loc[predicate, selected]
 
-    return original(dev, TrainingProjection(), candidate, origin, horizon, position, evaluation)
+    result = original(dev, TrainingProjection(), candidate, origin, horizon, position, evaluation)
+    release_unused_process_memory(label="foundation4-native-fit-released")
+    return result
 
 
 def bounded_feature_matrix(original, categorical, train, evaluation, features, architecture):
