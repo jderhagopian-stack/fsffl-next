@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
+from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord, utc_now
 from fsffl.product.foundation4_career_forward_runtime import (
     CAREER_INTRINSIC_ARTIFACT_KIND,
     CAREER_INTRINSIC_SCOPE_KIND,
@@ -29,6 +29,7 @@ from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 from fsffl.product.foundation4_shadow_routes import (
     FOUNDATION4_CAREER_FORWARD_ENDPOINT,
     FOUNDATION4_Y4_Y7_ENDPOINT,
+    _carry_dynasty_last_good,
     _career_position_depth_rows,
     install_foundation4_shadow_routes,
 )
@@ -61,6 +62,25 @@ from fsffl.value.shapley_intrinsic_contract import (
     ShapleyIntrinsicHorizonContribution,
     ShapleyIntrinsicPlayerEstimate,
 )
+
+
+def test_promoted_last_good_dynasty_drops_prior_state_career_rows():
+    carried = _carry_dynasty_last_good(
+        {
+            "status": "ready",
+            "league_state_id": "old-state",
+            "publication_generation_id": "old-generation",
+            "career_position_depth": [{"player_id": "p1", "state_hash": "old-state"}],
+            "rooms": [{"team_id": "team-a"}],
+        },
+        state_id="new-state",
+    )
+
+    assert carried["league_state_id"] == "new-state"
+    assert carried["dynasty_evidence_state_id"] == "old-state"
+    assert carried["rooms"] == [{"team_id": "team-a"}]
+    assert "career_position_depth" not in carried
+    assert "publication_generation_id" not in carried
 
 
 class MemoryPersistence:
@@ -291,6 +311,37 @@ def test_restart_restore_is_semantically_identical_and_skips_rebuild(
     component = second_loader.restore_component(context)
     assert component is not None
     assert len(component.estimates) == 335
+
+
+def test_restore_expanded_career_artifact_returns_only_frozen_reference_base(materialized):
+    persistence, _calls, _base_loader, context, base = materialized
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _context: None,
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        persistence_store=persistence,
+        expanded_career_contract_loader=lambda _context, frozen: frozen,
+        expanded_career_contract_fingerprint_resolver=lambda _context: "dynamic-fp-v1",
+    )
+    dynamic_id = "sleeper:player:restored-dynamic"
+    dynamic_row = base.estimates[0].model_copy(update={"player_id": dynamic_id})
+    legacy_expanded = base.model_copy(update={
+        "estimates": (*base.estimates, dynamic_row),
+        "player_count": base.player_count + 1,
+    })
+    fingerprint = loader.intrinsic_input_fingerprint(context)
+    payload = legacy_expanded.model_dump(mode="json")
+    payload["_foundation4_dependency_fingerprint"] = fingerprint
+    persistence.put_artifact(ReusableArtifactRecord(
+        key=loader._career_key(context, fingerprint),
+        payload=payload,
+        computed_at=utc_now(),
+    ))
+
+    restored = loader.restore_compatible(context)
+
+    assert restored is not None
+    assert restored.player_count == base.player_count
+    assert dynamic_id not in {row.player_id for row in restored.estimates}
 
 
 def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(
