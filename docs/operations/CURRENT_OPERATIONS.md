@@ -1,5 +1,10 @@
 # Current Operations
 
+## 2026-10-13 — Automation #456 no-new-billing correction
+
+Management accepted an **existing-subscription-first** pilot after successful GitHub main protection and exact-head CI on #457. Do **not** request an OpenAI API key, change plans, install a paid Codex GitHub Action, or claim unattended engineering from CI alone. Verify a read-only GitHub PR-event-triggered ChatGPT Work task on #457 through an actual run first, then separately validate subscription-backed Codex Cloud coding capabilities. Work PR triggers and Codex Cloud are not proven to connect into an unattended coding/retry loop; document the limitation honestly if it cannot be established. Issue #456 is the latest scoped execution authority. Preserve all Career #454 and production safeguards.
+
+
 ## 2026-10-13 20:54 ET — current execution authority; automation bootstrap #456
 
 **Current priority:** preserve Career Coverage #405 on draft [PR #454](https://github.com/jderhagopian-stack/fsffl-next/pull/454), and validate the isolated [Engineering Automation Bootstrap #456](https://github.com/jderhagopian-stack/fsffl-next/issues/456). No new product feature expansion, model authority change, broad re-audit, unapproved merge, or production write is authorized by the bootstrap. No autonomous coding workflow is installed or accepted yet. [Bootstrap checkpoint](workstreams/ENGINEERING_AUTOMATION_BOOTSTRAP.md) records the exact safeguards and required real workflow evidence.
