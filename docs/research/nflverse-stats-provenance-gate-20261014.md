@@ -50,6 +50,40 @@ python scripts/research/nflverse_historical_coverage_audit.py \
 
 ---
 
+## Full historical release inventory / commercial-source alternatives (2026-10-14)
+
+**Quantified asset metadata** — queried the official GitHub API release `stats_player` and committed [a reproducible 111-asset CSV manifest](../../artifacts/research/nflverse_stats_player_release_manifest_20261014.csv). It contains public asset name, scope, season, exact file bytes, published `sha256` digest, asset ID, URL and last updated time. This **is metadata only, not an ingestion or rights grant**.
+
+| CSV scope | Seasons published | Count |
+|---|---|---:|
+| `stats_player_week_YYYY.csv` | **1999–2026**, complete coverage of *file names* | 28 |
+| `stats_player_reg_YYYY.csv` | **1999–2026**, complete coverage of *file names* | 28 |
+| `stats_player_post_YYYY.csv` | **1999–2025**, no future 2026 postseason | 27 |
+| `stats_player_regpost_YYYY.csv` | **1999–2026**, partial 2026 archive | 28 |
+| **Total** | | **111** |
+
+The historical modeling cohort has **27 completed seasons 1999–2025**, not merely the earlier 2019–2025 scope. Keep **2026 in-progress weeks separate**. Data files may have been revised recently even for very old seasons, so a current file upload timestamp is NOT proof of original historical point-in-time availability. The schema, player count, revision effects and individual missingness are still unverified until source-data access is approved. Official GitHub API: https://api.github.com/repos/nflverse/nflverse-data/releases/tags/stats_player .
+
+**Direct distribution trace:** the `raw_pbp_urls()` code points to GitHub `nflverse/nflverse-pbp/releases/download/raw_pbp_YYYY/<game>.rds`; `release_pbp`, `release_pbp_stats`, and `release_stats` materialize aggregates and publish into `nflverse-data` GitHub releases. That verifies **how a downstream researcher retrieves releases** (GitHub) but **does not establish how the original raw event data was acquired** or release rights vis-à-vis original owners. It is inappropriate to equate GitHub retrieval with directly scraping an NFL.com service; likewise inappropriate to infer that the original rightsholder consented to all downstream commercial uses.
+
+**Independent commercial example (not legal clearance):** the for-profit fantasy-analysis website [Regression Candidate attribution policy](https://regressioncandidate.com/attributions) expressly identifies nflverse data as inputs to its proprietary rankings, projections and player tools; states it relies on CC BY 4.0 for commercial reuse with attribution and Feist for raw sports facts. This is evidence that our contemplated model (credit nflverse, keep original analyses proprietary) has an industry analogue. Their self-assessment is **not a license from the NFL nor independent proof of the upstream rights**; we cannot import their conclusion without our own source/integration judgment.
+
+**Stronger separately licensed fallback for identity/career facts:** [Wikidata structured data is CC0](https://www.wikidata.org/wiki/Wikidata:Licensing) and may be used commercially without fees or source release, with voluntary credit. Its career/biographic records may support a limited identity/draft/experience supplement under its own access guidelines; it **does not supply equivalent complete weekly box-score statistics** and should not be described as solving the primary production-history gap. Photo/media objects linked from Wikidata have separate licenses; do not bring them across with the structured facts.
+
+### Narrowly scoped rights judgment still to be resolved
+
+**Best candidate:** GitHub-published nflverse basic **numerical weekly and regular-season counts**, 1999–2025, with exact release asset hashes; attribute nflverse and CC BY when displaying licensed content; do not redistribute raw files, scrape NFL.com or PFR, or use logos/photos, premium FTN, unreviewed injury/snap collections. U.S. sports **facts** generally lack copyright protection, while database arrangement and access obligations can still apply. The unresolved item is **the scope and effect of upstream rights for the particular copied release** in a paid training, storage, and display service. It is NOT whether CC BY 4.0 permits commercial products in general (it does).
+
+**Practical disposition:**
+- **GO for source manifest research and software experiments using synthetic data.**
+- **GO-CODE** for MIT loading libraries with appropriate notices, once needed.
+- **HOLD for bulk historical stat download, proprietary production-model training and paid public displays** until evidence adequate for the actual acquisition/use (or a focused qualified legal opinion) is documented. An ordinary legal risk judgment may not require written permission from every original statistics producer for uncopyrightable facts, but that cannot be asserted solely by this research.
+- **GO for later limited Wikidata CC0 biographical/identity evaluation**, subject to actual coverage/quality and API-use limits (not an NFL weekly-stats replacement).
+
+No new fee-bearing licensing, FSFFL source disclosure, or competing Codex workstream. The existing [offline coverage audit tool](../../scripts/research/nflverse_historical_coverage_audit.py) and **asset SHA256 manifest** together form a reproducible pilot once the data gate is met.
+
+---
+
 ## Smallest commercially relevant rights question
 
 For **only** `stats_player_week_2019` through `stats_player_week_2025`, corresponding `stats_player_reg` season summaries, and completed weeks of `2026`:
