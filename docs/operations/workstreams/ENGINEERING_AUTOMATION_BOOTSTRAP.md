@@ -32,8 +32,17 @@ This workstream restores **enforced execution**, not a new AI management philoso
 - Existing GitHub Actions does run on other PRs; the repository has a standard `CI` and a draft-gated `Stable full suite` workflow.
 - A GitHub Codex PR **review** integration has been observed. This does not mean an autonomous *coding/repair dispatcher* is installed.
 
+## Executed native automation proof (2026-10-13 ET / 2026-10-14 UTC)
+- Isolated automation PR [#457](https://github.com/jderhagopian-stack/fsffl-next/pull/457) opened **draft** on branch `ops/automation-bootstrap-20261013` (initial smoke head `d47c02965d2d141a99e3e8c09f3cceb7672d47f1`).
+- GitHub Actions **push-triggered** smoke run [38493457701](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/38493457701) completed **success** on that exact head; the script asserts `git rev-parse HEAD == event SHA`.
+- GitHub Actions **pull_request-triggered** smoke run [38493480683](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/38493480683) completed **success** on that same head (job `trigger-and-exact-head`).
+- Ordinary [CI run 38493480575](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/38493480575) began on PR creation; it was still in progress at the first checkpoint. The [Stable full suite event 38493480653](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/38493480653) was **skipped as expected** because this PR remains draft.
+- This disproves a **global GitHub Actions outage**. It does **not** yet identify why Career #454 stopped receiving runs; compare commit/event generation and workflow configuration before choosing a fix.
+- GitHub connector cannot administer the current repo's branch protections or install account-level secrets. A repository owner must authorize that one-time setup; no changes to `main` enforcement have been made.
+- **Unattended coding NOT YET TESTED**; no Codex agent installed, no paid token used, no attempted repair loop. This PR should not be described as the completed #456 outcome.
+
 ## Remaining acceptance records
-- [ ] Exact-head smoke run URL and event proof
+- [x] Exact-head read-only push and PR smoke events observed on initial pilot head (latest head must remain checked)
 - [ ] Concrete root cause for missing #454 Actions and corrected reliable trigger with observed run
 - [ ] Protected `main` with required passing CI check(s), verified by effective GitHub settings
 - [ ] Compiled and authenticated issue-triggered coding workflow, least privilege
