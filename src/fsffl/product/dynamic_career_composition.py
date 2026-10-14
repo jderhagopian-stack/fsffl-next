@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from typing import Callable, Mapping
 
 from fsffl.forecast.future_contract import FutureForecastContract
@@ -214,19 +215,34 @@ def _compose_dynamic_career_contract(
     ), failures
 
 
-def dynamic_career_fingerprint(context: UserRuntimeContext) -> str:
-    """Bind persisted Career results to exact State and existing live evidence."""
+def dynamic_career_fingerprint(
+    context: UserRuntimeContext, *, projection_history_reader=None
+) -> str:
+    """Bind Career reuse to State, forecasts, and retained ROS revision identities."""
     if context.league_state is None:
         raise ValueError("dynamic Career fingerprint requires canonical State")
     evidence = context.forecast_evidence
+    ros_revisions = ()
+    if projection_history_reader is not None:
+        from fsffl.forecast.models import ForecastHorizon
+        from fsffl.forecast.projection_history import ProjectionSelector
+
+        ros_revisions = projection_history_reader.latest_revision_fingerprints(
+            ProjectionSelector(
+                season=context.league_state.league.season,
+                horizon=ForecastHorizon.REST_OF_SEASON,
+                as_of=datetime.now(UTC),
+            )
+        )
     payload = {
         "state_id": context.league_state.state_id,
         "completed_through_week": context.league_state.completed_through_week,
-        "forecast_model": evidence.model_version if evidence is not None else None,
+        "forecast_model": getattr(evidence, "model_version", None),
         "forecast_rows": [
             (row.player_id, row.metric.value, float(row.distribution.mean), row.model_version)
-            for row in (evidence.raw_forecasts if evidence is not None else ())
+            for row in getattr(evidence, "raw_forecasts", ())
         ],
+        "projection_history_revisions": ros_revisions,
         "contract": "dynamic-rostered-p0-career-bridge-v1",
     }
     return hashlib.sha256(
@@ -251,11 +267,30 @@ def build_dynamic_rostered_career_contract(
 
     # Reuse the configured accepted preseason authority, then the exact same
     # future contract builder as the hosted Shapley loader.
-    year_one_evidence = current_intrinsic_loader._year_one_loader(state)
-    if year_one_evidence.evidence_basis != "preseason_baseline":
-        raise ValueError("dynamic Career bridge requires accepted preseason base cohort")
-    base_year_one = _year_one_forecasts(year_one_evidence)
-    live = candidate_builder(state)
+    try:
+        year_one_evidence = current_intrinsic_loader._year_one_loader(state)
+        if year_one_evidence.evidence_basis != "preseason_baseline":
+            raise ValueError("dynamic Career bridge requires accepted preseason base cohort")
+        base_year_one = _year_one_forecasts(year_one_evidence)
+        live = candidate_builder(state)
+    except Exception as exc:
+        # Dynamic acquisition is an optional extension to the already-built
+        # frozen Career contract. Preserve that contract and expose each
+        # supported roster subject as explicitly unresolved on batch failure.
+        base_ids = {row.player_id for row in frozen_reference.estimates}
+        candidates = sorted({
+            entry.player_id
+            for team in state.team_states
+            for entry in team.roster
+            if entry.player_id not in base_ids
+            and entry.player_id in {p.player_id for p in state.players
+                                    if p.position.value in {"QB", "RB", "WR", "TE"}}
+        })
+        detail = f"dynamic P0 acquisition failed: {type(exc).__name__}: {exc}"
+        return ExpandedCareerContractResult(
+            contract=None,
+            failures={player_id: detail for player_id in candidates},
+        )
     failures = dict(live.failures)
     future = live.future
     if future is None:
