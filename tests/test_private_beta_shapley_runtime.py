@@ -34,6 +34,7 @@ from fsffl.product.i1_scoring_bridge import (
     FROZEN_I1_STANDARD_SCORING,
     FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
 )
+from fsffl.product import dynamic_career_composition as bridge
 from fsffl.product.p0_forecast_runtime import (
     P0_FINAL_ROUTE_AUTHORITY_SHA256,
     P0_FINAL_ROUTE_AUTHORITY_VERSION,
@@ -379,6 +380,56 @@ def test_hosted_dynamic_career_bridge_scalarizes_structured_provenance() -> None
         "accepted": True,
     }
     assert all(value is None or isinstance(value, (str, bool, int, float)) for value in encoded.values())
+
+
+def test_dynamic_career_candidate_acquisition_failure_preserves_frozen_base():
+    state, observation = _fixture()
+    state = state.model_copy(update={
+        "team_states": (
+            TeamState(
+                team_id="a",
+                roster=(RosterEntry(player_id="canonical-player", slot=RosterSlot.BENCH),),
+            ),
+            TeamState(team_id="b", roster=()),
+        )
+    })
+    loader = _legacy_p0_loader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )
+
+    def unavailable(_state):
+        raise RuntimeError("projection history unavailable")
+
+    result = bridge.build_dynamic_rostered_career_contract(
+        _context(state, observation),
+        SimpleNamespace(estimates=()),
+        current_intrinsic_loader=loader,
+        candidate_builder=unavailable,
+    )
+    assert result.contract is None
+    assert result.failures
+    assert all("projection history unavailable" in reason for reason in result.failures.values())
+
+
+def test_dynamic_career_fingerprint_changes_when_ros_revision_identity_changes():
+    state, observation = _fixture()
+    context = _context(state, observation)
+
+    class Reader:
+        version = "ros-v1"
+
+        def latest_revision_fingerprints(self, _selector):
+            return ({"provider": "cbs", "content_fingerprint": self.version},)
+
+    reader = Reader()
+    first = bridge.dynamic_career_fingerprint(
+        context, projection_history_reader=reader
+    )
+    reader.version = "ros-v2"
+    second = bridge.dynamic_career_fingerprint(
+        context, projection_history_reader=reader
+    )
+    assert first != second
 
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
