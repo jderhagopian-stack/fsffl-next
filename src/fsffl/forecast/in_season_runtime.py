@@ -1,3 +1,5 @@
+3f95ce7af3d586cd72f2156f5c6269d2c43644f4
+484645a955654c2652400bb41aa89e160501d0e9
 from __future__ import annotations
 
 from contextvars import copy_context
@@ -259,9 +261,14 @@ def build_in_season_forecasts(
             snapshot.season != league_state.league.season
             or snapshot.horizon != horizon
             or snapshot.week != week
+            or snapshot.period_start != period_start
+            or snapshot.period_end != period_end
             or snapshot.effective_at > evaluation_as_of
         ):
-            failed.append(f"{source_id}: saved projection revision does not match requested State horizon/cutoff")
+            failed.append(
+                f"{source_id}: saved projection revision does not match requested "
+                "State horizon/period/cutoff"
+            )
             continue
         observations: list[ForecastObservation] = []
         for item in revision.observations:

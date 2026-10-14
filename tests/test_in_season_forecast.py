@@ -240,6 +240,47 @@ def test_saved_ros_revisions_preserve_canonical_ids_without_provider_name_rematc
     assert rush.distribution.mean == pytest.approx(800.0)
 
 
+def test_saved_ros_revision_from_earlier_period_is_rejected_not_relabeled():
+    captured_at = NOW - timedelta(hours=2)
+    stale = ProjectionRevision(
+        snapshot=ProjectionSnapshotRecord(
+            provider="cbs",
+            season=2026,
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            week=None,
+            period_start=PERIOD_START - timedelta(days=7),
+            period_end=PERIOD_END,
+            effective_at=captured_at,
+            retrieved_at=captured_at,
+            source_version="cbs-stale-ros-v1",
+            usage_class="test",
+            content_fingerprint="cbs-stale-fingerprint",
+            snapshot_id=None,
+        ),
+        observations=(ProjectionObservationRecord(
+            player_id="p1",
+            external_id="stale:cbs:player",
+            position=Position.RB,
+            metric=ForecastMetric.RUSH_YARDS,
+            mean=800.0,
+        ),),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="cbs: saved projection revision does not match requested State horizon/period/cutoff",
+    ):
+        build_in_season_forecasts(
+            _state(),
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            period_start=PERIOD_START,
+            period_end=PERIOD_END,
+            source_revisions=(stale,),
+            fetchers=(),
+            clock=lambda: NOW,
+        )
+
+
 def test_week_runtime_requires_week_and_never_relabels_as_ros():
     with pytest.raises(ValueError, match="requires week"):
         build_in_season_forecasts(
