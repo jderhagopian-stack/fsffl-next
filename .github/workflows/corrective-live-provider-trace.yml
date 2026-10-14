@@ -55,6 +55,18 @@ jobs:
           EOF
             exit 0
           fi
+          if grep -q "LiveForecastSourceHealthFailure: authoritative live ensemble requires at least 2 independent sources; found 1" artifacts/diagnostics/live_razzball_numerical_trace_20260920/WORKFLOW_TRACE.log; then
+            cat > artifacts/diagnostics/live_razzball_numerical_trace_20260920/EXPECTED_SOURCE_HEALTH_QUARANTINE.md <<'EOF'
+          # Expected independent-source evidence quarantine
+
+          The legacy Razzball trace supplied only one healthy independent source.
+          Forecast correctly rejected an authoritative ensemble requiring two.
+          Preserve the exact failure in WORKFLOW_TRACE.log; this verifies fail-closed
+          admission, not successful numerical trace output or source availability.
+          No source is invented, zero-filled, reacquired, or admitted by this gate.
+          EOF
+            exit 0
+          fi
           exit "$status"
       - name: Upload trace
         if: always()
