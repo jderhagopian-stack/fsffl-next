@@ -1,0 +1,46 @@
+name: Automation bootstrap smoke
+
+# Read-only proof of GitHub Actions event delivery and exact-head execution.
+# This is NOT an AI coding agent or a CI release gate.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/automation-bootstrap-smoke.yml'
+      - 'docs/operations/CURRENT_OPERATIONS.md'
+      - 'docs/operations/workstreams/ENGINEERING_AUTOMATION_BOOTSTRAP.md'
+  push:
+    branches:
+      - 'ops/automation-bootstrap-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: automation-bootstrap-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: trigger-and-exact-head
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact event head without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Prove real event delivery and exact commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_SHA"
+          test -s AGENTS.md
+          test -s docs/operations/CURRENT_OPERATIONS.md
+          test -s docs/operations/OPERATING_PROTOCOL.md
+          test -s docs/operations/workstreams/ENGINEERING_AUTOMATION_BOOTSTRAP.md
+          printf 'Automation smoke: event=%s ref=%s head=%s\n' "$GITHUB_EVENT_NAME" "$GITHUB_REF" "$actual_sha"
