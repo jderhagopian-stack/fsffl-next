@@ -4,6 +4,32 @@ from __future__ import annotations
 import numpy as np
 
 
+def bounded_candidate_fit(original, dev, long, candidate, origin, horizon, position, evaluation):
+    """Let the accepted route select rows, copying only its model's columns.
+
+    The route still owns every training-row predicate. Its Boolean selection
+    is applied directly to the feature projection, avoiding the transient
+    all-feature training table. No serialization or dtype conversion occurs.
+    """
+    architecture, feature_set, model = candidate.split("|")
+    columns = {"position", "actual", "horizon", "horizon_sq"}
+    columns.update(dev.FEATURE_SETS[feature_set])
+    selected = [name for name in long.columns if name in columns]
+
+    class TrainingProjection:
+        def __getattr__(self, name):
+            return getattr(long, name)
+
+        def __getitem__(self, predicate):
+            # Accepted fit_candidate selects its training frame exactly once
+            # with a Boolean Series; reject any changed source contract.
+            if getattr(predicate, "dtype", None) != bool:
+                raise TypeError("accepted Foundation 4 training selection must be Boolean")
+            return long.loc[predicate, selected]
+
+    return original(dev, TrainingProjection(), candidate, origin, horizon, position, evaluation)
+
+
 def bounded_feature_matrix(original, categorical, train, evaluation, features, architecture):
     """Apply the unchanged column-independent transform without wide temporaries.
 

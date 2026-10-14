@@ -455,6 +455,10 @@ def main():
     dev.matrix = lambda train, evaluation, features, architecture: bounded_feature_matrix(
         accepted_matrix, dev.CATEGORICAL, train, evaluation, features, architecture)
     route = load_module("dynamic_career_route", a.route_module)
+    from fsffl.product.foundation4_matrix import bounded_candidate_fit
+    accepted_fit = route.fit_candidate
+    route.fit_candidate = lambda dev, long, candidate, origin, horizon, position, evaluation: bounded_candidate_fit(
+        accepted_fit, dev, long, candidate, origin, horizon, position, evaluation)
     source = load_module("foundation4_source", str(Path(__file__).with_name("materialize_foundation4_fsffl_coordinate.py")))
     from fsffl.product.career_coverage import (
         build_career_position_depth_refresh,

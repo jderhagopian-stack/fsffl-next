@@ -1,5 +1,14 @@
 # Current Operations
 
+
+## 2026-10-11 20:46 ET — Career #405 Management direction and current gate
+
+Career Coverage #405 remains the first product delivery priority, followed by Explore and Trade Center. PR #454 remains draft and unmerged. The last saved production comparison reported 223/250 Career rows for State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` (as of 2026-10-08); treat 27 as the last audited gap, not today's count, until roster-to-Career coverage is recomputed against the latest State. The latest reported implementation checkpoint did not add production Career rows.
+
+Management clarifies: those 335 players were simply the initial modeled cohort; they are not unique, special, or an eligibility ceiling. Keep their output as a regression comparison while extending the accepted models to other eligible rostered players. Year 1 projected full-season points are actual year-to-date points plus the regular Rest-of-Season projection in connected league scoring; do not demand a separate full-season artifact when these components exist. Handle each rostered QB/RB/WR/TE independently so one missing or invalid fringe-player input cannot abort other results or suppress matching-State Position & Depth publication. Do not zero-fill, fabricate values, restart settled source/model/rights work, or run a broad waiver cohort.
+
+**Next gate:** demonstrate real producer-to-Career-composition-to-matching-State-publication results, report any failures by player, preserve the original cohort's numeric regression parity, and measure full-path memory. Fixture-only success and composer-only RSS are insufficient. No merge, deployment, production-model change, or infrastructure purchase is authorized.
+
 ## 2026-10-10 — Bounded intelligence job admission merged (#445)
 
 Management's narrow CHANGE NOW safeguard was implemented and merged into `main` as [PR #445](https://github.com/jderhagopian-stack/fsffl-next/pull/445), squash commit `a612c4dbd7eaadf676381238277664a663fa51df`. `IntelligenceJobCoordinator` now bounds admitted running + pending jobs, coalesces exact same-user/State requests before admission, and releases admission on completion, failure, interruption, cancellation and submission failure. Saturation returns a retryable HTTP 503 (`Retry-After: 5`) without changing reconciliation ownership or queuing unlimited closures. Focused GitHub checks and CI passed; stable full suite was skipped under proportionate-testing policy. **Not deployed**; production unchanged. PR #444 remains a separate draft architecture documentation PR. Career Coverage #405 PR1 remains merged and PR2 remains authorized but no PR2 implementation PR was visible as of this checkpoint. Next delivery focus: complete Career PR2 without parallel duplicate workers, then Explore and Trade.

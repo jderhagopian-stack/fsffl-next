@@ -103,7 +103,33 @@ Results: 335 base Shapley reproduction max absolute component delta `5.97e-13`; 
 
 Private artifact: `/FSFFL NEXT/_implementation_temp/CAREER_COMPOSED_SUPPORTED_ROSTER_11_FULL_COHORT.json` SHA-256 `2379c42b84116707d92e387e74f05097d13925a80b8dbb34476f47935a1da894`; sibling manifest includes State/evaluation timestamps and source hashes. #454 remains draft. **Next gate:** add the composition implementation and numeric parity test to PR CI; then finish matching-State publication/outside-cohort acquisition fixtures and prove complete materializer RSS below 410 MiB. No broader waiver precomputation.
 
+## 2026-10-12 — Career #405 checkpoint: regression work passed; runtime delivery still unproven
+
+PR #454 remains draft and unmerged at `19d0f969ee9b00c6b305ad516b32c28baabc985e`. Management reviewed the latest implementation checkpoint:
+
+- The Year-1 bridge now has a regression proving projected full-season points = actual YTD + regular ROS (37.5 + 100.0 = 137.5); no separate full-season artifact is required.
+- CI run `38191001697` passed 139 focused tests, including frozen-335 Shapley/Career parity (max numeric delta 0) and a 335-player composer-only memory result of 195.4 MiB.
+- These are code/fixture results, not live coverage. No current-roster run occurred: 0 newly resolved, 0 new live failures evaluated, and 0 publication writes. The often-repeated 223/250 count is from saved State `e431b5cb9e340e0f9a93e4433cafe51974fc8b86d6c56b1804e3e506013cd670` as of Oct 8; it is not a refreshed current-State count.
+- The full-path materializer gate remains open: last measured 490,928 KiB (~479.4 MiB), above the ~410 MiB target. Composer-only RSS does not close it.
+- Runtime integration is the actual blocker: the hosted app does not configure the expanded-contract callback, and the accepted regular YTD+ROS / future-year candidate outputs are not connected to a runtime-readable composition/publication path. This is an integration gap, not a decision to recover or recreate accepted models.
+
+**Management direction:** Continue #405 from this exact checkpoint. Wire the already accepted, regularly generated outputs into the existing Career composition and matching-State publication path; preserve Year 1 = YTD + ROS, accepted future-year/Shapley authority, exact-State identity, and independent per-player failure status. Recompute roster coverage from the actual State used by that run. A missing fringe-player input must not abort valid players or blank Position & Depth; never invent or zero-fill. The 335 are a parity baseline, not an eligibility or coverage boundary. Do not expand to all 480 nonrostered players or restart provider acquisition/history recovery. Completion still requires actual rostered-player results/statuses, matching-State publication, automatic new-roster resolution, frozen-335 parity, and full-path memory within budget. No merge, deployment, production-model change, infrastructure purchase, or settled source/rights review is authorized.
+
 # FSFFL NEXT — Management Continuity
+
+
+## 2026-10-11 20:46 ET — Management correction: Career Year 1 and resilient roster coverage
+
+Career Coverage #405 remains the first product delivery priority before Explore and Trade Center. Management owns reconciling conflicting implementation reports with accepted decisions; an implementation checkpoint does not change product authority or roadmap by itself.
+
+- Those 335 players were simply the cohort initially modeled. They are not unique, special, or an eligibility limit; preserve their outputs as a regression comparison while extending the same accepted models to other eligible players.
+- Career Year 1 projected full-season points are actual Year-to-Date points plus the regularly generated Rest-of-Season projection in the connected league scoring coordinate. Do not require a separate full-season artifact when those components exist.
+- Use the already accepted Career/Shapley and future-year outputs. Trace and connect the existing calculated outputs; do not restart provider acquisition, historical/model recovery, settled source/rights review, or a broad waiver run.
+- Recompute the exact current roster-to-production-Career difference before reporting a gap count. Cover rostered QB/RB/WR/TE across all roster slots.
+- Process candidates independently. A missing or invalid input for one fringe player must produce an explicit player-level status without aborting other valid Career results or suppressing the matching-State Position & Depth response. Never zero-fill or invent a value.
+- Accept completion only on actual producer-to-composition-to-publication results, frozen-335 numeric parity, automatic handling of a newly rostered player, and a full-path memory measurement. Fixture-only tests and composer-only RSS are not end-to-end completion.
+
+This decision supersedes implementation interpretations that ROS cannot contribute to Year 1 or that the frozen 335 is a hard candidate boundary. Those reports may describe current code wiring; they do not reopen Management decisions. No merge, deployment, production-model change, or infrastructure purchase is authorized.
 
 ## 2026-10-10 — Management correction: existing-model-first universal Forecast
 
