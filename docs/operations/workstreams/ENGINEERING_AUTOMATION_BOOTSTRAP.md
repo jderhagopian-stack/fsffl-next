@@ -1,5 +1,15 @@
 # Engineering Automation Bootstrap — Issue #456
 
+## Owner-approved no-new-billing direction — 2026-10-13 ET
+
+**Priority correction:** Do not install `gh-aw`, solicit an OpenAI API key, change subscriptions, or authorize new spend during this pilot. Supported ChatGPT Plus Codex Cloud coding tasks and Work GitHub pull-request event-triggered tasks are the first integration candidates. They are different capabilities: PR-triggered Work is **not** proven to launch a Codex coding task, and subscription Codex Cloud is **not** automatically issue-dispatched.
+
+**Next measured action:** The owner creates a read-only, PR #457-scoped GitHub event-triggered task in Work using the existing GitHub connection. After the task is saved, produce a fresh benign PR comment as the trigger (only if the selected event type supports PR comments). Verify an actual Scheduled task run reads the correct PR head/checks and reports accurately. If the trigger or connected write permissions are unavailable, record the exact blocker. No API-backed agent, extra infrastructure, credential purchase, merge, deploy, or Career modification is authorized.
+
+Official capability documents: https://help.openai.com/en/articles/10291617-scheduled-tasks-in-chatgpt ; https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan ; https://github.com/openai/codex-action .
+
+---
+
 **Authority:** [Issue #456](https://github.com/jderhagopian-stack/fsffl-next/issues/456), existing [Operating Protocol](../OPERATING_PROTOCOL.md), and [Worker Bootstrap](../../../AGENTS.md).
 **Status:** BOOTSTRAP IN PROGRESS, not complete; **no agent is yet installed or working unattended**.
 **Owner:** a single isolated automation workstream. Existing Career #405/#454 implementation is unchanged.
