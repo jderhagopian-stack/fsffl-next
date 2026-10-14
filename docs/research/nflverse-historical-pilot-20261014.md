@@ -5,6 +5,51 @@
 **Lane:** Independent ChatGPT research, separate from Career Coverage #405 / PR #454.  
 **Authority:** No changes to production Forecast, Foundation 4, Career, Simulation 2.0, Value, State, model version, provider weights, or live operation are authorized.
 
+## Mandatory commercial/proprietary-use hard gate — Management directive 2026-10-14
+
+**Management requirement: FSFFL NEXT must remain independently monetizable and proprietary.** The research may inspect documentation and implementation approaches, but **no third-party dataset, fitted model, library, copied code or retained derived dataset can become a production dependency unless all rights below are affirmatively verified for that exact item, version, source and intended use.** Unknown/ambiguous is a **FAIL CLOSED / HOLD**, not implicit permission.
+
+Pass criteria, ALL required:
+1. **Commercial permission already granted:** the exact code/data/model license or authorized terms explicitly allow our intended paid SaaS use, without additional negotiated licensing, per-user fees or special approvals; retaining/hosting derived results and model training must also be within those permissions.
+2. **Proprietary freedom:** no requirement to publish FSFFL NEXT application source, algorithms, model weights, training recipes, or proprietary derived datasets, or to license the FSFFL service under GPL/AGPL/CC BY-SA or a similar copyleft/share-alike condition. Attribution/notice obligations may be acceptable when clearly bounded and compatible with paid proprietary SaaS.
+3. **Upstream-chain verification:** a permissive *code loader* license is not a license to ingest third-party data. Every NFLverse release tag and upstream originating dataset must be assessed independently for the permitted acts (access, copy, automate, store, train, run paid forecasts, and commercial output display). NFL trademarks, footage and endorsements are outside assumed permissions.
+4. **No free-tier / redistribution obligation:** no term may require FSFFL NEXT subscriptions, dashboards, APIs, reports or application to be provided without charge; no obligation to redistribute restricted source or derived data.
+5. **Reproducibility and audit:** keep source URL, license text/location and version/date, underlying provider, relevant terms, permitted uses, any required notices, approval status and review owner. Document remaining issues for specialist counsel review before production promotion.
+
+### Preliminary screening — not final legal clearance
+
+| Candidate | Published code/data license signals | Research disposition |
+|---|---|---|
+| `nflreadpy` code | MIT | **Candidate**, only as a loader; it cannot transfer rights to NFL/third-party content downloaded through it. |
+| General `nflverse-data` assets | Repository says CC BY 4.0; licenses may differ by dataset, and CC only licenses rights actually held by the licensor | **HOLD** for each selected upstream dataset and use. CC BY 4.0 itself permits paid use and has no share-alike requirement; attribution/notice still matter. |
+| `ffopportunity` code | GPL v3 | **EXCLUDE from any FSFFL product dependency** under conservative proprietary-only policy, even though private server use alone does not automatically trigger public-source release under standard GPL. Public paper/method ideas can be evaluated without incorporating code. |
+| `ffopportunity` model weights and expected-point data | CC BY-SA 4.0 per project README | **EXCLUDE from production/training and commercial data derivatives** until any separate counsel-cleared, compliant use can be demonstrated without conflicting with proprietary strategy. Not automatically a requirement to make the *whole application* free, but sharing adapted licensed data can trigger ShareAlike. |
+| `ffsimulator` code | MIT per README; separate upstream data rights | **METHODS-ONLY** research; no data copied and no product dependency until separate review. |
+| `nflseedR` | Exact installed code/asset licenses and provider rights not yet fully verified | **HOLD**; low-priority. |
+| FTN charting and other dataset-specific ShareAlike contents | CC BY-SA / other third-party terms may apply | **EXCLUDE by default**. |
+
+**Interpretation:** GPL, AGPL and CC BY-SA are not bans on charging money. GPL obligations typically attach to conveying/distributing software and AGPL adds an applicable network-use source condition; CC BY-SA's ShareAlike applies to adapted licensed material when shared. However, this project imposes the stricter policy of **no avoidable open-source or dataset-disclosure obligations**. The permissive status of `nflreadpy`/MIT and `nflverse-data`/CC BY does not establish upstream commercial clearance.
+
+### Execution gate for Pilot A/B/C
+
+- **Until source-by-source commercial clearance is evidenced:** do only metadata/source-documentation/reproducibility research; do not ingest uncertain-rights releases into FSFFL production, train a product model on them, or redistribute their data. A bounded offline research experiment may be proposed separately, but do not assume research rights are automatic.
+- If a dataset cannot be affirmatively cleared under existing permissions, **drop it and find a suitable alternative**; do not seek paid/special commercial rights as part of this workstream.
+- No package/classifier copied from GPL/AGPL projects, no pretrained ShareAlike model/data import, and no default R ecosystem dependency. Independently implementing general statistical ideas is not the same as copying proprietary or copyleft implementations.
+- Before any code/data integration, Management receives a concise **GO / NO-GO rights ledger** reviewed by appropriate legal counsel for commercial deployment as needed. The research report alone is not legal assurance.
+- Career #405 remains independent and must not be delayed.
+
+Primary published references checked on 2026-10-14:
+- [nflreadpy licensing and upstream data note](https://nflreadpy.nflverse.com/)
+- [nflverse-data repo license](https://github.com/nflverse/nflverse-data/blob/main/LICENSE.md)
+- [ffopportunity source vs model/data terms](https://github.com/ffverse/ffopportunity#terms-of-use)
+- [ffsimulator code/data terms](https://github.com/ffverse/ffsimulator#terms-of-use)
+- [CC BY 4.0 terms](https://creativecommons.org/licenses/by/4.0/)
+- [CC BY-SA 4.0 terms](https://creativecommons.org/licenses/by-sa/4.0/)
+- [GNU GPL FAQ](https://www.gnu.org/licenses/gpl-faq.html)
+- [GNU AGPL explanation](https://www.gnu.org/licenses/why-affero-gpl.html)
+
+---
+
 ## Decision
 
 Use NFLverse as a **candidate historical-evidence and player-identity source**, not an automatic replacement for FSFFL's models. Benchmark FFverse forecasting and empirical weekly-outcome techniques as challengers only. Do not treat realized historical fantasy points or expected points calculated after games as timestamp-valid projections of those same games.
