@@ -54,7 +54,7 @@ LEGACY_FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
 FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = CAREER_INTRINSIC_ARTIFACT_KIND
 FOUNDATION4_SCOPE_KIND = CAREER_INTRINSIC_SCOPE_KIND
 FOUNDATION4_RUNTIME_VERSION = (
-    "foundation4-career-forward-runtime-v5:active-cohort:"
+    "foundation4-career-forward-runtime-v6:active-cohort:"
     "dynamic-rostered-y1-y3-shapley-bridge:"
     "fsffl-material-scoring-with-rare-residual-omission"
 )
@@ -243,6 +243,27 @@ class CareerIntrinsicLoader:
             contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
         except (TypeError, ValueError):
             return None
+        # Older hosted releases persisted the expanded Career contract. Treat
+        # only its accepted Foundation 4 reference cohort as the frozen base;
+        # dynamic roster rows must be rebuilt against current live evidence.
+        reference_ids = set(
+            provide_foundation4_long_horizon_forecast_contract_for_rules(
+                context.league_state.league.rules
+            ).player_ids
+        )
+        base_estimates = tuple(
+            row for row in contract.estimates if row.player_id in reference_ids
+        )
+        if len(base_estimates) != len(contract.estimates):
+            contract = contract.model_copy(update={
+                "estimates": base_estimates,
+                "player_count": len(base_estimates),
+                "player_coverage_failures": {
+                    player_id: reason
+                    for player_id, reason in contract.player_coverage_failures.items()
+                    if player_id in reference_ids
+                },
+            })
         if migrated_legacy:
             migrated_payload = contract.model_dump(mode="json")
             migrated_payload["_foundation4_dependency_fingerprint"] = fingerprint
@@ -482,7 +503,7 @@ class CareerIntrinsicLoader:
                         context,
                         dependency_fingerprint=dependency_fingerprint,
                         component=component,
-                        contract=expanded_restored,
+                        contract=restored,
                     )
             with self._lock:
                 self._cached_user_id = context.user_id
@@ -546,12 +567,13 @@ class CareerIntrinsicLoader:
         # Reference aggregation is complete. The expanded phase reuses the
         # typed contract/component, not these transient forecast/tail inputs.
         del long_forecast, terminal_features, tails
-        contract = self._append_expanded_rostered_contract(context, contract)
+        frozen_contract = contract
+        contract = self._append_expanded_rostered_contract(context, frozen_contract)
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
             component=component,
-            contract=contract,
+            contract=frozen_contract,
         )
         with self._lock:
             self._cached_user_id = context.user_id
