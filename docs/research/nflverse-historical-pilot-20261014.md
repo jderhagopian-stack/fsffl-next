@@ -44,6 +44,22 @@ Official reference texts: [CC BY 4.0](https://creativecommons.org/licenses/by/4.
 
 ---
 
+## Management focus update — Historical data FIRST (2026-10-14)
+
+**Decision:** Historical factual/player evidence is the sole active NFLverse evaluation priority. Defer adopting or benchmarking `ffopportunity`, `ffsimulator`, `nflseedR`, or replacing FSFFL Forecast/Career/Simulation models until the historical source rights and real coverage are demonstrated. Do not start a parallel implementation lane while Career Coverage #405 is underway.
+
+**Priority source family:** `nflverse-data` `stats_player` (weekly and regular-season summaries, 2019–2025 completed seasons and elapsed 2026 weeks) — basic numerical passing/rushing/receiving/fantasy-scoring coordinates, player ID, season/week/team. The publisher documents files created via `nflfastR::calculate_stats` from its play-by-play pipeline: see [nflverse-pbp/R/update_stats.R](https://github.com/nflverse/nflverse-pbp/blob/master/R/update_stats.R). Its published license label is CC BY 4.0; **upstream PBP/data rights remain the specific unsolved commercial issue**, so code or blanket repository license does NOT equal clearance to store, train, or publicly show the data.
+
+**Secondary only if cleared:** minimal canonical GSIS identity and career-season continuity; current roster cohort joins; later historical availability/missed games, usage and age/experience. Do not add PFR-sourced snap counts or PFR-sourced draft-pick datasets merely to fill gaps while their provenance/terms remain on HOLD. Do not acquire full PBP unless model comparison demonstrates that granular features add measurable value and its rights are cleared separately.
+
+**First research deliverable (rights/provenance before data download):** field/source provenance for the core `stats_player` weekly/seasonal files, precise permitted/no-fee paid SaaS uses (internal storage, training, derived output, user-visible historical stat lines), no FSFFL proprietary-code release, and attribution notice requirements. Record each category with a clear GO/HOLD/NO-GO and evidence, distinguishing uncopyrightable factual information from obligations imposed by the manner/source of acquisition. NFL.com terms restrict direct service retrieval; a public redistributor license does not automatically settle that issue. If authoritative existing rights do not support the intended use, document alternative lawful acquisition/independently sourced numerical facts without proposing paid commercial data licenses.
+
+**Next quantitative deliverable only if applicable rights are established:** player-ID matched coverage for frozen-335, exact-State roster and unresolved Career subjects; completeness and 2019–2025 career longitudinal continuity; 2026 completed-week availability (not full 2026 season); row-level evidence, league-scoring reconciliation, and source timestamp/revision tracking. Compare incremental usefulness to existing accepted models without production changes.
+
+**No changes to current priority:** Career #405 proceeds unchanged. No new model fit, code, merge, deploy, or provider integration is approved by this note.
+
+---
+
 ## Decision
 
 Use NFLverse as a **candidate historical-evidence and player-identity source**, not an automatic replacement for FSFFL's models. Benchmark FFverse forecasting and empirical weekly-outcome techniques as challengers only. Do not treat realized historical fantasy points or expected points calculated after games as timestamp-valid projections of those same games.
