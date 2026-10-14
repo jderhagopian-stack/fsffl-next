@@ -1,3 +1,15 @@
+## 2026-10-14 UTC — Career #405 Week 5 replay observed; release held for numerical review
+
+On PR #454 code head `774722c3677e878ad1fd6c5678e38d7bbb8c333d`, the user-supplied checkpoint was replayed locally at its saved State `2fd788a858a6497425b2e066c77b3176e305030d6f7620cf25cf59ed3b30e061` and saved evaluation cutoff, using retained HTTP responses only. The private archive was not uploaded. The accepted Foundation 4 archives and pinned dev/route/policy programs matched their recorded SHA-256 values; the pinned 335-player reference file also matched.
+
+The corrected primary-domain guard passed. For these inputs it changed neither candidate admission, Year-1 means, evidence modes, nor the nine player-specific failures. The calculation returned 353 Career estimates and 252 matching-State Position & Depth rows: 243 numeric outcomes and the same nine unresolved outcomes as before.
+
+Seventeen dynamic Career totals differ from the previous saved result (two other dynamic totals and all 334 frozen-reference estimates are unchanged). The largest absolute difference is 2.2998696 points. These deltas occur after the unchanged P0 inputs enter the current Career/F4 calculation; they are not attributable to the WR/TE admission guard. Keep the prior accepted ledger intact and treat the replay values as observed but not approved for release until Management reviews the numerical change. The detailed player-level comparison is in the workstream checkpoint.
+
+The complete replay peaked at 477,331,456 B (455.21875 MiB): below the unchanged 536,870,900 B hard cap, above the 429,496,720 B working target, and 40,599,552 B above the previously recorded accepted measurement. No memory threshold was changed.
+
+Exact-head GitHub focused CI `38637208950` passed; the Stable full-suite run `38637209201` was skipped because the PR remains draft. A local full-suite run on Python 3.12 passed 2,351 tests and failed one unrelated fixed-digest test whose accepted baseline only covers Python 3.11. Do not mark ready, merge, or deploy yet: numerical review is pending, the official stable suite has not run on this candidate, and five P1 plus two P2 review threads remain open.
+
 ## 2026-10-14 UTC — Career release remains gated on saved-cohort preservation
 
 The historical frozen I1 validation is non-gating for Career #405, as recorded below. The latest Career code review also found a single-source WR/TE fallback could omit its primary receiving domain. The code now requires position-specific primary metrics; the focused regression and CI pass on code head `20d314d5cf455fabee48d4ec0cae629d3ad77d3d` (run `38636431216`, 179 checks, frozen Career/Shapley max deltas 0).
