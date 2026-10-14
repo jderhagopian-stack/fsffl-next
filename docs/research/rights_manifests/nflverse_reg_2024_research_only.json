@@ -1,0 +1,16 @@
+{
+  "decision": "GO",
+  "allow_offline_research": true,
+  "production_rights": "HOLD",
+  "paid_product_display_allowed": false,
+  "production_model_training_allowed": false,
+  "authorized_scope": "Offline nonpublic testing of basic historical numerical NFL counting stats only; no raw redistribution; no direct NFL.com/PFR collection",
+  "origin": "nflverse stats_player GitHub release; original NFL-derived game/play records; upstream rights not fully certified",
+  "source_url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_reg_2024.csv",
+  "license_evidence_url": "https://github.com/nflverse/nflverse-data/blob/main/LICENSE.md",
+  "file_sha256": "fbad4e9f1b892e3870a51a4eea808d692cde14ed6dbacd67cce3a0def8ddcbaa",
+  "attribution": "nflverse historical stats, CC BY 4.0; changes to extracted fields must be disclosed if licensed adapted material is shared",
+  "decision_evidence": "docs/research/nflverse-upstream-contract-reach-decision-20261014.md",
+  "decision_date": "2026-10-14",
+  "notes": "This management research-stage risk determination is not a third-party contractual waiver, legal opinion, or paid-product rights clearance. If source hash changes, re-evaluate source identity."
+}
