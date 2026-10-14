@@ -45,6 +45,37 @@ _LOCK = RLock()
 _MANIFEST = "foundation4_dynamic_materializer_manifest.json"
 
 
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _verified_cached_manifest(root: Path) -> bool:
+    manifest = root / _MANIFEST
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        if payload.get("accepted_commit") != _COMMIT:
+            return False
+        expected = payload.get("sha256")
+        files = payload.get("files")
+        if not isinstance(expected, dict) or set(expected) != set(_PATHS):
+            return False
+        if not isinstance(files, dict) or set(files) != set(_PATHS):
+            return False
+        for key, relative in _PATHS.items():
+            path = (root / relative).resolve()
+            if not path.is_relative_to(root.resolve()) or not path.is_file():
+                return False
+            if files[key] != str(path) or _file_sha256(path) != expected[key]:
+                return False
+        return True
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return False
+
+
 def _download_verified(url: str, path: Path, digest: str) -> None:
     checksum = hashlib.sha256()
     with urlopen(url, timeout=120) as source, path.open("wb") as destination:
@@ -70,7 +101,9 @@ def restore_accepted_bundle(root: Path | None = None) -> Path:
     manifest = root / _MANIFEST
     with _LOCK:
         if manifest.is_file():
-            return manifest
+            if _verified_cached_manifest(root):
+                return manifest
+            shutil.rmtree(root, ignore_errors=True)
         root.parent.mkdir(parents=True, exist_ok=True)
         temporary = Path(tempfile.mkdtemp(prefix="foundation4-restore-", dir=root.parent))
         try:
@@ -87,9 +120,17 @@ def restore_accepted_bundle(root: Path | None = None) -> Path:
             absent = [key for key, value in _PATHS.items() if not (temporary / value).is_file()]
             if absent:
                 raise ValueError("accepted Foundation 4 restored bundle missing files: " + ", ".join(absent))
-            (temporary / _MANIFEST).write_text(
-                json.dumps({key: str(root / value) for key, value in _PATHS.items()}), encoding="utf-8",
-            )
+            payload = {
+                "accepted_commit": _COMMIT,
+                "files": {key: str(root / value) for key, value in _PATHS.items()},
+                "sha256": {
+                    key: _file_sha256(temporary / value)
+                    for key, value in _PATHS.items()
+                },
+            }
+            # Preserve the adapter's established key-to-path interface.
+            payload.update(payload["files"])
+            (temporary / _MANIFEST).write_text(json.dumps(payload), encoding="utf-8")
             # A failed restore never leaves a manifest that can be reused.
             if root.exists():
                 shutil.rmtree(root)
