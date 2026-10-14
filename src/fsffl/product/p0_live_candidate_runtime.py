@@ -639,6 +639,18 @@ def _ensemble_ros_with_fumbles(ensemble, supplement):
     return tuple(ensemble) + tuple(item for item in supplement if item.player_id in player_ids)
 
 
+def _catalog_evidence_cutoff(
+    cutoff: datetime, catalog_captured_at: datetime, *, explicit_cutoff: bool
+) -> datetime:
+    """Validate replay chronology and include live catalog evidence in the cutoff."""
+    captured = catalog_captured_at.astimezone(UTC)
+    if explicit_cutoff and captured > cutoff:
+        raise ValueError(
+            "live Sleeper catalog snapshot postdates the requested P0 evidence cutoff"
+        )
+    return max(cutoff, captured)
+
+
 def build_live_p0_rostered_candidate_forecasts(
     league_state: LeagueState,
     *,
@@ -675,6 +687,13 @@ def build_live_p0_rostered_candidate_forecasts(
     latest_snapshot = sleeper.fetch_latest(
         league_external_id=league_state.league.league_id.rsplit(":", 1)[-1]
     )
+    # The live catalog supplies identity, experience, and depth-chart evidence.
+    # Include its capture time in the run cutoff before selecting persisted ROS
+    # revisions or stamping any derived Year-1 rows.
+    cutoff = _catalog_evidence_cutoff(
+        cutoff, latest_snapshot.captured_at, explicit_cutoff=evaluation_as_of is not None
+    )
+    catalog_captured_at = latest_snapshot.captured_at.astimezone(UTC)
     current_state = SleeperSnapshotNormalizer().normalize_snapshot(
         latest_snapshot,
         as_of=latest_snapshot.captured_at,
@@ -729,6 +748,7 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     cutoff = max(
         cutoff,
+        catalog_captured_at,
         ros_runtime.evaluation_as_of.astimezone(UTC),
         *(line.captured_at.astimezone(UTC) for rows in weekly.values() for line in rows),
         *(line.captured_at.astimezone(UTC) for line in prior_lines),
