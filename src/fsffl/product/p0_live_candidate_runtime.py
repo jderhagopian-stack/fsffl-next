@@ -34,7 +34,7 @@ from fsffl.providers.sleeper_weekly_stats import (
     SleeperWeeklyStatLine,
     SleeperWeeklyStatsSource,
 )
-from fsffl.state.models import LeagueState, Provenance, ProviderRef
+from fsffl.state.models import LeagueState, Position, Provenance, ProviderRef
 from fsffl.forecast.projection_history import ProjectionSelector
 from fsffl.forecast.in_season_orchestration import canonical_week_window
 
