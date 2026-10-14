@@ -10,6 +10,7 @@ from fsffl.product.p0_live_candidate_runtime import (
     _score_complete_single_source_year_one,
     _single_source_fumbles_gap_player_ids,
     _status_based_zero_ros,
+    _catalog_evidence_cutoff,
 )
 from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
@@ -27,6 +28,18 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
+
+
+def test_live_catalog_is_included_in_cutoff_and_replay_rejects_later_capture():
+    import pytest
+
+    cutoff = datetime(2026, 10, 13, 19, 0, tzinfo=UTC)
+    catalog_capture = cutoff + timedelta(minutes=3)
+    assert _catalog_evidence_cutoff(
+        cutoff, catalog_capture, explicit_cutoff=False
+    ) == catalog_capture
+    with pytest.raises(ValueError, match="catalog snapshot postdates"):
+        _catalog_evidence_cutoff(cutoff, catalog_capture, explicit_cutoff=True)
 
 
 def test_dynamic_p0_source_row_retains_candidate_evidence_identity():
