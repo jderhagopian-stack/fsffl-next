@@ -41,6 +41,8 @@ jobs:
           CAREER_PR1_SEMANTIC_DIR: /tmp/career405/semantic
           CAREER_FOUNDATION4_DIR: /tmp/career405/foundation4
         run: pytest -q -s tests/test_career_frozen_reference_parity.py
+      - name: Focused saved ROS period boundary regression
+        run: pytest -q tests/test_in_season_forecast.py -k saved_ros_revision_from_earlier_period_is_rejected_not_relabeled
       - name: Focused numeric Shapley and Career contract parity
         run: pytest -q tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity
       - name: Focused hosted dynamic Career loader-to-composition regression
