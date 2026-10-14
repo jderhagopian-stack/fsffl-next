@@ -1,7 +1,8 @@
 """Run the accepted Foundation 4 dynamic-candidate materializer in the host.
 
 The fitted route/development inputs are mounted as an existing accepted bundle;
-this adapter consumes them but never downloads, fits, or rewrites model inputs.
+this adapter consumes them without rewriting model inputs. Opt-in hosts may restore
+the immutable accepted bundle in the existing background materializer path.
 """
 from __future__ import annotations
 
@@ -44,13 +45,18 @@ def _accepted_materializer_manifest() -> tuple[dict[str, Any], Path]:
         path = Path(manifest_path)
     else:
         bundle_root = os.getenv(_BUNDLE_ROOT_ENV, "").strip()
-        if not bundle_root:
+        if not bundle_root and os.getenv("FSFFL_FOUNDATION4_RESTORE_ACCEPTED_BUNDLE", "0") == "1":
+            from .foundation4_accepted_bundle import restore_accepted_bundle
+
+            path = restore_accepted_bundle()
+        elif not bundle_root:
             raise ValueError(
                 "accepted Foundation 4 materializer bundle is not configured: set "
                 f"{_BUNDLE_ROOT_ENV} to the mounted immutable bundle or {_MANIFEST_ENV} "
                 "to its manifest"
             )
-        path = Path(bundle_root) / _BUNDLE_MANIFEST_NAME
+        else:
+            path = Path(bundle_root) / _BUNDLE_MANIFEST_NAME
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
