@@ -1,3 +1,35 @@
+## 2026-10-14 UTC — Controlled numerical comparison and review remediation
+
+### Numerical comparison
+
+The private Week 5 inputs remain local under `/workspace/work/career405-week5`; nothing from the package was uploaded. The prior Career output is retained at `current-career.json`, and the replay output at `replay-data/current-career.json`. Both use State `2fd788a858a6497425b2e066c77b3176e305030d6f7620cf25cf59ed3b30e061`, the saved cutoff `2026-10-13T19:38:00.425705Z`, unchanged accepted bundle hashes, 19 valid dynamic inputs, and the same nine source failures.
+
+A controlled old-versus-bounded run used Python 3.12.14, NumPy 2.5.4, pandas 2.3.3, scikit-learn 1.9.1, SciPy 1.18.1, and threadpoolctl 3.7.0. The accepted script SHA-256 is `f2dd7354c0aeb43372372ffc0762f8504948804ca9faed1af486b157ab225740`; its matrix helper SHA-256 is `1ecd3561b93c0d0c71789b3053897399f83e7975290e9768a45c6fd18d595f30`. The current bounded script/helper hashes are `e11ec5d193ff906e3f3c8b3752b92a7372ee5939b88f528771f26ded6268fe5f` and `f99dee3100dfa44074d480fb30189032e84a2ccecef66d646f380081135a7a8a`. Both use the same verified Foundation 4 bundle and one native fit worker.
+
+With that worker setting, all 353 Career estimates and their input fingerprints match exactly between the accepted and bounded materializer versions. Y1–Y3, Y4–Y7, terminal Y8+, and final Career are all exact. The persisted materializer comparison independently reports 304 policy rows and 19 tails with maximum delta 0. Under the unconstrained multithread setting, the old script differed from the bounded result by at most 0.00000335 points; that small effect disappears under the matched one-worker setting.
+
+Against the prior saved Career artifact, 17 dynamic Career totals move by more than 1e-9 (maximum absolute change 2.299869564); the other two dynamic results change only by 1.42e-14. All 334 frozen-reference estimates remain exact. Y1–Y3 totals and every terminal Y8+ value are exact; only the Y4–Y7 aggregate changes. The annual Y4–Y7 Shapley differences touch 19 candidates in Y4 (max 21.4895), six in Y5 (max 7.3293), ten in Y6 (max 8.4499), and six in Y7 (max 23.0439). Career composition reconciles to these changed components.
+
+The first *observable* divergence from the previous artifact is therefore Y4–Y7 Shapley output. The archive has no prior historical feature matrices or per-policy Y4–Y7 rows, so it cannot show whether the earlier difference first arose in historical feature construction, candidate policy forecasts, or Shapley inputs. The original runner's exact runtime/dependency lock is also absent. Re-running the exact accepted materializer and current bounded materializer with identical present-day inputs/runtime yields the same values, which rules out the bounded-history implementation as the cause. It does not prove the prior artifact was a runtime-only difference or a legitimate model correction. No calculation defect or approved correction has been established; keep the 17 prior values unapproved and retain the numerical release gate.
+
+### Review findings
+
+- **P1 cached restart:** fixed by stripping dynamic estimates from restored payloads and reusing only the frozen Foundation 4 base before rebuilding the live extension. The regression seeds a persisted expanded payload and proves the dynamic ID is absent after restore.
+- **P1 live acquisition failure:** fixed at the optional-extension boundary. A source/build exception preserves frozen Career and records explicit failures for supported exact-State roster subjects.
+- **P1 State/publication:** fixed by carrying last-good Dynasty estimates without the nested `career_position_depth` rows, which are exact-State evidence.
+- **P1 database ownership:** fixed by injecting the existing persistence store's bounded connection checkout into the projection-history adapter. It no longer opens an independent connection in the hosted path.
+- **P1 complete input fingerprint:** partially addressed: persisted ROS revision identities now enter the fingerprint through a metadata-only query on the shared pool. The key still lacks identities/digests for Sleeper weekly stats, current catalog, and prior-season data, so this P1 remains open and blocks release.
+- **P2 cached accepted bundle:** fixed with per-file SHA-256 manifest checks on reuse; invalid caches are discarded and restored from the same pinned sources. The tamper/rebuild regression passes.
+- **P2 catalog evidence cutoff:** fixed by rejecting a catalog capture later than an explicit replay cutoff and including the catalog capture time in default live cutoff/provenance. The focused cutoff regression passes.
+
+Focused local regressions passed: accepted bundle (5), cutoff and primary-domain admission (2), exact-State carry-forward (1), pooled projection-history ownership (1), acquisition-failure/fingerprint/provenance (3), and legacy expanded-artifact restore (1). The broader same-file command was interrupted while a heavyweight Shapley case was running; it is not counted as a pass. No stable full suite was started because these fixes make the head unstable, and PR #454 remains draft.
+
+### Memory and preserved outcomes
+
+The exact saved-input replay peak was 477,331,456 B (455.21875 MiB), below the unchanged 536,870,900 B (512 MiB) hard cap by 59,539,444 B (56.78 MiB). It exceeds the 429,496,720 B (409.6 MiB) working target by 47,834,736 B (45.62 MiB), and is 40,599,552 B (38.72 MiB) above the earlier 416.5 MiB accepted measurement. No guardrail was altered. The old unbounded same-worker run peaked at 506.2539 MiB, only about 5.75 MiB under the hard cap. The 455.22 MiB result is not covered by the earlier measured-memory exception pending workload disposition.
+
+The replay still preserves all 252 roster outcomes: 243 numeric values and nine explicit unresolved players; frozen-335 Shapley/Career parity remains passing. Do not mark ready, merge, or deploy. Resolve the remaining source-digest fingerprint and numerical attribution, assess the updated memory peak against the production service limit, and only then run the stable full suite on the exact final head.
+
 ## 2026-10-14 UTC — Replayed the recovered Week 5 checkpoint on PR #454
 
 The user attached the original saved checkpoint. It was replayed locally from the verified branch source at `774722c3677e878ad1fd6c5678e38d7bbb8c333d`, exact State `2fd788a858a6497425b2e066c77b3176e305030d6f7620cf25cf59ed3b30e061`, and saved evaluation cutoff `2026-10-13T19:38:00.425705Z`. The replay runner was made cache-only in scratch; no provider endpoint was called and the private archive was not uploaded.
