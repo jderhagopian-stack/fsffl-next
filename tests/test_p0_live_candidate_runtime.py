@@ -407,3 +407,60 @@ def test_retained_roster_ros_rows_enter_fumbles_gap_eligibility():
         candidate_ids={player_id},
         source_observations=runtime_rows,
     ) == {player_id}
+
+
+def test_single_source_fumbles_fallback_requires_primary_scoring_domain():
+    from dataclasses import replace
+
+    now = datetime(2026, 10, 8, tzinfo=UTC)
+    player_id = "sleeper:player:7567"
+    provenance = Provenance(source="razzball", retrieved_at=now, effective_at=now)
+    state = LeagueState(
+        league=League(
+            league_id="fixture-league",
+            name="Fixture",
+            season=2026,
+            rules=LeagueRules(
+                team_count=2,
+                roster_size=1,
+                lineup=(),
+                scoring=(*FROZEN_I1_STANDARD_SCORING, ScoringRule(stat="fum_lost", points=-2.0)),
+            ),
+        ),
+        as_of=now,
+        teams=(
+            Team(team_id="team-a", league_id="fixture-league", display_name="A"),
+            Team(team_id="team-b", league_id="fixture-league", display_name="B"),
+        ),
+        team_states=(
+            TeamState(
+                team_id="team-a",
+                roster=(RosterEntry(player_id=player_id, slot=RosterSlot.BENCH),),
+            ),
+            TeamState("team-b", ()),
+        ),
+        players=(Player(player_id=player_id, full_name="Receiver", position=Position.WR),),
+        player_states=(PlayerState(player_id=player_id, as_of=now, provenance=provenance),),
+    )
+    rushing_only = tuple(
+        ForecastObservation(
+            player_id=player_id,
+            position=Position.WR,
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            metric=metric,
+            period_start=now,
+            period_end=datetime(2027, 1, 10, tzinfo=UTC),
+            distribution=ForecastDistribution(mean=1.0, stddev=0.0),
+            source="razzball",
+            model_version="retained-roster-capture-v1",
+            as_of=now,
+            provenance=provenance,
+        )
+        for metric in (ForecastMetric.RUSH_YARDS, ForecastMetric.RUSH_TD)
+    )
+
+    assert _single_source_fumbles_gap_player_ids(
+        league_state=state,
+        candidate_ids={player_id},
+        source_observations=rushing_only,
+    ) == set()
