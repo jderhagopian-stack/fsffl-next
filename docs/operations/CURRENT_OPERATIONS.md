@@ -1,3 +1,11 @@
+## 2026-10-14 UTC — Stable-suite acceptance harness corrections
+
+The first stable run `38575401275` failed collection with `KeyError: CAREER_PR1_SEMANTIC_DIR`; the stable workflow now restores the same sanitized frozen fixture and environment used by passing focused CI. All 2,350 tests collect locally. The subsequent exact-head run `38576086876` passed 2,349 tests and failed only `test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layers`: accumulated whole-suite RSS 581,242,880 B exceeded the unchanged 536,870,900 B hard cap. This was the pytest process after unrelated model fixtures, not the measured saved-input Career run.
+
+That browser acceptance now runs its existing complete scenario and unchanged hard-limit assertion in a fresh child process. No production resource limit, threshold, runtime behavior or assertion was loosened. Local isolated browser acceptance passes; the focused workflow explicitly runs it. The original application full-path measurements remain 416.5 / 418.293 MiB. No model/provider acquisition or Career rerun was needed for these test/workflow-only changes.
+
+The legacy Razzball trace's exact failure was `LiveForecastSourceHealthFailure: authoritative live ensemble requires at least 2 independent sources; found 1; successful=['razzball']`. Its existing fail-closed quarantine handling now also classifies that narrow one-source admission rejection, preserving the exact error log and explicitly withholding numerical/source-availability success. Source policy remains unchanged; no retry was requested. Final stable and focused checks must pass the corrected exact head before conditional merge/deploy.
+
 ## 2026-10-14 UTC — Career #405 bounded history completed; measured memory exception accepted
 
 PR #454 code head `af38a4d9795a38a65c85639f262bab7873852503` preserves the accepted model calculations while storing unexpanded native feature columns and retaining only skinny horizon coordinates. Original predictor scope, row predicates, categorical/missing values, float64 matrices and fitting parameters are preserved; native fitting uses one worker and completed intermediates are released before the next phase.

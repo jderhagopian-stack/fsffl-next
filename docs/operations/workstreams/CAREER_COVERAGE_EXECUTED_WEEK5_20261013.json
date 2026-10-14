@@ -85,5 +85,10 @@
   "remote_ci_run": 38573942462,
   "remote_ci_url": "https://github.com/jderhagopian-stack/fsffl-next/actions/runs/38573942462",
   "remote_frozen_shapley_delta": 0,
-  "remote_frozen_career_delta": 0
+  "remote_frozen_career_delta": 0,
+  "stable_suite_previous_run": 38576086876,
+  "stable_suite_previous_result": "2349 passed; browser acceptance inherited whole-suite RSS 581242880 B",
+  "stable_suite_correction": "Restore required frozen fixture; isolate existing browser workload in fresh process, preserving every assertion and actual hard cap.",
+  "local_isolated_browser_acceptance": "passed",
+  "final_stable_suite": "pending_corrected_head"
 }
