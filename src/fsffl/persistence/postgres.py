@@ -100,6 +100,14 @@ class PostgresPersistenceStore(PersistenceStore):
         # psycopg.Connection, but returns healthy connections to bounded reuse.
         return pool.connection()
 
+    def connection(self):
+        """Borrow one connection from this store's bounded ownership pool.
+
+        Secondary persistence adapters may use this context manager so they do
+        not establish independent connections or pools for the same database.
+        """
+        return self._connect()
+
     def close(self) -> None:
         """Close this process-owned pool during hosted application shutdown."""
         with self._pool_lock:
