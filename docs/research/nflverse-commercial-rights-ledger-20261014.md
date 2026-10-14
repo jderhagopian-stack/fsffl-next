@@ -1,5 +1,8 @@
 # FSFFL NEXT — NFLverse and FFverse commercial rights screen (before Pilot #458)
 
+> **CONTROLLING UPDATE — 2026-10-14:** [Upstream contract-reach decision](./nflverse-upstream-contract-reach-decision-20261014.md) finds **no automatic NFL.com ToS pass-through** merely because FSFFL retrieves CC BY-labelled historical facts from NFLverse's public GitHub releases. **Conditional GO: bounded offline research** with only basic 2024–2025 player counting-stat CSVs, GitHub acquisition, SHA256 + attribution records, no production integration, no customer-facing output, and no direct NFL/PFR scraping. **Paid production/data-model commercialization remains an explicit separate approval gate**, because upstream collector contracts/rightsholder scope are not warranted. This narrower current decision supersedes older blanket language forbidding *all* dataset research until full production clearance. Actual file download has not been possible in this chat runtime; the substantive historical join has not been run.
+
+
 **Review date:** 2026-10-14  
 **Scope:** Selected NFLverse/FFverse data families and software likely to inform historical evidence, Year 1, Career Intrinsic, and Simulation 2.0. Primary public notices, license documents, source documentation, and specific upstream website terms. No data files ingested; no product packages installed; no backtests; no implementation authorized.  
 **Binding Management goal:** FSFFL NEXT may charge users, must not incur mandatory third-party commercial-license/royalty fees, can give attribution, and must not have to release its proprietary application code. Assess model weights, data derivatives, hosted vs distributed software separately.  
