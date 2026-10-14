@@ -583,6 +583,13 @@ def _single_source_fumbles_gap_player_ids(
             ForecastMetric.REC_TD,
         }),
     )
+    primary_domain_by_position = {
+        Position.QB: metric_domains[0],
+        Position.RB: metric_domains[1],
+        Position.WR: metric_domains[2],
+        Position.TE: metric_domains[2],
+    }
+    positions = {player.player_id: player.position for player in league_state.players}
     provider_metrics: dict[tuple[str, str], set[ForecastMetric]] = {}
     for item in source_observations:
         if (
@@ -593,6 +600,14 @@ def _single_source_fumbles_gap_player_ids(
     eligible: set[str] = set()
     for (player_id, _source), metrics in provider_metrics.items():
         if ForecastMetric.FUMBLES_LOST in metrics:
+            continue
+        primary_domain = primary_domain_by_position.get(positions.get(player_id))
+        required_primary_metrics = {
+            metric
+            for metric in primary_domain or ()
+            if configured_coefficients.get(metric, 0.0) != 0.0
+        }
+        if not required_primary_metrics or not required_primary_metrics.issubset(metrics):
             continue
         complete_other_domains = all(
             not metrics.intersection(domain)
