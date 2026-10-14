@@ -1,5 +1,23 @@
 # Current Operations
 
+## 2026-10-13 — Automation #456 no-new-billing correction
+
+Management accepted an **existing-subscription-first** pilot after successful GitHub main protection and exact-head CI on #457. Do **not** request an OpenAI API key, change plans, install a paid Codex GitHub Action, or claim unattended engineering from CI alone. Verify a read-only GitHub PR-event-triggered ChatGPT Work task on #457 through an actual run first, then separately validate subscription-backed Codex Cloud coding capabilities. Work PR triggers and Codex Cloud are not proven to connect into an unattended coding/retry loop; document the limitation honestly if it cannot be established. Issue #456 is the latest scoped execution authority. Preserve all Career #454 and production safeguards.
+
+
+## 2026-10-13 20:54 ET — current execution authority; automation bootstrap #456
+
+**Current priority:** preserve Career Coverage #405 on draft [PR #454](https://github.com/jderhagopian-stack/fsffl-next/pull/454), and validate the isolated [Engineering Automation Bootstrap #456](https://github.com/jderhagopian-stack/fsffl-next/issues/456). No new product feature expansion, model authority change, broad re-audit, unapproved merge, or production write is authorized by the bootstrap. No autonomous coding workflow is installed or accepted yet. [Bootstrap checkpoint](workstreams/ENGINEERING_AUTOMATION_BOOTSTRAP.md) records the exact safeguards and required real workflow evidence.
+
+**Career release reality:** #454 head `36fc608405795ac5fd0b2d32d1f21479f5192cf7` remains draft/unmerged. The current Week 5 nonproduction State `2fd788a858a6497425b2e066c77b3176e305030d6f7620cf25cf59ed3b30e061` contains 252 roster rows: 243 with Career values and nine explicit unresolved outcomes. Full Career and same-State Position & Depth composition ran, preserved frozen numerical parity, and locally passed 164 focused checks. The full-path peak RSS of 536.676 MiB fails the 429,496,720-byte resource gate, and GitHub Actions is not verified for the latest head. Previous Management [conditional release authorization](https://github.com/jderhagopian-stack/fsffl-next/pull/454#issuecomment-6134676365) **supersedes the October 11 blanket no-merge wording below**: release may proceed without renewed approval **only after** the stated exact-head CI, resource, readiness, and hosted acceptance gates pass. None of those remaining gates is waived.
+
+**Production truth:** Render `fsffl-next-private-beta` is on a 512 MiB plan, `autoDeploy=no`; the live deployment currently reports commit `2f89e83edbfbf31f72157735ced5fff4b0c4de5c`, predating Career #454. No Career release has happened. Keep user-visible beta availability and last-good recovery protected.
+
+**Workflow reality:** GitHub Actions runs elsewhere in the repository, but no run was found for the latest Career head; event/credential cause is not proven. GitHub branch data reports `main` as unprotected with no required checks. The isolated automation bootstrap must prove GitHub event delivery, restore trustworthy exact-head CI, and establish appropriate enforceable rules **before** any unassisted coding/repair flow is promoted. Codex PR review capability alone is not an autonomous engineering dispatcher.
+
+**Management rule:** no more chat-only corrections or status-only handoffs masquerading as implementation. Every new decision goes through this file and the bounded workstream checkpoint; the worker executes against the exact authorized State. Earlier dated sections remain historical evidence, not current instructions when superseded here.
+
+
 
 ## 2026-10-11 20:46 ET — Career #405 Management direction and current gate
 
