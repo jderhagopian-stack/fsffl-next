@@ -17,6 +17,39 @@
 
 The U.S. Supreme Court's [`Feist Publications v. Rural Telephone`](https://www.law.cornell.edu/supremecourt/text/499/340) establishes that historical facts themselves are generally not copyrighted; original selection/arrangement may be protected. That supports a **potential independent-factual-record route** for individual player/week totals. It does **not** eliminate enforceable contractual acquisition restrictions, rights outside copyright, jurisdiction-specific database protections, or special third-party provider terms. [NFL.com terms §1.3](https://www.nfl.com/legal/terms/) prohibit commercial or systematic retrieval from NFL-owned services without written consent; [Sports Reference Terms](https://www.sports-reference.com/termsofuse.html) restrict direct use of site stats/data for ML training and substitute databases. **These terms should not be casually imputed to a separate third-party data acquisition without an actual contractual link, nor should a public GitHub mirror be assumed to waive them.**
 
+## Offline audit implementation delivered (2026-10-14)
+
+A [small Python standard-library audit tool](../../scripts/research/nflverse_historical_coverage_audit.py) is committed on this research branch. It reads an **existing local FSFFL CSV**, counts canonical historical GSIS identifiers, and optionally reads one **already lawfully approved** local historical player-stat CSV. It does **not** download any data, install packages, train a forecast, or change the live product.
+
+- Internal reference-only usage from a repository checkout:
+
+```bash
+python scripts/research/nflverse_historical_coverage_audit.py \
+  --reference artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_CONNECTED_LEAGUE_BOARD_335.csv \
+  --output /tmp/fsffl-history-internal
+```
+
+- Once separately **approved data** and its source-rights manifest have been supplied:
+
+```bash
+python scripts/research/nflverse_historical_coverage_audit.py \
+  --reference artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_CONNECTED_LEAGUE_BOARD_335.csv \
+  --stats /approved/local/season-or-week-stats.csv \
+  --rights-manifest /approved/local/rights.json \
+  --output /tmp/fsffl-history-coverage --start 2019 --end 2025
+```
+
+- Rights manifest required fields: `{"decision":"GO","allow_offline_research":true,"license_evidence_url":"https://...","origin":"...","file_sha256":"<64 hex chars>"}`. The actual source decision must be made **independently**; filling this JSON does not itself grant rights. The tool checks SHA256 before reading stats, refuses unapproved/no-manifest stats, forbids duplicate reference GSIS, uses exact ID-only matching, and never infers zero/retirement from absent rows.
+- Synthetic fixture testing in the research environment passed four local cases (reference-only, approved synthetic CSV, reject missing manifest, reject invalid season window); **GitHub Actions/committed-head CI has not been run**, and no external historical dataset was processed.
+- `subject_coverage.csv` and `summary.json` are deliberately written outside the repository by default, to avoid publishing third-party rows. Outputs still require rights review before user display.
+- The prior [frozen-335 internal ID audit](./nflverse-internal-id-readiness-20261014.md) recorded **300/335** existing GSIS identifiers. This is a source-readiness result, not a historical NFLverse match rate.
+
+### Commercial launch caveat from separate existing Sleeper dependency
+
+[Official Sleeper API documentation](https://docs.sleeper.com/) states its read-only free API is for **noncommercial** use and directs commercial users to discuss licensing. The [Sleeper Terms, updated 2026-10-06](https://support.sleeper.com/en/articles/5486620-general-terms-of-use) also restrict third-party commercial access/synchronization without written consent. This is **outside the NFLverse data-source decision**, but is material to FSFFL's planned paid launch and should be separately tracked. No assumption that existing League/Sleeper use is commercially cleared, and no interruption of Career #405. There may be a way to operate through approved integrations or authorization; no entitlement has been confirmed.
+
+---
+
 ## Smallest commercially relevant rights question
 
 For **only** `stats_player_week_2019` through `stats_player_week_2025`, corresponding `stats_player_reg` season summaries, and completed weeks of `2026`:
