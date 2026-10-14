@@ -77,6 +77,25 @@ def _dynasty_publication_payload(
     return result
 
 
+def _carry_dynasty_last_good(payload: dict[str, object], *, state_id: str) -> dict[str, object]:
+    """Carry historical Dynasty estimates without exact-State roster rows."""
+    result = dict(payload)
+    result["dynasty_evidence_status"] = "last_good"
+    result["dynasty_evidence_state_id"] = payload.get("league_state_id")
+    result["dynasty_evidence_publication_generation_id"] = payload.get(
+        "publication_generation_id"
+    )
+    result["league_state_id"] = state_id
+    for key in (
+        "publication_generation_id",
+        "intelligence_freshness",
+        "presentation_continuity",
+        "career_position_depth",
+    ):
+        result.pop(key, None)
+    return result
+
+
 def _career_position_depth_rows(state, career_forward) -> list[dict[str, object]]:
     """Publish exact-State roster coverage beside Career and Dynasty evidence.
 
