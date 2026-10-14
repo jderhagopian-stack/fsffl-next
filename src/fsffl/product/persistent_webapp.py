@@ -45,6 +45,7 @@ from .foundation4_dynamic_candidate_runtime import (
 )
 from .p0_live_candidate_runtime import build_live_p0_rostered_candidate_forecasts
 from .foundation4_shadow_routes import install_career_intrinsic_routes
+from .foundation4_shadow_routes import _carry_dynasty_last_good
 from .hosted_connect import install_hosted_connect_routes
 from .current_position_depth import build_governed_current_position_depth
 from .in_season_forecast_routes import (
@@ -123,7 +124,11 @@ logging.getLogger("fsffl.product.persistence").setLevel(logging.INFO)
 _logger = logging.getLogger("fsffl.product.performance")
 
 _persistence_store = persistence_store_from_env()
-_projection_history_store = projection_history_store_from_env()
+_projection_history_store = projection_history_store_from_env(
+    connect_factory=(
+        _persistence_store.connection if _persistence_store is not None else None
+    )
+)
 _state_snapshot_store = state_snapshot_store_from_env()
 _runtime_store = PersistentPrivateBetaRuntimeStore(
     _persistence_store,
@@ -289,7 +294,11 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
             ),
         )
     ),
-    expanded_career_contract_fingerprint_resolver=dynamic_career_fingerprint,
+    expanded_career_contract_fingerprint_resolver=lambda context: (
+        dynamic_career_fingerprint(
+            context, projection_history_reader=_projection_history_store
+        )
+    ),
 )
 _career_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     _career_intrinsic_loader,
@@ -1891,21 +1900,11 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
             surface=LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,
         )
         if candidate is not None and candidate.get("status") == "ready":
-            dynasty_last_good = dict(candidate)
-            dynasty_last_good["dynasty_evidence_status"] = "last_good"
-            dynasty_last_good["dynasty_evidence_state_id"] = candidate.get(
-                "league_state_id"
+            # The carried Career estimate is explicitly marked last-good, but
+            # its nested roster rows are exact-State data and cannot be relabeled.
+            dynasty_last_good = _carry_dynasty_last_good(
+                candidate, state_id=context.league_state.state_id
             )
-            dynasty_last_good["dynasty_evidence_publication_generation_id"] = (
-                candidate.get("publication_generation_id")
-            )
-            # The copied evidence is now a governed value inside the new State's
-            # atomic presentation publication. Keep its source coordinates above
-            # instead of making the surface look like it belongs to the old State.
-            dynasty_last_good["league_state_id"] = context.league_state.state_id
-            dynasty_last_good.pop("publication_generation_id", None)
-            dynasty_last_good.pop("intelligence_freshness", None)
-            dynasty_last_good.pop("presentation_continuity", None)
 
     specs = (
         (HOME_SURFACE, "/api/home", {}),
