@@ -1,5 +1,8 @@
 # Historical player statistics — exact provenance and adoption gate
 
+> **CONTROLLING UPDATE — 2026-10-14:** [Upstream contract-reach decision](./nflverse-upstream-contract-reach-decision-20261014.md) finds **no automatic NFL.com ToS pass-through** merely because FSFFL retrieves CC BY-labelled historical facts from NFLverse's public GitHub releases. **Conditional GO: bounded offline research** with only basic 2024–2025 player counting-stat CSVs, GitHub acquisition, SHA256 + attribution records, no production integration, no customer-facing output, and no direct NFL/PFR scraping. **Paid production/data-model commercialization remains an explicit separate approval gate**, because upstream collector contracts/rightsholder scope are not warranted. This narrower current decision supersedes older blanket language forbidding *all* dataset research until full production clearance. Actual file download has not been possible in this chat runtime; the substantive historical join has not been run.
+
+
 **Date:** 2026-10-14  
 **Program:** [Research #458](https://github.com/jderhagopian-stack/fsffl-next/issues/458)  
 **Scope:** Core NFLverse numerical `stats_player` data, not any FFverse model, NFL imagery, or a production provider change.  
