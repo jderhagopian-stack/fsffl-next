@@ -410,8 +410,6 @@ def test_retained_roster_ros_rows_enter_fumbles_gap_eligibility():
 
 
 def test_single_source_fumbles_fallback_requires_primary_scoring_domain():
-    from dataclasses import replace
-
     now = datetime(2026, 10, 8, tzinfo=UTC)
     player_id = "sleeper:player:7567"
     provenance = Provenance(source="razzball", retrieved_at=now, effective_at=now)
@@ -437,7 +435,7 @@ def test_single_source_fumbles_fallback_requires_primary_scoring_domain():
                 team_id="team-a",
                 roster=(RosterEntry(player_id=player_id, slot=RosterSlot.BENCH),),
             ),
-            TeamState("team-b", ()),
+            TeamState(team_id="team-b", roster=()),
         ),
         players=(Player(player_id=player_id, full_name="Receiver", position=Position.WR),),
         player_states=(PlayerState(player_id=player_id, as_of=now, provenance=provenance),),
