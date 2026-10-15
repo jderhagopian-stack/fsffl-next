@@ -674,6 +674,7 @@ def build_live_p0_rostered_candidate_forecasts(
     stats_source: SleeperWeeklyStatsSource | None = None,
     sleeper_source: SleeperLiveSource | None = None,
     evaluation_as_of: datetime | None = None,
+    projection_history_as_of: datetime | None = None,
     authority: P0SourceStateAuthority | None = None,
     projection_history_reader: ProjectionHistoryReader | None = None,
     status_based_zero_ros_evidence: Mapping[str, StatusBasedZeroRosEvidence] | None = None,
@@ -698,6 +699,10 @@ def build_live_p0_rostered_candidate_forecasts(
     if cutoff.tzinfo is None:
         raise ValueError("P0 live candidate evaluation time must be timezone-aware")
     cutoff = cutoff.astimezone(UTC)
+    ros_revision_cutoff = projection_history_as_of or cutoff
+    if ros_revision_cutoff.tzinfo is None:
+        raise ValueError("P0 ROS revision-selection time must be timezone-aware")
+    ros_revision_cutoff = ros_revision_cutoff.astimezone(UTC)
     if cutoff < nfl_state.captured_at.astimezone(UTC):
         raise ValueError("P0 live evaluation time predates Sleeper NFL state acquisition")
 
@@ -751,7 +756,7 @@ def build_live_p0_rostered_candidate_forecasts(
             ProjectionSelector(
                 season=league_state.league.season,
                 horizon=ForecastHorizon.REST_OF_SEASON,
-                as_of=cutoff,
+                as_of=ros_revision_cutoff,
             )
         )
     ros_runtime = build_in_season_forecasts(
