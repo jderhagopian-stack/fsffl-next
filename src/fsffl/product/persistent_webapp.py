@@ -288,8 +288,9 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
             frozen,
             current_intrinsic_loader=_shapley_intrinsic_loader,
             materializer=materialize_foundation4_dynamic_candidates,
-            candidate_builder=lambda state: build_live_p0_rostered_candidate_forecasts(
+            candidate_builder=lambda state, *, projection_history_as_of=None: build_live_p0_rostered_candidate_forecasts(
                 state,
+                projection_history_as_of=projection_history_as_of,
                 projection_history_reader=_projection_history_store,
             ),
         )
