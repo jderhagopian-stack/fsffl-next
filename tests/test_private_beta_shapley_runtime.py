@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from threading import Event, Thread
 from typing import Any, cast
@@ -448,6 +449,18 @@ def test_dynamic_career_fingerprint_refreshes_unversioned_sources_once_per_windo
 
     assert within_window == first
     assert next_window != first
+
+
+def test_private_beta_live_provider_diagnostics_require_manual_dispatch():
+    workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github/workflows/private-beta-intrinsic-diagnostics.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "if: github.event_name == 'workflow_dispatch'" in workflow
+    assert "if: github.event_name == 'pull_request'" in workflow
+    assert "Provider diagnostics are skipped on pull requests" in workflow
 
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
