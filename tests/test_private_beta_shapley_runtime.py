@@ -340,7 +340,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         context,
         SimpleNamespace(),
         current_intrinsic_loader=base_loader,
-        candidate_builder=lambda _state, *, evaluation_as_of=None: candidate,
+        candidate_builder=lambda _state, *, projection_history_as_of=None: candidate,
     )
 
     assert composed_player_counts == []
@@ -358,7 +358,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
 
     result = bridge.build_dynamic_rostered_career_contract(
         context, SimpleNamespace(), current_intrinsic_loader=base_loader,
-        candidate_builder=lambda _state, *, evaluation_as_of=None: candidate, materializer=no_components,
+        candidate_builder=lambda _state, *, projection_history_as_of=None: candidate, materializer=no_components,
     )
     assert candidate.ros_runtime is not None  # public builder result unchanged
     assert result.contract is None
@@ -399,7 +399,7 @@ def test_dynamic_career_candidate_acquisition_failure_preserves_frozen_base():
         year_one_loader=lambda _state: _authority_evidence(observation)
     )
 
-    def unavailable(_state, *, evaluation_as_of=None):
+    def unavailable(_state, *, projection_history_as_of=None):
         raise RuntimeError("projection history unavailable")
 
     result = bridge.build_dynamic_rostered_career_contract(
@@ -413,7 +413,7 @@ def test_dynamic_career_candidate_acquisition_failure_preserves_frozen_base():
     assert all("projection history unavailable" in reason for reason in result.failures.values())
 
 
-def test_dynamic_career_candidate_builder_receives_pinned_evaluation_cutoff():
+def test_dynamic_career_candidate_builder_receives_pinned_ros_selection_time():
     state, observation = _fixture()
     cutoff = datetime(2026, 10, 15, 5, 59, tzinfo=UTC)
     context = replace(
@@ -425,8 +425,8 @@ def test_dynamic_career_candidate_builder_receives_pinned_evaluation_cutoff():
     )
     seen = []
 
-    def candidate_builder(_state, *, evaluation_as_of=None):
-        seen.append(evaluation_as_of)
+    def candidate_builder(_state, *, projection_history_as_of=None):
+        seen.append(projection_history_as_of)
         return SimpleNamespace(future=None, failures={})
 
     result = bridge.build_dynamic_rostered_career_contract(
