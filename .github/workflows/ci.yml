@@ -46,7 +46,7 @@ jobs:
       - name: Focused numeric Shapley and Career contract parity
         run: pytest -q tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity
       - name: Focused hosted dynamic Career loader-to-composition regression
-        run: pytest -q tests/test_private_beta_shapley_runtime.py -k 'hosted_dynamic_career_bridge or foundation4_hosted_dynamic_materializer or candidate_builder_receives_pinned_evaluation_cutoff'
+        run: pytest -q tests/test_private_beta_shapley_runtime.py -k 'hosted_dynamic_career_bridge or foundation4_hosted_dynamic_materializer or candidate_builder_receives_pinned_ros_selection_time'
       - name: Focused active Current and Foundation 4 cohort regression
         run: pytest -q tests/test_foundation4_cohort.py tests/test_foundation4_matrix.py tests/test_foundation4_history.py tests/test_foundation4_accepted_bundle.py
       - name: Focused isolated browser resource acceptance
