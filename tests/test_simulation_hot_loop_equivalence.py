@@ -948,7 +948,8 @@ def test_team_origin_ordering_optimization_preserves_complete_simulation(
 
 def test_hosted_numpy_pin_matches_durable_simulation_runtime_identity():
     project = (Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8")
-    assert '"numpy==2.5.3"' in project
+    assert '"numpy==2.5.3; python_version >= \'3.12\'"' in project
+    assert '"numpy==2.4.6; python_version < \'3.12\'"' in project
 
 
 def test_persisted_numpy_simulation_restores_only_on_its_exact_runtime(monkeypatch):

@@ -8,9 +8,11 @@ version = "0.1.0"
 description = "FSFFL NEXT dynasty decision-intelligence platform"
 requires-python = ">=3.11,<3.13"
 dependencies = [
-  # Durable NumPy PCG64 Simulation artifacts include this runtime version in
-  # their acceptance fingerprint. Keep this exact until artifacts are replayed.
-  "numpy==2.5.3",
+  # Durable hosted PCG64 Simulation artifacts include the exact NumPy runtime
+  # in their acceptance fingerprint. Keep Python 3.12 on that runtime; Python
+  # 3.11 uses its newest compatible NumPy for the supported local/CI baseline.
+  "numpy==2.5.3; python_version >= '3.12'",
+  "numpy==2.4.6; python_version < '3.12'",
   "pandas>=2.2,<3",
   "pydantic>=2.8,<3",
   "scikit-learn>=1.5,<2",
