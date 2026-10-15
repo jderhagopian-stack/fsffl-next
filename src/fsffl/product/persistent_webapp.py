@@ -35,6 +35,7 @@ from .forecast_resilience import (
 )
 from .foundation4_career_forward_runtime import (
     CareerIntrinsicLoader,
+    validate_foundation4_expanded_acceptance_cohort,
 )
 from .dynamic_career_composition import (
     build_dynamic_rostered_career_contract,
@@ -1091,10 +1092,18 @@ def _run_foundation4_shadow_acceptance() -> None:
             raise RuntimeError("Foundation 4 shadow did not reach completed state")
         contract = foundation4_record.contract
         component = _career_intrinsic_loader.current_component(context)
-        if contract.player_count != 335 or len(contract.estimates) != 335:
-            raise RuntimeError("Foundation 4 holistic cohort is not the governed 335 players")
-        if component is None or len(component.estimates) != 335:
-            raise RuntimeError("Foundation 4 Y4-Y7 component is not the governed 335 players")
+        if component is None:
+            raise RuntimeError("Foundation 4 Y4-Y7 component is unavailable")
+        validate_foundation4_expanded_acceptance_cohort(
+            frozen_reference_ids=tuple(row.player_id for row in component.estimates),
+            current_intrinsic_ids=tuple(
+                row.player_id for row in current_record.contract.estimates
+            ),
+            career_estimate_ids=tuple(row.player_id for row in contract.estimates),
+            expected_frozen_count=335,
+        )
+        if contract.player_count != len(contract.estimates):
+            raise RuntimeError("Foundation 4 Career player count does not match its estimates")
         if (
             contract.current_intrinsic_replaced
             or contract.authoritative_for_current_intrinsic

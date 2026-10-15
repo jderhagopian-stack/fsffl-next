@@ -83,6 +83,36 @@ ExpandedCareerContractFingerprintResolver = Callable[[UserRuntimeContext], str]
 CareerArtifactKeyFingerprintResolver = Callable[[UserRuntimeContext], str]
 
 
+def validate_foundation4_expanded_acceptance_cohort(
+    *,
+    frozen_reference_ids,
+    current_intrinsic_ids,
+    career_estimate_ids,
+    expected_frozen_count: int,
+) -> frozenset[str]:
+    """Validate frozen reference identity and any fully composed dynamic rows."""
+    frozen_rows = tuple(str(value) for value in frozen_reference_ids)
+    current_rows = tuple(str(value) for value in current_intrinsic_ids)
+    career_rows = tuple(str(value) for value in career_estimate_ids)
+    frozen = frozenset(frozen_rows)
+    current = frozenset(current_rows)
+    career = frozenset(career_rows)
+    if len(frozen_rows) != len(frozen):
+        raise ValueError("Foundation 4 frozen reference contains duplicate players")
+    if len(frozen) != expected_frozen_count:
+        raise ValueError("Foundation 4 frozen reference cohort is not the governed size")
+    if len(career_rows) != len(career):
+        raise ValueError("Foundation 4 Career cohort contains duplicate players")
+    if not frozen.issubset(career):
+        raise ValueError("Foundation 4 Career cohort is missing frozen reference players")
+    dynamic = career - frozen
+    if not dynamic.issubset(current):
+        raise ValueError("Foundation 4 dynamic Career players are outside expanded Current")
+    return dynamic
+
+
+
+
 def _rules_payload(context: UserRuntimeContext) -> dict[str, object]:
     if context.league_state is None:
         raise ValueError("Foundation 4 requires canonical league State")

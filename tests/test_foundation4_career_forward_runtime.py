@@ -60,9 +60,36 @@ from fsffl.value.shapley_intrinsic_contract import (
     ShapleyIntrinsicAvailability,
     ShapleyIntrinsicContract,
     ShapleyIntrinsicCoverage,
+    validate_foundation4_expanded_acceptance_cohort,
     ShapleyIntrinsicHorizonContribution,
     ShapleyIntrinsicPlayerEstimate,
 )
+
+
+def test_expanded_acceptance_keeps_frozen_335_and_accepts_current_dynamic_rows():
+    frozen = tuple(f"frozen-{index}" for index in range(335))
+    current = (*frozen, "dynamic-ready", "dynamic-unresolved")
+    career = (*frozen, "dynamic-ready")
+
+    dynamic = validate_foundation4_expanded_acceptance_cohort(
+        frozen_reference_ids=frozen,
+        current_intrinsic_ids=current,
+        career_estimate_ids=career,
+        expected_frozen_count=335,
+    )
+
+    assert dynamic == frozenset({"dynamic-ready"})
+
+
+def test_expanded_acceptance_rejects_dynamic_rows_outside_current_cohort():
+    frozen = tuple(f"frozen-{index}" for index in range(335))
+    with pytest.raises(ValueError, match="outside expanded Current"):
+        validate_foundation4_expanded_acceptance_cohort(
+            frozen_reference_ids=frozen,
+            current_intrinsic_ids=frozen,
+            career_estimate_ids=(*frozen, "untracked-dynamic"),
+            expected_frozen_count=335,
+        )
 
 
 def test_promoted_last_good_dynasty_drops_prior_state_career_rows():
