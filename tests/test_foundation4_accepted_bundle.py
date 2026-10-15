@@ -77,7 +77,21 @@ def test_opt_in_restore_uses_existing_materializer_owner_and_mount_wins(tmp_path
     monkeypatch.setattr(bundle, 'restore_accepted_bundle', lambda: calls.append(1) or manifest)
     assert runtime._accepted_materializer_manifest()[0] == {'source': 'accepted'}
     assert calls == [1]
-    manifest.write_text('{"source": "mounted"}')
-    monkeypatch.setenv(runtime._BUNDLE_ROOT_ENV, str(tmp_path))
-    assert runtime._accepted_materializer_manifest()[0] == {'source': 'mounted'}
+    mounted = tmp_path / 'mounted'
+    values = {
+        'accepted_commit': bundle._COMMIT,
+        'files': {},
+        'sha256': {},
+    }
+    for key, relative in bundle._PATHS.items():
+        path = mounted / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f'accepted fixture {key}')
+        resolved = path.resolve()
+        values['files'][key] = str(resolved)
+        values['sha256'][key] = bundle._file_sha256(resolved)
+        values[key] = str(resolved)
+    (mounted / runtime._BUNDLE_MANIFEST_NAME).write_text(json.dumps(values))
+    monkeypatch.setenv(runtime._BUNDLE_ROOT_ENV, str(mounted))
+    assert runtime._accepted_materializer_manifest()[0] == values
     assert calls == [1]
