@@ -65,3 +65,28 @@ def test_ready_three_year_render_does_not_wait_for_career_and_route_is_guarded()
     assert "await careerPromise" not in loader
     render = source.split("function renderFranchiseNorthStar(){", 1)[1]
     assert "if(state?.route!=='my_team')return;" in render[:100]
+
+
+def test_simulation_outlook_labels_current_and_retained_evidence_honestly():
+    node = shutil.which('node')
+    if node is None:
+        pytest.skip('Node is required for the browser lifecycle harness')
+    source = SOURCE.read_text()
+    functions = source.split('function franchiseNSOutcome(){',1)[1].split('function franchiseNSCurrentContract(){',1)[0]
+    script = "function franchiseNSOutcome(){" + functions
+    script += r"""
+const assert=require('node:assert/strict');
+const state={context:{state_id:'new',capability_readiness:{simulation:{status:'full'}}}};
+const fsfflMyTeamState={view:{context:{league_state_id:'new'},utility:{competitive_outcome:{expected_wins:7.5}}}};
+assert.equal(franchiseNSSimulationPresentation().status,'current');
+fsfflMyTeamState.view.presentation_continuity={served_league_state_id:'old'};
+assert.equal(franchiseNSSimulationPresentation().status,'retained');
+fsfflMyTeamState.view.presentation_continuity={served_league_state_id:'new'};
+state.context.capability_readiness.simulation.status='unavailable';
+assert.equal(franchiseNSSimulationPresentation().status,'retained');
+assert.equal(franchiseNSSimulationPresentation().ready,true);
+fsfflMyTeamState.view.utility.competitive_outcome=null;
+assert.equal(franchiseNSSimulationPresentation().status,'unavailable');
+"""
+    result = subprocess.run([node, '-e', script], capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stdout + result.stderr

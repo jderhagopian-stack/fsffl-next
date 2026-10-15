@@ -21,7 +21,8 @@ def test_player_intelligence_exposes_required_information_architecture() -> None
         "Stats",
         "Methods / Evidence",
         "Broad Market",
-        "FSFFL Intrinsic",
+        "3-Year Intrinsic",
+        "Career Intrinsic",
         "Projected current season + historical actuals",
         "Forecast details",
     ):
@@ -256,7 +257,8 @@ def test_north_star_overview_keeps_decision_relevant_content_in_first_screenful(
     source = _text("player_intelligence.js")
     assert "Season Projection" in source
     assert "Broad Market" in source
-    assert "FSFFL Intrinsic" in source
+    assert "3-Year Intrinsic" in source
+    assert "Career Intrinsic" in source
     assert "valueComparison()" in source
     assert "Open detail" in source
     assert "Career trajectory" in source

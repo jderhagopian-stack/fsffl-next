@@ -20,6 +20,7 @@ from .league_value_lenses import (
     build_league_value_lenses,
 )
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
+from .career_presentation import attach_career_player_lenses
 
 
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
@@ -35,8 +36,24 @@ def install_league_value_lens_routes(
     require_user,
     background_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
     presentation_payload_loader: PresentationPayloadLoader | None = None,
+    career_record_loader: Callable | None = None,
 ) -> None:
     """Expose Atlas-ready player lenses without creating team value authority."""
+
+    def with_career(payload, runtime):
+        served = (payload.get("presentation_continuity") or {}).get("served_league_state_id") or payload.get("league_state_id")
+        can_read = (career_record_loader is not None
+                    and runtime.publication_generation_id is not None
+                    and runtime.forecast_evidence is not None
+                    and served == runtime.league_state.state_id)
+        result = attach_career_player_lenses(
+            payload,
+            record=career_record_loader(runtime) if can_read else None,
+            current_state_id=runtime.league_state.state_id,
+        )
+        if served == runtime.league_state.state_id:
+            result["publication_generation_id"] = runtime.publication_generation_id
+        return result
 
     @app.get("/api/league/value-lenses")
     def league_value_lenses(
@@ -62,7 +79,7 @@ def install_league_value_lens_routes(
             )
             stale = presentation_payload_loader(user_id, runtime, surface)
             if stale is not None:
-                return stale
+                return with_career(stale, runtime)
 
         intrinsic = None
         intrinsic_error = None
@@ -186,7 +203,7 @@ def install_league_value_lens_routes(
                     universe,
                     state.state_id,
                 )
-                return payload
+                return with_career(payload, runtime)
             record = background_coordinator.current(runtime)
             if record is None:
                 record = background_coordinator.request(runtime)
@@ -262,7 +279,7 @@ def install_league_value_lens_routes(
                     record.status.value,
                     record.forecast_coordinate,
                 )
-                return payload
+                return with_career(payload, runtime)
             if record.status == IntrinsicBuildStatus.FAILED:
                 intrinsic_error = str(intrinsic_failure_payload(record)["message"])
             else:
@@ -350,4 +367,4 @@ def install_league_value_lens_routes(
             (payload.get("intrinsic_execution") or {}).get("forecast_coordinate"),
             (payload.get("fsffl_intrinsic") or {}).get("reason"),
         )
-        return payload
+        return with_career(payload, runtime)

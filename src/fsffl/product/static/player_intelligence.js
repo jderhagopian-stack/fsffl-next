@@ -149,33 +149,33 @@
   function intrinsicReason(v){
     if(finite(v?.intrinsic_value_index))return null;
     if(['queued','running'].includes(v?.intrinsic_status))return'Canonical Shapley Intrinsic is still preparing server-side.';
-    return v?.intrinsic_error||v?.intrinsic_status_reason||'Governed FSFFL Intrinsic is unavailable for the current league state.';
+    return v?.intrinsic_error||v?.intrinsic_status_reason||'Governed 3-Year Intrinsic is unavailable for the current league state.';
   }
   function valueRead(){
     const v=overview?.value||{},gap=finite(v.intrinsic_value_index)&&finite(v.broad_market_value_index)?v.intrinsic_value_index-v.broad_market_value_index:null;
-    if(!finite(gap)){const reason=intrinsicReason(v);return reason?`FSFFL Intrinsic unavailable: ${reason}`:'Comparison is unavailable until both governed lenses are ready.'}
-    if(Math.abs(gap)<250)return'Broad Market and FSFFL Intrinsic are closely aligned on the shared display ruler.';
-    return gap>0?'FSFFL Intrinsic above Broad Market.':'FSFFL Intrinsic below Broad Market.';
+    if(!finite(gap)){const reason=intrinsicReason(v);return reason?`3-Year Intrinsic unavailable: ${reason}`:'Comparison is unavailable until both governed lenses are ready.'}
+    if(Math.abs(gap)<250)return'Broad Market and 3-Year Intrinsic are closely aligned on the shared display ruler.';
+    return gap>0?'3-Year Intrinsic above Broad Market.':'3-Year Intrinsic below Broad Market.';
   }
   function intrinsicDisplay(v){if(finite(v?.intrinsic_value_index))return idx(v.intrinsic_value_index);if(['queued','running'].includes(v?.intrinsic_status))return'Preparing…';return'Unavailable'}
   function valueGauge(value){const ratio=finite(value)?Math.max(0,Math.min(1,value/10000)):0;return `<span class="pi-value-gauge" aria-hidden="true">${[.2,.4,.6,.8,1].map((threshold,index)=>`<i class="${ratio>=threshold-.12?'on':''}" style="height:${8+index*4}px"></i>`).join('')}</span>`}
   function valueCard(label,value,percentile){
-    const shown=finite(value)?idx(value):label==='FSFFL Intrinsic'?intrinsicDisplay(overview?.value||{}):'—';
-    const support=finite(percentile)?pct(percentile):label==='FSFFL Intrinsic'?esc(intrinsicReason(overview?.value||{})||'Governed value ready'):'—';
+    const shown=finite(value)?idx(value):label==='3-Year Intrinsic'?intrinsicDisplay(overview?.value||{}):'Unavailable';
+    const support=label==='Career Intrinsic'?(finite(overview?.value?.raw_career_forward_reference)?'raw Career '+num(overview.value.raw_career_forward_reference,1):esc(overview?.value?.career_presentation?.reason||'Career evidence unavailable')):finite(percentile)?pct(percentile):label==='3-Year Intrinsic'?esc(intrinsicReason(overview?.value||{})||'Governed value ready'):'—';
     return `<article class="pi-value-card"><div class="pi-value-card-copy"><small>${esc(label)}</small><strong>${shown}</strong><span>0–10,000 Value Index</span><em>${support}</em></div>${valueGauge(value)}</article>`;
   }
   function valueComparison(){
     const v=overview?.value||{},market=v.broad_market_value_index,intrinsic=v.intrinsic_value_index;
     if(!finite(market)||!finite(intrinsic))return `<div class="pi-compare-card unavailable"><span class="pi-compare-icon">!</span><div><strong>Value comparison unavailable</strong><p>${esc(intrinsicReason(v)||'Both governed lenses must be ready before comparison.')}</p></div></div>`;
     const gap=intrinsic-market,relative=Math.abs(gap)/Math.max(1,(intrinsic+market)/2),aligned=relative<.04,up=gap>0;
-    const headline=aligned?'Broad Market and FSFFL Intrinsic are closely aligned.':`FSFFL Intrinsic ${up?'above':'below'} Broad Market.`;
+    const headline=aligned?'Broad Market and 3-Year Intrinsic are closely aligned.':`3-Year Intrinsic ${up?'above':'below'} Broad Market.`;
     return `<div class="pi-compare-card"><span class="pi-compare-icon">${aligned?'↔':up?'↑':'↓'}</span><div><strong>${esc(headline)}</strong><p>Both values use the shared 0–10,000 presentation ruler while remaining separate governed lenses. This is not a buy/sell command.</p></div></div>`;
   }
   function projectionCard(){
     const row=y1();
     return `<article class="pi-summary-card"><div><small>Season Projection</small><strong>${num(row?.fantasy_points,1)}</strong><span>fantasy points</span><em>${finite(row?.fantasy_ppg)?`${num(row.fantasy_ppg,1)} PPG`:'PPG unavailable'}</em></div></article>`;
   }
-  function overviewCards(){const v=overview?.value||{};return `<div class="pi-summary-grid">${projectionCard()}${valueCard('Broad Market',v.broad_market_value_index,v.broad_market_percentile)}${valueCard('FSFFL Intrinsic',v.intrinsic_value_index,v.intrinsic_percentile)}</div>`}
+  function overviewCards(){const v=overview?.value||{};return `<div class="pi-summary-grid">${projectionCard()}${valueCard('Broad Market',v.broad_market_value_index,v.broad_market_percentile)}${valueCard('3-Year Intrinsic',v.intrinsic_value_index,v.intrinsic_percentile)}${valueCard('Career Intrinsic',v.career_intrinsic_index,null)}</div>`}
   function forecastProvenance(){
     const f=overview?.forecast||{},basis=f.current_evidence_basis||'unavailable',fallback=basis==='preseason_baseline';
     return `<div class="pi-provenance ${fallback?'fallback':''}"><strong>${fallback?'Preserved Preseason Forecast fallback':'Current governed Forecast'}</strong><span>Evidence basis: ${esc(basis)} · as of ${esc(f.current_as_of||'—')}</span><span>Sources: ${esc((f.successful_source_ids||[]).join(', ')||'preserved / unavailable')}</span></div>`;
@@ -224,7 +224,7 @@
         ${overviewCards()}
         ${marketActions()}
         ${finite(v.broad_market_value_index)&&finite(v.intrinsic_value_index)?valueComparison():''}
-        <details class="pi-method pi-overview-why"><summary>Why this value?</summary><p>Broad Market and FSFFL Intrinsic use the same 0–10,000 presentation ruler but remain separate governed lenses. Percentiles are secondary context; this is not a buy/sell command.</p></details>
+        <details class="pi-method pi-overview-why"><summary>Why this value?</summary><p>Broad Market and 3-Year Intrinsic use the same 0–10,000 presentation ruler but remain separate governed lenses. Percentiles are secondary context; this is not a buy/sell command.</p></details>
         <section class="pi-section pi-trajectory-section"><div class="pi-section-head"><div><small>Trajectory preview</small><h3>Recent actuals → Forecast</h3></div><button type="button" class="pi-drill-button" data-pi-jump="career">Open detail</button></div>${chart(true)}</section>
       </div>
       <div class="pi-tab ${tabClass('career')}" data-pi-panel="career"><section class="pi-section pi-career-hero"><div class="pi-section-head"><div><small>Career & Forecast</small><h3>Career trajectory: Actual → Forecast</h3></div></div>${chart(false)}</section><section class="pi-section"><div class="pi-section-head"><div><small>Forecast details</small><h3>Current season + Y2 / Y3</h3></div></div>${forecastTable()}</section></div>

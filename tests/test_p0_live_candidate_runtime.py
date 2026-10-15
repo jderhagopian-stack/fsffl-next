@@ -542,3 +542,52 @@ def test_single_source_fumbles_fallback_requires_primary_scoring_domain():
         candidate_ids={player_id},
         source_observations=rushing_only,
     ) == set()
+
+
+def test_signed_year_one_and_empty_rb_depth_cell_use_accepted_model_features():
+    """Coverage validation must not invent scores or empirical percentiles."""
+    from dataclasses import replace
+    from math import isfinite
+    from fsffl.product.p0_candidate_evidence import (
+        P0CandidateFacts, accepted_p0_source_state_authority, build_p0_candidate_source_rows,
+    )
+    from fsffl.product.p0_forecast_runtime import _score_source
+
+    now = datetime(2026, 10, 15, tzinfo=UTC)
+    for position, points in ((Position.WR, -0.35), (Position.RB, 1.8)):
+        reference = next(row for row in frozen_p0_source_rows() if row.position == position.value)
+        pid = 'sleeper:player:signed-or-empty-cell-' + position.value
+        player = Player(player_id=pid, full_name='Evidence Fixture', position=position)
+        state = LeagueState(league=League(league_id='fixture', name='Fixture', season=2026,
+            rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=())), as_of=now,
+            teams=(), team_states=(), players=(player,),
+            player_states=(PlayerState(player_id=pid, as_of=now,
+                provenance=Provenance(source='fixture', retrieved_at=now, effective_at=now)),))
+        values = {field.name: getattr(reference, field.name)
+            for field in fields(P0CandidateFacts) if hasattr(reference, field.name)}
+        facts = P0CandidateFacts(**{**values, 'player_id': pid, 'current_player_id': pid,
+            'player_name': player.full_name, 'age': 24., 'experience': 0,
+            'standard_y1_points': points, 'connected_league_y1_points': points + 1,
+            'facts_as_of': now, 'facts_source_version': 'accepted-signed-y1-fixture-v1',
+            'facts_digest': 'b' * 64})
+        row = build_p0_candidate_source_rows(league_state=state, candidate_facts={pid: facts},
+            source_state_authority=accepted_p0_source_state_authority(), evaluation_as_of=now)[pid]
+        assert row.standard_y1_points == points
+        assert row.connected_league_y1_points == points + 1
+        assert row.source_state == ('out' if points <= 0 else 'depth')
+        if position == Position.RB:
+            assert row.state_percentile is None
+        # Execute the unchanged accepted classifier and production models. Both
+        # horizons must be finite; a missing percentile is not fabricated as 0.
+        result = _score_source(row, player_id=pid, standard_y1_points=points)
+        for horizon in (2, 3):
+            estimate = result.results[horizon]
+            assert isfinite(estimate.anticipated_points)
+            assert abs(sum(estimate.probabilities.values()) - 1) < 1e-12
+            assert all(isfinite(value) for value in estimate.state_means.values())
+        if position == Position.RB:
+            # The accepted missing-feature behavior already supports None; do
+            # not recalibrate, retrain, or create an empirical median surrogate.
+            missing = _score_source(replace(row, state_percentile=float('nan')),
+                                    player_id=pid, standard_y1_points=points)
+            assert missing.results == result.results

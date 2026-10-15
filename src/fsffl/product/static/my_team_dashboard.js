@@ -269,6 +269,14 @@ async function franchiseNSLoadAlignedPair(expectedStateId){
 function franchiseNSOutcome(){
   return fsfflMyTeamState.view?.utility?.competitive_outcome||null;
 }
+function franchiseNSSimulationPresentation(){
+  const view=fsfflMyTeamState.view,outcome=franchiseNSOutcome();
+  if(!outcome||typeof outcome.expected_wins!=='number'||!Number.isFinite(outcome.expected_wins))return {ready:false,status:'unavailable',label:'Simulation unavailable'};
+  const served=view?.presentation_continuity?.served_league_state_id||view?.context?.league_state_id;
+  const current=served===state?.context?.state_id&&!view?.intelligence_freshness?.stale
+    &&state?.context?.capability_readiness?.simulation?.status==='full';
+  return {ready:true,status:current?'current':'retained',label:current?'current Simulation':'retained Simulation'};
+}
 function franchiseNSCurrentContract(){
   const current=fsfflMyTeamState.currentPositionDepth;
   const viewGeneration=fsfflMyTeamState.view?.publication_generation_id??null;
@@ -471,7 +479,7 @@ function franchiseNSOverview(){
   const view=fsfflMyTeamState.view,outcome=franchiseNSOutcome(),expectedWinsRank=franchiseNSExpectedWinsRank();
   const {strongest,weakest}=franchiseNSStrongWeak(),fragility=franchiseNSFragility();
   const positionRows=franchiseNSPositionRows();
-  const simulationReady=outcome&&typeof outcome.expected_wins==='number';
+  const simulation=franchiseNSSimulationPresentation(),simulationReady=simulation.ready;
   const weakestReady=weakest&&weakest.status==='ready'&&typeof weakest.league_rank==='number';
   const strongestReady=strongest&&strongest.status==='ready'&&typeof strongest.league_rank==='number';
   const mattersTitle=weakestReady?weakest.position+' is the clearest Current pressure point':'Current position pressure is unavailable';
@@ -484,7 +492,7 @@ function franchiseNSOverview(){
   };
   return '<section class="franchise-ns-view franchise-home-overview" data-franchise-view="overview">'+
     '<section class="franchise-home-outlook-card">'+
-      '<div class="franchise-home-card-head"><span class="franchise-home-kicker">Season Outlook · current Simulation</span><small>'+(simulationReady?(expectedWinsRank?'Expected wins #'+expectedWinsRank.rank+' of '+expectedWinsRank.count:'Governed Simulation'):'Unavailable')+'</small></div>'+
+      '<div class="franchise-home-card-head"><span class="franchise-home-kicker">Season Outlook · '+myTeamEsc(simulation.label)+'</span><small>'+(simulationReady?(expectedWinsRank?'Expected wins #'+expectedWinsRank.rank+' of '+expectedWinsRank.count:'Governed Simulation'):'Unavailable')+'</small></div>'+
       '<div class="franchise-home-outlook-grid">'+
         outlookMetric('Expected wins',outcome?.expected_wins,'number')+
         outlookMetric('Playoffs',outcome?.playoff_probability,'percent')+
@@ -553,7 +561,7 @@ function renderFranchiseNorthStar(){
       myTeamTabButton('roster','Roster',fsfflMyTeamState.franchiseTab==='roster')+
       myTeamTabButton('assets','Assets & Picks',fsfflMyTeamState.franchiseTab==='assets')+
     '</nav>'+
-    (view.intelligence_freshness?.stale?'<aside class="franchise-ns-forecast-strip fallback" role="status"><strong>State current · last-good intelligence shown</strong><span>Derived fields as of '+myTeamEsc(view.intelligence_freshness.served_as_of||"the last-good snapshot")+'.</span></aside>':stateOnly?'<aside class="franchise-ns-forecast-strip state-only" role="status"><strong>Roster State current · '+myTeamRosterRows(view.players||[]).length+' players</strong><span>Forecast / Simulation-derived fields are unavailable. The canonical roster remains usable; see readiness for the exact blocker.</span></aside>':(fallback?'<aside class="franchise-ns-forecast-strip" role="status"><strong>Forecast fallback active</strong><span>Preserved preseason projections in use · live source-health degraded.</span></aside>':''))+
+    (view.intelligence_freshness?.stale?'<aside class="franchise-ns-forecast-strip fallback" role="status"><strong>State current · last-good intelligence shown</strong><span>Derived fields as of '+myTeamEsc(view.intelligence_freshness.served_as_of||"the last-good snapshot")+'.</span></aside>':stateOnly?'<aside class="franchise-ns-forecast-strip state-only" role="status"><strong>Roster State current · '+myTeamRosterRows(view.players||[]).length+' players</strong><span>Forecast classification is unavailable. '+(franchiseNSSimulationPresentation().ready?'The season outlook shows '+myTeamEsc(franchiseNSSimulationPresentation().label)+'.':'Simulation is unavailable.')+' The canonical roster remains usable; see readiness for the exact blocker.</span></aside>':(fallback?'<aside class="franchise-ns-forecast-strip" role="status"><strong>Forecast fallback active</strong><span>Preserved preseason projections in use · live source-health degraded.</span></aside>':''))+
     (fsfflMyTeamState.franchiseTab==='overview'?franchiseNSOverview():fsfflMyTeamState.franchiseTab==='roster'?franchiseNSRoster():franchiseNSAssets())+
   '</div>';
   panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchiseTab=button.dataset.franchiseTab;renderFranchiseNorthStar()}));

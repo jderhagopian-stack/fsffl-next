@@ -152,7 +152,7 @@ class P0SourceRow:
     prior2_mean_age_state_z: float | None
     prior2_gap_age_state_z: float | None
     source_percentile: float
-    state_percentile: float
+    state_percentile: float | None
     # Dynamic rows retain their governed evidence identity alongside the same
     # model features. Frozen reference rows have no dynamic evidence packet.
     evidence_as_of: str | None = None

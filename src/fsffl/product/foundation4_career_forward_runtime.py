@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field, replace
+from contextlib import nullcontext
 from threading import RLock, Timer
 from typing import Callable, Mapping
 
@@ -42,6 +43,7 @@ from .foundation4_shadow_inputs import (
     provide_foundation4_terminal_features,
 )
 from .runtime import UserRuntimeContext
+from .resource_coordinator import HeavyWorkCoordinator
 from .foundation4_cohort import align_foundation4_cohort
 
 
@@ -139,6 +141,7 @@ class CareerIntrinsicLoader:
         self,
         *,
         current_intrinsic_loader: CurrentIntrinsicLoader,
+        heavy_work_coordinator: HeavyWorkCoordinator | None = None,
         current_intrinsic_fingerprint_resolver: CurrentIntrinsicFingerprintResolver,
         persistence_store: PersistenceStore | None = None,
         expanded_career_contract_loader: ExpandedCareerContractLoader | None = None,
@@ -156,6 +159,7 @@ class CareerIntrinsicLoader:
                 "expanded Career contract loader and semantic fingerprint resolver "
                 "must be configured together"
             )
+        self._heavy_work_coordinator = heavy_work_coordinator
         self._expanded_career_contract_loader = expanded_career_contract_loader
         self._expanded_career_contract_fingerprint_resolver = (
             expanded_career_contract_fingerprint_resolver
@@ -176,19 +180,25 @@ class CareerIntrinsicLoader:
         self._component_timer: Timer | None = None
 
     def pin_build_context(self, context: UserRuntimeContext) -> UserRuntimeContext:
-        """Use the published State cutoff, never the reader/restart wall clock.
+        """Use the published State/Forecast cutoff, never the reader's clock.
 
         A newer source capture requires a new governed evidence publication.
         Visiting a page must not advance its source window or force acquisition.
         """
         if context.career_fingerprint_evaluation_as_of is not None:
             return context
-        return replace(
-            context,
-            career_fingerprint_evaluation_as_of=(
-                context.league_state.as_of if context.league_state is not None else utc_now()
-            ),
+        cutoff = context.league_state.as_of if context.league_state is not None else utc_now()
+        # The roster State and its governed Forecast publication have distinct
+        # capture times. Preserve a later, already published Forecast cutoff;
+        # using the roster timestamp alone could discard its admitted ROS rows.
+        published_as_of = getattr(
+            getattr(context.forecast_evidence, "runtime_result", None), "evaluation_as_of", None
         )
+        if published_as_of is not None:
+            if published_as_of.tzinfo is None:
+                raise ValueError("published Career evidence cutoff must be timezone-aware")
+            cutoff = max(cutoff, published_as_of)
+        return replace(context, career_fingerprint_evaluation_as_of=cutoff)
 
     def intrinsic_input_fingerprint(self, context: UserRuntimeContext) -> str:
         return self._input_fingerprint(
@@ -391,6 +401,19 @@ class CareerIntrinsicLoader:
                     and self._cached_fingerprint == fingerprint
                     and self._cached_component is not None):
                 return self._cached_component
+        guard = (self._heavy_work_coordinator.claim(
+            kind="career_component_restore", key=f"{context.user_id}:component"
+        ) if self._heavy_work_coordinator is not None else nullcontext())
+        with guard, self._lock:
+            # Recheck under the lock: concurrent readers must deserialize once.
+            return self._restore_component(context)
+
+    def _restore_component(self, context: UserRuntimeContext) -> LongTermIntrinsicShadowContract | None:
+        fingerprint = self.intrinsic_input_fingerprint(context)
+        if (self._cached_user_id == context.user_id
+                and self._cached_fingerprint == fingerprint
+                and self._cached_component is not None):
+            return self._cached_component
         if self._persistence_store is None or context.league_state is None:
             return None
         forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -198,7 +199,7 @@ def install_career_intrinsic_routes(
                 "status": "refresh_required",
                 "league_state_id": _context.league_state.state_id,
                 "publication_generation_id": _context.publication_generation_id,
-                "reason": "No compatible Career publication is available. Use the explicit intelligence preparation action.",
+                "reason": "Career is not prepared for this publication. Refresh league intelligence to prepare it.",
             })
         if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
             building = _building_payload(record)
@@ -231,6 +232,12 @@ def install_career_intrinsic_routes(
             payload["uncertainty_detail_endpoint"] = LEGACY_FOUNDATION4_CAREER_FORWARD_ENDPOINT
         payload["league_state_id"] = record.league_state_id
         payload["publication_generation_id"] = _context.publication_generation_id
+        from .dynamic_career_composition import DYNAMIC_CAREER_SOURCE_REFRESH_INTERVAL
+        selected_as_of = loader.pin_build_context(_context).career_fingerprint_evaluation_as_of
+        payload["source_selection_as_of"] = selected_as_of.isoformat()
+        payload["source_refresh_due"] = datetime.now(UTC) - selected_as_of >= DYNAMIC_CAREER_SOURCE_REFRESH_INTERVAL
+        # Age is presentation/readiness metadata. It never changes the artifact
+        # key or silently starts a new provider capture on a browser read.
         payload["career_position_depth"] = _career_position_depth_rows(
             _context.league_state, record.contract
         )
@@ -341,7 +348,7 @@ def install_career_intrinsic_routes(
                 "status": "refresh_required",
                 "capability": "career_intrinsic",
                 "league_state_id": state.state_id,
-                "reason": "No compatible Career publication is available; explicit intelligence preparation is required.",
+                "reason": "Career is not prepared for this publication. Refresh league intelligence to prepare it.",
             })
         if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
             payload = _building_payload(record)

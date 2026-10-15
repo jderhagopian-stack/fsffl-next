@@ -54,7 +54,7 @@ def test_franchise_overview_matches_approved_scan_first_structure() -> None:
         "function franchiseNSRoster(){", 1
     )[0]
     for label in (
-        "Season Outlook · current Simulation",
+        "Season Outlook · ",
         "Expected wins",
         "Playoffs",
         "Championship",

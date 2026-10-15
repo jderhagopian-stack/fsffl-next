@@ -279,6 +279,7 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
 )
 _career_intrinsic_loader = CareerIntrinsicLoader(
     current_intrinsic_loader=_shapley_intrinsic_loader,
+    heavy_work_coordinator=_heavy_work_coordinator,
     current_intrinsic_fingerprint_resolver=(
         _shapley_intrinsic_loader.intrinsic_input_fingerprint
     ),
@@ -1784,6 +1785,7 @@ install_intrinsic_market_discovery_routes(
 )
 install_league_value_lens_routes(
     app,
+    career_record_loader=_career_intrinsic_coordinator.current,
     runtime_store=_runtime_store,
     contract_loader=_shapley_intrinsic_loader,
     require_user=_webapp.require_beta_user,
@@ -1792,6 +1794,7 @@ install_league_value_lens_routes(
 )
 install_player_intelligence_routes(
     app,
+    career_record_loader=_career_intrinsic_coordinator.current,
     runtime_store=_runtime_store,
     require_user=_webapp.require_beta_user,
     intrinsic_coordinator=_shapley_intrinsic_coordinator,

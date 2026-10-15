@@ -885,15 +885,9 @@ def test_runtime_appends_only_complete_expanded_candidates_from_exact_roster(mat
             "player_count": frozen.player_count + 1,
         }
     )
-    state_player = SimpleNamespace(
-        player_id=candidate_id,
-        position=SimpleNamespace(value="QB"),
-    )
-    roster_entry = SimpleNamespace(
-        player_id=candidate_id,
-        slot=SimpleNamespace(value="BENCH"),
-    )
-    team_state = SimpleNamespace(team_id="team-1", roster=(roster_entry,))
+    state_player = Player(player_id=candidate_id, full_name="Expanded Fixture", position=Position.QB)
+    roster_entry = RosterEntry(player_id=candidate_id, slot=RosterSlot.BENCH)
+    team_state = TeamState(team_id="team-1", roster=(roster_entry,))
     league_state = context.league_state.model_copy(
         update={
             "players": context.league_state.players + (state_player,),
@@ -1022,3 +1016,36 @@ def test_product_career_read_is_small_exact_publication_and_never_launches_work(
                        user_id=context.user_id)
     assert missing.status_code == 503
     assert json.loads(missing.body)["status"] == "refresh_required"
+
+
+def test_concurrent_explicit_component_readers_deserialize_once(materialized, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    persistence, _calls, _first, context, _built = materialized
+    loader = _loader(persistence, [])
+    assert loader.restore_compatible(context) is not None
+    calls = []
+    original = persistence.get_reusable_artifact
+    def read(key):
+        calls.append(key.artifact_kind)
+        return original(key)
+    monkeypatch.setattr(persistence, 'get_reusable_artifact', read)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = tuple(pool.map(lambda _: loader.current_component(context), range(8)))
+    assert results[0] is not None
+    assert all(row is results[0] for row in results)
+    assert calls.count(FOUNDATION4_Y4_Y7_ARTIFACT_KIND) == 1
+    loader.clear_user_cache(context.user_id)
+
+
+def test_default_career_cutoff_preserves_later_governed_forecast_publication():
+    context = _context()
+    from datetime import timedelta
+    published_as_of = context.league_state.as_of + timedelta(hours=3)
+    context = replace(context, forecast_evidence=SimpleNamespace(
+        runtime_result=SimpleNamespace(evaluation_as_of=published_as_of)))
+    loader = _loader(None, [])
+    assert loader.pin_build_context(context).career_fingerprint_evaluation_as_of == published_as_of
+    # A preserved older baseline must not move the current roster boundary back.
+    context = replace(context, forecast_evidence=SimpleNamespace(
+        runtime_result=SimpleNamespace(evaluation_as_of=published_as_of - timedelta(days=7))))
+    assert loader.pin_build_context(context).career_fingerprint_evaluation_as_of == context.league_state.as_of

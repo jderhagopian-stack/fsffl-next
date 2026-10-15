@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
+from functools import lru_cache
 import hashlib
 import json
 from math import isfinite
@@ -76,3 +77,47 @@ class CareerPresentationCoordinate:
             "economic_gap_subtraction_allowed": False,
             "minimum_index": 0, "maximum_index": 10_000,
         }
+
+
+@lru_cache(maxsize=1)
+def career_reference_player_ids() -> frozenset[str]:
+    from .foundation4_shadow_inputs import provide_foundation4_terminal_features
+    return frozenset(provide_foundation4_terminal_features())
+
+
+def career_lens_for_publication(record, *, served_state_id: str) -> tuple[dict, dict]:
+    """Present an already published exact-State authority, never request a build."""
+    unavailable = {"status": "unavailable", "label": "Career Intrinsic",
+                   "reason": "No completed Career authority matches the served State."}
+    if (record is None or getattr(record.status, "value", None) != "completed"
+            or record.contract is None or record.league_state_id != served_state_id):
+        return unavailable, {}
+    raw = {row.player_id: row.raw_career_forward_reference for row in record.contract.estimates}
+    # Current explicitly owns the active reference game. No roster/free-agent
+    # query can contribute anchors to this fixed reference authority.
+    reference_ids = career_reference_player_ids() & raw.keys()
+    try:
+        coordinate = CareerPresentationCoordinate.from_reference(raw, reference_ids=frozenset(reference_ids))
+    except ValueError as exc:
+        return {**unavailable, "reason": str(exc)}, {}
+    return ({"status": "ready", "label": "Career Intrinsic", "league_state_id": served_state_id,
+             **coordinate.summary()},
+            {pid: {"career_intrinsic_index": coordinate.index(value),
+                   "raw_career_forward_reference": value, "career_status": "ready"}
+             for pid, value in raw.items()})
+
+
+def attach_career_player_lenses(payload: dict, *, record, current_state_id: str) -> dict:
+    """Overlay optional product evidence without changing other Value lenses."""
+    served = (payload.get("presentation_continuity") or {}).get("served_league_state_id") or payload.get("league_state_id")
+    summary, rows = career_lens_for_publication(
+        record if served == current_state_id else None, served_state_id=served,
+    )
+    result = {**payload, "career_intrinsic": summary}
+    if "fsffl_intrinsic" in result:
+        result["fsffl_intrinsic"] = {**result["fsffl_intrinsic"], "label": "3-Year Intrinsic"}
+    result["players"] = [{**row, **rows.get(row["player_id"], {
+        "career_intrinsic_index": None, "raw_career_forward_reference": None,
+        "career_status": "unavailable",
+    })} for row in payload.get("players", ())]
+    return result
