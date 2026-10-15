@@ -414,6 +414,7 @@ def test_dynamic_career_candidate_acquisition_failure_preserves_frozen_base():
 def test_dynamic_career_fingerprint_changes_when_ros_revision_identity_changes():
     state, observation = _fixture()
     context = _context(state, observation)
+    now = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
 
     class Reader:
         version = "ros-v1"
@@ -423,13 +424,30 @@ def test_dynamic_career_fingerprint_changes_when_ros_revision_identity_changes()
 
     reader = Reader()
     first = bridge.dynamic_career_fingerprint(
-        context, projection_history_reader=reader
+        context, projection_history_reader=reader, now=now
     )
     reader.version = "ros-v2"
     second = bridge.dynamic_career_fingerprint(
-        context, projection_history_reader=reader
+        context, projection_history_reader=reader, now=now
     )
     assert first != second
+
+
+def test_dynamic_career_fingerprint_refreshes_unversioned_sources_once_per_window():
+    state, observation = _fixture()
+    context = _context(state, observation)
+    start = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
+
+    first = bridge.dynamic_career_fingerprint(context, now=start)
+    within_window = bridge.dynamic_career_fingerprint(
+        context, now=start + timedelta(hours=5, minutes=59)
+    )
+    next_window = bridge.dynamic_career_fingerprint(
+        context, now=start + timedelta(hours=6)
+    )
+
+    assert within_window == first
+    assert next_window != first
 
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:

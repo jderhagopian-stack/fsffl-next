@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Callable, Mapping
 
 from fsffl.forecast.future_contract import FutureForecastContract
@@ -56,6 +56,12 @@ DynamicCareerMaterializer = Callable[
     [UserRuntimeContext, P0LiveCandidateResult, tuple[str, ...]],
     DynamicCareerComponents,
 ]
+
+# Sleeper's catalog and stats endpoints have no durable revision token and are
+# currently acquired only when the dynamic Career builder runs. Bound how long
+# a reusable dynamic result can hide corrected provider inputs without polling
+# those endpoints on every request.
+DYNAMIC_CAREER_SOURCE_REFRESH_INTERVAL = timedelta(hours=6)
 
 
 def _scalar_provenance(values: Mapping[str, object]) -> dict[str, object]:
@@ -216,11 +222,27 @@ def _compose_dynamic_career_contract(
 
 
 def dynamic_career_fingerprint(
-    context: UserRuntimeContext, *, projection_history_reader=None
+    context: UserRuntimeContext,
+    *,
+    projection_history_reader=None,
+    now: datetime | None = None,
 ) -> str:
-    """Bind Career reuse to State, forecasts, and retained ROS revision identities."""
+    """Bind Career reuse to State, ROS revisions, and bounded live-source freshness.
+
+    Sleeper stats/catalog inputs have no persisted revision identity in the
+    hosted path. A State-scoped six-hour epoch forces a bounded rebuild while
+    keeping the pre-build resolver free of provider calls. Exact ROS content
+    revisions remain part of the fingerprint below.
+    """
     if context.league_state is None:
         raise ValueError("dynamic Career fingerprint requires canonical State")
+    evaluated_at = now or datetime.now(UTC)
+    if evaluated_at.tzinfo is None:
+        raise ValueError("dynamic Career fingerprint clock must be timezone-aware")
+    freshness_epoch = int(
+        evaluated_at.astimezone(UTC).timestamp()
+        // DYNAMIC_CAREER_SOURCE_REFRESH_INTERVAL.total_seconds()
+    )
     evidence = context.forecast_evidence
     ros_revisions = ()
     if projection_history_reader is not None:
@@ -231,7 +253,7 @@ def dynamic_career_fingerprint(
             ProjectionSelector(
                 season=context.league_state.league.season,
                 horizon=ForecastHorizon.REST_OF_SEASON,
-                as_of=datetime.now(UTC),
+                as_of=evaluated_at.astimezone(UTC),
             )
         )
     payload = {
@@ -243,6 +265,7 @@ def dynamic_career_fingerprint(
             for row in getattr(evidence, "raw_forecasts", ())
         ],
         "projection_history_revisions": ros_revisions,
+        "live_source_freshness_epoch": freshness_epoch,
         "contract": "dynamic-rostered-p0-career-bridge-v1",
     }
     return hashlib.sha256(
