@@ -154,9 +154,11 @@ def test_franchise_missing_evidence_fails_visibly_without_substitute_metrics() -
         "Roster-resilience evidence unavailable",
         "No pick Value evidence",
         "Selected-lens player Value evidence is unavailable.",
-        "Intrinsic unavailable",
     ):
         assert text in NORTH_STAR
+    intrinsic_display = NORTH_STAR.split("function franchiseNSIntrinsicDisplay(player){", 1)[1].split("\nfunction ", 1)[0]
+    assert "<strong>Unavailable</strong>" in intrinsic_display
+    assert "th pct · index unavailable" in intrinsic_display
 
 
 def test_franchise_north_star_is_the_only_primary_franchise_renderer() -> None:

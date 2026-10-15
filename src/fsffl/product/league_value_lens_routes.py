@@ -20,7 +20,7 @@ from .league_value_lenses import (
     build_league_value_lenses,
 )
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
-from .career_presentation import attach_career_player_lenses
+from .career_presentation import attach_career_player_lenses, career_reference_ids_from_current
 
 
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
@@ -40,18 +40,25 @@ def install_league_value_lens_routes(
 ) -> None:
     """Expose Atlas-ready player lenses without creating team value authority."""
 
-    def with_career(payload, runtime):
+    def with_career(payload, runtime, *, persisted=False):
         served = (payload.get("presentation_continuity") or {}).get("served_league_state_id") or payload.get("league_state_id")
-        can_read = (career_record_loader is not None
+        generation = payload.get("publication_generation_id")
+        generation_matches = ((generation is not None and generation == runtime.publication_generation_id)
+                              or (generation is None and not persisted))
+        can_read = (generation_matches and career_record_loader is not None
                     and runtime.publication_generation_id is not None
                     and runtime.forecast_evidence is not None
                     and served == runtime.league_state.state_id)
+        reference_ids = (career_reference_ids_from_current(background_coordinator.current(runtime))
+                         if can_read and background_coordinator is not None else None)
         result = attach_career_player_lenses(
             payload,
             record=career_record_loader(runtime) if can_read else None,
             current_state_id=runtime.league_state.state_id,
+            current_generation_id=runtime.publication_generation_id,
+            reference_ids=reference_ids,
         )
-        if served == runtime.league_state.state_id:
+        if served == runtime.league_state.state_id and generation is None and not persisted:
             result["publication_generation_id"] = runtime.publication_generation_id
         return result
 
@@ -79,7 +86,7 @@ def install_league_value_lens_routes(
             )
             stale = presentation_payload_loader(user_id, runtime, surface)
             if stale is not None:
-                return with_career(stale, runtime)
+                return with_career(stale, runtime, persisted=True)
 
         intrinsic = None
         intrinsic_error = None

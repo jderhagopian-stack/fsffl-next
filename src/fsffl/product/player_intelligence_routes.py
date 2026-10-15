@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .career_presentation import career_lens_for_publication
+from .career_presentation import career_lens_for_publication, career_reference_ids_from_current
 
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -313,6 +313,7 @@ def install_player_intelligence_routes(
         career_summary, career_rows = career_lens_for_publication(
             career_record_loader(runtime) if career_record_loader is not None else None,
             served_state_id=runtime.league_state.state_id,
+            reference_ids=career_reference_ids_from_current(intrinsic_record),
         )
         value.update(career_rows.get(player_id, {
             "career_intrinsic_index": None, "raw_career_forward_reference": None,

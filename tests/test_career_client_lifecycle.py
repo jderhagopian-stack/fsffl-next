@@ -35,6 +35,8 @@ setTimeout=(f)=>nativeTimer(f,0);
  await loadCareerIntrinsicForState('A');assert.equal(requests,17);
  // Target B while Franchise still serves A: neither fetch nor display B.
  state.context.state_id='B';fsfflMyTeamState.view={...view,presentation_continuity:{served_league_state_id:'A'}};
+ resetCareerRequestForState('B');
+ assert.equal(myTeamCareerEstimate('p').raw_career_forward_reference,12); // preserve matching last-good evidence
  await loadCareerIntrinsicForState('B');assert.equal(requests,17);
  fsfflMyTeamState.careerIntrinsic={status:'ready',league_state_id:'B',publication_generation_id:'g1',estimates:[{player_id:'p'}]};
  assert.equal(myTeamCareerEstimate('p'),null);
@@ -47,6 +49,10 @@ setTimeout=(f)=>nativeTimer(f,0);
  release({status:'ready',league_state_id:'A',publication_generation_id:'g1',estimates:[{player_id:'p'}]});
  assert.equal(await first,null);assert.equal(await second,null);
  assert.notEqual(fsfflMyTeamState.careerIntrinsic.status,'ready');
+ // An unversioned view cannot borrow a newer publication's evidence.
+ state.route='my_team';fsfflMyTeamState.view={context:{league_state_id:'A'}};
+ await loadCareerIntrinsicForState('A');assert.equal(requests,18);
+ assert.equal(myTeamCareerEstimate('p'),null);
  // Same-State but new publication must not reuse an old response.
  state.route='my_team';fsfflMyTeamState.view={...view,publication_generation_id:'g2'};
  api=async()=>({status:'ready',league_state_id:'A',publication_generation_id:'g1',estimates:[]});
@@ -76,9 +82,12 @@ def test_simulation_outlook_labels_current_and_retained_evidence_honestly():
     script = "function franchiseNSOutcome(){" + functions
     script += r"""
 const assert=require('node:assert/strict');
-const state={context:{state_id:'new',capability_readiness:{simulation:{status:'full'}}}};
-const fsfflMyTeamState={view:{context:{league_state_id:'new'},utility:{competitive_outcome:{expected_wins:7.5}}}};
+const state={context:{state_id:'new',publication_generation_id:'g1',capability_readiness:{simulation:{status:'full'}}}};
+const fsfflMyTeamState={view:{context:{league_state_id:'new'},publication_generation_id:'g1',utility:{competitive_outcome:{expected_wins:7.5}}}};
 assert.equal(franchiseNSSimulationPresentation().status,'current');
+fsfflMyTeamState.view.publication_generation_id='g0';
+assert.equal(franchiseNSSimulationPresentation().status,'retained');
+fsfflMyTeamState.view.publication_generation_id='g1';
 fsfflMyTeamState.view.presentation_continuity={served_league_state_id:'old'};
 assert.equal(franchiseNSSimulationPresentation().status,'retained');
 fsfflMyTeamState.view.presentation_continuity={served_league_state_id:'new'};

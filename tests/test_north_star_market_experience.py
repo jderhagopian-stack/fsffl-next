@@ -281,3 +281,10 @@ def test_current_beta_submit_row_and_safe_area_are_mobile_ready() -> None:
     assert ".market-ns-submit-row{" in css
     assert ".market-ns-submit-row .primary-button{width:100%" in css
     assert "padding-top:max(10px,env(safe-area-inset-top))!important" in css
+
+
+def test_mobile_free_agent_lenses_keep_forecast_and_all_three_indexes_visible():
+    css = _source(MARKET_CSS)
+    assert '.market-ns-free-player>span:nth-child(2),.market-ns-free-player>span:nth-child(3){display:grid;grid-column:span 3}' in css
+    assert '.market-ns-free-player>span:nth-child(n+4){display:grid;grid-column:span 2}' in css
+    assert '.market-ns-free-player>span:nth-child(3){display:none}' not in css

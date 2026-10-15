@@ -5,14 +5,14 @@ function myTeamNum(value,digits=1){return typeof value==='number'&&Number.isFini
 function myTeamPct(value,digits=0){return typeof value==='number'&&Number.isFinite(value)?`${(value*100).toFixed(digits)}%`:'—'}
 function myTeamAge(value){return typeof value==='number'&&Number.isFinite(value)?(Number.isInteger(value)?String(value):value.toFixed(1)):'—'}
 function myTeamPanel(){return document.querySelector('#generic-screen .panel')}
-function myTeamLensMap(){return new Map((fsfflMyTeamState.valueLenses?.players||[]).map(item=>[item.player_id,item]))}
+function myTeamLensMap(){const payload=fsfflMyTeamState.valueLenses;return new Map((myTeamCareerMatchesView(payload)?payload.players||[]:[]).map(item=>[item.player_id,item]))}
 function myTeamIntrinsicNumber(id){const row=myTeamLensMap().get(id);return typeof row?.intrinsic_percentile==='number'&&Number.isFinite(row.intrinsic_percentile)?row.intrinsic_percentile:null}
 function myTeamIntrinsicIndex(id){const row=myTeamLensMap().get(id);return typeof row?.intrinsic_value_index==='number'&&Number.isFinite(row.intrinsic_value_index)?row.intrinsic_value_index:null}
 function myTeamCareerMatchesView(payload){
   const view=fsfflMyTeamState.view;
   const served=view?.presentation_continuity?.served_league_state_id||view?.context?.league_state_id;
-  return Boolean(served)&&payload?.league_state_id===served
-    &&(!view?.publication_generation_id||payload?.publication_generation_id===view.publication_generation_id);
+  return Boolean(served)&&Boolean(view?.publication_generation_id)&&payload?.league_state_id===served
+    &&payload?.publication_generation_id===view.publication_generation_id;
 }
 function myTeamCareerEstimate(id){return myTeamCareerMatchesView(fsfflMyTeamState.careerIntrinsic)?(fsfflMyTeamState.careerIntrinsic.estimates||[]).find(row=>row.player_id===id)||null:null}
 function myTeamCareerDisplay(id){
@@ -25,7 +25,15 @@ function myTeamCareerScopeActive(expectedStateId,expectedGenerationId){
   const view=fsfflMyTeamState.view;
   const served=view?.presentation_continuity?.served_league_state_id||view?.context?.league_state_id;
   return state?.route==='my_team'&&state?.context?.state_id===expectedStateId
-    &&served===expectedStateId&&(!expectedGenerationId||view?.publication_generation_id===expectedGenerationId);
+    &&served===expectedStateId&&Boolean(expectedGenerationId)&&view?.publication_generation_id===expectedGenerationId;
+}
+function resetCareerRequestForState(expectedStateId){
+  if(fsfflMyTeamState.careerIntrinsicStateId===expectedStateId)return;
+  fsfflMyTeamState.careerIntrinsicGeneration+=1;
+  fsfflMyTeamState.careerIntrinsicStateId=null;fsfflMyTeamState.careerIntrinsicPromise=null;
+  // Retain completed evidence only when it still matches the visible last-good
+  // publication. The new target must not erase or relabel that information.
+  if(fsfflMyTeamState.careerIntrinsic?.status!=='ready'||!myTeamCareerMatchesView(fsfflMyTeamState.careerIntrinsic))fsfflMyTeamState.careerIntrinsic=null;
 }
 async function loadCareerIntrinsicForState(expectedStateId){
   if(!expectedStateId)return null;
@@ -179,7 +187,7 @@ async function loadMyTeamCommandCenter(){
   const panel=myTeamPanel();
   if(!state?.context?.team_id){if(panel)panel.innerHTML='<p class="eyebrow">Franchise</p><h2>Select the franchise you manage.</h2><p class="lead">Choose a team from the product context to unlock the diagnosis.</p>';return}
   const expectedStateId=state.context?.state_id||null;
-  if(fsfflMyTeamState.careerIntrinsicStateId!==expectedStateId){fsfflMyTeamState.careerIntrinsicGeneration+=1;fsfflMyTeamState.careerIntrinsic=null;fsfflMyTeamState.careerIntrinsicStateId=null;fsfflMyTeamState.careerIntrinsicPromise=null}
+  resetCareerRequestForState(expectedStateId);
   if(panel)panel.innerHTML='<p class="eyebrow">Franchise</p><h2>Reading the franchise…</h2><p class="lead">Loading optimized lineup, league-relative position strength, resilience, Value and draft capital.</p>';
   try{const[view,league]=await Promise.all([api('/api/my-team'),api('/api/league/team-views').catch(()=>({team_views:[],source_level:'unavailable'}))]);fsfflMyTeamState.view=view;fsfflMyTeamState.valueLenses=null;fsfflMyTeamState.leagueViews=league.team_views||[];fsfflMyTeamState.leagueSource=league.source_level||'';renderMyTeamCommandCenter();void loadMyTeamValueLenses(state.context?.state_id||null)}catch(error){if(panel)panel.innerHTML=`<p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2><p class="lead">${myTeamEsc(error.message)}</p>`}
 }
@@ -273,7 +281,9 @@ function franchiseNSSimulationPresentation(){
   const view=fsfflMyTeamState.view,outcome=franchiseNSOutcome();
   if(!outcome||typeof outcome.expected_wins!=='number'||!Number.isFinite(outcome.expected_wins))return {ready:false,status:'unavailable',label:'Simulation unavailable'};
   const served=view?.presentation_continuity?.served_league_state_id||view?.context?.league_state_id;
+  const expectedGeneration=state?.context?.target_publication_generation_id||state?.context?.publication_generation_id||null;
   const current=served===state?.context?.state_id&&!view?.intelligence_freshness?.stale
+    &&Boolean(expectedGeneration)&&view?.publication_generation_id===expectedGeneration
     &&state?.context?.capability_readiness?.simulation?.status==='full';
   return {ready:true,status:current?'current':'retained',label:current?'current Simulation':'retained Simulation'};
 }
@@ -338,8 +348,7 @@ function franchiseNSLensPercentile(player,lens){
 function franchiseNSMarketDisplay(player){
   const index=myTeamMarketIndex(player),pct=franchiseNSMarketPercentile(player);
   if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+'</strong><small>'+(pct==null?'Broad Market':Math.round(pct*100)+'th pct')+'</small>';
-  if(pct!=null)return '<strong>'+Math.round(pct*100)+'th</strong><small>Broad Market pct</small>';
-  return '<strong>—</strong><small>Market unavailable</small>';
+  return '<strong>Unavailable</strong><small>'+(pct==null?'Broad Market index':Math.round(pct*100)+'th pct · index unavailable')+'</small>';
 }
 function franchiseNSIntrinsicReason(){
   return fsfflMyTeamState.valueLenses?.fsffl_intrinsic?.reason||
@@ -350,8 +359,7 @@ function franchiseNSIntrinsicDisplay(player){
   const index=myTeamIntrinsicIndex(player?.player_id),pct=franchiseNSIntrinsicPercentile(player);
   if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+'</strong><small>'+(pct==null?'0–10,000 index':Math.round(pct*100)+'th pct')+'</small>';
   if(fsfflMyTeamState.valueLensLoading)return '<strong>…</strong><small>Intrinsic preparing</small>';
-  if(pct!=null)return '<strong>'+Math.round(pct*100)+'th</strong><small>Intrinsic pct</small>';
-  return '<strong>—</strong><small title="'+myTeamEsc(franchiseNSIntrinsicReason())+'">Intrinsic unavailable</small>';
+  return '<strong>Unavailable</strong><small title="'+myTeamEsc(franchiseNSIntrinsicReason())+'">'+(pct==null?'3-Year index unavailable':Math.round(pct*100)+'th pct · index unavailable')+'</small>';
 }
 function franchiseNSCareerDisplay(player){return '<strong>'+myTeamCareerDisplay(player?.player_id)+'</strong>'}
 function franchiseNSProjectedStarter(player){
@@ -607,7 +615,7 @@ async function loadFranchiseNorthStar(){
   }
   const expectedStateId=state.context?.state_id||null;
   fsfflMyTeamState.valueLensGeneration+=1;
-  if(fsfflMyTeamState.careerIntrinsicStateId!==expectedStateId){fsfflMyTeamState.careerIntrinsic=null;fsfflMyTeamState.careerIntrinsicStateId=null;fsfflMyTeamState.careerIntrinsicPromise=null}
+  resetCareerRequestForState(expectedStateId);
   fsfflMyTeamState.valueLensLoading=false;
   // Keep the accepted last-good Franchise visible while fresh reads are in flight.
   // This prevents a prior Market body from occupying Franchise during refresh and
@@ -635,7 +643,11 @@ async function loadFranchiseNorthStar(){
     renderFranchiseNorthStar();
     const servedStateId=franchiseNSResponseStateId(results[0],results[1]).viewServedStateId;
     if(servedStateId===expectedStateId)void loadFranchiseNorthStarValueLenses(servedStateId);
-    else{fsfflMyTeamState.valueLenses=null;fsfflMyTeamState.careerIntrinsic=null;renderFranchiseNorthStar()}
+    else{
+      if(!myTeamCareerMatchesView(fsfflMyTeamState.valueLenses))fsfflMyTeamState.valueLenses=null;
+      if(!myTeamCareerMatchesView(fsfflMyTeamState.careerIntrinsic))fsfflMyTeamState.careerIntrinsic=null;
+      renderFranchiseNorthStar();
+    }
   }catch(error){
     if(state?.route!=='my_team'||state?.context?.state_id!==expectedStateId)return;
     if(fsfflMyTeamState.view){

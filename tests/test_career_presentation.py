@@ -54,3 +54,69 @@ def test_product_overlay_preserves_other_lenses_and_rejects_last_good_state(monk
     result = attach_career_player_lenses(stale, record=record, current_state_id='new')
     assert result['career_intrinsic']['status'] == 'unavailable'
     assert all(row['career_intrinsic_index'] is None for row in result['players'])
+
+
+def test_same_state_old_generation_is_not_relabelled_as_current_career(monkeypatch):
+    from types import SimpleNamespace
+    from fsffl.product.career_presentation import attach_career_player_lenses
+    monkeypatch.setattr('fsffl.product.career_presentation.career_reference_player_ids',
+                        lambda: frozenset({'a', 'b'}))
+    record = SimpleNamespace(status=SimpleNamespace(value='completed'), league_state_id='same-state',
+        intrinsic_input_fingerprint='dependency-fp', contract=SimpleNamespace(
+            input_fingerprint='economic-fp',model_version='accepted-model',contract_version='contract-v1',
+            estimates=(SimpleNamespace(player_id='a',raw_career_forward_reference=1.),
+                       SimpleNamespace(player_id='b',raw_career_forward_reference=2.))))
+    payload = {'league_state_id':'same-state','publication_generation_id':'old',
+               'players':[{'player_id':'a'}]}
+    old = attach_career_player_lenses(payload,record=record,current_state_id='same-state',current_generation_id='new')
+    assert old['publication_generation_id'] == 'old'
+    assert old['career_intrinsic']['status'] == 'unavailable'
+    assert old['players'][0]['career_intrinsic_index'] is None
+    current = attach_career_player_lenses({**payload,'publication_generation_id':'new'},
+        record=record,current_state_id='same-state',current_generation_id='new')
+    summary = current['career_intrinsic']
+    assert summary['input_fingerprint'] == 'economic-fp'
+    assert summary['dependency_fingerprint'] == 'dependency-fp'
+    assert summary['presentation']['input_fingerprint'] != 'economic-fp'
+    assert summary['presentation']['market_inputs_used'] is False
+    assert current['players'][0]['career_intrinsic_index'] == 0
+
+
+def test_partial_reference_does_not_recalibrate_on_available_career_rows(monkeypatch):
+    from types import SimpleNamespace
+    from fsffl.product.career_presentation import career_lens_for_publication, career_reference_ids_from_current
+    monkeypatch.setattr('fsffl.product.career_presentation.career_reference_player_ids',
+                        lambda: frozenset({'a', 'b', 'c'}))
+    current = SimpleNamespace(status=SimpleNamespace(value='completed'),contract=SimpleNamespace(
+        estimates=tuple(SimpleNamespace(player_id=key) for key in ('a','b','c'))))
+    expected = career_reference_ids_from_current(current)
+    record = SimpleNamespace(status=SimpleNamespace(value='completed'),league_state_id='S',
+        contract=SimpleNamespace(estimates=(SimpleNamespace(player_id='a',raw_career_forward_reference=1.),
+                                           SimpleNamespace(player_id='b',raw_career_forward_reference=2.))))
+    summary, rows = career_lens_for_publication(record,served_state_id='S',reference_ids=expected)
+    assert summary['status'] == 'unavailable'
+    assert 'incomplete' in summary['reason']
+    assert rows == {}
+
+
+def test_unversioned_saved_value_payload_is_not_promoted_to_current_career():
+    from types import SimpleNamespace
+    from fastapi import FastAPI
+    from fsffl.product.league_value_lens_routes import install_league_value_lens_routes
+    runtime = SimpleNamespace(league_state=SimpleNamespace(state_id='S'),
+                              publication_generation_id='current',forecast_evidence=object())
+    saved = {'league_state_id':'S','players':[{'player_id':'a','intrinsic_value_index':100.}]}
+    calls = []
+    app = FastAPI()
+    install_league_value_lens_routes(app,runtime_store=SimpleNamespace(get=lambda _:runtime),
+        contract_loader=lambda _:calls.append('build'),require_user=lambda:'fixture',
+        background_coordinator=SimpleNamespace(current=lambda _:calls.append('current')),
+        career_record_loader=lambda _:calls.append('career'),
+        presentation_payload_loader=lambda *_:saved)
+    endpoint = next(route.endpoint for route in app.routes if route.path=='/api/league/value-lenses')
+    result = endpoint(user_id='fixture')
+    assert result.get('publication_generation_id') is None
+    assert result['career_intrinsic']['status'] == 'unavailable'
+    assert result['players'][0]['career_intrinsic_index'] is None
+    assert result['players'][0]['intrinsic_value_index'] == 100.
+    assert calls == []

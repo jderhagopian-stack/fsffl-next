@@ -1003,8 +1003,8 @@ def test_product_career_read_is_small_exact_publication_and_never_launches_work(
                         publication_generation_id="served-generation", user_id=context.user_id)
     assert response["publication_generation_id"] == "served-generation"
     assert response["status"] == "ready"
-    assert response["career_presentation"]["market_inputs_used"] is False
-    assert response["career_presentation"]["reference_count"] == 335
+    assert response["career_presentation"]["presentation"]["market_inputs_used"] is False
+    assert response["career_presentation"]["presentation"]["reference_count"] == 335
     assert all("uncertainty" not in row for row in response["estimates"])
     assert [row["raw_career_forward_reference"] for row in response["estimates"]] == [row.raw_career_forward_reference for row in built.estimates]
     assert len(json.dumps(response)) < len(built.model_dump_json()) / 3

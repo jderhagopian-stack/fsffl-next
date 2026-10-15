@@ -85,7 +85,15 @@ def career_reference_player_ids() -> frozenset[str]:
     return frozenset(provide_foundation4_terminal_features())
 
 
-def career_lens_for_publication(record, *, served_state_id: str) -> tuple[dict, dict]:
+def career_reference_ids_from_current(record) -> frozenset[str]:
+    if (record is None or getattr(record.status, "value", None) != "completed"
+            or record.contract is None):
+        return frozenset()
+    return career_reference_player_ids() & {row.player_id for row in record.contract.estimates}
+
+
+def career_lens_for_publication(record, *, served_state_id: str,
+                                reference_ids: frozenset[str] | None = None) -> tuple[dict, dict]:
     """Present an already published exact-State authority, never request a build."""
     unavailable = {"status": "unavailable", "label": "Career Intrinsic",
                    "reason": "No completed Career authority matches the served State."}
@@ -95,23 +103,38 @@ def career_lens_for_publication(record, *, served_state_id: str) -> tuple[dict, 
     raw = {row.player_id: row.raw_career_forward_reference for row in record.contract.estimates}
     # Current explicitly owns the active reference game. No roster/free-agent
     # query can contribute anchors to this fixed reference authority.
-    reference_ids = career_reference_player_ids() & raw.keys()
+    # Expected anchors come from the independent governed Current game, not
+    # from whichever Career rows happened to arrive. An incomplete reference
+    # fails closed rather than silently recalibrating on a smaller universe.
+    reference_ids = career_reference_player_ids() if reference_ids is None else reference_ids
     try:
         coordinate = CareerPresentationCoordinate.from_reference(raw, reference_ids=frozenset(reference_ids))
     except ValueError as exc:
         return {**unavailable, "reason": str(exc)}, {}
     return ({"status": "ready", "label": "Career Intrinsic", "league_state_id": served_state_id,
-             **coordinate.summary()},
+             "input_fingerprint": getattr(record.contract, "input_fingerprint", None),
+             "dependency_fingerprint": getattr(record, "intrinsic_input_fingerprint", None),
+             "model_version": getattr(record.contract, "model_version", None),
+             "contract_version": getattr(record.contract, "contract_version", None),
+             "presentation": coordinate.summary()},
             {pid: {"career_intrinsic_index": coordinate.index(value),
                    "raw_career_forward_reference": value, "career_status": "ready"}
              for pid, value in raw.items()})
 
 
-def attach_career_player_lenses(payload: dict, *, record, current_state_id: str) -> dict:
+def attach_career_player_lenses(payload: dict, *, record, current_state_id: str,
+                               current_generation_id: str | None = None,
+                               reference_ids: frozenset[str] | None = None) -> dict:
     """Overlay optional product evidence without changing other Value lenses."""
     served = (payload.get("presentation_continuity") or {}).get("served_league_state_id") or payload.get("league_state_id")
+    served_generation = payload.get("publication_generation_id")
+    generation_matches = served_generation is None or served_generation == current_generation_id
     summary, rows = career_lens_for_publication(
-        record if served == current_state_id else None, served_state_id=served,
+        record if served == current_state_id and generation_matches else None,
+        served_state_id=served, reference_ids=reference_ids,
+    )
+    summary["publication_generation_id"] = (
+        current_generation_id if served_generation is None else served_generation
     )
     result = {**payload, "career_intrinsic": summary}
     if "fsffl_intrinsic" in result:

@@ -1771,6 +1771,7 @@ install_shapley_intrinsic_routes(
 )
 install_career_intrinsic_routes(
     app,
+    current_intrinsic_coordinator=_shapley_intrinsic_coordinator,
     runtime_store=_runtime_store,
     loader=_career_intrinsic_loader,
     coordinator=_career_intrinsic_coordinator,

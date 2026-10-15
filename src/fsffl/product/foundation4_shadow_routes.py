@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import lru_cache
 from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -8,8 +7,7 @@ from fastapi.responses import JSONResponse
 
 from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
 from .foundation4_career_forward_runtime import CareerIntrinsicLoader
-from .career_presentation import CareerPresentationCoordinate
-from .foundation4_shadow_inputs import provide_foundation4_terminal_features
+from .career_presentation import career_lens_for_publication, career_reference_ids_from_current
 from .career_coverage import (
     build_career_position_depth_refresh,
     select_career_coverage,
@@ -24,12 +22,6 @@ CAREER_INTRINSIC_ENDPOINT = "/api/value/career-intrinsic-v1"
 LEGACY_FOUNDATION4_CAREER_FORWARD_ENDPOINT = "/api/value/long-term-intrinsic-shadow-v1"
 FOUNDATION4_CAREER_FORWARD_ENDPOINT = CAREER_INTRINSIC_ENDPOINT
 FOUNDATION4_Y4_Y7_ENDPOINT = "/api/value/long-horizon-y4-y7-shadow-v1"
-
-
-@lru_cache(maxsize=1)
-def _reference_player_ids() -> frozenset[str]:
-    # Retain only small identity data, not the terminal-feature object graph.
-    return frozenset(provide_foundation4_terminal_features())
 
 
 def _building_payload(record) -> dict[str, object]:
@@ -166,6 +158,7 @@ def install_career_intrinsic_routes(
     loader: CareerIntrinsicLoader,
     coordinator: ShapleyIntrinsicBackgroundCoordinator,
     presentation_payload_loader=None,
+    current_intrinsic_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
 ) -> None:
     def _record(user_id: str):
         context = runtime_store.get(user_id)
@@ -243,18 +236,14 @@ def install_career_intrinsic_routes(
         )
         # The reference game is Current-owned; dynamic roster additions never
         # change its presentation ruler or participate as Market inputs.
-        frozen_ids = _reference_player_ids()
-        raw = {row.player_id: row.raw_career_forward_reference for row in record.contract.estimates}
-        reference_ids = frozenset(frozen_ids & raw.keys())
-        try:
-            coordinate = CareerPresentationCoordinate.from_reference(raw, reference_ids=reference_ids)
-        except ValueError as exc:
-            payload["career_presentation"] = {"status": "unavailable", "reason": str(exc)}
-        else:
-            payload["career_presentation"] = {"status": "ready", **coordinate.summary(),
-                "inactive_reference_player_ids": sorted(frozen_ids - reference_ids)}
-            for row in payload["estimates"]:
-                row["career_intrinsic_index"] = coordinate.index(row["raw_career_forward_reference"])
+        reference_ids = (career_reference_ids_from_current(current_intrinsic_coordinator.current(_context))
+                         if current_intrinsic_coordinator is not None else None)
+        summary, presentation_rows = career_lens_for_publication(
+            record, served_state_id=record.league_state_id, reference_ids=reference_ids,
+        )
+        payload["career_presentation"] = summary
+        for row in payload["estimates"]:
+            row["career_intrinsic_index"] = presentation_rows.get(row["player_id"], {}).get("career_intrinsic_index")
         payload["capability"] = "career_intrinsic"
         payload["value_label"] = "Career Intrinsic"
         if request.url.path == CAREER_INTRINSIC_ENDPOINT:
