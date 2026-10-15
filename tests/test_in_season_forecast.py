@@ -15,6 +15,11 @@ from fsffl.forecast.in_season_runtime import (
     build_in_season_forecasts,
     default_in_season_projection_fetchers,
 )
+from fsffl.forecast.projection_history import (
+    ProjectionObservationRecord,
+    ProjectionRevision,
+    ProjectionSnapshotRecord,
+)
 from fsffl.forecast.models import (
     ForecastDistribution,
     ForecastHorizon,
@@ -24,6 +29,7 @@ from fsffl.forecast.models import (
 from fsffl.forecast.season_rollforward import (
     compose_completed_actuals_only,
     compose_completed_actuals_with_ros,
+    compose_completed_actuals_with_ros_per_player,
 )
 from fsffl.forecast.backtest import RealizedOutcome
 from fsffl.providers.current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
@@ -195,6 +201,86 @@ def test_ros_runtime_ensembles_scores_and_persists_source_evidence_without_simul
     assert all(item.horizon == ForecastHorizon.REST_OF_SEASON for item in result.fantasy_point_forecasts)
 
 
+def test_saved_ros_revisions_preserve_canonical_ids_without_provider_name_rematching():
+    revisions = []
+    metrics = (
+        (ForecastMetric.RUSH_YARDS, 700.0),
+        (ForecastMetric.RUSH_TD, 4.0),
+        (ForecastMetric.RECEPTIONS, 30.0),
+        (ForecastMetric.REC_YARDS, 250.0),
+        (ForecastMetric.REC_TD, 2.0),
+    )
+    for provider, delta in (("cbs", 0.0), ("razzball", 200.0)):
+        effective = NOW - timedelta(hours=2)
+        revisions.append(ProjectionRevision(
+            snapshot=ProjectionSnapshotRecord(
+                provider=provider, season=2026,
+                horizon=ForecastHorizon.REST_OF_SEASON, week=None,
+                period_start=PERIOD_START, period_end=PERIOD_END,
+                effective_at=effective, retrieved_at=effective,
+                source_version=f"{provider}-saved-v1", usage_class="test",
+                content_fingerprint=f"{provider}-fingerprint", snapshot_id=None,
+            ),
+            observations=tuple(ProjectionObservationRecord(
+                player_id="p1", external_id=f"stale:{provider}:name-key",
+                position=Position.RB, metric=metric, mean=value + delta,
+            ) for metric, value in metrics),
+        ))
+
+    result = build_in_season_forecasts(
+        _state(), horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        source_revisions=tuple(revisions), fetchers=(), clock=lambda: NOW,
+    )
+
+    assert result.successful_source_ids == ("cbs", "razzball")
+    assert {row.player_id for row in result.source_observations} == {"p1"}
+    rush = next(row for row in result.raw_ensemble if row.metric == ForecastMetric.RUSH_YARDS)
+    assert rush.player_id == "p1"
+    assert rush.distribution.mean == pytest.approx(800.0)
+
+
+def test_saved_ros_revision_from_earlier_period_is_rejected_not_relabeled():
+    captured_at = NOW - timedelta(hours=2)
+    stale = ProjectionRevision(
+        snapshot=ProjectionSnapshotRecord(
+            provider="cbs",
+            season=2026,
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            week=None,
+            period_start=PERIOD_START - timedelta(days=7),
+            period_end=PERIOD_END,
+            effective_at=captured_at,
+            retrieved_at=captured_at,
+            source_version="cbs-stale-ros-v1",
+            usage_class="test",
+            content_fingerprint="cbs-stale-fingerprint",
+            snapshot_id=None,
+        ),
+        observations=(ProjectionObservationRecord(
+            player_id="p1",
+            external_id="stale:cbs:player",
+            position=Position.RB,
+            metric=ForecastMetric.RUSH_YARDS,
+            mean=800.0,
+        ),),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="cbs: saved projection revision does not match requested State horizon/period/cutoff",
+    ):
+        build_in_season_forecasts(
+            _state(),
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            period_start=PERIOD_START,
+            period_end=PERIOD_END,
+            source_revisions=(stale,),
+            fetchers=(),
+            clock=lambda: NOW,
+        )
+
+
 def test_week_runtime_requires_week_and_never_relabels_as_ros():
     with pytest.raises(ValueError, match="requires week"):
         build_in_season_forecasts(
@@ -269,6 +355,42 @@ def test_season_roll_forward_adds_completed_actual_and_shifts_distribution_witho
     assert season.distribution.p10 == pytest.approx(735.0)
     assert season.period_start == datetime(2026, 9, 1, tzinfo=UTC)
     assert season.source == "fsffl:completed-actuals-plus-ros"
+
+
+
+def test_player_roll_forward_isolates_invalid_and_missing_roster_inputs():
+    good_ros = _forecast().model_copy(update={"player_id": "p2"})
+    bad_ros = _forecast()
+    overlap_actuals = (
+        _actual(
+            start=datetime(2026, 9, 1, tzinfo=UTC),
+            end=datetime(2026, 9, 15, tzinfo=UTC),
+            value=12.0,
+        ),
+        _actual(
+            start=datetime(2026, 9, 8, tzinfo=UTC),
+            end=datetime(2026, 9, 22, tzinfo=UTC),
+            value=8.0,
+        ),
+    )
+
+    outlook, failures = compose_completed_actuals_with_ros_per_player(
+        completed_actuals=overlap_actuals,
+        ros_forecasts=(bad_ros, good_ros),
+        season_start=datetime(2026, 9, 1, tzinfo=UTC),
+        expected_roster_positions={
+            "p1": Position.RB,
+            "p2": Position.RB,
+            "p3": Position.WR,
+        },
+    )
+
+    assert [row.player_id for row in outlook] == ["p2"]
+    assert outlook[0].horizon == ForecastHorizon.SEASON
+    assert outlook[0].distribution.mean == pytest.approx(good_ros.distribution.mean)
+    assert failures["p1"].startswith("ValueError: completed actual periods overlap")
+    assert failures["p3"] == "rest_of_season_forecast_missing"
+
 
 
 def test_week4_acceptance_gate_counts_weeks_1_to_4_once_then_ros_only():
@@ -831,3 +953,73 @@ def test_current_ros_fumbles_gap_stays_fail_closed_for_multi_coordinate_partial(
     assert forward == ()
     assert filled == 0
     assert called is False
+
+
+def test_completed_actuals_plus_ros_is_accepted_as_career_year_one_input():
+    import runpy
+    from pathlib import Path
+
+    from fsffl.forecast.backtest import RealizedOutcome
+    from fsffl.forecast.season_rollforward import (
+        compose_completed_actuals_with_ros_per_player,
+    )
+
+    start = datetime(2026, 9, 1, tzinfo=UTC)
+    actual_end = datetime(2026, 9, 8, tzinfo=UTC)
+    ros_start = actual_end
+    season_end = datetime(2027, 1, 5, tzinfo=UTC)
+    cutoff = datetime(2026, 10, 12, tzinfo=UTC)
+    actual = RealizedOutcome(
+        player_id="sleeper:player:career-bridge",
+        position=Position.RB,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=start,
+        period_end=actual_end,
+        actual=37.5,
+        finalized_at=actual_end,
+        provenance=Provenance(
+            source="sleeper:weekly_nfl_stats",
+            retrieved_at=actual_end,
+            effective_at=actual_end,
+        ),
+    )
+    ros = ForecastObservation(
+        player_id=actual.player_id,
+        position=Position.RB,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=ros_start,
+        period_end=season_end,
+        distribution=ForecastDistribution(mean=100.0, stddev=18.0),
+        source="fsffl:in-season-league-scored",
+        model_version="accepted-current-ros-fixture",
+        as_of=cutoff,
+        provenance=Provenance(
+            source="fsffl:in-season-league-scored",
+            retrieved_at=cutoff,
+            effective_at=cutoff,
+        ),
+    )
+
+    full_season, failures = compose_completed_actuals_with_ros_per_player(
+        completed_actuals=(actual,),
+        ros_forecasts=(ros,),
+        season_start=start,
+        expected_roster_positions={actual.player_id: Position.RB},
+    )
+    assert failures == {}
+    assert len(full_season) == 1
+    assert full_season[0].distribution.mean == pytest.approx(137.5)
+    assert full_season[0].source == "fsffl:completed-actuals-plus-ros"
+
+    composer = runpy.run_path(
+        str(Path(__file__).parents[1] / "scripts/compose_rostered_p0_expanded_shapley.py")
+    )
+    accepted, candidate_failures = composer["_candidate_year_one_index"](
+        full_season,
+        candidate_ids={actual.player_id},
+        expected_positions={actual.player_id: "RB"},
+    )
+    assert candidate_failures == {}
+    assert set(accepted) == {actual.player_id}
+    assert accepted[actual.player_id].distribution.mean == pytest.approx(137.5)

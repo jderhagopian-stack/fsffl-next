@@ -3,11 +3,17 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from typing import Annotated, Literal, Mapping
+from typing import Annotated, Iterable, Literal, Mapping
 
 from pydantic import Field, model_validator
 
-from fsffl.state.models import FrozenModel, Position
+from fsffl.state.models import FrozenModel, LeagueRules, Position
+from fsffl.forecast.integrated_i1 import I1ForecastResult
+from fsffl.forecast.models import ForecastObservation
+from fsffl.value.live_intrinsic_calendar import (
+    build_live_calendar_shapley_estimates,
+    compose_live_intrinsic_calendar_from_future_results,
+)
 from fsffl.value.career_tail import CareerTailAuthority
 from fsffl.value.long_term_intrinsic import (
     LONG_TERM_INTRINSIC_HORIZONS,
@@ -16,8 +22,10 @@ from fsffl.value.long_term_intrinsic import (
 )
 from fsffl.value.shapley_intrinsic_contract import (
     ShapleyHorizonUncertainty,
+    CompletedSourceFactProvenance,
     ShapleyIntrinsicAvailability,
     ShapleyIntrinsicContract,
+    build_shapley_intrinsic_contract,
 )
 
 
@@ -149,6 +157,9 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
     lineup_capacity_signature: str
     estimates: tuple[CareerForwardIntrinsicPlayerEstimate, ...]
     player_count: Annotated[int, Field(ge=1)]
+    # Product evidence failures are carried beside (never as fabricated values
+    # inside) the accepted Career estimates. This is coverage metadata only.
+    player_coverage_failures: dict[str, str] = Field(default_factory=dict)
     model_version: str = CAREER_FORWARD_INTRINSIC_MODEL_VERSION
     contract_version: str = CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION
     raw_quantity: str = CAREER_FORWARD_RAW_QUANTITY
@@ -175,6 +186,10 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
             raise ValueError("career-forward shadow is raw economic authority")
         if self.market_inputs_used:
             raise ValueError("career-forward shadow cannot consume Market")
+        if set(self.player_coverage_failures) & {row.player_id for row in self.estimates}:
+            raise ValueError("Career player cannot be both estimated and failed")
+        if any(not str(reason).strip() for reason in self.player_coverage_failures.values()):
+            raise ValueError("Career player coverage failures require explicit reasons")
         if self.ignored_long_term_residual_rule_stats and not (
             self.scoring_coordinate_limitation or ""
         ).strip():
@@ -182,6 +197,37 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
                 "career-forward residual omissions require explicit scoring provenance"
             )
         return self
+
+
+def build_career_forward_from_canonical_p0(
+    *,
+    live_year_one_forecasts: tuple[ForecastObservation, ...],
+    future_results: Mapping[str, Mapping[int, I1ForecastResult]],
+    future_source_season: int,
+    rules: LeagueRules,
+    long_term: LongTermIntrinsicShadowContract,
+    tails: Mapping[str, CareerTailAuthority],
+    completed_source_provenance: CompletedSourceFactProvenance | None = None,
+    missing_required_fact_families: tuple[str, ...] = (),
+) -> CareerForwardIntrinsicShadowContract:
+    """Compose a complete Career shadow from canonical P0 Y2/Y3 packets.
+
+    Inputs must cover the identical full Shapley cohort. Shapley is evaluated
+    on that cohort before Career composition; this function never computes a
+    candidate-alone marginal or fills an absent player/horizon.
+    """
+    calendar = compose_live_intrinsic_calendar_from_future_results(
+        live_year_one_forecasts=live_year_one_forecasts,
+        future_results=future_results,
+        future_source_season=future_source_season,
+    )
+    shapley = build_live_calendar_shapley_estimates(calendar, rules=rules)
+    current = build_shapley_intrinsic_contract(
+        shapley,
+        completed_source_provenance=completed_source_provenance,
+        missing_required_fact_families=missing_required_fact_families,
+    )
+    return build_career_forward_intrinsic_shadow(current, long_term, tails)
 
 
 def _semantic_payload(
@@ -339,4 +385,71 @@ def build_career_forward_intrinsic_shadow(
         lineup_capacity_signature=lineup_signature,
         estimates=tuple(estimates),
         player_count=len(estimates),
+    )
+
+
+def append_dynamic_career_estimates(
+    frozen_reference: CareerForwardIntrinsicShadowContract,
+    expanded_cohort: CareerForwardIntrinsicShadowContract,
+    *,
+    candidate_player_ids: Iterable[str],
+) -> CareerForwardIntrinsicShadowContract:
+    """Append only roster-candidate estimates from a full expanded Shapley run.
+
+    Adding candidates to a cooperative Shapley game reallocates marginal values
+    across the original members. The accepted frozen Career rows are therefore
+    retained verbatim, while candidate rows come from the expanded-cohort result.
+    Both inputs must be complete Career contracts; this function never computes
+    a candidate-alone value or fills a missing component.
+    """
+    if frozen_reference.evaluation_season != expanded_cohort.evaluation_season:
+        raise ValueError("Career append contracts must share evaluation season")
+    if (
+        frozen_reference.current_intrinsic_contract_version
+        != expanded_cohort.current_intrinsic_contract_version
+        or frozen_reference.long_horizon_contract_version
+        != expanded_cohort.long_horizon_contract_version
+        or frozen_reference.long_horizon_value_model_version
+        != expanded_cohort.long_horizon_value_model_version
+        or frozen_reference.career_tail_model_version
+        != expanded_cohort.career_tail_model_version
+        or frozen_reference.lineup_capacity_signature
+        != expanded_cohort.lineup_capacity_signature
+    ):
+        raise ValueError("Career append contracts use incompatible model authorities")
+
+    frozen_by_id = {row.player_id: row for row in frozen_reference.estimates}
+    expanded_by_id = {row.player_id: row for row in expanded_cohort.estimates}
+    requested = {str(player_id).strip() for player_id in candidate_player_ids}
+    if not requested or "" in requested:
+        raise ValueError("Career append requires non-empty canonical candidate IDs")
+    if not set(frozen_by_id).issubset(expanded_by_id):
+        raise ValueError("expanded Career cohort is missing frozen reference players")
+    actual_candidates = set(expanded_by_id) - set(frozen_by_id)
+    if requested != actual_candidates:
+        raise ValueError(
+            "Career append candidate IDs must exactly match the expanded cohort; "
+            f"missing={sorted(actual_candidates - requested)}; "
+            f"unexpected={sorted(requested - actual_candidates)}"
+        )
+
+    estimates = tuple(
+        [frozen_by_id[player_id] for player_id in sorted(frozen_by_id)]
+        + [expanded_by_id[player_id] for player_id in sorted(requested)]
+    )
+    fingerprint_payload = {
+        "append_contract_version": "career-frozen-reference-append-v1",
+        "frozen_reference_input_fingerprint": frozen_reference.input_fingerprint,
+        "expanded_cohort_input_fingerprint": expanded_cohort.input_fingerprint,
+        "candidate_player_ids": sorted(requested),
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(fingerprint_payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return frozen_reference.model_copy(
+        update={
+            "input_fingerprint": fingerprint,
+            "estimates": estimates,
+            "player_count": len(estimates),
+        }
     )

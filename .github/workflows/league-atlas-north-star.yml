@@ -64,9 +64,25 @@ jobs:
           tests/test_product_league_position_strength.py
           tests/test_player_intelligence.py
       - name: Real-league Atlas composition sanity
+        if: github.event_name == 'workflow_dispatch'
         run: python scripts/run_league_atlas_north_star_sanity.py
       - name: Final-acceptance live provider authority audit
+        if: github.event_name == 'workflow_dispatch'
         run: python scripts/run_league_atlas_final_acceptance_audit.py
+      - name: Keep live provider sanity checks manually authorized
+        if: github.event_name == 'pull_request'
+        run: echo "Live-league checks are skipped on pull requests; dispatch this workflow manually when provider validation is authorized."
+      - name: Record deferred live-check disposition
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p artifacts/diagnostics/league_atlas_north_star_20260922
+          cat > artifacts/diagnostics/league_atlas_north_star_20260922/PR_LIVE_CHECKS_DEFERRED.md <<'EOF'
+          # Live League Atlas checks deferred
+
+          Automatic pull-request validation runs the deterministic syntax and
+          regression checks. Real-league and live-provider checks are reserved
+          for an explicitly authorized `workflow_dispatch` run.
+          EOF
       - name: Upload Atlas sanity evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -11,7 +11,11 @@ from .fumbles_lost_first_party import build_first_party_fumbles_lost_supplement
 from .in_season_runtime import InSeasonForecastRuntimeResult, ProjectionHistoryWriter, build_in_season_forecasts
 from .league_scoring import derive_league_scoring_result
 from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
-from .season_rollforward import compose_completed_actuals_only, compose_completed_actuals_with_ros
+from .season_rollforward import (
+    compose_completed_actuals_only,
+    compose_completed_actuals_with_ros,
+    compose_completed_actuals_with_ros_per_player,
+)
 
 
 NFL_REGULAR_SEASON_WEEKS = 18
@@ -189,53 +193,77 @@ def remaining_prior_from_preseason(
     return tuple(sorted(output, key=lambda item: item.player_id))
 
 
-def fill_current_ros_fumbles_lost_gaps(
+def build_current_ros_fumbles_lost_supplement_observations(
     league_state: LeagueState,
     *,
     current_runtime: InSeasonForecastRuntimeResult,
     stats_source: SleeperWeeklyStatsSource,
     completed_through_week: int,
     as_of: datetime,
-) -> tuple[tuple[ForecastObservation, ...], int]:
-    """Use accepted first-party FUMBLES_LOST authority for current ROS scoring gaps.
+    eligible_player_ids: set[str] | frozenset[str] | None = None,
+) -> tuple[ForecastObservation, ...]:
+    """Build schedule-scaled first-party FUMBLES_LOST rows for eligible ROS gaps.
 
-    Ordinary current ROS provider evidence remains unchanged and still requires the
-    governed two-source ensemble. This helper only supplies the already-accepted
-    Forecast-owned FUMBLES_LOST coordinate when that is the *sole* omitted active
-    scoring coordinate for a current strict-scorer partial. The accepted 17-game
-    first-party point authority is converted to the player's remaining schedule
-    using the same structural remaining-games fraction used by Current roll-forward.
-    No missing provider coordinate is interpreted as zero.
+    By default eligibility is limited to strict scorer partials whose only missing
+    active coordinate is fum_lost. Dynamic roster callers may supply exact-State
+    roster IDs after proving a single provider has every other required stat.
+    This returns the separately sourced model coordinate; it never adds provider
+    weight or supplies any other missing statistic.
     """
-
     if as_of.tzinfo is None:
         raise ValueError("current ROS FUMBLES_LOST fallback as_of must be timezone-aware")
-    eligible = {
-        (item.player_id, item.position): item
-        for item in current_runtime.partial_fantasy_point_forecasts
-        if tuple(sorted(item.omitted_rule_stats)) == ("fum_lost",)
-        and item.horizon == ForecastHorizon.REST_OF_SEASON
-    }
-    if not eligible:
-        return current_runtime.fantasy_point_forecasts, 0
-
-    try:
-        supplement = build_first_party_fumbles_lost_supplement(
-            league_state,
-            base_observations=(),
-            stats_source=stats_source,
-            clock=lambda: as_of,
+    eligible: dict[tuple[str, Position], tuple[datetime, datetime, datetime]] = {}
+    if eligible_player_ids is None:
+        for item in current_runtime.partial_fantasy_point_forecasts:
+            if (
+                tuple(sorted(item.omitted_rule_stats)) == ("fum_lost",)
+                and item.horizon == ForecastHorizon.REST_OF_SEASON
+            ):
+                eligible[(item.player_id, item.position)] = (
+                    item.period_start, item.period_end, item.as_of
+                )
+    else:
+        players = {item.player_id: item for item in league_state.players}
+        period_start, _ = canonical_week_window(
+            league_state.league.season, completed_through_week + 1
         )
-    except Exception:
-        # Point authority is optional evidence. Preserve the strict partial so the
-        # existing governed preseason remaining-prior fallback can run next.
-        return current_runtime.fantasy_point_forecasts, 0
+        _, period_end = canonical_week_window(
+            league_state.league.season, NFL_REGULAR_SEASON_WEEKS
+        )
+        source_rows = tuple(
+            item
+            for item in current_runtime.source_observations
+            if item.horizon == ForecastHorizon.REST_OF_SEASON
+            and item.player_id in eligible_player_ids
+        )
+        as_of_by_player = {
+            player_id: max(item.as_of for item in source_rows if item.player_id == player_id)
+            for player_id in eligible_player_ids
+            if any(item.player_id == player_id for item in source_rows)
+        }
+        for player_id, observed_as_of in as_of_by_player.items():
+            player = players.get(player_id)
+            if player is not None and player.position in {
+                Position.QB, Position.RB, Position.WR, Position.TE
+            }:
+                eligible[(player_id, player.position)] = (
+                    period_start, period_end, observed_as_of
+                )
+    if not eligible:
+        return ()
 
+    supplement = build_first_party_fumbles_lost_supplement(
+        league_state,
+        base_observations=(),
+        stats_source=stats_source,
+        clock=lambda: as_of,
+    )
     ros_supplement: list[ForecastObservation] = []
     for observation in supplement.observations:
-        partial = eligible.get((observation.player_id, observation.position))
-        if partial is None:
+        window = eligible.get((observation.player_id, observation.position))
+        if window is None:
             continue
+        period_start, period_end, provider_as_of = window
         remaining_games = _remaining_games_for_player(
             league_state,
             player_id=observation.player_id,
@@ -243,22 +271,19 @@ def fill_current_ros_fumbles_lost_gaps(
         )
         factor = max(0.0, min(1.0, remaining_games / NFL_GAMES_PER_TEAM))
         version = f"{observation.model_version}:{FUMBLES_ROS_MODEL_VERSION}"
-        current_authority_as_of = max(
-            partial.as_of,
-            observation.as_of,
-            supplement.authority_valid_from,
-        )
         ros_supplement.append(
             observation.model_copy(
                 update={
                     "horizon": ForecastHorizon.REST_OF_SEASON,
-                    "period_start": partial.period_start,
-                    "period_end": partial.period_end,
+                    "period_start": period_start,
+                    "period_end": period_end,
                     "distribution": ForecastDistribution(
                         mean=observation.distribution.mean * factor,
                         stddev=observation.distribution.stddev * factor,
                     ),
-                    "as_of": current_authority_as_of,
+                    "as_of": max(
+                        provider_as_of, observation.as_of, supplement.authority_valid_from
+                    ),
                     "model_version": version,
                     "provenance": observation.provenance.model_copy(
                         update={
@@ -272,13 +297,51 @@ def fill_current_ros_fumbles_lost_gaps(
                 }
             )
         )
+    return tuple(sorted(
+        ros_supplement,
+        key=lambda item: (item.player_id, item.position.value, item.metric.value),
+    ))
+
+
+def fill_current_ros_fumbles_lost_gaps(
+    league_state: LeagueState,
+    *,
+    current_runtime: InSeasonForecastRuntimeResult,
+    stats_source: SleeperWeeklyStatsSource,
+    completed_through_week: int,
+    as_of: datetime,
+) -> tuple[tuple[ForecastObservation, ...], int]:
+    """Use accepted first-party FUMBLES_LOST authority for current ROS scoring gaps.
+
+    Ordinary provider evidence still requires two independent sources. Only the
+    missing fum_lost coordinate may be supplied by this separate Forecast model.
+    """
+    eligible_player_ids = {
+        item.player_id
+        for item in current_runtime.partial_fantasy_point_forecasts
+        if tuple(sorted(item.omitted_rule_stats)) == ("fum_lost",)
+        and item.horizon == ForecastHorizon.REST_OF_SEASON
+    }
+    if not eligible_player_ids:
+        return current_runtime.fantasy_point_forecasts, 0
+    try:
+        ros_supplement = build_current_ros_fumbles_lost_supplement_observations(
+            league_state,
+            current_runtime=current_runtime,
+            stats_source=stats_source,
+            completed_through_week=completed_through_week,
+            as_of=as_of,
+        )
+    except Exception:
+        # Preserve the strict partial so the existing governed preseason fallback
+        # can run; model input failure does not abort other player rows.
+        return current_runtime.fantasy_point_forecasts, 0
     if not ros_supplement:
         return current_runtime.fantasy_point_forecasts, 0
-
     rescored = derive_league_scoring_result(
         current_runtime.raw_ensemble,
         rules=league_state.league.rules,
-        supplemental_observations=tuple(ros_supplement),
+        supplemental_observations=ros_supplement,
         source="fsffl:in-season-league-scored",
         model_version="next2-in-season-runtime-v1",
     )
@@ -287,23 +350,17 @@ def fill_current_ros_fumbles_lost_gaps(
         for item in current_runtime.fantasy_point_forecasts
     }
     additions = tuple(
-        item
-        for item in rescored.authoritative_forecasts
-        if (item.player_id, item.position) in eligible
+        item for item in rescored.authoritative_forecasts
+        if item.player_id in eligible_player_ids
         and (item.player_id, item.position, item.metric) not in current_keys
     )
     return (
-        tuple(
-            sorted(
-                current_runtime.fantasy_point_forecasts + additions,
-                key=lambda item: (
-                    item.player_id,
-                    item.position.value,
-                    item.metric.value,
-                    item.source,
-                ),
-            )
-        ),
+        tuple(sorted(
+            current_runtime.fantasy_point_forecasts + additions,
+            key=lambda item: (
+                item.player_id, item.position.value, item.metric.value, item.source
+            ),
+        )),
         len(additions),
     )
 
@@ -384,6 +441,7 @@ class GovernedInSeasonResult:
         evidence_basis: str,
         current_runtime: InSeasonForecastRuntimeResult | None,
         current_failure: str | None,
+        season_outlook_failures: dict[str, str] | None = None,
     ) -> None:
         self.completed_through_week = completed_through_week
         self.season_outlook = season_outlook
@@ -391,6 +449,7 @@ class GovernedInSeasonResult:
         self.evidence_basis = evidence_basis
         self.current_runtime = current_runtime
         self.current_failure = current_failure
+        self.season_outlook_failures = dict(season_outlook_failures or {})
 
 
 def build_governed_in_season_outlook(
@@ -491,10 +550,20 @@ def build_governed_in_season_outlook(
         )
         basis = "preseason_remaining_prior"
 
-    season_outlook = compose_completed_actuals_with_ros(
+    player_by_id = {player.player_id: player for player in league_state.players}
+    roster_positions = {
+        entry.player_id: player_by_id[entry.player_id].position
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.player_id in player_by_id
+        and player_by_id[entry.player_id].position
+        in {Position.QB, Position.RB, Position.WR, Position.TE}
+    }
+    season_outlook, season_outlook_failures = compose_completed_actuals_with_ros_per_player(
         completed_actuals=actuals,
         ros_forecasts=forward,
         season_start=canonical_week_window(league_state.league.season, 1)[0],
+        expected_roster_positions=roster_positions,
     )
     return GovernedInSeasonResult(
         completed_through_week=completed,
@@ -503,4 +572,5 @@ def build_governed_in_season_outlook(
         evidence_basis=basis,
         current_runtime=current_runtime,
         current_failure=current_failure,
+        season_outlook_failures=season_outlook_failures,
     )

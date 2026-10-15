@@ -1,6 +1,10 @@
 from datetime import UTC, datetime
 
-from fsffl.forecast.current_normalization import canonical_season_window, normalize_current_projection_snapshot
+from fsffl.forecast.current_normalization import (
+    canonical_season_window,
+    map_projection_rows,
+    normalize_current_projection_snapshot,
+)
 from fsffl.forecast.ensemble import equal_weight_ensemble
 from fsffl.forecast.models import ForecastMetric
 from fsffl.providers.current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
@@ -11,6 +15,7 @@ from fsffl.state.models import (
     Player,
     PlayerState,
     Position,
+    ProviderRef,
     Provenance,
     Team,
     TeamState,
@@ -145,3 +150,90 @@ def test_ambiguous_or_unmatched_identity_is_not_guessed() -> None:
         evaluation_as_of=datetime(2026, 9, 5, 20, tzinfo=UTC),
     )
     assert observations == ()
+
+
+def test_asserted_provider_identity_resolves_changed_name_and_team() -> None:
+    state = _state().model_copy(update={
+        "players": (
+            Player(
+                player_id="p1",
+                full_name="Lamar Jackson",
+                position=Position.QB,
+                nfl_team="BAL",
+                provider_refs=(ProviderRef(provider="cbs", external_id="cbs:canonical-1"),),
+            ),
+        ),
+    })
+    snapshot = CurrentProjectionSnapshot(
+        provider="CBS",
+        captured_at=datetime(2026, 9, 5, 19, tzinfo=UTC),
+        effective_at=datetime(2026, 9, 5, 18, tzinfo=UTC),
+        rows=(CurrentProjectionRow(
+            provider="CBS",
+            external_id="cbs:canonical-1",
+            player_name="Provider Alias",
+            position=Position.QB,
+            nfl_team="NYJ",
+            stats={"pass_yd": 4100.0},
+        ),),
+        source_version="cbs-v1",
+        usage_class="beta-personal-research-requires-commercial-review",
+    )
+    observations = normalize_current_projection_snapshot(
+        snapshot,
+        league_state=state,
+        season=2026,
+        evaluation_as_of=datetime(2026, 9, 5, 20, tzinfo=UTC),
+    )
+    assert len(observations) == 1
+    assert observations[0].player_id == "p1"
+    assert observations[0].provenance.provider_ref.external_id == "cbs:canonical-1"
+
+
+def test_shared_mapper_resolves_rostered_player_outside_frozen_reference_universe() -> None:
+    state = _state().model_copy(update={
+        "players": _state().players + tuple(
+            Player(
+                player_id=f"reference-{index}",
+                full_name=f"Reference Player {index}",
+                position=Position.WR,
+                nfl_team="BUF",
+            )
+            for index in range(335)
+        ) + (
+            Player(
+                player_id="sleeper:player:new-roster",
+                full_name="New Roster Player",
+                position=Position.WR,
+                nfl_team="SEA",
+                provider_refs=(ProviderRef(provider="cbs", external_id="cbs:new-roster"),),
+            ),
+        ),
+    })
+    snapshot = CurrentProjectionSnapshot(
+        provider="CBS",
+        captured_at=datetime(2026, 9, 5, 19, tzinfo=UTC),
+        effective_at=datetime(2026, 9, 5, 18, tzinfo=UTC),
+        rows=(CurrentProjectionRow(
+            provider="CBS",
+            external_id="cbs:new-roster",
+            player_name="Provider Alias",
+            position=Position.WR,
+            nfl_team="NYJ",
+            stats={"rec_yd": 900.0},
+        ),),
+        source_version="cbs-ros-v1",
+        usage_class="test",
+    )
+
+    mapped = map_projection_rows(snapshot, players=state.players)
+    observations = normalize_current_projection_snapshot(
+        snapshot,
+        league_state=state,
+        season=2026,
+        evaluation_as_of=datetime(2026, 9, 5, 20, tzinfo=UTC),
+    )
+    assert [(row.external_id, player.player_id) for row, player in mapped] == [
+        ("cbs:new-roster", "sleeper:player:new-roster")
+    ]
+    assert [item.player_id for item in observations] == ["sleeper:player:new-roster"]

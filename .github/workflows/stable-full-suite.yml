@@ -40,7 +40,17 @@ jobs:
           python-version: '3.11'
       - name: Install
         run: python -m pip install -e '.[dev,web]'
+      - name: Restore sanitized frozen numeric reference fixture
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/career405/semantic/unchanged_current /tmp/career405/foundation4/f4
+          base64 -d tests/fixtures/career_coverage/frozen_335_numeric_reference.zip.b64 \
+            > /tmp/career405/frozen_335_numeric_reference.zip
+          unzip -oq /tmp/career405/frozen_335_numeric_reference.zip -d /tmp/career405
       - name: Stable-head full suite
+        env:
+          CAREER_PR1_SEMANTIC_DIR: /tmp/career405/semantic
+          CAREER_FOUNDATION4_DIR: /tmp/career405/foundation4
         run: pytest -q
       - name: Verify PR head after testing
         env:

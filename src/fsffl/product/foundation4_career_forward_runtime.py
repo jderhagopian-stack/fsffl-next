@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass, field, replace
 from threading import RLock
-from typing import Callable
+from typing import Callable, Mapping
 
 from fsffl.persistence.contracts import (
     ArtifactKey,
@@ -15,6 +16,7 @@ from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
     CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
     CareerForwardIntrinsicShadowContract,
+    append_dynamic_career_estimates,
     build_career_forward_intrinsic_shadow,
 )
 from fsffl.value.career_tail import (
@@ -40,6 +42,7 @@ from .foundation4_shadow_inputs import (
     provide_foundation4_terminal_features,
 )
 from .runtime import UserRuntimeContext
+from .foundation4_cohort import align_foundation4_cohort
 
 
 FOUNDATION4_Y4_Y7_ARTIFACT_KIND = "foundation4_long_horizon_y4_y7_shadow"
@@ -51,13 +54,63 @@ LEGACY_FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
 FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = CAREER_INTRINSIC_ARTIFACT_KIND
 FOUNDATION4_SCOPE_KIND = CAREER_INTRINSIC_SCOPE_KIND
 FOUNDATION4_RUNTIME_VERSION = (
-    "foundation4-career-forward-runtime-v3:"
+    "foundation4-career-forward-runtime-v6:active-cohort:"
+    "dynamic-rostered-y1-y3-shapley-bridge:"
     "fsffl-material-scoring-with-rare-residual-omission"
 )
 
 
 CurrentIntrinsicLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
 CurrentIntrinsicFingerprintResolver = Callable[[UserRuntimeContext], str]
+@dataclass(frozen=True)
+class ExpandedCareerContractResult:
+    """Per-State append result with explicit failures for unsupported subjects.
+
+    The callback composes valid candidates together in the full accepted cohort,
+    while recording invalid/missing candidate evidence independently. No metric is
+    supplied for a failed player.
+    """
+
+    contract: CareerForwardIntrinsicShadowContract | None
+    failures: Mapping[str, str] = field(default_factory=dict)
+
+
+ExpandedCareerContractLoader = Callable[
+    [UserRuntimeContext, CareerForwardIntrinsicShadowContract],
+    ExpandedCareerContractResult | CareerForwardIntrinsicShadowContract | None,
+]
+ExpandedCareerContractFingerprintResolver = Callable[[UserRuntimeContext], str]
+CareerArtifactKeyFingerprintResolver = Callable[[UserRuntimeContext], str]
+
+
+def validate_foundation4_expanded_acceptance_cohort(
+    *,
+    frozen_reference_ids,
+    current_intrinsic_ids,
+    career_estimate_ids,
+    expected_frozen_count: int,
+) -> frozenset[str]:
+    """Validate frozen reference identity and any fully composed dynamic rows."""
+    frozen_rows = tuple(str(value) for value in frozen_reference_ids)
+    current_rows = tuple(str(value) for value in current_intrinsic_ids)
+    career_rows = tuple(str(value) for value in career_estimate_ids)
+    frozen = frozenset(frozen_rows)
+    current = frozenset(current_rows)
+    career = frozenset(career_rows)
+    if len(frozen_rows) != len(frozen):
+        raise ValueError("Foundation 4 frozen reference contains duplicate players")
+    if len(frozen) != expected_frozen_count:
+        raise ValueError("Foundation 4 frozen reference cohort is not the governed size")
+    if len(career_rows) != len(career):
+        raise ValueError("Foundation 4 Career cohort contains duplicate players")
+    if not frozen.issubset(career):
+        raise ValueError("Foundation 4 Career cohort is missing frozen reference players")
+    dynamic = career - frozen
+    if not dynamic.issubset(current):
+        raise ValueError("Foundation 4 dynamic Career players are outside expanded Current")
+    return dynamic
+
+
 
 
 def _rules_payload(context: UserRuntimeContext) -> dict[str, object]:
@@ -88,7 +141,28 @@ class CareerIntrinsicLoader:
         current_intrinsic_loader: CurrentIntrinsicLoader,
         current_intrinsic_fingerprint_resolver: CurrentIntrinsicFingerprintResolver,
         persistence_store: PersistenceStore | None = None,
+        expanded_career_contract_loader: ExpandedCareerContractLoader | None = None,
+        expanded_career_contract_fingerprint_resolver: (
+            ExpandedCareerContractFingerprintResolver | None
+        ) = None,
+        career_artifact_key_fingerprint_resolver: (
+            CareerArtifactKeyFingerprintResolver | None
+        ) = None,
     ) -> None:
+        if (expanded_career_contract_loader is None) != (
+            expanded_career_contract_fingerprint_resolver is None
+        ):
+            raise ValueError(
+                "expanded Career contract loader and semantic fingerprint resolver "
+                "must be configured together"
+            )
+        self._expanded_career_contract_loader = expanded_career_contract_loader
+        self._expanded_career_contract_fingerprint_resolver = (
+            expanded_career_contract_fingerprint_resolver
+        )
+        self._career_artifact_key_fingerprint_resolver = (
+            career_artifact_key_fingerprint_resolver
+        )
         self._current_intrinsic_loader = current_intrinsic_loader
         self._current_intrinsic_fingerprint_resolver = (
             current_intrinsic_fingerprint_resolver
@@ -100,7 +174,35 @@ class CareerIntrinsicLoader:
         self._cached_contract: CareerForwardIntrinsicShadowContract | None = None
         self._cached_component: LongTermIntrinsicShadowContract | None = None
 
+    def pin_build_context(self, context: UserRuntimeContext) -> UserRuntimeContext:
+        """Pin time-sensitive source identity for coordinator key and worker."""
+        if context.career_fingerprint_evaluation_as_of is not None:
+            return context
+        return replace(
+            context,
+            career_fingerprint_evaluation_as_of=utc_now(),
+        )
+
     def intrinsic_input_fingerprint(self, context: UserRuntimeContext) -> str:
+        return self._input_fingerprint(
+            context, self._expanded_career_contract_fingerprint_resolver
+        )
+
+    def intrinsic_artifact_key_fingerprint(
+        self, context: UserRuntimeContext
+    ) -> str:
+        """Stable durable key; freshness remains verified in the payload."""
+        resolver = (
+            self._career_artifact_key_fingerprint_resolver
+            or self._expanded_career_contract_fingerprint_resolver
+        )
+        return self._input_fingerprint(context, resolver)
+
+    def _input_fingerprint(
+        self,
+        context: UserRuntimeContext,
+        expanded_fingerprint_resolver: Callable[[UserRuntimeContext], str] | None,
+    ) -> str:
         if context.league_state is None:
             raise ValueError("Foundation 4 requires canonical league State")
         payload = {
@@ -123,6 +225,11 @@ class CareerIntrinsicLoader:
             "long_horizon_value_model_version": LONG_TERM_INTRINSIC_MODEL_VERSION,
             "career_tail_model_version": CAREER_TAIL_MODEL_VERSION,
             "runtime_version": FOUNDATION4_RUNTIME_VERSION,
+            "expanded_career_contract_input_fingerprint": (
+                expanded_fingerprint_resolver(context)
+                if expanded_fingerprint_resolver is not None
+                else None
+            ),
         }
         return hashlib.sha256(
             json.dumps(
@@ -138,11 +245,15 @@ class CareerIntrinsicLoader:
         fingerprint: str,
     ) -> ArtifactKey:
         assert context.league_state is not None
+        # Reuse one durable slot for the same non-time-varying source identity.
+        # The payload still carries and validates the exact freshness fingerprint,
+        # so a new epoch rebuilds and upserts this row instead of accumulating one.
+        artifact_fingerprint = self.intrinsic_artifact_key_fingerprint(context)
         return ArtifactKey(
             artifact_kind=CAREER_INTRINSIC_ARTIFACT_KIND,
             scope_kind=CAREER_INTRINSIC_SCOPE_KIND,
             scope_id=context.league_state.league.league_id,
-            input_fingerprint=fingerprint,
+            input_fingerprint=artifact_fingerprint,
             model_version=(
                 f"{CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION}"
                 f"|{CAREER_FORWARD_INTRINSIC_MODEL_VERSION}"
@@ -164,6 +275,21 @@ class CareerIntrinsicLoader:
         )
 
     def restore_compatible(
+        self,
+        context: UserRuntimeContext,
+    ) -> CareerForwardIntrinsicShadowContract | None:
+        context = self.pin_build_context(context)
+        frozen = self._restore_frozen_compatible(context)
+        if frozen is None:
+            return None
+        expanded = self._append_expanded_rostered_contract(context, frozen)
+        with self._lock:
+            self._cached_user_id = context.user_id
+            self._cached_fingerprint = self.intrinsic_input_fingerprint(context)
+            self._cached_contract = expanded
+        return expanded
+
+    def _restore_frozen_compatible(
         self,
         context: UserRuntimeContext,
     ) -> CareerForwardIntrinsicShadowContract | None:
@@ -201,6 +327,27 @@ class CareerIntrinsicLoader:
             contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
         except (TypeError, ValueError):
             return None
+        # Older hosted releases persisted the expanded Career contract. Treat
+        # only its accepted Foundation 4 reference cohort as the frozen base;
+        # dynamic roster rows must be rebuilt against current live evidence.
+        reference_ids = set(
+            provide_foundation4_long_horizon_forecast_contract_for_rules(
+                context.league_state.league.rules
+            ).player_ids
+        )
+        base_estimates = tuple(
+            row for row in contract.estimates if row.player_id in reference_ids
+        )
+        if len(base_estimates) != len(contract.estimates):
+            contract = contract.model_copy(update={
+                "estimates": base_estimates,
+                "player_count": len(base_estimates),
+                "player_coverage_failures": {
+                    player_id: reason
+                    for player_id, reason in contract.player_coverage_failures.items()
+                    if player_id in reference_ids
+                },
+            })
         if migrated_legacy:
             migrated_payload = contract.model_dump(mode="json")
             migrated_payload["_foundation4_dependency_fingerprint"] = fingerprint
@@ -227,6 +374,16 @@ class CareerIntrinsicLoader:
         forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
             context.league_state.league.rules
         )
+        # restore_compatible already retained the exact Career subject contract;
+        # use its reference IDs to locate the corresponding scoped component.
+        # This does not rebuild Current or reread the full Career payload.
+        with self._lock:
+            restored = self._cached_contract if self._cached_user_id == context.user_id else None
+        if restored is not None:
+            reference_ids = {row.player_id for row in forecast.forecasts}
+            active_ids = {row.player_id for row in restored.estimates} & reference_ids
+            forecast, _ = align_foundation4_cohort(player_ids=active_ids,
+                long_forecast=forecast, terminal_features=provide_foundation4_terminal_features())
         expected_input = long_term_intrinsic_input_fingerprint(
             forecast,
             rules=context.league_state.league.rules,
@@ -305,10 +462,106 @@ class CareerIntrinsicLoader:
             self._cached_component = None
             return 1
 
+    def _append_expanded_rostered_contract(
+        self,
+        context: UserRuntimeContext,
+        frozen_reference: CareerForwardIntrinsicShadowContract,
+    ) -> CareerForwardIntrinsicShadowContract:
+        loader = self._expanded_career_contract_loader
+        if loader is None:
+            return frozen_reference
+        if context.league_state is None:
+            raise ValueError("dynamic Career append requires canonical league State")
+        loaded = loader(context, frozen_reference)
+        if isinstance(loaded, ExpandedCareerContractResult):
+            expanded = loaded.contract
+            failures = dict(loaded.failures)
+        else:
+            expanded = loaded
+            failures = {}
+        state_players = {row.player_id: row for row in context.league_state.players}
+        roster_ids = {
+            entry.player_id
+            for team_state in context.league_state.team_states
+            for entry in team_state.roster
+        }
+        if failures:
+            invalid_failure_ids = set(failures) - roster_ids
+            if invalid_failure_ids:
+                raise ValueError(
+                    "expanded Career failures include players outside exact-State roster: "
+                    + ", ".join(sorted(invalid_failure_ids))
+                )
+            for player_id, reason in failures.items():
+                player = state_players.get(player_id)
+                position = str(player.position.value) if player is not None else ""
+                if position not in {"QB", "RB", "WR", "TE"}:
+                    raise ValueError(
+                        f"expanded Career failure has unsupported exact-State roster identity {player_id}"
+                    )
+                if not str(reason).strip():
+                    raise ValueError(
+                        f"expanded Career failure reason is empty for {player_id}"
+                    )
+            frozen_ids = {row.player_id for row in frozen_reference.estimates}
+            if set(failures) & frozen_ids:
+                raise ValueError("expanded Career failure overlaps frozen reference")
+        if expanded is None:
+            if not failures:
+                return frozen_reference
+            return frozen_reference.model_copy(
+                update={
+                    "player_coverage_failures": {
+                        **frozen_reference.player_coverage_failures,
+                        **failures,
+                    }
+                }
+            )
+        frozen_ids = {row.player_id for row in frozen_reference.estimates}
+        expanded_ids = {row.player_id for row in expanded.estimates}
+        candidate_ids = expanded_ids - frozen_ids
+        if not candidate_ids:
+            return frozen_reference
+
+        expanded_by_id = {row.player_id: row for row in expanded.estimates}
+        if set(failures) & candidate_ids:
+            raise ValueError("expanded Career player cannot have both value and failure")
+        outside_roster = candidate_ids - roster_ids
+        if outside_roster:
+            raise ValueError(
+                "expanded Career contract includes players outside exact-State roster: "
+                + ", ".join(sorted(outside_roster))
+            )
+        for player_id in candidate_ids:
+            player = state_players.get(player_id)
+            position = str(player.position.value) if player is not None else ""
+            if position not in {"QB", "RB", "WR", "TE"}:
+                raise ValueError(
+                    f"expanded Career contract has unsupported exact-State roster identity {player_id}"
+                )
+            if expanded_by_id[player_id].position.value != position:
+                raise ValueError(
+                    f"expanded Career position differs from exact-State roster for {player_id}"
+                )
+        appended = append_dynamic_career_estimates(
+            frozen_reference,
+            expanded,
+            candidate_player_ids=candidate_ids,
+        )
+        return appended.model_copy(
+            update={
+                "player_coverage_failures": {
+                    **frozen_reference.player_coverage_failures,
+                    **failures,
+                }
+            }
+        )
+
     def __call__(
         self,
         context: UserRuntimeContext,
     ) -> CareerForwardIntrinsicShadowContract:
+        context = self.pin_build_context(context)
         if context.league_state is None:
             raise ValueError("Foundation 4 requires canonical league State")
         if context.league_state.league.season != 2026:
@@ -323,9 +576,25 @@ class CareerIntrinsicLoader:
             ):
                 return self._cached_contract
 
-        restored = self.restore_compatible(context)
+        restored = self._restore_frozen_compatible(context)
         if restored is not None:
-            return restored
+            expanded_restored = self._append_expanded_rostered_contract(
+                context, restored
+            )
+            if expanded_restored != restored:
+                component = self.restore_component(context)
+                if component is not None:
+                    self._persist(
+                        context,
+                        dependency_fingerprint=dependency_fingerprint,
+                        component=component,
+                        contract=restored,
+                    )
+            with self._lock:
+                self._cached_user_id = context.user_id
+                self._cached_fingerprint = dependency_fingerprint
+                self._cached_contract = expanded_restored
+            return expanded_restored
 
         # Scoring-coordinate compatibility is an authority precondition for the
         # holistic sum.  Validate it before loading Current Intrinsic so an
@@ -340,12 +609,15 @@ class CareerIntrinsicLoader:
                 "Foundation 4 requires ready governed Current Intrinsic Y1-Y3"
             )
 
+        player_ids = {item.player_id for item in current.estimates}
+        long_forecast, terminal_features = align_foundation4_cohort(
+            player_ids=player_ids, long_forecast=long_forecast,
+            terminal_features=provide_foundation4_terminal_features(),
+        )
         component = build_long_term_intrinsic_shadow(
             long_forecast,
             rules=context.league_state.league.rules,
         )
-        terminal_features = provide_foundation4_terminal_features()
-        player_ids = {item.player_id for item in current.estimates}
         component_player_ids = {item.player_id for item in component.estimates}
         if component_player_ids != player_ids or set(terminal_features) != player_ids:
             raise ValueError(
@@ -377,11 +649,16 @@ class CareerIntrinsicLoader:
                 ),
             }
         )
+        # Reference aggregation is complete. The expanded phase reuses the
+        # typed contract/component, not these transient forecast/tail inputs.
+        del long_forecast, terminal_features, tails
+        frozen_contract = contract
+        contract = self._append_expanded_rostered_contract(context, frozen_contract)
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
             component=component,
-            contract=contract,
+            contract=frozen_contract,
         )
         with self._lock:
             self._cached_user_id = context.user_id

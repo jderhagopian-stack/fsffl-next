@@ -5,6 +5,7 @@ import json
 import logging
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
+from datetime import datetime
 from threading import RLock, local
 from typing import Callable
 
@@ -388,6 +389,7 @@ class UserRuntimeContext:
     served_intelligence: ServedIntelligenceSnapshot | None = None
     publication_generation_id: str | None = None
     intelligence_reused: bool = False
+    career_fingerprint_evaluation_as_of: datetime | None = None
 
 
 @dataclass(frozen=True)

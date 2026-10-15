@@ -484,6 +484,11 @@ def build_first_party_fumbles_lost_supplement(
     # absent from provider projections still receives the accepted current-only /
     # cold-start / identity-light model tier when its canonical State identity is
     # sufficient. Provider membership is never an authority prerequisite here.
+    canonical_player_ids = {
+        player.player_id
+        for player in league_state.players
+        if player.position in _ALLOWED_POSITIONS
+    }
     targets: dict[
         tuple[str, Position, ForecastHorizon, datetime, datetime],
         ForecastObservation | None,
@@ -495,6 +500,12 @@ def build_first_party_fumbles_lost_supplement(
         if row.position not in _ALLOWED_POSITIONS:
             continue
         if row.horizon != ForecastHorizon.SEASON:
+            continue
+        # A provider row that did not resolve to this State's canonical player
+        # universe cannot be used to create a first-party subject. Ignore that
+        # unmatched row here so it cannot invalidate the supplement for every
+        # other canonical player; downstream source matching remains fail-closed.
+        if row.player_id not in canonical_player_ids:
             continue
         key = (
             row.player_id,

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from threading import Event, Thread
 from typing import Any, cast
 
 import pytest
 
+from fsffl.forecast.in_season_orchestration import build_current_ros_fumbles_lost_supplement_observations
 from fsffl.forecast.future_contract import (
     CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
     FUTURE_FORECAST_CONTRACT_VERSION,
@@ -33,6 +36,7 @@ from fsffl.product.i1_scoring_bridge import (
     FROZEN_I1_STANDARD_SCORING,
     FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
 )
+from fsffl.product import dynamic_career_composition as bridge
 from fsffl.product.p0_forecast_runtime import (
     P0_FINAL_ROUTE_AUTHORITY_SHA256,
     P0_FINAL_ROUTE_AUTHORITY_VERSION,
@@ -40,6 +44,8 @@ from fsffl.product.p0_forecast_runtime import (
     frozen_p0_source_rows,
 )
 from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
+from fsffl.product.p0_live_candidate_runtime import _score_complete_single_source_year_one
+from fsffl.product.p0_live_candidate_runtime import _single_source_fumbles_gap_player_ids
 from fsffl.product.private_beta_shapley_runtime import (
     PrivateBetaShapleyContractLoader,
     intrinsic_input_fingerprint,
@@ -65,6 +71,7 @@ from fsffl.state.models import (
     Position,
     ProviderRef,
     Provenance,
+    RosterEntry,
     RosterSlot,
     ScoringRule,
     Team,
@@ -239,6 +246,266 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
     assert contract.horizon_seeds == (contract.seed, contract.seed + 1, contract.seed + 2)
     reconstructed = sum(item.discounted_contribution for item in contract.estimates[0].contributions)
     assert abs(reconstructed - contract.estimates[0].raw_intrinsic_value) <= 1e-9
+
+
+def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
+    monkeypatch,
+) -> None:
+    from fsffl.product import dynamic_career_composition as bridge
+    from fsffl.product.p0_live_candidate_runtime import P0LiveCandidateResult
+    from fsffl.product.p0_forecast_runtime import frozen_p0_source_rows
+
+    state, base_year_one = _fixture()
+    candidate_id = "sleeper:player:dynamic-career-fixture"
+    candidate_player = Player(
+        player_id=candidate_id,
+        full_name="Dynamic Career Fixture",
+        position=Position.QB,
+    )
+    candidate_as_of = base_year_one.as_of
+    candidate_y1 = base_year_one.model_copy(update={
+        "player_id": candidate_id,
+        "source": "fsffl:sleeper-actuals-plus-governed-ros",
+        "model_version": "p0-live-y1-raw-v1",
+    })
+    dynamic_row = next(
+        row for row in frozen_p0_source_rows() if row.position == "QB"
+    )
+    dynamic_row = dynamic_row.__class__(**{
+        **dynamic_row.__dict__,
+        "player_id": candidate_id,
+        "current_player_id": candidate_id,
+        "player_name": candidate_player.full_name,
+    })
+    players = tuple(state.players) + (candidate_player,)
+    roster = RosterEntry(
+        player_id=candidate_id,
+        slot=RosterSlot.BENCH,
+    )
+    team_states = tuple(
+        row.model_copy(update={"roster": (roster,)})
+        if row.team_id == "a" else row
+        for row in state.team_states
+    )
+    state = state.model_copy(update={
+        "players": players,
+        "team_states": team_states,
+        "player_states": tuple(state.player_states) + (
+            PlayerState(
+                player_id=candidate_id,
+                age_years=25.0,
+                as_of=candidate_as_of,
+                provenance=base_year_one.provenance,
+            ),
+        ),
+    })
+    raw = _raw_forecasts(candidate_y1)
+    dynamic_future = build_p0_future_forecast_contract(
+        league_state=state,
+        raw_forecasts=raw,
+        league_year_one=(candidate_y1,),
+        candidate_source_rows={candidate_id: dynamic_row},
+    )
+    candidate = P0LiveCandidateResult(
+        evaluation_as_of=candidate_as_of,
+        completed_through_week=4,
+        candidate_ids=(candidate_id,),
+        candidate_source_rows={candidate_id: dynamic_row},
+        year_one_standard={candidate_id: candidate_y1},
+        year_one_league={candidate_id: candidate_y1},
+        future=dynamic_future,
+        failures={},
+        ros_runtime=SimpleNamespace(),
+        year_one_evidence_modes={},
+    )
+    evidence = _authority_evidence(base_year_one)
+    base_loader = _legacy_p0_loader(
+        year_one_loader=lambda _state: evidence,
+    )
+    context = UserRuntimeContext(user_id="dynamic", league_state=state)
+
+    original = bridge.build_live_calendar_shapley_estimates
+    composed_player_counts = []
+    # Missing Foundation 4 must not construct and retain the future scenario
+    # graph before the materializer phase has completed.
+    monkeypatch.setattr(base_loader, "_resolve_future_contract", lambda **kwargs: pytest.fail(
+        "future scenarios were built before Foundation 4 completed"))
+
+    def record_full_cohort(calendar, *, rules):
+        composed_player_counts.append(calendar.player_count)
+        return original(calendar, rules=rules)
+
+    monkeypatch.setattr(bridge, "build_live_calendar_shapley_estimates", record_full_cohort)
+    result = bridge.build_dynamic_rostered_career_contract(
+        context,
+        SimpleNamespace(),
+        current_intrinsic_loader=base_loader,
+        candidate_builder=lambda _state, *, projection_history_as_of=None: candidate,
+    )
+
+    assert composed_player_counts == []
+    assert result.contract is None
+    assert set(result.failures) == {candidate_id}
+    assert "Foundation 4 dynamic materializer input bundle is not configured" in result.failures[candidate_id]
+    assert "route/development modules" in result.failures[candidate_id]
+
+    def no_components(_context, retained, ids):
+        assert retained.ros_runtime is None
+        assert retained.future is candidate.future
+        assert retained.candidate_source_rows == candidate.candidate_source_rows
+        assert retained.year_one_league == candidate.year_one_league
+        return bridge.DynamicCareerComponents({}, {}, {candidate_id: "no F4 components"})
+
+    result = bridge.build_dynamic_rostered_career_contract(
+        context, SimpleNamespace(), current_intrinsic_loader=base_loader,
+        candidate_builder=lambda _state, *, projection_history_as_of=None: candidate, materializer=no_components,
+    )
+    assert candidate.ros_runtime is not None  # public builder result unchanged
+    assert result.contract is None
+    assert result.failures[candidate_id] == "no F4 components"
+
+
+def test_hosted_dynamic_career_bridge_scalarizes_structured_provenance() -> None:
+    from fsffl.product.dynamic_career_composition import _scalar_provenance
+
+    encoded = _scalar_provenance(
+        {
+            "dynamic_candidate_ids": ["sleeper:player:b", "sleeper:player:a"],
+            "route_inputs": {"version": 1, "families": ["Y4", "Y5"]},
+            "accepted": True,
+        }
+    )
+
+    assert encoded == {
+        "dynamic_candidate_ids": '["sleeper:player:b","sleeper:player:a"]',
+        "route_inputs": '{"families":["Y4","Y5"],"version":1}',
+        "accepted": True,
+    }
+    assert all(value is None or isinstance(value, (str, bool, int, float)) for value in encoded.values())
+
+
+def test_dynamic_career_candidate_acquisition_failure_preserves_frozen_base():
+    state, observation = _fixture()
+    state = state.model_copy(update={
+        "team_states": (
+            TeamState(
+                team_id="a",
+                roster=(RosterEntry(player_id="canonical-player", slot=RosterSlot.BENCH),),
+            ),
+            TeamState(team_id="b", roster=()),
+        )
+    })
+    loader = _legacy_p0_loader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )
+
+    def unavailable(_state, *, projection_history_as_of=None):
+        raise RuntimeError("projection history unavailable")
+
+    result = bridge.build_dynamic_rostered_career_contract(
+        _context(state, observation),
+        SimpleNamespace(estimates=()),
+        current_intrinsic_loader=loader,
+        candidate_builder=unavailable,
+    )
+    assert result.contract is None
+    assert result.failures
+    assert all("projection history unavailable" in reason for reason in result.failures.values())
+
+
+def test_dynamic_career_candidate_builder_receives_pinned_ros_selection_time():
+    state, observation = _fixture()
+    cutoff = datetime(2026, 10, 15, 5, 59, tzinfo=UTC)
+    context = replace(
+        _context(state, observation),
+        career_fingerprint_evaluation_as_of=cutoff,
+    )
+    loader = _legacy_p0_loader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )
+    seen = []
+
+    def candidate_builder(_state, *, projection_history_as_of=None):
+        seen.append(projection_history_as_of)
+        return SimpleNamespace(future=None, failures={})
+
+    result = bridge.build_dynamic_rostered_career_contract(
+        context,
+        SimpleNamespace(estimates=()),
+        current_intrinsic_loader=loader,
+        candidate_builder=candidate_builder,
+    )
+
+    assert seen == [cutoff]
+    assert result.contract is None
+    assert result.failures == {}
+
+
+def test_dynamic_career_fingerprint_changes_when_ros_revision_identity_changes():
+    state, observation = _fixture()
+    context = _context(state, observation)
+    now = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
+
+    class Reader:
+        version = "ros-v1"
+
+        def latest_revision_fingerprints(self, _selector):
+            return ({"provider": "cbs", "content_fingerprint": self.version},)
+
+    reader = Reader()
+    first = bridge.dynamic_career_fingerprint(
+        context, projection_history_reader=reader, now=now
+    )
+    reader.version = "ros-v2"
+    second = bridge.dynamic_career_fingerprint(
+        context, projection_history_reader=reader, now=now
+    )
+    assert first != second
+
+
+def test_dynamic_career_fingerprint_refreshes_unversioned_sources_once_per_window():
+    state, observation = _fixture()
+    context = _context(state, observation)
+    start = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
+
+    first = bridge.dynamic_career_fingerprint(context, now=start)
+    within_window = bridge.dynamic_career_fingerprint(
+        context, now=start + timedelta(hours=5, minutes=59)
+    )
+    next_window_at = start + timedelta(hours=6)
+    next_window = bridge.dynamic_career_fingerprint(
+        context, now=next_window_at
+    )
+
+    assert within_window == first
+    assert next_window != first
+    assert bridge.dynamic_career_fingerprint(
+        context, now=start, include_freshness_epoch=False
+    ) == bridge.dynamic_career_fingerprint(
+        context, now=next_window_at, include_freshness_epoch=False
+    )
+
+
+def test_private_beta_live_provider_diagnostics_require_manual_dispatch():
+    private_beta_workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github/workflows/private-beta-intrinsic-diagnostics.yml"
+    ).read_text(encoding="utf-8")
+    atlas_workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github/workflows/league-atlas-north-star.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in private_beta_workflow
+    assert "if: github.event_name == 'workflow_dispatch'" in private_beta_workflow
+    assert "if: github.event_name == 'pull_request'" in private_beta_workflow
+    assert "Provider diagnostics are skipped on pull requests" in private_beta_workflow
+
+    assert "workflow_dispatch:" in atlas_workflow
+    assert atlas_workflow.count("if: github.event_name == 'workflow_dispatch'") == 2
+    assert "if: github.event_name == 'pull_request'" in atlas_workflow
+    assert "Live-league checks are skipped on pull requests" in atlas_workflow
+    assert "Record deferred live-check disposition" in atlas_workflow
 
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
@@ -1706,3 +1973,222 @@ def test_intrinsic_loader_drops_stale_durable_restore_after_cache_epoch_advance(
     assert not thread.is_alive()
     assert result["contract"] is None
     assert loader.clear_user_cache(context.user_id) == 0
+
+def test_hosted_dynamic_career_bridge_scores_first_party_fumbles_for_complete_single_source_y1() -> None:
+    state, _ = _fixture()
+    player_id = "canonical-player"
+    player = state.players[0]
+    now = state.as_of
+    provenance = Provenance(
+        source="razzball",
+        retrieved_at=now,
+        effective_at=now,
+        source_version="captured-ros-v1",
+    )
+    period_start = datetime(2026, 10, 8, tzinfo=UTC)
+    period_end = datetime(2027, 1, 15, tzinfo=UTC)
+    metric_means = (
+        (ForecastMetric.PASS_YARDS, 100.0),
+        (ForecastMetric.PASS_TD, 1.0),
+        (ForecastMetric.INTERCEPTIONS, 1.0),
+        (ForecastMetric.RUSH_YARDS, 10.0),
+        (ForecastMetric.RUSH_TD, 1.0),
+    )
+    source_rows = tuple(
+        ForecastObservation(
+            player_id=player_id,
+            position=player.position,
+            horizon=ForecastHorizon.REST_OF_SEASON,
+            metric=metric,
+            period_start=period_start,
+            period_end=period_end,
+            distribution=ForecastDistribution(mean=mean, stddev=0.0),
+            source="razzball",
+            model_version="captured-ros-v1",
+            as_of=now,
+            provenance=provenance,
+        )
+        for metric, mean in metric_means
+    )
+    fumbles = ForecastObservation(
+        player_id=player_id,
+        position=player.position,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=period_start,
+        period_end=period_end,
+        distribution=ForecastDistribution(mean=0.5, stddev=0.7),
+        source="fsffl:first_party:fumbles_lost",
+        model_version="accepted-fumbles-lost-rolling-v1",
+        as_of=now,
+        provenance=Provenance(
+            source="fsffl:first_party:fumbles_lost",
+            retrieved_at=now,
+            effective_at=now,
+            source_version="accepted-fumbles-lost-rolling-v1",
+        ),
+    )
+
+    without_supplement = _score_complete_single_source_year_one(
+        player_id=player_id,
+        source_rows=source_rows,
+        completed_actuals=(),
+        league_state=state,
+    )
+    with_supplement = _score_complete_single_source_year_one(
+        player_id=player_id,
+        source_rows=source_rows,
+        completed_actuals=(),
+        league_state=state,
+        supplemental_rows=(fumbles,),
+    )
+
+    assert without_supplement is None
+    assert with_supplement is not None
+    raw, standard, league = with_supplement
+    assert standard is not None and league is not None
+    assert standard.distribution.mean == pytest.approx(12.0)
+    assert league.distribution.mean == pytest.approx(12.0)
+    assert len([row for row in raw if row.metric == ForecastMetric.FUMBLES_LOST]) == 1
+    assert next(row for row in raw if row.metric == ForecastMetric.FUMBLES_LOST).model_version == "p0-live-y1-raw-v1"
+
+
+def test_hosted_dynamic_career_bridge_rejects_unrelated_supplement_coordinate() -> None:
+    state, _ = _fixture()
+    now = state.as_of
+    period_start = datetime(2026, 10, 8, tzinfo=UTC)
+    period_end = datetime(2027, 1, 15, tzinfo=UTC)
+    provider = ForecastObservation(
+        player_id="canonical-player",
+        position=Position.QB,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        metric=ForecastMetric.PASS_YARDS,
+        period_start=period_start,
+        period_end=period_end,
+        distribution=ForecastDistribution(mean=1.0, stddev=0.0),
+        source="razzball",
+        model_version="captured-ros-v1",
+        as_of=now,
+        provenance=Provenance(source="razzball", retrieved_at=now, effective_at=now),
+    )
+    other_player = ForecastObservation(
+        player_id="different-player",
+        position=Position.QB,
+        horizon=ForecastHorizon.REST_OF_SEASON,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=period_start,
+        period_end=period_end,
+        distribution=ForecastDistribution(mean=0.2, stddev=0.4),
+        source="fsffl:first_party:fumbles_lost",
+        model_version="accepted-fumbles-lost-rolling-v1",
+        as_of=now,
+        provenance=Provenance(source="fsffl:first_party:fumbles_lost", retrieved_at=now, effective_at=now),
+    )
+    assert _score_complete_single_source_year_one(
+        player_id="canonical-player",
+        source_rows=(provider,),
+        completed_actuals=(),
+        league_state=state,
+        supplemental_rows=(other_player,),
+    ) is None
+
+
+def test_hosted_dynamic_career_bridge_materializes_schedule_scaled_fumbles_ros(monkeypatch) -> None:
+    import fsffl.forecast.in_season_orchestration as orchestration
+
+    state, provider_observation = _fixture()
+    now = state.as_of
+    provider_observation = provider_observation.model_copy(
+        update={
+            "horizon": ForecastHorizon.REST_OF_SEASON,
+            "metric": ForecastMetric.PASS_YARDS,
+            "period_start": datetime(2026, 9, 29, tzinfo=UTC),
+            "period_end": datetime(2027, 1, 26, tzinfo=UTC),
+        }
+    )
+    season_fumbles = ForecastObservation(
+        player_id=provider_observation.player_id,
+        position=provider_observation.position,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=datetime(2026, 9, 1, tzinfo=UTC),
+        period_end=datetime(2027, 3, 1, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=0.4, stddev=0.6),
+        source="fsffl:first_party:fumbles_lost",
+        model_version="accepted-fumbles-lost-rolling-v1",
+        as_of=now,
+        provenance=Provenance(
+            source="fsffl:first_party:fumbles_lost",
+            retrieved_at=now,
+            effective_at=now,
+            source_version="accepted-fumbles-lost-rolling-v1",
+        ),
+    )
+    monkeypatch.setattr(
+        orchestration,
+        "build_first_party_fumbles_lost_supplement",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            observations=(season_fumbles,), authority_valid_from=now
+        ),
+    )
+    runtime = SimpleNamespace(
+        partial_fantasy_point_forecasts=(),
+        source_observations=(provider_observation,),
+    )
+
+    ros_rows = build_current_ros_fumbles_lost_supplement_observations(
+        state,
+        current_runtime=runtime,
+        stats_source=cast(Any, object()),
+        completed_through_week=4,
+        as_of=now,
+        eligible_player_ids={provider_observation.player_id},
+    )
+
+    assert len(ros_rows) == 1
+    assert ros_rows[0].horizon == ForecastHorizon.REST_OF_SEASON
+    assert ros_rows[0].source == "fsffl:first_party:fumbles_lost"
+    assert ros_rows[0].distribution.mean == pytest.approx(0.4 * 13 / 17)
+    assert ros_rows[0].distribution.stddev == pytest.approx(0.6 * 13 / 17)
+    assert "remaining_games=13" in ros_rows[0].provenance.source_version
+
+
+def test_hosted_dynamic_career_bridge_selects_only_complete_provider_rows_missing_fumbles() -> None:
+    state, forecast = _fixture()
+    now = state.as_of
+    period_start = datetime(2026, 9, 29, tzinfo=UTC)
+    period_end = datetime(2027, 1, 26, tzinfo=UTC)
+    metrics = (
+        ForecastMetric.PASS_YARDS,
+        ForecastMetric.PASS_TD,
+        ForecastMetric.INTERCEPTIONS,
+        ForecastMetric.RUSH_YARDS,
+        ForecastMetric.RUSH_TD,
+    )
+
+    def rows(player_id: str, selected: tuple[ForecastMetric, ...]) -> tuple[ForecastObservation, ...]:
+        return tuple(
+            forecast.model_copy(
+                update={
+                    "player_id": player_id,
+                    "horizon": ForecastHorizon.REST_OF_SEASON,
+                    "metric": metric,
+                    "period_start": period_start,
+                    "period_end": period_end,
+                    "source": "razzball",
+                    "model_version": "captured-ros-v1",
+                }
+            )
+            for metric in selected
+        )
+
+    complete_except_fumbles = rows("canonical-player", metrics)
+    incomplete_other_metric = rows("incomplete-player", metrics[:-1])
+    outsider = rows("not-rostered", metrics)
+    selected = _single_source_fumbles_gap_player_ids(
+        league_state=state,
+        candidate_ids={"canonical-player", "incomplete-player"},
+        source_observations=complete_except_fumbles + incomplete_other_metric + outsider,
+    )
+
+    assert selected == {"canonical-player"}

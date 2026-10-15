@@ -157,6 +157,18 @@ def test_pool_lazy_exact_bounds_and_disabled_prepared_statements(pooled):
     assert len(pool.backend["committed"]) == 2
 
 
+def test_projection_history_adapter_borrows_existing_persistence_pool(pooled):
+    from fsffl.persistence.projection_history import PostgresProjectionHistoryStore
+
+    reader = PostgresProjectionHistoryStore(
+        "postgresql://unused", connect_factory=pooled.connection
+    )
+    with reader._connect() as connection:
+        assert connection is not None
+    assert len(FakePool.instances) == 1
+    assert FakePool.instances[0].created == 1
+
+
 def test_parallel_checkouts_reuse_one_bounded_pool_without_cross_user_leaks(pooled):
     def worker(i):
         with pooled._connect() as conn, conn.cursor() as cur:

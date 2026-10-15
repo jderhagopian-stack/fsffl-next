@@ -160,4 +160,5 @@ def test_store_query_contract_is_horizon_and_cutoff_aware():
     assert "horizon=%s" in where
     assert "provider=%s" in where
     assert "effective_at <= %s" in where
-    assert params == [2026, "rest_of_season", None, "provider-a", cutoff]
+    assert "retrieved_at <= %s" in where
+    assert params == [2026, "rest_of_season", None, "provider-a", cutoff, cutoff]

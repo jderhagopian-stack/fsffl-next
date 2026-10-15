@@ -60,6 +60,33 @@ def candidate_prediction(route, dev, long, candidate: str, h: int, pos: str,
     return np.asarray(pred, dtype=float).clip(min=0.0)
 
 
+def build_history_inputs_memory_bounded(dev, args):
+    """Mirror the frozen route builder while releasing wide inputs as soon as safe."""
+    model_a = pd.read_csv(args.model_a_rows)
+    qb_results = json.loads(Path(args.qb_results).read_text())
+    model_a = dev.add_qb_governed_path(model_a, qb_results)
+    del qb_results
+    base = dev.build_forecast_base(model_a)
+    del model_a
+
+    raw = dev.prep_raw(pd.read_csv(args.raw_seasons))
+    base = dev.merge_lags(base, raw)
+    players = pd.read_csv(args.players)
+    base = dev.add_engineered_features(base, players)
+    del players
+
+    residual = pd.read_csv(args.residual_states)
+    innovation = pd.read_csv(args.innovation_states)
+    base = dev.merge_trajectory(base, residual, innovation)
+    del residual, innovation
+
+    long = dev.build_long(base, raw)
+    del base, raw
+    import gc
+    gc.collect()
+    return long
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--development-module", required=True)
@@ -89,6 +116,48 @@ def main() -> None:
     board = pd.read_csv(args.board)
     current = build_current(dev, board, raw, players, residual, innovation)
 
+    # Freeze the scale-compatible terminal feature coordinate in the same evidence
+    # job. The retrospective terminal study used full-season base-year production;
+    # during the 2026 season we therefore use the governed full-season Y1 point
+    # coordinate as an explicitly labeled live proxy rather than annualizing YTD.
+    prior_2025 = {
+        str(row.player_id): float(row.fantasy_target)
+        for row in raw[raw.season == 2025].itertuples()
+    }
+    terminal_rows = []
+    for row in board.itertuples():
+        historical_id = (
+            None
+            if pd.isna(row.historical_gsis_id)
+            else str(row.historical_gsis_id)
+        )
+        prior = prior_2025.get(historical_id) if historical_id is not None else None
+        terminal_rows.append({
+            "player_id": str(row.player_id),
+            "position": str(row.position),
+            "age_years": float(row.age),
+            "experience_years": float(row.experience),
+            "current_points": max(0.0, float(row.standard_y1_points)),
+            "prior_points": prior,
+            "prior_missing": prior is None,
+            "current_points_coordinate": (
+                "governed_2026_standard_y1_full_season_expectation_proxy"
+            ),
+            "prior_points_coordinate": "completed_2025_fantasy_production",
+            "live_feature_transport_limitation": (
+                "terminal calibration used retrospective completed base-season production; "
+                "2026 shadow uses the governed full-season Y1 point coordinate to preserve "
+                "the training scale without inventing a YTD annualization multiplier"
+            ),
+        })
+    terminal = pd.DataFrame(terminal_rows).sort_values("player_id").reset_index(drop=True)
+    # Current and terminal coordinates are now narrow snapshots. Release the
+    # raw historical joins before route.build_inputs loads its long panel; keeping
+    # both wide preparations alive during that allocation caused the Career peak.
+    del raw, players, residual, innovation, board
+    import gc
+    gc.collect()
+
     class Args:
         pass
     history_args = Args()
@@ -98,7 +167,7 @@ def main() -> None:
     history_args.players = args.players
     history_args.residual_states = args.residual_states
     history_args.innovation_states = args.innovation_states
-    long = route.build_inputs(dev, history_args)
+    long = build_history_inputs_memory_bounded(dev, history_args)
 
     current_route = pd.read_csv(args.current_route)
     metrics = pd.read_csv(args.cell_metrics)
@@ -178,45 +247,16 @@ def main() -> None:
                         ),
                     })
 
+    # Predictions are complete; release the large historical training panel
+    # and per-cell prediction cache before allocating publication tables.
+    del long, current, candidate_cache, ev, policy_predictions
+    import gc
+    gc.collect()
+
     result = pd.DataFrame(rows).sort_values(
         ["player_id", "year_index", "policy_id"]
     ).reset_index(drop=True)
 
-    # Freeze the scale-compatible terminal feature coordinate in the same evidence
-    # job. The retrospective terminal study used full-season base-year production;
-    # during the 2026 season we therefore use the governed full-season Y1 point
-    # coordinate as an explicitly labeled live proxy rather than annualizing YTD.
-    prior_2025 = {
-        str(row.player_id): float(row.fantasy_target)
-        for row in raw[raw.season == 2025].itertuples()
-    }
-    terminal_rows = []
-    for row in board.itertuples():
-        historical_id = (
-            None
-            if pd.isna(row.historical_gsis_id)
-            else str(row.historical_gsis_id)
-        )
-        prior = prior_2025.get(historical_id) if historical_id is not None else None
-        terminal_rows.append({
-            "player_id": str(row.player_id),
-            "position": str(row.position),
-            "age_years": float(row.age),
-            "experience_years": float(row.experience),
-            "current_points": max(0.0, float(row.standard_y1_points)),
-            "prior_points": prior,
-            "prior_missing": prior is None,
-            "current_points_coordinate": (
-                "governed_2026_standard_y1_full_season_expectation_proxy"
-            ),
-            "prior_points_coordinate": "completed_2025_fantasy_production",
-            "live_feature_transport_limitation": (
-                "terminal calibration used retrospective completed base-season production; "
-                "2026 shadow uses the governed full-season Y1 point coordinate to preserve "
-                "the training scale without inventing a YTD annualization multiplier"
-            ),
-        })
-    terminal = pd.DataFrame(terminal_rows).sort_values("player_id").reset_index(drop=True)
     if len(terminal) != 335 or terminal.player_id.nunique() != 335:
         raise SystemExit("terminal feature snapshot must cover the governed 335-player cohort")
     if len(result) != 335 * 4 * 4:

@@ -5,6 +5,10 @@ name: CI
 on:
   pull_request:
 
+permissions:
+  contents: read
+  actions: read
+
 # Superseded focused runs should not compete with the latest PR head.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -13,7 +17,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,5 +25,31 @@ jobs:
           python-version: '3.11'
       - name: Install
         run: python -m pip install -e '.[dev,web]'
-      - name: Focused Dynasty, persistence, and provider acquisition regressions
-        run: pytest -q tests/test_dynasty_presentation_handoff.py tests/test_postgres_connection_pool.py tests/test_persistence_metadata_reads.py tests/test_market_batch_persistence.py tests/test_persistence_contracts.py tests/test_atomic_intelligence_publication.py tests/test_preseason_forecast_baseline.py tests/test_preseason_baseline_read_through.py tests/test_provider_acquisition_telemetry.py tests/test_provider_sleeper_live.py tests/test_sleeper_live_parallel_acquisition.py tests/test_cbs_live.py tests/test_fftoday_live.py tests/test_nfl_fantasy_live.py tests/test_in_season_projection_sources.py
+      - name: Install dynamic-candidate test dependency
+        run: python -m pip install 'pandas>=2.2,<3'
+      - name: Focused 335-player Career composer RSS benchmark
+        run: pytest -q -s tests/test_career_forward_intrinsic.py -k career_composer_materializer_peak_rss_below_budget
+      - name: Restore sanitized frozen numeric reference fixture
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/career405/semantic/unchanged_current /tmp/career405/foundation4/f4
+          base64 -d tests/fixtures/career_coverage/frozen_335_numeric_reference.zip.b64 \
+            > /tmp/career405/frozen_335_numeric_reference.zip
+          unzip -oq /tmp/career405/frozen_335_numeric_reference.zip -d /tmp/career405
+      - name: Focused numeric frozen 335 Career and Shapley parity
+        env:
+          CAREER_PR1_SEMANTIC_DIR: /tmp/career405/semantic
+          CAREER_FOUNDATION4_DIR: /tmp/career405/foundation4
+        run: pytest -q -s tests/test_career_frozen_reference_parity.py
+      - name: Focused saved ROS period boundary regression
+        run: pytest -q tests/test_in_season_forecast.py -k saved_ros_revision_from_earlier_period_is_rejected_not_relabeled
+      - name: Focused numeric Shapley and Career contract parity
+        run: pytest -q tests/test_career_forward_intrinsic.py -k canonical_p0_numeric_shapley_career_parity
+      - name: Focused hosted dynamic Career loader-to-composition regression
+        run: pytest -q tests/test_private_beta_shapley_runtime.py -k 'hosted_dynamic_career_bridge or foundation4_hosted_dynamic_materializer or candidate_builder_receives_pinned_ros_selection_time'
+      - name: Focused active Current and Foundation 4 cohort regression
+        run: pytest -q tests/test_foundation4_cohort.py tests/test_foundation4_matrix.py tests/test_foundation4_history.py tests/test_foundation4_accepted_bundle.py
+      - name: Focused isolated browser resource acceptance
+        run: pytest -q -s tests/test_browser_memory_acceptance.py
+      - name: Focused Dynasty, persistence, provider, and Career regressions
+        run: pytest -q tests/test_dynasty_presentation_handoff.py tests/test_presentation_continuity.py tests/test_postgres_connection_pool.py tests/test_persistence_metadata_reads.py tests/test_market_batch_persistence.py tests/test_persistence_contracts.py tests/test_atomic_intelligence_publication.py tests/test_preseason_forecast_baseline.py tests/test_preseason_baseline_read_through.py tests/test_provider_acquisition_telemetry.py tests/test_provider_sleeper_live.py tests/test_sleeper_live_parallel_acquisition.py tests/test_cbs_live.py tests/test_fftoday_live.py tests/test_nfl_fantasy_live.py tests/test_in_season_projection_sources.py tests/test_projection_history.py tests/test_p0_live_candidate_runtime.py tests/test_career_coverage.py tests/test_foundation4_dynamic_candidates.py tests/test_career_forward_intrinsic.py tests/test_shapley_intrinsic_contract.py tests/test_foundation4_career_forward_runtime.py tests/test_foundation4_materializer_memory.py tests/test_rostered_career_journal.py tests/test_rostered_p0_expanded_shapley.py

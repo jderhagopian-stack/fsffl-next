@@ -1,11 +1,23 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
+from fsffl.forecast.integrated_i1 import I1ForecastResult, STATE_NAMES
+from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
+from fsffl.state.models import Provenance
 
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot
+from fsffl.value.live_intrinsic_calendar import (
+    build_live_calendar_shapley_estimates,
+    compose_live_intrinsic_calendar_from_future_results,
+)
+from fsffl.value.shapley_intrinsic_contract import build_shapley_intrinsic_contract
 from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
+    append_dynamic_career_estimates,
     build_career_forward_intrinsic_shadow,
+    build_career_forward_from_canonical_p0,
 )
 from fsffl.value.career_tail import (
     CAREER_TAIL_SCORING_COORDINATE,
@@ -288,3 +300,267 @@ def test_holistic_shadow_requires_identical_full_cohort() -> None:
     long_term = _long_term()
     with pytest.raises(ValueError, match="identical player cohort"):
         build_career_forward_intrinsic_shadow(current, long_term, {})
+
+
+def test_dynamic_career_append_keeps_frozen_rows_after_full_cohort_composition() -> None:
+    frozen_current = _current()
+    frozen_long = _long_term()
+    frozen_tail = build_career_tail_authority(
+        CareerTailFeatures(
+            player_id="p1", position=Position.WR, age_years=25.0,
+            experience_years=3.0, current_points=100.0, prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+        ),
+        rules=_rules(),
+    )
+    frozen = build_career_forward_intrinsic_shadow(
+        frozen_current, frozen_long, {"p1": frozen_tail}
+    )
+
+    candidate_id = "sleeper:player:dynamic-fixture"
+    candidate_current = frozen_current.estimates[0].model_copy(
+        update={"player_id": candidate_id}
+    )
+    expanded_current = frozen_current.model_copy(
+        update={
+            "coverage": frozen_current.coverage.model_copy(
+                update={
+                    "player_count": 2,
+                    "year_1_forecast_players": 2,
+                    "year_2_i1_players": 2,
+                    "year_3_i1_players": 2,
+                    "rich_path_players": 2,
+                }
+            ),
+            "estimates": frozen_current.estimates + (candidate_current,),
+        }
+    )
+    candidate_long = frozen_long.estimates[0].model_copy(
+        update={"player_id": candidate_id}
+    )
+    expanded_long = frozen_long.model_copy(
+        update={"estimates": frozen_long.estimates + (candidate_long,)}
+    )
+    candidate_tail = build_career_tail_authority(
+        CareerTailFeatures(
+            player_id=candidate_id, position=Position.WR, age_years=25.0,
+            experience_years=3.0, current_points=100.0, prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+        ),
+        rules=_rules(),
+    )
+    expanded = build_career_forward_intrinsic_shadow(
+        expanded_current, expanded_long,
+        {"p1": frozen_tail, candidate_id: candidate_tail},
+    )
+
+    result = append_dynamic_career_estimates(
+        frozen, expanded, candidate_player_ids=(candidate_id,)
+    )
+    result_by_id = {row.player_id: row for row in result.estimates}
+    frozen_by_id = {row.player_id: row for row in frozen.estimates}
+    expanded_by_id = {row.player_id: row for row in expanded.estimates}
+    assert result.player_count == 2
+    assert all(result_by_id[player_id] == row for player_id, row in frozen_by_id.items())
+    assert result_by_id[candidate_id] == expanded_by_id[candidate_id]
+
+    with pytest.raises(ValueError, match="exactly match the expanded cohort"):
+        append_dynamic_career_estimates(
+            frozen, expanded, candidate_player_ids=("sleeper:player:wrong",)
+        )
+
+
+
+def _canonical_p0_future(horizon: int) -> I1ForecastResult:
+    probabilities = {
+        "out": 0.05, "depth": 0.10, "usable": 0.20,
+        "starter": 0.35, "premium": 0.20, "elite": 0.10,
+    }
+    means = {state: float(index * 35) for index, state in enumerate(STATE_NAMES)}
+    return I1ForecastResult(
+        probabilities=probabilities,
+        persistence_probability=0.9,
+        anticipated_points=130.0 - 10.0 * horizon,
+        state_means=means,
+        evidence_path="rich",
+        model_version="canonical-p0-fixture-v1",
+    )
+
+
+def _canonical_p0_year_one() -> ForecastObservation:
+    as_of = datetime(2026, 10, 10, tzinfo=UTC)
+    return ForecastObservation(
+        player_id="p1",
+        position=Position.WR,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=datetime(2026, 1, 1, tzinfo=UTC),
+        period_end=datetime(2027, 1, 1, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=155.0, stddev=22.0, p10=120.0, p50=155.0, p90=190.0),
+        source="fixture:canonical-p0",
+        model_version="current-y1-fixture-v1",
+        as_of=as_of,
+        provenance=Provenance(
+            source="fixture",
+            retrieved_at=as_of,
+            effective_at=as_of,
+            source_version="fixture-v1",
+        ),
+    )
+
+
+def test_canonical_p0_numeric_shapley_career_parity():
+    year_one = (_canonical_p0_year_one(),)
+    future = {"p1": {2: _canonical_p0_future(2), 3: _canonical_p0_future(3)}}
+    tail = build_career_tail_authority(
+        CareerTailFeatures(
+            player_id="p1",
+            position=Position.WR,
+            age_years=25.0,
+            experience_years=3.0,
+            current_points=100.0,
+            prior_points=80.0,
+            current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+        ),
+        rules=_rules(),
+    )
+    composed = build_career_forward_from_canonical_p0(
+        live_year_one_forecasts=year_one,
+        future_results=future,
+        future_source_season=2026,
+        rules=_rules(),
+        long_term=_long_term(),
+        tails={"p1": tail},
+    )
+    assert composed.player_count == 1
+    row = composed.estimates[0]
+    assert tuple(item.target_season for item in row.uncertainty.current_y1_y3) == (2026, 2027, 2028)
+    assert row.raw_career_forward_reference == pytest.approx(
+        row.current_intrinsic_raw_y1_y3
+        + row.long_horizon_raw_y4_y7_reference
+        + row.terminal_raw_y8_plus_reference
+    )
+    assert row.aggregation == CAREER_FORWARD_AGGREGATION
+
+    # The convenience adapter must preserve the established Shapley/Career
+    # contract result for the same full-cohort canonical packet.
+    calendar = compose_live_intrinsic_calendar_from_future_results(
+        live_year_one_forecasts=year_one,
+        future_results=future,
+        future_source_season=2026,
+    )
+    current = build_shapley_intrinsic_contract(
+        build_live_calendar_shapley_estimates(calendar, rules=_rules())
+    )
+    reference = build_career_forward_intrinsic_shadow(
+        current,
+        _long_term(),
+        {"p1": tail},
+    )
+    reference_row = reference.estimates[0]
+    assert row.current_intrinsic_raw_y1_y3 == pytest.approx(
+        reference_row.current_intrinsic_raw_y1_y3, abs=1e-12
+    )
+    assert tuple(
+        item.raw_shapley_contribution for item in row.uncertainty.current_y1_y3
+    ) == pytest.approx(tuple(
+        item.raw_shapley_contribution
+        for item in reference_row.uncertainty.current_y1_y3
+    ), abs=1e-12)
+    assert tuple(
+        item.target_season for item in row.uncertainty.current_y1_y3
+    ) == tuple(item.target_season for item in reference_row.uncertainty.current_y1_y3)
+    assert row.long_horizon_raw_y4_y7_reference == pytest.approx(
+        reference_row.long_horizon_raw_y4_y7_reference, abs=1e-12
+    )
+    assert row.terminal_raw_y8_plus_reference == pytest.approx(
+        reference_row.terminal_raw_y8_plus_reference, abs=1e-12
+    )
+    assert row.raw_career_forward_reference == pytest.approx(
+        reference_row.raw_career_forward_reference, abs=1e-12
+    )
+    assert row.model_authority.low == pytest.approx(reference_row.model_authority.low, abs=1e-12)
+    assert row.model_authority.high == pytest.approx(reference_row.model_authority.high, abs=1e-12)
+
+
+def test_canonical_p0_composition_fails_closed_on_missing_horizon():
+    with pytest.raises(ValueError, match="direct Y2/Y3 only"):
+        build_career_forward_from_canonical_p0(
+            live_year_one_forecasts=(_canonical_p0_year_one(),),
+            future_results={"p1": {2: _canonical_p0_future(2)}},
+            future_source_season=2026,
+            rules=_rules(),
+            long_term=_long_term(),
+            tails={"p1": build_career_tail_authority(
+                CareerTailFeatures(
+                    player_id="p1", position=Position.WR, age_years=25.0,
+                    experience_years=3.0, current_points=100.0, prior_points=80.0,
+                    current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+                    prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+                ),
+                rules=_rules(),
+            )},
+        )
+
+
+def test_career_composer_materializer_peak_rss_below_budget():
+    """Focused 335-row Career composition RSS benchmark (Linux runner)."""
+    import resource
+
+    count = 335
+    player_ids = tuple(f"career-bench-{index:03d}" for index in range(count))
+    base_current = _current()
+    current_estimate = base_current.estimates[0]
+    current = base_current.model_copy(
+        update={
+            "coverage": base_current.coverage.model_copy(
+                update={
+                    "player_count": count,
+                    "year_1_forecast_players": count,
+                    "year_2_i1_players": count,
+                    "year_3_i1_players": count,
+                    "rich_path_players": count,
+                }
+            ),
+            "estimates": tuple(
+                current_estimate.model_copy(update={"player_id": player_id})
+                for player_id in player_ids
+            ),
+        }
+    )
+    base_long = _long_term()
+    long_estimate = base_long.estimates[0]
+    long_term = base_long.model_copy(
+        update={
+            "estimates": tuple(
+                long_estimate.model_copy(update={"player_id": player_id})
+                for player_id in player_ids
+            )
+        }
+    )
+    benchmark_rules = _rules()
+    tails = {
+        player_id: build_career_tail_authority(
+            CareerTailFeatures(
+                player_id=player_id,
+                position=Position.WR,
+                age_years=25.0,
+                experience_years=3.0,
+                current_points=100.0,
+                prior_points=80.0,
+                current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+                prior_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
+            ),
+            rules=benchmark_rules,
+        )
+        for player_id in player_ids
+    }
+
+    result = build_career_forward_intrinsic_shadow(current, long_term, tails)
+    peak_rss_mib = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    print(f"career_composer_335_peak_rss_mib={peak_rss_mib:.1f}")
+    assert result.player_count == count
+    assert peak_rss_mib < 410.0

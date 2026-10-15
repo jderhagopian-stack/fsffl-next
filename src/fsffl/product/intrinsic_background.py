@@ -150,6 +150,8 @@ class ShapleyIntrinsicBackgroundCoordinator:
     ) -> IntrinsicBuildRecord | None:
         """Seed completed lifecycle state from a durable compatible contract."""
 
+        context = self._pin_build_context(context)
+
         restorer = getattr(self._loader, "restore_compatible", None)
         if not callable(restorer):
             return None
@@ -218,6 +220,11 @@ class ShapleyIntrinsicBackgroundCoordinator:
         )
         return record
 
+    def _pin_build_context(self, context: UserRuntimeContext) -> UserRuntimeContext:
+        """Let a lifecycle-aware loader pin time-dependent inputs for one build."""
+        prepare = getattr(self._loader, "pin_build_context", None)
+        return prepare(context) if callable(prepare) else context
+
 
     def restore_compatible_staged(
         self,
@@ -247,6 +254,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         *,
         expected_epoch: int | None = None,
     ) -> IntrinsicBuildRecord:
+        context = self._pin_build_context(context)
         if (
             self._ownership_validator is not None
             and not self._ownership_validator(context)

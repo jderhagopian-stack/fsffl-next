@@ -22,8 +22,10 @@ from .league_scoring import (
     derive_league_scoring_result,
 )
 from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_authoritative_live_ensemble
-from .models import ForecastHorizon, ForecastObservation
+from .models import ForecastDistribution, ForecastHorizon, ForecastObservation
 from .projection_history import ProjectionRevision, revision_from_forecast_observations
+from .projection_history import ProjectionSelector
+from fsffl.state.models import ProviderRef, Provenance
 
 
 Clock = Callable[[], datetime]
@@ -32,6 +34,10 @@ InSeasonSnapshotFetcher = Callable[[int, int | None], CurrentProjectionSnapshot]
 
 class ProjectionHistoryWriter(Protocol):
     def save_revision(self, revision: ProjectionRevision) -> int: ...
+
+
+class ProjectionHistoryReader(Protocol):
+    def latest_revisions(self, selector: ProjectionSelector) -> tuple[ProjectionRevision, ...]: ...
 
 
 @dataclass(frozen=True)
@@ -145,6 +151,7 @@ def build_in_season_forecasts(
     period_end: datetime,
     week: int | None = None,
     fetchers: tuple[NamedInSeasonProjectionFetcher, ...] | None = None,
+    source_revisions: tuple[ProjectionRevision, ...] | None = None,
     clock: Clock | None = None,
     history_writer: ProjectionHistoryWriter | None = None,
     minimum_independent_sources: int = 2,
@@ -169,15 +176,23 @@ def build_in_season_forecasts(
     if period_end <= period_start:
         raise ValueError("in-season forecast period_end must be after period_start")
 
-    active_fetchers = fetchers or default_in_season_projection_fetchers(horizon=horizon)
-    if len({item.source_id for item in active_fetchers}) != len(active_fetchers):
-        raise ValueError("in-season projection fetcher ids must be unique")
-
-    snapshots, failed = _fetch_snapshots(
-        active_fetchers,
-        season=league_state.league.season,
-        week=week,
-    )
+    if source_revisions is None:
+        active_fetchers = fetchers or default_in_season_projection_fetchers(horizon=horizon)
+        if len({item.source_id for item in active_fetchers}) != len(active_fetchers):
+            raise ValueError("in-season projection fetcher ids must be unique")
+        snapshots, failed = _fetch_snapshots(
+            active_fetchers,
+            season=league_state.league.season,
+            week=week,
+        )
+    else:
+        # Stored revisions already carry the canonical player_id assigned when
+        # accepted evidence was normalized. Do not throw that identity away and
+        # rematch it by today's provider name/team string.
+        snapshots, failed = [], []
+        providers = [item.snapshot.provider for item in source_revisions]
+        if len(providers) != len(set(providers)):
+            raise ValueError("saved in-season revisions must contain one latest row per provider")
     cutoff = (clock or (lambda: datetime.now(UTC)))()
     if cutoff.tzinfo is None:
         raise ValueError("in-season forecast runtime clock must be timezone-aware")
@@ -187,6 +202,12 @@ def build_in_season_forecasts(
             evaluation_as_of,
             *(snapshot.captured_at.astimezone(UTC) for _, snapshot in snapshots),
             *(snapshot.effective_at.astimezone(UTC) for _, snapshot in snapshots),
+        )
+    if source_revisions:
+        evaluation_as_of = max(
+            evaluation_as_of,
+            *(revision.snapshot.retrieved_at.astimezone(UTC) for revision in source_revisions),
+            *(revision.snapshot.effective_at.astimezone(UTC) for revision in source_revisions),
         )
 
     batches: list[LiveForecastSourceBatch] = []
@@ -228,6 +249,56 @@ def build_in_season_forecasts(
 
         source_observations.extend(observations)
         batches.append(LiveForecastSourceBatch(source_id=source_id, observations=observations))
+        successful.append(source_id)
+
+    players_by_id = {player.player_id: player for player in league_state.players}
+    for revision in source_revisions or ():
+        snapshot = revision.snapshot
+        source_id = snapshot.provider
+        if (
+            snapshot.season != league_state.league.season
+            or snapshot.horizon != horizon
+            or snapshot.week != week
+            or snapshot.period_start != period_start
+            or snapshot.period_end != period_end
+            or snapshot.effective_at > evaluation_as_of
+        ):
+            failed.append(
+                f"{source_id}: saved projection revision does not match requested "
+                "State horizon/period/cutoff"
+            )
+            continue
+        observations: list[ForecastObservation] = []
+        for item in revision.observations:
+            player = players_by_id.get(item.player_id)
+            if player is None or player.position != item.position:
+                continue
+            observations.append(ForecastObservation(
+                player_id=item.player_id,
+                position=item.position,
+                horizon=horizon,
+                metric=item.metric,
+                period_start=period_start,
+                period_end=period_end,
+                distribution=ForecastDistribution(
+                    mean=item.mean, stddev=item.stddev, p10=item.p10, p50=item.p50, p90=item.p90,
+                ),
+                source=source_id,
+                model_version=snapshot.source_version,
+                as_of=evaluation_as_of,
+                provenance=Provenance(
+                    source=source_id,
+                    retrieved_at=snapshot.retrieved_at,
+                    effective_at=snapshot.effective_at,
+                    provider_ref=ProviderRef(provider=source_id, external_id=item.external_id),
+                    source_version=snapshot.source_version,
+                ),
+            ))
+        if not observations:
+            failed.append(f"{source_id}: saved projection revision has no exact-State canonical observations")
+            continue
+        source_observations.extend(observations)
+        batches.append(LiveForecastSourceBatch(source_id=source_id, observations=tuple(observations)))
         successful.append(source_id)
 
     if len(batches) < minimum_independent_sources:
