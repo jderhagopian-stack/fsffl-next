@@ -904,12 +904,11 @@ def test_dynasty_followup_is_presentation_only_and_generation_fenced() -> None:
     assert "simulation" not in followup.lower()
 
 
-def test_last_good_dynasty_is_rebased_with_explicit_source_provenance() -> None:
+def test_last_good_dynasty_rebase_uses_shared_provenance_helper() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
-    assert 'dynasty_last_good["dynasty_evidence_state_id"]' in source
-    assert 'dynasty_last_good["dynasty_evidence_publication_generation_id"]' in source
-    assert 'dynasty_last_good["league_state_id"] = context.league_state.state_id' in source
-    assert 'dynasty_last_good.pop("publication_generation_id", None)' in source
+    assert "from .foundation4_shadow_routes import _carry_dynasty_last_good" in source
+    assert "dynasty_last_good = _carry_dynasty_last_good(" in source
+    assert "candidate, state_id=context.league_state.state_id" in source
 
 def test_same_state_republish_is_fresh_and_rejects_prior_generation(
     monkeypatch: pytest.MonkeyPatch,
