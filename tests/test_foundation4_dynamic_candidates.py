@@ -15,12 +15,40 @@ from fsffl.product.foundation4_dynamic_candidate_runtime import (
     _candidate_rows,
     _write_candidate_failures,
 )
+from fsffl.product.foundation4_accepted_bundle import (
+    _COMMIT as ACCEPTED_BUNDLE_COMMIT,
+    _PATHS as ACCEPTED_BUNDLE_PATHS,
+    _file_sha256,
+)
 
 FILE = Path(__file__).parents[1] / "scripts/materialize_foundation4_dynamic_candidates.py"
 SPEC = importlib.util.spec_from_file_location("career_dynamic", FILE)
 assert SPEC and SPEC.loader
 MOD = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MOD)
+
+
+def _write_accepted_mount(root: Path) -> tuple[dict[str, object], Path]:
+    payload: dict[str, object] = {
+        "accepted_commit": ACCEPTED_BUNDLE_COMMIT,
+        "files": {},
+        "sha256": {},
+    }
+    files = payload["files"]
+    digests = payload["sha256"]
+    assert isinstance(files, dict) and isinstance(digests, dict)
+    for key, relative in ACCEPTED_BUNDLE_PATHS.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(f"accepted fixture {key}".encode())
+        resolved = path.resolve()
+        digest = _file_sha256(resolved)
+        files[key] = str(resolved)
+        digests[key] = digest
+        payload[key] = str(resolved)
+    manifest_path = root / "foundation4_dynamic_materializer_manifest.json"
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+    return payload, manifest_path
 
 
 def row(**updates):
@@ -209,15 +237,23 @@ def test_dynamic_materializer_input_failure_isolated_to_missing_future_player():
 
 
 def test_hosted_materializer_resolves_manifest_from_mounted_bundle_root(tmp_path, monkeypatch):
-    manifest = {"model-a-rows": str(tmp_path / "model-a.csv")}
-    (tmp_path / "foundation4_dynamic_materializer_manifest.json").write_text(
-        json.dumps(manifest), encoding="utf-8"
-    )
+    manifest, manifest_path = _write_accepted_mount(tmp_path)
     monkeypatch.delenv("FSFFL_FOUNDATION4_DYNAMIC_MATERIALIZER_MANIFEST", raising=False)
     monkeypatch.setenv("FSFFL_FOUNDATION4_DYNAMIC_MATERIALIZER_ROOT", str(tmp_path))
     loaded, path = _accepted_materializer_manifest()
     assert loaded == manifest
-    assert path == tmp_path / "foundation4_dynamic_materializer_manifest.json"
+    assert path == manifest_path
+
+
+def test_hosted_materializer_rejects_modified_mounted_input(tmp_path, monkeypatch):
+    _, manifest_path = _write_accepted_mount(tmp_path)
+    (tmp_path / ACCEPTED_BUNDLE_PATHS["model-a-rows"]).write_text(
+        "modified after manifest creation", encoding="utf-8"
+    )
+    monkeypatch.setenv("FSFFL_FOUNDATION4_DYNAMIC_MATERIALIZER_MANIFEST", str(manifest_path))
+    monkeypatch.delenv("FSFFL_FOUNDATION4_DYNAMIC_MATERIALIZER_ROOT", raising=False)
+    with pytest.raises(ValueError, match="accepted-commit and per-file SHA256 verification"):
+        _accepted_materializer_manifest()
 
 
 def test_hosted_materializer_rejects_unconfigured_bundle(monkeypatch):

@@ -53,8 +53,8 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _verified_cached_manifest(root: Path) -> bool:
-    manifest = root / _MANIFEST
+def _verified_cached_manifest(root: Path, manifest_path: Path | None = None) -> bool:
+    manifest = manifest_path or root / _MANIFEST
     try:
         payload = json.loads(manifest.read_text(encoding="utf-8"))
         if payload.get("accepted_commit") != _COMMIT:
@@ -69,11 +69,21 @@ def _verified_cached_manifest(root: Path) -> bool:
             path = (root / relative).resolve()
             if not path.is_relative_to(root.resolve()) or not path.is_file():
                 return False
-            if files[key] != str(path) or _file_sha256(path) != expected[key]:
+            if (
+                files[key] != str(path)
+                or payload.get(key) != str(path)
+                or _file_sha256(path) != expected[key]
+            ):
                 return False
         return True
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         return False
+
+
+def verify_accepted_manifest(manifest_path: Path) -> bool:
+    """Verify an explicitly mounted bundle against its accepted manifest hashes."""
+    manifest_path = Path(manifest_path)
+    return _verified_cached_manifest(manifest_path.parent, manifest_path)
 
 
 def _download_verified(url: str, path: Path, digest: str) -> None:

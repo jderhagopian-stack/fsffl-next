@@ -643,12 +643,29 @@ def _catalog_evidence_cutoff(
     cutoff: datetime, catalog_captured_at: datetime, *, explicit_cutoff: bool
 ) -> datetime:
     """Validate replay chronology and include live catalog evidence in the cutoff."""
-    captured = catalog_captured_at.astimezone(UTC)
-    if explicit_cutoff and captured > cutoff:
-        raise ValueError(
-            "live Sleeper catalog snapshot postdates the requested P0 evidence cutoff"
-        )
-    return max(cutoff, captured)
+    return _source_evidence_cutoff(
+        cutoff,
+        (("live Sleeper catalog snapshot", catalog_captured_at),),
+        explicit_cutoff=explicit_cutoff,
+    )
+
+
+def _source_evidence_cutoff(
+    cutoff: datetime,
+    source_captures: tuple[tuple[str, datetime], ...],
+    *,
+    explicit_cutoff: bool,
+) -> datetime:
+    """Reject post-cutoff inputs in replays; otherwise retain latest provenance."""
+    latest = cutoff
+    for source, captured_at in source_captures:
+        if captured_at.tzinfo is None:
+            raise ValueError(f"{source} capture time must be timezone-aware")
+        captured = captured_at.astimezone(UTC)
+        if explicit_cutoff and captured > cutoff:
+            raise ValueError(f"{source} postdates the requested P0 evidence cutoff")
+        latest = max(latest, captured)
+    return latest
 
 
 def build_live_p0_rostered_candidate_forecasts(
@@ -693,7 +710,6 @@ def build_live_p0_rostered_candidate_forecasts(
     cutoff = _catalog_evidence_cutoff(
         cutoff, latest_snapshot.captured_at, explicit_cutoff=evaluation_as_of is not None
     )
-    catalog_captured_at = latest_snapshot.captured_at.astimezone(UTC)
     current_state = SleeperSnapshotNormalizer().normalize_snapshot(
         latest_snapshot,
         as_of=latest_snapshot.captured_at,
@@ -746,12 +762,19 @@ def build_live_p0_rostered_candidate_forecasts(
         clock=lambda: cutoff,
         source_revisions=saved_ros_revisions,
     )
-    cutoff = max(
+    source_captures = (
+        ("REST-of-season projections", ros_runtime.evaluation_as_of),
+        *(
+            (f"Sleeper weekly stats week {week}", line.captured_at)
+            for week, rows in weekly.items()
+            for line in rows
+        ),
+        *( ("Sleeper prior-season stats", line.captured_at) for line in prior_lines ),
+    )
+    cutoff = _source_evidence_cutoff(
         cutoff,
-        catalog_captured_at,
-        ros_runtime.evaluation_as_of.astimezone(UTC),
-        *(line.captured_at.astimezone(UTC) for rows in weekly.values() for line in rows),
-        *(line.captured_at.astimezone(UTC) for line in prior_lines),
+        source_captures,
+        explicit_cutoff=evaluation_as_of is not None,
     )
     completed_raw = _weekly_actual_observations(
         league_state=league_state,

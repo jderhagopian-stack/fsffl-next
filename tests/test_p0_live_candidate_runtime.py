@@ -11,6 +11,7 @@ from fsffl.product.p0_live_candidate_runtime import (
     _single_source_fumbles_gap_player_ids,
     _status_based_zero_ros,
     _catalog_evidence_cutoff,
+    _source_evidence_cutoff,
 )
 from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
@@ -40,6 +41,26 @@ def test_live_catalog_is_included_in_cutoff_and_replay_rejects_later_capture():
     ) == catalog_capture
     with pytest.raises(ValueError, match="catalog snapshot postdates"):
         _catalog_evidence_cutoff(cutoff, catalog_capture, explicit_cutoff=True)
+
+
+def test_explicit_replay_cutoff_rejects_later_ros_weekly_and_prior_inputs():
+    import pytest
+
+    cutoff = datetime(2026, 10, 13, 19, 0, tzinfo=UTC)
+    later = cutoff + timedelta(minutes=3)
+    captures = (
+        ("REST-of-season projections", later),
+        ("Sleeper weekly stats week 7", later),
+        ("Sleeper prior-season stats", later),
+    )
+    for source, captured_at in captures:
+        with pytest.raises(ValueError, match=f"{source} postdates"):
+            _source_evidence_cutoff(
+                cutoff, ((source, captured_at),), explicit_cutoff=True
+            )
+    assert _source_evidence_cutoff(
+        cutoff, captures, explicit_cutoff=False
+    ) == later
 
 
 def test_dynamic_p0_source_row_retains_candidate_evidence_identity():

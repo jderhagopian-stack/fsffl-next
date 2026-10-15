@@ -41,6 +41,7 @@ def _accepted_materializer_manifest() -> tuple[dict[str, Any], Path]:
     make the runtime-root handoff explicit and deterministic for normal hosts.
     """
     manifest_path = os.getenv(_MANIFEST_ENV, "").strip()
+    explicit_mount = bool(manifest_path)
     if manifest_path:
         path = Path(manifest_path)
     else:
@@ -56,6 +57,7 @@ def _accepted_materializer_manifest() -> tuple[dict[str, Any], Path]:
                 "to its manifest"
             )
         else:
+            explicit_mount = True
             path = Path(bundle_root) / _BUNDLE_MANIFEST_NAME
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -65,6 +67,13 @@ def _accepted_materializer_manifest() -> tuple[dict[str, Any], Path]:
         ) from exc
     if not isinstance(manifest, dict):
         raise ValueError("accepted Foundation 4 materializer manifest must be a JSON object")
+    if explicit_mount:
+        from .foundation4_accepted_bundle import verify_accepted_manifest
+
+        if not verify_accepted_manifest(path):
+            raise ValueError(
+                "mounted Foundation 4 materializer bundle failed accepted-commit and per-file SHA256 verification"
+            )
     return manifest, path
 
 
