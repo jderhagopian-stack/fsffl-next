@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord, utc_now
 from fsffl.product.foundation4_career_forward_runtime import (
+    validate_foundation4_expanded_acceptance_cohort,
     CAREER_INTRINSIC_ARTIFACT_KIND,
     CAREER_INTRINSIC_SCOPE_KIND,
     LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
@@ -60,7 +61,6 @@ from fsffl.value.shapley_intrinsic_contract import (
     ShapleyIntrinsicAvailability,
     ShapleyIntrinsicContract,
     ShapleyIntrinsicCoverage,
-    validate_foundation4_expanded_acceptance_cohort,
     ShapleyIntrinsicHorizonContribution,
     ShapleyIntrinsicPlayerEstimate,
 )
