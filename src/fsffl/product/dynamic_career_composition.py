@@ -297,7 +297,10 @@ def build_dynamic_rostered_career_contract(
         if year_one_evidence.evidence_basis != "preseason_baseline":
             raise ValueError("dynamic Career bridge requires accepted preseason base cohort")
         base_year_one = _year_one_forecasts(year_one_evidence)
-        live = candidate_builder(state)
+        live = candidate_builder(
+            state,
+            evaluation_as_of=context.career_fingerprint_evaluation_as_of,
+        )
     except Exception as exc:
         # Dynamic acquisition is an optional extension to the already-built
         # frozen Career contract. Preserve that contract and expose each
