@@ -365,11 +365,15 @@ def test_coordinator_restore_reexpands_exact_state_dynamic_roster(materialized):
         "estimates": (*base.estimates, candidate_row),
         "player_count": base.player_count + 1,
     })
-    player = SimpleNamespace(player_id=candidate_id, position=SimpleNamespace(value="QB"))
-    roster = SimpleNamespace(player_id=candidate_id, slot=SimpleNamespace(value="BENCH"))
+    player = Player(
+        player_id=candidate_id,
+        full_name="Restart Fixture",
+        position=Position.QB,
+    )
+    roster = RosterEntry(player_id=candidate_id, slot=RosterSlot.BENCH)
     exact_state = context.league_state.model_copy(update={
         "players": (*context.league_state.players, player),
-        "team_states": (SimpleNamespace(team_id="team-1", roster=(roster,)),),
+        "team_states": (TeamState(team_id="team-1", roster=(roster,)),),
     })
     exact_context = UserRuntimeContext(user_id=context.user_id, league_state=exact_state)
     loader = CareerIntrinsicLoader(
@@ -475,9 +479,7 @@ def test_coordinator_pins_freshness_in_key_and_background_worker(materialized):
     coordinator._futures[key].result(timeout=10)
     completed = coordinator._records[key]
 
-    assert queued.intrinsic_input_fingerprint == built_fingerprints == [
-        queued.intrinsic_input_fingerprint
-    ]
+    assert built_fingerprints == [queued.intrinsic_input_fingerprint]
     assert completed.status == IntrinsicBuildStatus.COMPLETED
 
 
