@@ -168,6 +168,8 @@ class PostgresProjectionHistoryStore:
         if selector.as_of is not None:
             clauses.append(f"{prefix}effective_at <= %s")
             params.append(selector.as_of)
+            clauses.append(f"{prefix}retrieved_at <= %s")
+            params.append(selector.as_of)
         return " and ".join(clauses), params
 
     def latest_revisions(self, selector: ProjectionSelector) -> tuple[ProjectionRevision, ...]:
