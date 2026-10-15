@@ -72,6 +72,17 @@ jobs:
       - name: Keep live provider sanity checks manually authorized
         if: github.event_name == 'pull_request'
         run: echo "Live-league checks are skipped on pull requests; dispatch this workflow manually when provider validation is authorized."
+      - name: Record deferred live-check disposition
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p artifacts/diagnostics/league_atlas_north_star_20260922
+          cat > artifacts/diagnostics/league_atlas_north_star_20260922/PR_LIVE_CHECKS_DEFERRED.md <<'EOF'
+          # Live League Atlas checks deferred
+
+          Automatic pull-request validation runs the deterministic syntax and
+          regression checks. Real-league and live-provider checks are reserved
+          for an explicitly authorized `workflow_dispatch` run.
+          EOF
       - name: Upload Atlas sanity evidence
         if: always()
         uses: actions/upload-artifact@v4

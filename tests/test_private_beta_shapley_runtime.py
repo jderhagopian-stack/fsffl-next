@@ -470,6 +470,7 @@ def test_private_beta_live_provider_diagnostics_require_manual_dispatch():
     assert atlas_workflow.count("if: github.event_name == 'workflow_dispatch'") == 2
     assert "if: github.event_name == 'pull_request'" in atlas_workflow
     assert "Live-league checks are skipped on pull requests" in atlas_workflow
+    assert "Record deferred live-check disposition" in atlas_workflow
 
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
