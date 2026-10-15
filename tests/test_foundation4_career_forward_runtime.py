@@ -345,95 +345,75 @@ def test_restart_restore_is_semantically_identical_and_skips_rebuild(
     assert len(component.estimates) == 335
 
 
-def test_restore_expanded_career_artifact_returns_only_frozen_reference_base(materialized):
+def test_restart_restores_complete_expanded_contract_without_acquisition(materialized):
     persistence, _calls, _base_loader, context, base = materialized
+    calls = []
     loader = CareerIntrinsicLoader(
-        current_intrinsic_loader=lambda _context: None,
+        current_intrinsic_loader=lambda _context: calls.append("current"),
         current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
         persistence_store=persistence,
-        expanded_career_contract_loader=lambda _context, frozen: frozen,
+        expanded_career_contract_loader=lambda *_args: calls.append("provider-and-fit"),
         expanded_career_contract_fingerprint_resolver=lambda _context: "dynamic-fp-v1",
     )
     dynamic_id = "sleeper:player:restored-dynamic"
     dynamic_row = base.estimates[0].model_copy(update={"player_id": dynamic_id})
-    legacy_expanded = base.model_copy(update={
+    expanded = base.model_copy(update={
         "estimates": (*base.estimates, dynamic_row),
         "player_count": base.player_count + 1,
+        "player_coverage_failures": {"sleeper:player:unsupported": "verified missing evidence"},
     })
-    fingerprint = loader.intrinsic_input_fingerprint(context)
-    payload = legacy_expanded.model_dump(mode="json")
-    payload["_foundation4_dependency_fingerprint"] = fingerprint
-    persistence.put_artifact(ReusableArtifactRecord(
-        key=loader._career_key(context, fingerprint),
-        payload=payload,
-        computed_at=utc_now(),
-    ))
-
-    restored = loader.restore_compatible(context)
-
-    assert restored is not None
-    assert restored.player_count == base.player_count
-    assert dynamic_id not in {row.player_id for row in restored.estimates}
-
-
-def test_coordinator_restore_reexpands_exact_state_dynamic_roster(materialized):
-    persistence, _calls, _base_loader, context, base = materialized
-    candidate_id = "sleeper:player:restart-dynamic"
-    frozen_row = next(row for row in base.estimates if row.position.value == "QB")
-    frozen_tail = frozen_row.uncertainty.terminal_y8_plus
-    candidate_tail = frozen_tail.model_copy(update={
-        "player_id": candidate_id,
-        "features": frozen_tail.features.model_copy(update={"player_id": candidate_id}),
-    })
-    candidate_row = frozen_row.model_copy(update={
-        "player_id": candidate_id,
-        "uncertainty": frozen_row.uncertainty.model_copy(
-            update={"terminal_y8_plus": candidate_tail}
-        ),
-    })
-    expanded = base.model_copy(update={
-        "input_fingerprint": "restart-expanded-fixture",
-        "estimates": (*base.estimates, candidate_row),
-        "player_count": base.player_count + 1,
-    })
-    player = Player(
-        player_id=candidate_id,
-        full_name="Restart Fixture",
-        position=Position.QB,
+    component = _base_loader.current_component(context)
+    loader._persist(
+        context,
+        dependency_fingerprint=loader.intrinsic_input_fingerprint(context),
+        component=component,
+        contract=expanded,
     )
-    roster = RosterEntry(player_id=candidate_id, slot=RosterSlot.BENCH)
-    exact_state = context.league_state.model_copy(update={
-        "players": (*context.league_state.players, player),
-        "team_states": (TeamState(team_id="team-1", roster=(roster,)),),
-    })
-    exact_context = UserRuntimeContext(user_id=context.user_id, league_state=exact_state)
+    assert loader.restore_compatible(context) == expanded
+    assert loader(context) == expanded
+    assert calls == []
+
+
+def test_base_only_artifact_is_not_restored_as_completed_expanded_product(materialized):
+    persistence, _calls, _base_loader, context, base = materialized
+    calls = []
     loader = CareerIntrinsicLoader(
-        current_intrinsic_loader=lambda _context: _current_intrinsic(),
+        current_intrinsic_loader=lambda _context: calls.append("current"),
         current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
         persistence_store=persistence,
-        expanded_career_contract_loader=lambda _context, _frozen: expanded,
-        expanded_career_contract_fingerprint_resolver=lambda _context: "restart-dynamic-v1",
+        expanded_career_contract_loader=lambda *_args: calls.append("provider-and-fit"),
+        expanded_career_contract_fingerprint_resolver=lambda _context: "dynamic-fp-v1",
     )
-    fingerprint = loader.intrinsic_input_fingerprint(exact_context)
+    fingerprint = loader.intrinsic_input_fingerprint(context)
     payload = base.model_dump(mode="json")
     payload["_foundation4_dependency_fingerprint"] = fingerprint
     persistence.put_artifact(ReusableArtifactRecord(
-        key=loader._career_key(exact_context, fingerprint),
-        payload=payload,
-        computed_at=utc_now(),
+        key=loader._career_key(context, fingerprint), payload=payload, computed_at=utc_now(),
     ))
-    coordinator = ShapleyIntrinsicBackgroundCoordinator(
-        loader,
-        max_workers=1,
-        intrinsic_input_fingerprint_resolver=loader.intrinsic_input_fingerprint,
-    )
+    assert loader.restore_compatible(context) is None
+    assert calls == []
 
-    restored = coordinator.restore_compatible_staged(exact_context)
 
-    assert restored is not None
-    assert restored.status == IntrinsicBuildStatus.COMPLETED
-    assert restored.contract is not None
-    assert candidate_id in {row.player_id for row in restored.contract.estimates}
+def test_component_reads_are_reused_and_disabled_persistence_keeps_only_copy(materialized):
+    persistence, _calls, loader, context, _base = materialized
+    first = loader.current_component(context)
+    assert first is not None
+    assert loader.current_component(context) is first
+    transient = _loader(None, [])
+    transient(context)
+    assert transient.current_component(context) is not None
+    transient.clear_user_cache(context.user_id)
+    assert transient._cached_component is None
+
+
+def test_unpinned_state_uses_evidence_cutoff_not_reader_clock(materialized, monkeypatch):
+    _persistence, _calls, loader, context, _base = materialized
+    first = loader.pin_build_context(context)
+    monkeypatch.setattr("fsffl.product.foundation4_career_forward_runtime.utc_now",
+                        lambda: datetime(2030, 1, 1, tzinfo=UTC))
+    restarted = loader.pin_build_context(context)
+    assert first.career_fingerprint_evaluation_as_of == context.league_state.as_of
+    assert restarted == first
 
 
 def test_freshness_epoch_replaces_one_durable_career_artifact_slot(materialized):
@@ -525,6 +505,7 @@ def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(
     store = PrivateBetaRuntimeStore()
     store.set_league_state("local-beta-user", context.league_state)
     coordinator = ShapleyIntrinsicBackgroundCoordinator(loader, max_workers=1)
+    coordinator.restore_compatible_staged(store.get("local-beta-user"))
     app = FastAPI()
     install_foundation4_shadow_routes(
         app,
@@ -606,6 +587,7 @@ def test_canonical_career_intrinsic_endpoint_is_primary_and_not_shadow_labeled(m
     store = PrivateBetaRuntimeStore()
     store.set_league_state("local-beta-user", context.league_state)
     coordinator = ShapleyIntrinsicBackgroundCoordinator(loader, max_workers=1)
+    coordinator.restore_compatible_staged(store.get("local-beta-user"))
     app = FastAPI()
     install_foundation4_shadow_routes(app, runtime_store=store, loader=loader, coordinator=coordinator)
     client = TestClient(app)
@@ -722,7 +704,7 @@ def test_dynasty_route_does_not_deserialize_career_artifact_on_foreground_reques
     assert "restore_compatible(" not in route
     assert "coordinator.current(context)" in route
     assert "presentation_payload_loader" in route
-    assert "coordinator.request(context)" in route
+    assert "coordinator.request(context)" not in route
 
 
 @pytest.mark.parametrize(
@@ -754,10 +736,10 @@ def test_dynasty_nonready_responses_keep_published_generation(
 
     class Coordinator:
         def current(self, _context):
-            return None
+            return record
 
         def request(self, _context):
-            return record
+            raise AssertionError("reader must not start a build")
 
     app = FastAPI()
     install_foundation4_shadow_routes(
@@ -826,7 +808,7 @@ def test_dynasty_last_good_requires_current_publication_generation(monkeypatch) 
     assert payload["league_state_id"] == context.league_state.state_id
     assert payload["publication_generation_id"] == "replacement-runtime-generation"
     assert payload.get("rooms") is None
-    assert request_calls
+    assert request_calls == []
 
 
 def test_dynasty_rejects_unversioned_last_good_instead_of_guessing_generation(
@@ -1008,3 +990,35 @@ def test_expanded_roster_failure_is_visible_without_blocking_frozen_career(mater
         by_id[candidate_id]["career_failure_reason"]
         == "year_one_ros_fantasy_points_missing"
     )
+
+
+def test_product_career_read_is_small_exact_publication_and_never_launches_work(materialized):
+    import json
+    _persistence, _calls, loader, context, built = materialized
+    context = replace(context, publication_generation_id="served-generation")
+    record = SimpleNamespace(status=IntrinsicBuildStatus.COMPLETED, contract=built,
+                             league_state_id=context.league_state.state_id)
+    coordinator = SimpleNamespace(current=lambda _context: record,
+        request=lambda *_args: pytest.fail("GET must not launch fitting or acquisition"))
+    app = FastAPI()
+    install_foundation4_shadow_routes(app, runtime_store=SimpleNamespace(get=lambda _: context),
+                                      loader=loader, coordinator=coordinator)
+    endpoint = next(route.endpoint for route in app.routes if route.path == FOUNDATION4_CAREER_FORWARD_ENDPOINT)
+    response = endpoint(SimpleNamespace(url=SimpleNamespace(path=FOUNDATION4_CAREER_FORWARD_ENDPOINT)),
+                        state_id=context.league_state.state_id,
+                        publication_generation_id="served-generation", user_id=context.user_id)
+    assert response["publication_generation_id"] == "served-generation"
+    assert response["status"] == "ready"
+    assert response["career_presentation"]["market_inputs_used"] is False
+    assert response["career_presentation"]["reference_count"] == 335
+    assert all("uncertainty" not in row for row in response["estimates"])
+    assert [row["raw_career_forward_reference"] for row in response["estimates"]] == [row.raw_career_forward_reference for row in built.estimates]
+    assert len(json.dumps(response)) < len(built.model_dump_json()) / 3
+    stale = endpoint(SimpleNamespace(url=SimpleNamespace(path=FOUNDATION4_CAREER_FORWARD_ENDPOINT)),
+                     state_id="other-served-state", user_id=context.user_id)
+    assert stale.status_code == 409
+    coordinator.current = lambda _: None
+    missing = endpoint(SimpleNamespace(url=SimpleNamespace(path=FOUNDATION4_CAREER_FORWARD_ENDPOINT)),
+                       user_id=context.user_id)
+    assert missing.status_code == 503
+    assert json.loads(missing.body)["status"] == "refresh_required"

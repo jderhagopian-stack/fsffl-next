@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
 from .foundation4_career_forward_runtime import CareerIntrinsicLoader
+from .career_presentation import CareerPresentationCoordinate
+from .foundation4_shadow_inputs import provide_foundation4_terminal_features
 from .career_coverage import (
     build_career_position_depth_refresh,
     select_career_coverage,
@@ -21,6 +25,12 @@ FOUNDATION4_CAREER_FORWARD_ENDPOINT = CAREER_INTRINSIC_ENDPOINT
 FOUNDATION4_Y4_Y7_ENDPOINT = "/api/value/long-horizon-y4-y7-shadow-v1"
 
 
+@lru_cache(maxsize=1)
+def _reference_player_ids() -> frozenset[str]:
+    # Retain only small identity data, not the terminal-feature object graph.
+    return frozenset(provide_foundation4_terminal_features())
+
+
 def _building_payload(record) -> dict[str, object]:
     return {
         "status": "building",
@@ -29,6 +39,7 @@ def _building_payload(record) -> dict[str, object]:
         "league_state_id": record.league_state_id,
         "input_fingerprint": record.intrinsic_input_fingerprint,
         "current_intrinsic_replaced": False,
+        "retry_after_ms": 3000,
     }
 
 
@@ -162,14 +173,37 @@ def install_career_intrinsic_routes(
                 status_code=409,
                 detail="Connect a league before requesting Long-Term Intrinsic shadow",
             )
-        return context, coordinator.request(context)
+        return context, coordinator.current(context)
 
     @app.get(LEGACY_FOUNDATION4_CAREER_FORWARD_ENDPOINT)
     @app.get(CAREER_INTRINSIC_ENDPOINT)
-    def career_forward_shadow(request: Request, user_id: str = Depends(require_beta_user)):
+    def career_forward_shadow(
+        request: Request,
+        state_id: str | None = None,
+        publication_generation_id: str | None = None,
+        user_id: str = Depends(require_beta_user),
+    ):
         _context, record = _record(user_id)
+        if ((state_id is not None and state_id != _context.league_state.state_id)
+                or (publication_generation_id is not None
+                    and publication_generation_id != _context.publication_generation_id)):
+            return JSONResponse(status_code=409, content={
+                "status": "superseded",
+                "league_state_id": _context.league_state.state_id,
+                "publication_generation_id": _context.publication_generation_id,
+                "reason": "Career evidence must match the publication actually displayed.",
+            })
+        if record is None:
+            return JSONResponse(status_code=503, content={
+                "status": "refresh_required",
+                "league_state_id": _context.league_state.state_id,
+                "publication_generation_id": _context.publication_generation_id,
+                "reason": "No compatible Career publication is available. Use the explicit intelligence preparation action.",
+            })
         if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
-            return JSONResponse(status_code=202, content=_building_payload(record))
+            building = _building_payload(record)
+            building["publication_generation_id"] = _context.publication_generation_id
+            return JSONResponse(status_code=202, content=building)
         if record.status == IntrinsicBuildStatus.FAILED:
             return JSONResponse(
                 status_code=503,
@@ -185,11 +219,35 @@ def install_career_intrinsic_routes(
                 status_code=503,
                 detail="Career Intrinsic lifecycle completed without a governed contract",
             )
-        payload = record.contract.model_dump(mode="json")
+        # Product readers need economic totals and provenance, not the full
+        # per-horizon uncertainty matrices. Keep the explicit detail endpoint
+        # compatible, without allocating those matrices for every browser poll.
+        canonical = request.url.path == CAREER_INTRINSIC_ENDPOINT
+        payload = record.contract.model_dump(
+            mode="json",
+            exclude={"estimates": {"__all__": {"uncertainty"}}} if canonical else None,
+        )
+        if canonical:
+            payload["uncertainty_detail_endpoint"] = LEGACY_FOUNDATION4_CAREER_FORWARD_ENDPOINT
         payload["league_state_id"] = record.league_state_id
+        payload["publication_generation_id"] = _context.publication_generation_id
         payload["career_position_depth"] = _career_position_depth_rows(
             _context.league_state, record.contract
         )
+        # The reference game is Current-owned; dynamic roster additions never
+        # change its presentation ruler or participate as Market inputs.
+        frozen_ids = _reference_player_ids()
+        raw = {row.player_id: row.raw_career_forward_reference for row in record.contract.estimates}
+        reference_ids = frozenset(frozen_ids & raw.keys())
+        try:
+            coordinate = CareerPresentationCoordinate.from_reference(raw, reference_ids=reference_ids)
+        except ValueError as exc:
+            payload["career_presentation"] = {"status": "unavailable", "reason": str(exc)}
+        else:
+            payload["career_presentation"] = {"status": "ready", **coordinate.summary(),
+                "inactive_reference_player_ids": sorted(frozen_ids - reference_ids)}
+            for row in payload["estimates"]:
+                row["career_intrinsic_index"] = coordinate.index(row["raw_career_forward_reference"])
         payload["capability"] = "career_intrinsic"
         payload["value_label"] = "Career Intrinsic"
         if request.url.path == CAREER_INTRINSIC_ENDPOINT:
@@ -278,7 +336,13 @@ def install_career_intrinsic_routes(
         # No canonical or verified last-good evidence is available. Request the
         # production Career lifecycle and report its real state; never fabricate
         # zero/empty Dynasty strength.
-        record = coordinator.request(context)
+        if record is None:
+            return _dynasty_publication_payload(context, {
+                "status": "refresh_required",
+                "capability": "career_intrinsic",
+                "league_state_id": state.state_id,
+                "reason": "No compatible Career publication is available; explicit intelligence preparation is required.",
+            })
         if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
             payload = _building_payload(record)
             payload["status"] = "preparing"
@@ -326,6 +390,8 @@ def install_career_intrinsic_routes(
     @app.get(FOUNDATION4_Y4_Y7_ENDPOINT)
     def y4_y7_shadow(user_id: str = Depends(require_beta_user)):
         context, record = _record(user_id)
+        if record is None:
+            raise HTTPException(status_code=503, detail="Prepare Career Intrinsic explicitly before requesting its component")
         if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
             return JSONResponse(status_code=202, content=_building_payload(record))
         if record.status == IntrinsicBuildStatus.FAILED:

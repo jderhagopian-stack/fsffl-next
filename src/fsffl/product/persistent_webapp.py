@@ -315,6 +315,9 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
 _career_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     _career_intrinsic_loader,
     max_workers=1,
+    # Keep current and one last-good Career authority in the single-instance
+    # beta. Older exact-State results remain durable, not eight matrices in RAM.
+    max_records=2,
     forecast_coordinate_resolver=(
         lambda _context: _career_intrinsic_loader.forecast_model_version
     ),

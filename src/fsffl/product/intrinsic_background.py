@@ -535,6 +535,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         return record
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
+        context = self._pin_build_context(context)
         key = self._key(context)
         with self._lock:
             return self._records.get(key)
