@@ -226,6 +226,7 @@ def dynamic_career_fingerprint(
     *,
     projection_history_reader=None,
     now: datetime | None = None,
+    include_freshness_epoch: bool = True,
 ) -> str:
     """Bind Career reuse to State, ROS revisions, and bounded live-source freshness.
 
@@ -265,9 +266,10 @@ def dynamic_career_fingerprint(
             for row in getattr(evidence, "raw_forecasts", ())
         ],
         "projection_history_revisions": ros_revisions,
-        "live_source_freshness_epoch": freshness_epoch,
         "contract": "dynamic-rostered-p0-career-bridge-v1",
     }
+    if include_freshness_epoch:
+        payload["live_source_freshness_epoch"] = freshness_epoch
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()

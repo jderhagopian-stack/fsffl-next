@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from threading import RLock
 from typing import Callable, Mapping
 
@@ -80,6 +80,7 @@ ExpandedCareerContractLoader = Callable[
     ExpandedCareerContractResult | CareerForwardIntrinsicShadowContract | None,
 ]
 ExpandedCareerContractFingerprintResolver = Callable[[UserRuntimeContext], str]
+CareerArtifactKeyFingerprintResolver = Callable[[UserRuntimeContext], str]
 
 
 def _rules_payload(context: UserRuntimeContext) -> dict[str, object]:
@@ -114,6 +115,9 @@ class CareerIntrinsicLoader:
         expanded_career_contract_fingerprint_resolver: (
             ExpandedCareerContractFingerprintResolver | None
         ) = None,
+        career_artifact_key_fingerprint_resolver: (
+            CareerArtifactKeyFingerprintResolver | None
+        ) = None,
     ) -> None:
         if (expanded_career_contract_loader is None) != (
             expanded_career_contract_fingerprint_resolver is None
@@ -126,6 +130,9 @@ class CareerIntrinsicLoader:
         self._expanded_career_contract_fingerprint_resolver = (
             expanded_career_contract_fingerprint_resolver
         )
+        self._career_artifact_key_fingerprint_resolver = (
+            career_artifact_key_fingerprint_resolver
+        )
         self._current_intrinsic_loader = current_intrinsic_loader
         self._current_intrinsic_fingerprint_resolver = (
             current_intrinsic_fingerprint_resolver
@@ -137,7 +144,35 @@ class CareerIntrinsicLoader:
         self._cached_contract: CareerForwardIntrinsicShadowContract | None = None
         self._cached_component: LongTermIntrinsicShadowContract | None = None
 
+    def pin_build_context(self, context: UserRuntimeContext) -> UserRuntimeContext:
+        """Pin time-sensitive source identity for coordinator key and worker."""
+        if context.career_fingerprint_evaluation_as_of is not None:
+            return context
+        return replace(
+            context,
+            career_fingerprint_evaluation_as_of=utc_now(),
+        )
+
     def intrinsic_input_fingerprint(self, context: UserRuntimeContext) -> str:
+        return self._input_fingerprint(
+            context, self._expanded_career_contract_fingerprint_resolver
+        )
+
+    def intrinsic_artifact_key_fingerprint(
+        self, context: UserRuntimeContext
+    ) -> str:
+        """Stable durable key; freshness remains verified in the payload."""
+        resolver = (
+            self._career_artifact_key_fingerprint_resolver
+            or self._expanded_career_contract_fingerprint_resolver
+        )
+        return self._input_fingerprint(context, resolver)
+
+    def _input_fingerprint(
+        self,
+        context: UserRuntimeContext,
+        expanded_fingerprint_resolver: Callable[[UserRuntimeContext], str] | None,
+    ) -> str:
         if context.league_state is None:
             raise ValueError("Foundation 4 requires canonical league State")
         payload = {
@@ -161,8 +196,8 @@ class CareerIntrinsicLoader:
             "career_tail_model_version": CAREER_TAIL_MODEL_VERSION,
             "runtime_version": FOUNDATION4_RUNTIME_VERSION,
             "expanded_career_contract_input_fingerprint": (
-                self._expanded_career_contract_fingerprint_resolver(context)
-                if self._expanded_career_contract_fingerprint_resolver is not None
+                expanded_fingerprint_resolver(context)
+                if expanded_fingerprint_resolver is not None
                 else None
             ),
         }
@@ -180,11 +215,15 @@ class CareerIntrinsicLoader:
         fingerprint: str,
     ) -> ArtifactKey:
         assert context.league_state is not None
+        # Reuse one durable slot for the same non-time-varying source identity.
+        # The payload still carries and validates the exact freshness fingerprint,
+        # so a new epoch rebuilds and upserts this row instead of accumulating one.
+        artifact_fingerprint = self.intrinsic_artifact_key_fingerprint(context)
         return ArtifactKey(
             artifact_kind=CAREER_INTRINSIC_ARTIFACT_KIND,
             scope_kind=CAREER_INTRINSIC_SCOPE_KIND,
             scope_id=context.league_state.league.league_id,
-            input_fingerprint=fingerprint,
+            input_fingerprint=artifact_fingerprint,
             model_version=(
                 f"{CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION}"
                 f"|{CAREER_FORWARD_INTRINSIC_MODEL_VERSION}"
@@ -206,6 +245,21 @@ class CareerIntrinsicLoader:
         )
 
     def restore_compatible(
+        self,
+        context: UserRuntimeContext,
+    ) -> CareerForwardIntrinsicShadowContract | None:
+        context = self.pin_build_context(context)
+        frozen = self._restore_frozen_compatible(context)
+        if frozen is None:
+            return None
+        expanded = self._append_expanded_rostered_contract(context, frozen)
+        with self._lock:
+            self._cached_user_id = context.user_id
+            self._cached_fingerprint = self.intrinsic_input_fingerprint(context)
+            self._cached_contract = expanded
+        return expanded
+
+    def _restore_frozen_compatible(
         self,
         context: UserRuntimeContext,
     ) -> CareerForwardIntrinsicShadowContract | None:
@@ -477,6 +531,7 @@ class CareerIntrinsicLoader:
         self,
         context: UserRuntimeContext,
     ) -> CareerForwardIntrinsicShadowContract:
+        context = self.pin_build_context(context)
         if context.league_state is None:
             raise ValueError("Foundation 4 requires canonical league State")
         if context.league_state.league.season != 2026:
@@ -491,7 +546,7 @@ class CareerIntrinsicLoader:
             ):
                 return self._cached_contract
 
-        restored = self.restore_compatible(context)
+        restored = self._restore_frozen_compatible(context)
         if restored is not None:
             expanded_restored = self._append_expanded_rostered_contract(
                 context, restored

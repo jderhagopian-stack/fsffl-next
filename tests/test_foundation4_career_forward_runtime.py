@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from dataclasses import replace
 from time import monotonic, sleep
 from types import SimpleNamespace
 
@@ -342,6 +343,142 @@ def test_restore_expanded_career_artifact_returns_only_frozen_reference_base(mat
     assert restored is not None
     assert restored.player_count == base.player_count
     assert dynamic_id not in {row.player_id for row in restored.estimates}
+
+
+def test_coordinator_restore_reexpands_exact_state_dynamic_roster(materialized):
+    persistence, _calls, _base_loader, context, base = materialized
+    candidate_id = "sleeper:player:restart-dynamic"
+    frozen_row = next(row for row in base.estimates if row.position.value == "QB")
+    frozen_tail = frozen_row.uncertainty.terminal_y8_plus
+    candidate_tail = frozen_tail.model_copy(update={
+        "player_id": candidate_id,
+        "features": frozen_tail.features.model_copy(update={"player_id": candidate_id}),
+    })
+    candidate_row = frozen_row.model_copy(update={
+        "player_id": candidate_id,
+        "uncertainty": frozen_row.uncertainty.model_copy(
+            update={"terminal_y8_plus": candidate_tail}
+        ),
+    })
+    expanded = base.model_copy(update={
+        "input_fingerprint": "restart-expanded-fixture",
+        "estimates": (*base.estimates, candidate_row),
+        "player_count": base.player_count + 1,
+    })
+    player = SimpleNamespace(player_id=candidate_id, position=SimpleNamespace(value="QB"))
+    roster = SimpleNamespace(player_id=candidate_id, slot=SimpleNamespace(value="BENCH"))
+    exact_state = context.league_state.model_copy(update={
+        "players": (*context.league_state.players, player),
+        "team_states": (SimpleNamespace(team_id="team-1", roster=(roster,)),),
+    })
+    exact_context = UserRuntimeContext(user_id=context.user_id, league_state=exact_state)
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _context: _current_intrinsic(),
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        persistence_store=persistence,
+        expanded_career_contract_loader=lambda _context, _frozen: expanded,
+        expanded_career_contract_fingerprint_resolver=lambda _context: "restart-dynamic-v1",
+    )
+    fingerprint = loader.intrinsic_input_fingerprint(exact_context)
+    payload = base.model_dump(mode="json")
+    payload["_foundation4_dependency_fingerprint"] = fingerprint
+    persistence.put_artifact(ReusableArtifactRecord(
+        key=loader._career_key(exact_context, fingerprint),
+        payload=payload,
+        computed_at=utc_now(),
+    ))
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        loader,
+        max_workers=1,
+        intrinsic_input_fingerprint_resolver=loader.intrinsic_input_fingerprint,
+    )
+
+    restored = coordinator.restore_compatible_staged(exact_context)
+
+    assert restored is not None
+    assert restored.status == IntrinsicBuildStatus.COMPLETED
+    assert restored.contract is not None
+    assert candidate_id in {row.player_id for row in restored.contract.estimates}
+
+
+def test_freshness_epoch_replaces_one_durable_career_artifact_slot(materialized):
+    _persistence, _calls, _base_loader, context, _base = materialized
+    from fsffl.product.dynamic_career_composition import dynamic_career_fingerprint
+
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _context: _current_intrinsic(),
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        expanded_career_contract_loader=lambda _context, frozen: frozen,
+        expanded_career_contract_fingerprint_resolver=lambda item: (
+            dynamic_career_fingerprint(
+                item, now=item.career_fingerprint_evaluation_as_of
+            )
+        ),
+        career_artifact_key_fingerprint_resolver=lambda item: (
+            dynamic_career_fingerprint(
+                item,
+                now=item.career_fingerprint_evaluation_as_of,
+                include_freshness_epoch=False,
+            )
+        ),
+    )
+    first = UserRuntimeContext(
+        user_id=context.user_id,
+        league_state=context.league_state,
+        career_fingerprint_evaluation_as_of=datetime(2026, 10, 15, 0, 0, tzinfo=UTC),
+    )
+    next_epoch = UserRuntimeContext(
+        user_id=context.user_id,
+        league_state=context.league_state,
+        career_fingerprint_evaluation_as_of=datetime(2026, 10, 15, 6, 0, tzinfo=UTC),
+    )
+    first_fingerprint = loader.intrinsic_input_fingerprint(first)
+    next_fingerprint = loader.intrinsic_input_fingerprint(next_epoch)
+
+    assert first_fingerprint != next_fingerprint
+    assert loader._career_key(first, first_fingerprint) == loader._career_key(
+        next_epoch, next_fingerprint
+    )
+
+
+def test_coordinator_pins_freshness_in_key_and_background_worker(materialized):
+    _persistence, _calls, _base_loader, context, _base = materialized
+    start = datetime(2026, 10, 15, 5, 59, 59, tzinfo=UTC)
+    wall_clock = [start]
+    built_fingerprints = []
+
+    class TimeSensitiveLoader:
+        def pin_build_context(self, value):
+            return replace(value, career_fingerprint_evaluation_as_of=wall_clock[0])
+
+        def fingerprint(self, value):
+            evaluated_at = value.career_fingerprint_evaluation_as_of or wall_clock[0]
+            return str(int(evaluated_at.timestamp() // (6 * 60 * 60)))
+
+        def __call__(self, value):
+            wall_clock[0] = start.replace(hour=6, minute=0, second=1)
+            built_fingerprints.append(self.fingerprint(value))
+            return _current_intrinsic()
+
+    loader = TimeSensitiveLoader()
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        loader,
+        max_workers=1,
+        intrinsic_input_fingerprint_resolver=loader.fingerprint,
+    )
+    queued = coordinator.request(context)
+    key = (
+        queued.user_id,
+        context.league_state.league.league_id,
+        queued.intrinsic_input_fingerprint,
+    )
+    coordinator._futures[key].result(timeout=10)
+    completed = coordinator._records[key]
+
+    assert queued.intrinsic_input_fingerprint == built_fingerprints == [
+        queued.intrinsic_input_fingerprint
+    ]
+    assert completed.status == IntrinsicBuildStatus.COMPLETED
 
 
 def test_shadow_api_serves_completed_full_cohort_and_y4_y7_component(
