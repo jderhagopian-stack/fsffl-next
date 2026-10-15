@@ -149,7 +149,7 @@ function renderTradeAnalysis(result){
     <div id="trade-simulation-result" style="margin-top:12px"></div>
     <div id="trade-frontier-result" style="margin-top:12px"></div>
     ${warnings?`<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--accent)">Evidence & limitations</summary><ul style="color:var(--muted);font-size:12px;line-height:1.5;padding-left:18px">${warnings}</ul></details>`:''}
-    <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Broad Market and FSFFL Intrinsic are evidence lenses; Trade Decision remains the authority for bilateral package economics and consequences.</p>
+    <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Broad Market and 3-Year Intrinsic are evidence lenses; Trade Decision remains the authority for bilateral package economics and consequences.</p>
   </div>`;
 }
 

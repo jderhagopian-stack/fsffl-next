@@ -23,7 +23,7 @@ def test_franchise_north_star_consumes_only_existing_governed_read_paths() -> No
         "projected_starter",
         "draft_picks",
         "Broad Market",
-        "FSFFL Intrinsic",
+        "3-Year Intrinsic",
     ):
         assert evidence in NORTH_STAR
     assert "view?.position_strengths" not in NORTH_STAR
@@ -110,7 +110,7 @@ def test_franchise_roster_is_compact_filtered_and_uses_one_forecast_basis() -> N
     assert "return season==null?null:season/FSFFL_FRANCHISE_GAME_BASIS" in NORTH_STAR
     assert "Proj · 17g" in NORTH_STAR
     assert "Broad Market" in NORTH_STAR
-    assert "FSFFL Intrinsic" in NORTH_STAR
+    assert "3-Year Intrinsic" in NORTH_STAR
     assert "data-player-intelligence-id" in NORTH_STAR
     assert "roster.filter(franchiseNSProjectedStarter)" in roster
     assert "!franchiseNSProjectedStarter(player)" in roster
@@ -121,7 +121,7 @@ def test_franchise_assets_keep_market_intrinsic_and_pick_authority_separate() ->
         "function renderFranchiseNorthStar(){", 1
     )[0]
     assert "Broad Market" in assets
-    assert "FSFFL Intrinsic" in assets
+    assert "3-Year Intrinsic" in assets
     assert "Flexible assets" in assets
     assert "describes optionality; it is not a trade recommendation" in assets
     assert "Player lens selection never changes universal pick evidence." in assets
@@ -178,7 +178,7 @@ def test_franchise_mobile_layout_avoids_table_first_and_page_horizontal_scroll()
 
 def test_franchise_intrinsic_unavailable_is_explicit_not_a_dash() -> None:
     assert "franchiseNSIntrinsicReason" in NORTH_STAR
-    assert "Governed FSFFL Intrinsic is unavailable for the current league state." in NORTH_STAR
+    assert "Governed 3-Year Intrinsic is unavailable for the current league state." in NORTH_STAR
     assert "fsffl_intrinsic?.reason" in NORTH_STAR
 
 

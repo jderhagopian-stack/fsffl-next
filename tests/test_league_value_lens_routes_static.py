@@ -33,7 +33,7 @@ def test_primary_league_presentation_uses_approved_value_hierarchy() -> None:
     assert 'value="total_cardinal_value"' not in html
     assert 'option[value="total_cardinal_value"]' in corrections
     assert "remove()" in corrections
-    assert "Broad Market + FSFFL Intrinsic" in league
+    assert "Broad Market + 3-Year Intrinsic" in league
     assert "Total FSFFL Cardinal Value" not in league
 
 

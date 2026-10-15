@@ -207,7 +207,7 @@ def test_intrinsic_never_falls_through_to_a_silent_dash() -> None:
     assert "intrinsic_error" in source
     assert "intrinsic_status_reason" in source
     assert "franchise-intrinsic-unavailable" in franchise
-    assert "Governed FSFFL Intrinsic is unavailable for the current league state." in franchise
+    assert "Governed 3-Year Intrinsic is unavailable for the current league state." in franchise
 
 
 def test_forecast_detail_keeps_expected_as_centerline_and_does_not_relabel_it_p50() -> None:
