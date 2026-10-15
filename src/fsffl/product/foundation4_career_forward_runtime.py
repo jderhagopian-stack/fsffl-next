@@ -664,7 +664,11 @@ class CareerIntrinsicLoader:
             self._cached_user_id = context.user_id
             self._cached_fingerprint = dependency_fingerprint
             self._cached_contract = contract
-            self._cached_component = component
+            # The exact component is persisted above and can be restored on
+            # demand by explicit Y4–Y7 consumers. Do not keep this second large
+            # matrix resident alongside the Career contract after materializing
+            # a league; the hosted worker runs below a 512 MiB hard limit.
+            self._cached_component = None
         return contract
 
     def current_component(

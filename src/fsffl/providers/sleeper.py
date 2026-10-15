@@ -27,6 +27,33 @@ from fsffl.state.models import (
 )
 
 
+def _normalize_sleeper_player_status(raw: Mapping[str, Any]) -> PlayerStatus:
+    """Normalize available NFL status facts without inferring season-long absence."""
+    injury = str(raw.get("injury_status") or "").strip().lower()
+    if injury in {"out", "doubtful", "questionable", "ir", "injured reserve"}:
+        return PlayerStatus.INJURED
+    if injury == "pup":
+        return PlayerStatus.PUP
+    status = str(raw.get("status") or "").strip().lower().replace("-", " ")
+    status_key = " ".join(status.replace("_", " ").split())
+    status_map = {
+        "active": PlayerStatus.ACTIVE,
+        "inactive": PlayerStatus.INACTIVE,
+        "injured": PlayerStatus.INJURED,
+        "injured reserve": PlayerStatus.INJURED,
+        "reserve/injured": PlayerStatus.INJURED,
+        "reserve injured": PlayerStatus.INJURED,
+        "ir": PlayerStatus.INJURED,
+        "pup": PlayerStatus.PUP,
+        "physically unable to perform": PlayerStatus.PUP,
+        "suspended": PlayerStatus.SUSPENDED,
+        "practice squad": PlayerStatus.PRACTICE_SQUAD,
+        "free agent": PlayerStatus.FREE_AGENT,
+        "retired": PlayerStatus.RETIRED,
+    }
+    return status_map.get(status_key, PlayerStatus.UNKNOWN)
+
+
 @dataclass(frozen=True)
 class SleeperPayloadBundle:
     league: Mapping[str, Any]
@@ -397,8 +424,7 @@ class SleeperNormalizer:
                     provider_refs=(ProviderRef(provider="sleeper", external_id=external_id),),
                 )
             )
-            status_raw = str(raw.get("status") or "unknown").lower()
-            status = PlayerStatus.ACTIVE if status_raw == "active" else PlayerStatus.UNKNOWN
+            status = _normalize_sleeper_player_status(raw)
             player_states.append(
                 PlayerState(
                     player_id=player_id,

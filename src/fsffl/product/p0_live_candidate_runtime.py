@@ -188,12 +188,30 @@ def _status_based_zero_ros(
 def _active_backup_player_ids(
     league_state: LeagueState,
     current_catalog: Mapping[str, Any],
+    *,
+    current_status_state: LeagueState | None = None,
+    as_of: datetime | None = None,
 ) -> set[str]:
-    """Require recorded NFL depth-chart evidence before single-source fallback."""
+    """Require current NFL status and role evidence before one-source fallback.
+
+    Exact State roster rows bound the candidates. When available, status comes
+    from the captured NFL player catalog, never from a fantasy roster slot.
+    """
+    status_state = current_status_state or league_state
+    state_rows = {item.player_id: item for item in status_state.player_states}
     active = {
-        item.player_id
-        for item in league_state.player_states
-        if item.status.value == "active" and item.nfl_team
+        player_id
+        for player_id, item in state_rows.items()
+        if item.status.value in {"active", "practice_squad", "injured", "pup"}
+        and item.nfl_team
+        and (
+            as_of is None
+            or item.as_of.astimezone(UTC) <= as_of.astimezone(UTC)
+        )
+        and (
+            current_status_state is None
+            or item.provenance.source == "sleeper:current_player_universe"
+        )
     }
     rostered = {
         entry.player_id
@@ -205,13 +223,25 @@ def _active_backup_player_ids(
         catalog_row = current_catalog.get(player_id.rsplit(":", 1)[-1])
         if not isinstance(catalog_row, Mapping):
             continue
-        state = next(item for item in league_state.player_states if item.player_id == player_id)
+        state = state_rows.get(player_id)
+        if state is None:
+            continue
         try:
             depth_order = int(catalog_row.get("depth_chart_order"))
         except (TypeError, ValueError):
-            continue
+            depth_order = None
         catalog_team = str(catalog_row.get("team") or "").upper()
-        if depth_order > 1 and catalog_team == str(state.nfl_team).upper():
+        status = state.status.value
+        supported_role = (
+            (status == "practice_squad" and depth_order in {None, 0})
+            or (status == "active" and depth_order is not None and depth_order > 1)
+            or (
+                status in {"injured", "pup"}
+                and depth_order is not None
+                and depth_order >= 1
+            )
+        )
+        if supported_role and catalog_team == str(state.nfl_team).upper():
             backups.add(player_id)
     return backups
 
@@ -880,7 +910,12 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     facts: dict[str, P0CandidateFacts] = {}
     failures: dict[str, str] = {}
-    active_backup_ids = _active_backup_player_ids(league_state, catalog)
+    active_backup_ids = _active_backup_player_ids(
+        league_state,
+        catalog,
+        current_status_state=current_state,
+        as_of=cutoff,
+    )
     for player_id in candidates:
         if player_id not in positions:
             failures[player_id] = "live roster candidate is absent from governed State identity universe"
@@ -952,6 +987,16 @@ def build_live_p0_rostered_candidate_forecasts(
                     if standard_item is None or league_item is None:
                         continue
                     evidence_mode = f"single_source_low_confidence:{source_id}"
+                    candidate_status = next(
+                        (
+                            item.status.value
+                            for item in current_state.player_states
+                            if item.player_id == player_id
+                        ),
+                        "unknown",
+                    )
+                    if candidate_status in {"injured", "pup", "practice_squad"}:
+                        evidence_mode += f"+nfl_status:{candidate_status}"
                     if fumbles_rows:
                         evidence_mode += "+first_party_fumbles_lost"
                     y1_raw = tuple(

@@ -303,6 +303,52 @@ def test_active_backup_eligibility_requires_exact_state_and_depth_chart_evidence
     assert _active_backup_player_ids(state, {"11638": {"team": "SEA"}}) == set()
 
 
+def test_live_backup_fallback_uses_cutoff_bound_nfl_status_not_fantasy_slot():
+    cutoff = datetime(2026, 10, 8, tzinfo=UTC)
+    practice_id = "sleeper:player:practice"
+    injured_id = "sleeper:player:injured"
+    late_id = "sleeper:player:late"
+    ids = (practice_id, injured_id, late_id)
+    provenance = Provenance(
+        source="sleeper:current_player_universe",
+        retrieved_at=cutoff,
+        effective_at=cutoff,
+    )
+    state = LeagueState(
+        league=League(
+            league_id="fixture-league",
+            name="Fixture",
+            season=2026,
+            rules=LeagueRules(team_count=2, roster_size=3, lineup=(), scoring=()),
+        ),
+        as_of=cutoff,
+        teams=(Team(team_id="team-a", league_id="fixture-league", display_name="A"),),
+        team_states=(TeamState(
+            team_id="team-a",
+            roster=tuple(RosterEntry(player_id=player_id, slot=RosterSlot.IR) for player_id in ids),
+        ),),
+        players=tuple(Player(player_id=player_id, full_name=player_id, position=Position.WR) for player_id in ids),
+        player_states=(
+            PlayerState(player_id=practice_id, as_of=cutoff, status="practice_squad", nfl_team="SEA", provenance=provenance),
+            PlayerState(player_id=injured_id, as_of=cutoff, status="injured", nfl_team="SEA", provenance=provenance),
+            PlayerState(player_id=late_id, as_of=cutoff.replace(day=9), status="active", nfl_team="SEA", provenance=provenance),
+        ),
+    )
+
+    # The two exact-State players qualify only with team-matching NFL depth
+    # evidence. A future status update cannot leak into this evaluation cutoff.
+    assert _active_backup_player_ids(
+        state,
+        {
+            "practice": {"team": "SEA"},
+            "injured": {"team": "SEA", "depth_chart_order": "2"},
+            "late": {"team": "SEA", "depth_chart_order": "2"},
+        },
+        current_status_state=state,
+        as_of=cutoff,
+    ) == {practice_id, injured_id}
+
+
 def test_complete_single_source_year_one_is_labeled_eligible_and_missing_metrics_fail():
     now = datetime(2026, 10, 8, tzinfo=UTC)
     player_id = "sleeper:player:11638"

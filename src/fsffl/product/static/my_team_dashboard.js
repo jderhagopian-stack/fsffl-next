@@ -1,4 +1,4 @@
-const fsfflMyTeamState={view:null,valueLenses:null,leagueViews:[],leagueSource:'',currentPositionDepth:null,valueLensLoading:false,valueLensGeneration:0};
+const fsfflMyTeamState={view:null,valueLenses:null,careerIntrinsic:null,careerIntrinsicPromise:null,careerIntrinsicStateId:null,leagueViews:[],leagueSource:'',currentPositionDepth:null,valueLensLoading:false,valueLensGeneration:0,careerIntrinsicGeneration:0};
 
 function myTeamEsc(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
 function myTeamNum(value,digits=1){return typeof value==='number'&&Number.isFinite(value)?value.toFixed(digits):'—'}
@@ -8,6 +8,37 @@ function myTeamPanel(){return document.querySelector('#generic-screen .panel')}
 function myTeamLensMap(){return new Map((fsfflMyTeamState.valueLenses?.players||[]).map(item=>[item.player_id,item]))}
 function myTeamIntrinsicNumber(id){const row=myTeamLensMap().get(id);return typeof row?.intrinsic_percentile==='number'&&Number.isFinite(row.intrinsic_percentile)?row.intrinsic_percentile:null}
 function myTeamIntrinsicIndex(id){const row=myTeamLensMap().get(id);return typeof row?.intrinsic_value_index==='number'&&Number.isFinite(row.intrinsic_value_index)?row.intrinsic_value_index:null}
+function myTeamCareerEstimate(id){return(fsfflMyTeamState.careerIntrinsic?.estimates||[]).find(row=>row.player_id===id)||null}
+function myTeamCareerDisplay(id){const estimate=myTeamCareerEstimate(id);if(typeof estimate?.raw_career_forward_reference==='number'&&Number.isFinite(estimate.raw_career_forward_reference))return `${estimate.raw_career_forward_reference.toFixed(1)}<small>raw Career quantity</small>`;const reason=fsfflMyTeamState.careerIntrinsic?.player_coverage_failures?.[id]||fsfflMyTeamState.careerIntrinsic?.reason||'Career evidence is unavailable for this player and State.';return `<span title="${myTeamEsc(reason)}">${fsfflMyTeamState.careerIntrinsic?.status==='building'?'Preparing…':'Unavailable'}</span><small>raw Career quantity</small>`}
+async function loadCareerIntrinsicForState(expectedStateId){
+  if(!expectedStateId)return null;
+  if(fsfflMyTeamState.careerIntrinsicStateId===expectedStateId&&fsfflMyTeamState.careerIntrinsic)return fsfflMyTeamState.careerIntrinsic;
+  if(fsfflMyTeamState.careerIntrinsicPromise&&fsfflMyTeamState.careerIntrinsicStateId===expectedStateId)return fsfflMyTeamState.careerIntrinsicPromise;
+  const generation=++fsfflMyTeamState.careerIntrinsicGeneration;
+  fsfflMyTeamState.careerIntrinsicStateId=expectedStateId;
+  fsfflMyTeamState.careerIntrinsic={status:'building',league_state_id:expectedStateId,estimates:[]};
+  const task=(async()=>{
+    try{
+      for(let attempt=0;attempt<80;attempt+=1){
+        const payload=await api('/api/value/career-intrinsic-v1');
+        if(generation!==fsfflMyTeamState.careerIntrinsicGeneration||state?.context?.state_id!==expectedStateId)return null;
+        if(payload?.league_state_id&&payload.league_state_id!==expectedStateId){fsfflMyTeamState.careerIntrinsic={status:'unavailable',league_state_id:expectedStateId,estimates:[],reason:'Career evidence belongs to a different State.'};return fsfflMyTeamState.careerIntrinsic}
+        if(payload?.status==='ready'&&payload.league_state_id===expectedStateId){fsfflMyTeamState.careerIntrinsic=payload;return payload}
+        if(payload?.status==='unavailable'){fsfflMyTeamState.careerIntrinsic=payload;return payload}
+        await new Promise(resolve=>setTimeout(resolve,1500));
+      }
+      fsfflMyTeamState.careerIntrinsic={status:'unavailable',league_state_id:expectedStateId,estimates:[],reason:'Career Intrinsic is still preparing; reopen this view to retry.'};
+      return fsfflMyTeamState.careerIntrinsic;
+    }catch(error){
+      if(generation===fsfflMyTeamState.careerIntrinsicGeneration)fsfflMyTeamState.careerIntrinsic={status:'unavailable',league_state_id:expectedStateId,estimates:[],reason:error?.message||String(error)};
+      return fsfflMyTeamState.careerIntrinsic;
+    }finally{
+      if(generation===fsfflMyTeamState.careerIntrinsicGeneration)fsfflMyTeamState.careerIntrinsicPromise=null;
+    }
+  })();
+  fsfflMyTeamState.careerIntrinsicPromise=task;
+  return task;
+}
 function myTeamIntrinsic(id){const index=myTeamIntrinsicIndex(id),pct=myTeamIntrinsicNumber(id);if(index!=null)return `${Math.round(index).toLocaleString()}<small>${pct==null?'':`${Math.round(pct*100)}th pct`}</small>`;if(fsfflMyTeamState.valueLensLoading)return'Loading…';const reason=fsfflMyTeamState.valueLenses?.fsffl_intrinsic?.reason||fsfflMyTeamState.valueLenses?.message||'Governed FSFFL Intrinsic is unavailable for the current league state.';return `<span class="franchise-intrinsic-unavailable">Unavailable<small>${myTeamEsc(reason)}</small></span>`}
 function myTeamMarketNumber(player){const estimate=player?.value_profile?.market_price;return estimate?.scale?.scale_id==='dynasty-market-percentile'&&typeof estimate?.distribution?.mean==='number'&&Number.isFinite(estimate.distribution.mean)?estimate.distribution.mean:null}
 function myTeamMarketIndex(player){const row=myTeamLensMap().get(player?.player_id);return typeof row?.broad_market_value_index==='number'&&Number.isFinite(row.broad_market_value_index)?row.broad_market_value_index:null}
@@ -25,15 +56,15 @@ function myTeamPickLabel(row){const pick=row.pick||{};const season=pick.season??
 function myTeamStateLabel(value){return value&&value!=='unknown'?String(value).replaceAll('_',' '):'Not classified'}
 function myTeamStrengths(view){return(view?.position_strengths||[]).filter(row=>typeof row?.strength_index==='number'&&Number.isFinite(row.strength_index)).sort((a,b)=>b.strength_index-a.strength_index)}
 function myTeamAverageAge(players){const ages=(players||[]).map(row=>row.age_years).filter(value=>typeof value==='number'&&Number.isFinite(value));return ages.length?ages.reduce((sum,value)=>sum+value,0)/ages.length:null}
-function myTeamRankedAssets(players){const useIntrinsic=(fsfflMyTeamState.valueLenses?.fsffl_intrinsic?.status||'')!=='unavailable';return(players||[]).map(player=>({player,value:useIntrinsic?myTeamIntrinsicNumber(player.player_id):myTeamMarketNumber(player),lens:useIntrinsic?'FSFFL Intrinsic':'Broad Market'})).filter(row=>row.value!=null).sort((a,b)=>b.value-a.value)}
+function myTeamRankedAssets(players){const useIntrinsic=(fsfflMyTeamState.valueLenses?.fsffl_intrinsic?.status||'')!=='unavailable';return(players||[]).map(player=>({player,value:useIntrinsic?myTeamIntrinsicNumber(player.player_id):myTeamMarketNumber(player),lens:useIntrinsic?'3-Year Intrinsic':'Broad Market'})).filter(row=>row.value!=null).sort((a,b)=>b.value-a.value)}
 function myTeamPickSeasons(view){const map=new Map();for(const row of view?.draft_picks||[]){const season=row?.pick?.season;if(season==null)continue;const bucket=map.get(season)||[];bucket.push(row);map.set(season,bucket)}return[...map.entries()].sort((a,b)=>a[0]-b[0])}
 function myTeamStrengthDirection(value){if(typeof value!=='number')return'No current evidence';const delta=value-100;if(Math.abs(delta)<1)return'At league average';return`${Math.abs(delta).toFixed(0)}% ${delta>0?'above':'below'} league average`}
 function myTeamStrengthBar(row){const value=Math.max(0,Math.min(160,row.strength_index));const pct=Math.min(100,value/1.6);return `<article class="franchise-position-row"><div class="franchise-position-label"><strong>${myTeamEsc(row.position)}</strong><span>${row.league_rank&&row.team_count?`#${row.league_rank} of ${row.team_count}`:'League rank unavailable'}</span></div><div class="franchise-position-track" aria-label="${myTeamEsc(row.position)} strength ${Math.round(row.strength_index)}, league average 100"><span style="width:${pct.toFixed(1)}%"></span><i style="left:62.5%" aria-hidden="true"></i></div><div class="franchise-position-value"><strong>${Math.round(row.strength_index)}</strong><span>${myTeamEsc(myTeamStrengthDirection(row.strength_index))}</span></div></article>`}
-function myTeamAssetChip(row,index){return `<button type="button" class="franchise-asset" data-player-intelligence-id="${myTeamEsc(row.player.player_id)}"><span class="franchise-asset-rank">${index+1}</span><span><strong>${myTeamEsc(row.player.full_name)}</strong><small>${myTeamEsc(row.player.position)} · age ${myTeamAge(row.player.age_years)} · ${myTeamEsc(row.lens)}</small></span><b>${row.lens==='FSFFL Intrinsic'?(myTeamIntrinsicIndex(row.player.player_id)==null?`${Math.round(row.value*100)}th pct`:Math.round(myTeamIntrinsicIndex(row.player.player_id)).toLocaleString()):(myTeamMarketIndex(row.player)==null?`${Math.round(row.value*100)}th pct`:Math.round(myTeamMarketIndex(row.player)).toLocaleString())}</b></button>`}
+function myTeamAssetChip(row,index){return `<button type="button" class="franchise-asset" data-player-intelligence-id="${myTeamEsc(row.player.player_id)}"><span class="franchise-asset-rank">${index+1}</span><span><strong>${myTeamEsc(row.player.full_name)}</strong><small>${myTeamEsc(row.player.position)} · age ${myTeamAge(row.player.age_years)} · ${myTeamEsc(row.lens)}</small></span><b>${row.lens==='3-Year Intrinsic'?(myTeamIntrinsicIndex(row.player.player_id)==null?`${Math.round(row.value*100)}th pct`:Math.round(myTeamIntrinsicIndex(row.player.player_id)).toLocaleString()):(myTeamMarketIndex(row.player)==null?`${Math.round(row.value*100)}th pct`:Math.round(myTeamMarketIndex(row.player)).toLocaleString())}</b></button>`}
 function myTeamPickTrajectory(view){const seasons=myTeamPickSeasons(view);if(!seasons.length)return'<p class="franchise-empty">No owned draft picks are exposed in the current team view.</p>';return seasons.map(([season,rows])=>{const rounds=new Map();rows.forEach(row=>{const round=row.pick?.round;if(round!=null)rounds.set(round,(rounds.get(round)||0)+1)});const labels=[...rounds.entries()].sort((a,b)=>a[0]-b[0]).map(([round,count])=>`${count}× ${myTeamOrdinalRound(round)}`).join(' · ');return `<div class="franchise-pick-year"><strong>${season}</strong><span>${rows.length} pick${rows.length===1?'':'s'}</span><small>${myTeamEsc(labels||'Round detail unavailable')}</small></div>`}).join('')}
 function myTeamStarterOrder(player){const order={QB:0,RB:10,WR:20,TE:30,FLEX:40,SUPERFLEX:50,K:60,DST:70};return order[player.projected_lineup_slot]??90}
 function myTeamRosterRows(players){return[...(players||[])].sort((a,b)=>{if(Boolean(a.projected_starter)!==Boolean(b.projected_starter))return a.projected_starter?-1:1;if(a.projected_starter&&b.projected_starter){const d=myTeamStarterOrder(a)-myTeamStarterOrder(b);if(d)return d;return(myTeamProjectionNumber(b)??-Infinity)-(myTeamProjectionNumber(a)??-Infinity)}const slots={BENCH:0,TAXI:10,IR:20};const d=(slots[a.roster_slot]??30)-(slots[b.roster_slot]??30);if(d)return d;return(myTeamMarketNumber(b)??-Infinity)-(myTeamMarketNumber(a)??-Infinity)})}
-function myTeamPlayerTable(rows,emptyText){const body=rows.map(player=>`<tr><td>${myTeamEsc(player.projected_starter?(player.projected_lineup_slot||'Starter'):player.roster_slot)}</td><td><button type="button" class="pi-player-link" data-player-intelligence-id="${myTeamEsc(player.player_id)}"><strong>${myTeamEsc(player.full_name)}</strong></button><small>${myTeamEsc(player.position)} · age ${myTeamAge(player.age_years)}</small></td><td>${myTeamProjection(player)}<small>${myTeamRankText(myTeamPositionRank(player,'projection'))} at ${myTeamEsc(player.position)}</small></td><td><strong>${myTeamMarket(player)}</strong><small>${myTeamRankText(myTeamPositionRank(player,'market'))} at ${myTeamEsc(player.position)}</small></td><td><strong>${myTeamIntrinsic(player.player_id)}</strong><small>${myTeamRankText(myTeamPositionRank(player,'intrinsic'))} at ${myTeamEsc(player.position)}</small></td></tr>`).join('');return `<div class="table-wrap franchise-table-wrap"><table><thead><tr><th>Role</th><th>Player</th><th>Season projection</th><th>Broad Market Value Index</th><th>FSFFL Intrinsic Value Index</th></tr></thead><tbody>${body||`<tr><td colspan="5">${myTeamEsc(emptyText)}</td></tr>`}</tbody></table></div>`}
+function myTeamPlayerTable(rows,emptyText){const body=rows.map(player=>`<tr><td>${myTeamEsc(player.projected_starter?(player.projected_lineup_slot||'Starter'):player.roster_slot)}</td><td><button type="button" class="pi-player-link" data-player-intelligence-id="${myTeamEsc(player.player_id)}"><strong>${myTeamEsc(player.full_name)}</strong></button><small>${myTeamEsc(player.position)} · age ${myTeamAge(player.age_years)}</small></td><td>${myTeamProjection(player)}<small>${myTeamRankText(myTeamPositionRank(player,'projection'))} at ${myTeamEsc(player.position)}</small></td><td><strong>${myTeamMarket(player)}</strong><small>${myTeamRankText(myTeamPositionRank(player,'market'))} at ${myTeamEsc(player.position)}</small></td><td><strong>${myTeamIntrinsic(player.player_id)}</strong><small>${myTeamRankText(myTeamPositionRank(player,'intrinsic'))} at ${myTeamEsc(player.position)}</small></td><td><strong>${myTeamCareerDisplay(player.player_id)}</strong></td></tr>`).join('');return `<div class="table-wrap franchise-table-wrap"><table><thead><tr><th>Role</th><th>Player</th><th>Season projection</th><th>Broad Market Value Index</th><th>3-Year Intrinsic Index (0–10,000)</th><th>Career Intrinsic (raw)</th></tr></thead><tbody>${body||`<tr><td colspan="6">${myTeamEsc(emptyText)}</td></tr>`}</tbody></table></div>`}
 function myTeamTabButton(id,label,active){return `<button type="button" role="tab" data-franchise-tab="${id}" aria-selected="${active?'true':'false'}">${label}</button>`}
 function myTeamDiagnosisSentence(view,strongest,weakest){if(!view?.forecast_authority?.evidence_basis)return`Canonical roster State is current for ${view.display_name}. Forecast, Simulation-derived classification and position strength are not currently authoritative.`;const stateLabel=myTeamStateLabel(view.utility?.calculated_competitive_state);if(strongest&&weakest&&strongest.position!==weakest.position)return`${view.display_name} profiles as ${stateLabel}. ${strongest.position} is the clearest current lineup advantage; ${weakest.position} is the first position to investigate.`;if(strongest)return`${view.display_name} profiles as ${stateLabel}, with ${strongest.position} providing the clearest current lineup edge.`;return`${view.display_name} profiles as ${stateLabel}. Position-strength evidence is not currently available.`}
 
@@ -94,11 +125,35 @@ function renderMyTeamCommandCenter(){
   panel.querySelectorAll('[data-franchise-route]').forEach(button=>button.addEventListener('click',()=>setRoute(button.dataset.franchiseRoute)));
 }
 
-async function loadMyTeamValueLenses(expectedStateId){const generation=++fsfflMyTeamState.valueLensGeneration;fsfflMyTeamState.valueLensLoading=true;renderMyTeamCommandCenter();try{let payload=null;for(let attempt=0;attempt<80;attempt+=1){payload=await api('/api/league/value-lenses');if(generation!==fsfflMyTeamState.valueLensGeneration||state?.context?.state_id!==expectedStateId)return;if(payload?.status!=='loading')break;await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500))}if(payload?.status==='loading')payload={status:'unavailable',players:[],message:'FSFFL Intrinsic is still preparing; retry the Franchise view shortly.'};fsfflMyTeamState.valueLenses=payload}catch(error){if(generation!==fsfflMyTeamState.valueLensGeneration)return;fsfflMyTeamState.valueLenses={status:'unavailable',players:[],message:error?.message||String(error)}}finally{if(generation===fsfflMyTeamState.valueLensGeneration){fsfflMyTeamState.valueLensLoading=false;renderMyTeamCommandCenter()}}}
+async function loadMyTeamValueLenses(expectedStateId){
+  const generation=++fsfflMyTeamState.valueLensGeneration;
+  fsfflMyTeamState.valueLensLoading=true;
+  renderMyTeamCommandCenter();
+  try{
+    const careerPromise=loadCareerIntrinsicForState(expectedStateId);
+    let payload=null;
+    for(let attempt=0;attempt<80;attempt+=1){
+      payload=await api('/api/league/value-lenses');
+      if(generation!==fsfflMyTeamState.valueLensGeneration||state?.context?.state_id!==expectedStateId)return;
+      if(payload?.status!=='loading')break;
+      await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));
+    }
+    if(payload?.status==='loading')payload={status:'unavailable',players:[],message:'FSFFL Intrinsic is still preparing; retry the Franchise view shortly.'};
+    fsfflMyTeamState.valueLenses=payload;
+    await careerPromise;
+  }catch(error){
+    if(generation!==fsfflMyTeamState.valueLensGeneration)return;
+    fsfflMyTeamState.valueLenses={status:'unavailable',players:[],message:error?.message||String(error)};
+  }finally{
+    if(generation===fsfflMyTeamState.valueLensGeneration){fsfflMyTeamState.valueLensLoading=false;renderMyTeamCommandCenter()}
+  }
+}
 
 async function loadMyTeamCommandCenter(){
   const panel=myTeamPanel();
   if(!state?.context?.team_id){if(panel)panel.innerHTML='<p class="eyebrow">Franchise</p><h2>Select the franchise you manage.</h2><p class="lead">Choose a team from the product context to unlock the diagnosis.</p>';return}
+  const expectedStateId=state.context?.state_id||null;
+  if(fsfflMyTeamState.careerIntrinsicStateId!==expectedStateId){fsfflMyTeamState.careerIntrinsicGeneration+=1;fsfflMyTeamState.careerIntrinsic=null;fsfflMyTeamState.careerIntrinsicStateId=null;fsfflMyTeamState.careerIntrinsicPromise=null}
   if(panel)panel.innerHTML='<p class="eyebrow">Franchise</p><h2>Reading the franchise…</h2><p class="lead">Loading optimized lineup, league-relative position strength, resilience, Value and draft capital.</p>';
   try{const[view,league]=await Promise.all([api('/api/my-team'),api('/api/league/team-views').catch(()=>({team_views:[],source_level:'unavailable'}))]);fsfflMyTeamState.view=view;fsfflMyTeamState.valueLenses=null;fsfflMyTeamState.leagueViews=league.team_views||[];fsfflMyTeamState.leagueSource=league.source_level||'';renderMyTeamCommandCenter();void loadMyTeamValueLenses(state.context?.state_id||null)}catch(error){if(panel)panel.innerHTML=`<p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2><p class="lead">${myTeamEsc(error.message)}</p>`}
 }
@@ -259,11 +314,12 @@ function franchiseNSIntrinsicReason(){
 }
 function franchiseNSIntrinsicDisplay(player){
   const index=myTeamIntrinsicIndex(player?.player_id),pct=franchiseNSIntrinsicPercentile(player);
-  if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+'</strong><small>'+(pct==null?'FSFFL Intrinsic':Math.round(pct*100)+'th pct')+'</small>';
+  if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+'</strong><small>'+(pct==null?'0–10,000 index':Math.round(pct*100)+'th pct')+'</small>';
   if(fsfflMyTeamState.valueLensLoading)return '<strong>…</strong><small>Intrinsic preparing</small>';
   if(pct!=null)return '<strong>'+Math.round(pct*100)+'th</strong><small>Intrinsic pct</small>';
   return '<strong>—</strong><small title="'+myTeamEsc(franchiseNSIntrinsicReason())+'">Intrinsic unavailable</small>';
 }
+function franchiseNSCareerDisplay(player){return '<strong>'+myTeamCareerDisplay(player?.player_id)+'</strong>'}
 function franchiseNSProjectedStarter(player){
   return player?.projected_starter===true;
 }
@@ -280,7 +336,7 @@ function franchiseNSPlayerRow(player){
     '<span class="franchise-ns-player-stat"><small>PPG</small><strong>'+(ppg==null?'—':ppg.toFixed(1))+'</strong></span>'+
     '<span class="franchise-ns-player-stat"><small>Proj · 17g</small><strong>'+(season==null?'—':season.toFixed(1))+'</strong></span>'+
     '<span class="franchise-ns-player-value market"><small>Broad Market</small>'+franchiseNSMarketDisplay(player)+'</span>'+
-    '<span class="franchise-ns-player-value intrinsic"><small>FSFFL Intrinsic</small>'+franchiseNSIntrinsicDisplay(player)+'</span>'+
+    '<span class="franchise-ns-player-value intrinsic"><small>3-Year Intrinsic · 0–10,000 index</small>'+franchiseNSIntrinsicDisplay(player)+'<small>Career Intrinsic · raw value</small>'+franchiseNSCareerDisplay(player)+'</span>'+
     '<b class="franchise-ns-chevron" aria-hidden="true">›</b>'+
   '</button>';
 }
@@ -491,6 +547,7 @@ async function loadFranchiseNorthStarValueLenses(expectedStateId){
   const generation=++fsfflMyTeamState.valueLensGeneration;
   fsfflMyTeamState.valueLensLoading=true;renderFranchiseNorthStar();
   try{
+    const careerPromise=loadCareerIntrinsicForState(expectedStateId);
     let payload=null;
     for(let attempt=0;attempt<80;attempt+=1){
       payload=await api('/api/league/value-lenses');
@@ -500,6 +557,7 @@ async function loadFranchiseNorthStarValueLenses(expectedStateId){
     }
     if(payload?.status==='loading')payload={status:'unavailable',players:[],message:'FSFFL Intrinsic is still preparing; retry the Franchise view shortly.'};
     fsfflMyTeamState.valueLenses=payload;
+    await careerPromise;
   }catch(error){
     if(generation!==fsfflMyTeamState.valueLensGeneration)return;
     fsfflMyTeamState.valueLenses={status:'unavailable',players:[],message:error?.message||String(error)};
@@ -515,6 +573,7 @@ async function loadFranchiseNorthStar(){
   }
   const expectedStateId=state.context?.state_id||null;
   fsfflMyTeamState.valueLensGeneration+=1;
+  if(fsfflMyTeamState.careerIntrinsicStateId!==expectedStateId){fsfflMyTeamState.careerIntrinsic=null;fsfflMyTeamState.careerIntrinsicStateId=null;fsfflMyTeamState.careerIntrinsicPromise=null}
   fsfflMyTeamState.valueLensLoading=false;
   // Keep the accepted last-good Franchise visible while fresh reads are in flight.
   // This prevents a prior Market body from occupying Franchise during refresh and
