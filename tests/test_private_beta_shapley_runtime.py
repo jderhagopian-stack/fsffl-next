@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -415,8 +416,9 @@ def test_dynamic_career_candidate_acquisition_failure_preserves_frozen_base():
 def test_dynamic_career_candidate_builder_receives_pinned_evaluation_cutoff():
     state, observation = _fixture()
     cutoff = datetime(2026, 10, 15, 5, 59, tzinfo=UTC)
-    context = _context(state, observation).model_copy(
-        update={"career_fingerprint_evaluation_as_of": cutoff}
+    context = replace(
+        _context(state, observation),
+        career_fingerprint_evaluation_as_of=cutoff,
     )
     loader = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
