@@ -464,6 +464,7 @@ class PlayerStatus(StrEnum):
     INJURED = "injured"
     PUP = "pup"
     SUSPENDED = "suspended"
+    PRACTICE_SQUAD = "practice_squad"
     FREE_AGENT = "free_agent"
     RETIRED = "retired"
     UNKNOWN = "unknown"

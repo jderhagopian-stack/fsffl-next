@@ -4,7 +4,11 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from fsffl.providers.acquisition import ProviderSnapshot
-from fsffl.providers.sleeper import SleeperNormalizer, SleeperPayloadBundle
+from fsffl.providers.sleeper import (
+    SleeperNormalizer,
+    SleeperPayloadBundle,
+    _normalize_sleeper_player_status,
+)
 from fsffl.state.models import (
     LeagueState,
     NflTeamBye,
@@ -44,6 +48,10 @@ class SleeperSnapshotNormalizer:
     def normalize_snapshot(self, snapshot: ProviderSnapshot, *, as_of) -> LeagueState:
         if snapshot.provider_name != self.provider_name:
             raise ValueError("snapshot provider must be sleeper")
+        if as_of.tzinfo is None:
+            raise ValueError("as_of must be timezone-aware")
+        if snapshot.captured_at > as_of:
+            raise ValueError("Sleeper snapshot was captured after the State evidence cutoff")
         payload = snapshot.payload
         required = ("league", "users", "rosters", "players")
         missing = [key for key in required if key not in payload]
@@ -166,10 +174,16 @@ def _attach_current_fantasy_player_universe(
             continue
         position = _FANTASY_POSITIONS.get(str(raw.get("position") or "").upper())
         nfl_team = _normalize_team(raw.get("team"))
-        if position is None or nfl_team is None:
+        if position is None:
             continue
         player_id = f"sleeper:player:{external_id}"
-        if player_id in players_by_id:
+        existing_player = players_by_id.get(player_id)
+        # Keep teamless free agents already on a fantasy roster in the exact
+        # State universe so their NFL status is explicit. Teamless unrostered
+        # names remain excluded from automatic waiver discovery.
+        if existing_player is None and nfl_team is None:
+            continue
+        if existing_player is not None and existing_player.position != position:
             continue
         full_name = str(
             raw.get("full_name")
@@ -185,8 +199,7 @@ def _attach_current_fantasy_player_universe(
             nfl_team=nfl_team,
             provider_refs=(ProviderRef(provider="sleeper", external_id=str(external_id)),),
         )
-        status_raw = str(raw.get("status") or "unknown").lower()
-        status = PlayerStatus.ACTIVE if status_raw == "active" else PlayerStatus.UNKNOWN
+        status = _normalize_sleeper_player_status(raw)
         states_by_id[player_id] = PlayerState(
             player_id=player_id,
             as_of=effective_at,

@@ -1,8 +1,13 @@
 from datetime import UTC, datetime
 
+from fsffl.providers.acquisition import ProviderSnapshot
 from fsffl.providers.sleeper import SleeperNormalizer, SleeperPayloadBundle
-from fsffl.providers.sleeper_snapshot import canonical_players_from_sleeper_player_universe
-from fsffl.state.models import Position, RosterSlot
+from fsffl.providers.sleeper import _normalize_sleeper_player_status
+from fsffl.providers.sleeper_snapshot import (
+    SleeperSnapshotNormalizer,
+    canonical_players_from_sleeper_player_universe,
+)
+from fsffl.state.models import PlayerStatus, Position, RosterSlot
 
 
 AS_OF = datetime(2026, 9, 4, 14, 0, tzinfo=UTC)
@@ -307,3 +312,68 @@ def test_current_player_universe_includes_kickers_but_not_dst_pseudo_players() -
     assert [(item.player_id, item.position, item.nfl_team) for item in players] == [
         ("sleeper:player:k1", Position.K, "BUF"),
     ]
+
+
+def test_sleeper_nfl_status_normalization_keeps_weekly_injury_distinct_from_season_end():
+    assert _normalize_sleeper_player_status({"status": "Active"}) is PlayerStatus.ACTIVE
+    assert _normalize_sleeper_player_status({"status": "Practice Squad"}) is PlayerStatus.PRACTICE_SQUAD
+    assert _normalize_sleeper_player_status({"status": "Free Agent"}) is PlayerStatus.FREE_AGENT
+    assert _normalize_sleeper_player_status({"status": "Injured Reserve"}) is PlayerStatus.INJURED
+    # Sleeper's weekly injury tag is a current availability fact, not evidence
+    # that the player will miss the rest of the season.
+    assert _normalize_sleeper_player_status({"status": "Active", "injury_status": "Out"}) is PlayerStatus.INJURED
+    assert _normalize_sleeper_player_status({"status": "Active", "injury_status": "PUP"}) is PlayerStatus.PUP
+
+
+def test_exact_state_refresh_retains_rostered_teamless_player_with_nfl_status_provenance():
+    payload = bundle()
+    raw = {key: dict(value) for key, value in payload.players.items()}
+    raw["p2"].update({"team": None, "status": "Free Agent"})
+    snapshot = ProviderSnapshot(
+        provider_name="sleeper",
+        league_external_id="123",
+        captured_at=AS_OF,
+        payload={
+            "league": payload.league,
+            "users": payload.users,
+            "rosters": payload.rosters,
+            "players": raw,
+        },
+    )
+
+    state = SleeperSnapshotNormalizer().normalize_snapshot(snapshot, as_of=AS_OF)
+    player = next(item for item in state.players if item.player_id == "sleeper:player:p2")
+    player_state = next(item for item in state.player_states if item.player_id == player.player_id)
+
+    assert player.nfl_team is None
+    assert player_state.status is PlayerStatus.FREE_AGENT
+    assert player_state.provenance.source == "sleeper:current_player_universe"
+    assert any(
+        entry.player_id == player.player_id
+        for team in state.team_states
+        for entry in team.roster
+    )
+
+
+def test_sleeper_status_catalog_cannot_be_backdated_into_an_earlier_state():
+    payload = bundle()
+    snapshot = ProviderSnapshot(
+        provider_name="sleeper",
+        league_external_id="123",
+        captured_at=AS_OF,
+        payload={
+            "league": payload.league,
+            "users": payload.users,
+            "rosters": payload.rosters,
+            "players": payload.players,
+        },
+    )
+
+    try:
+        SleeperSnapshotNormalizer().normalize_snapshot(
+            snapshot, as_of=AS_OF.replace(hour=AS_OF.hour - 1)
+        )
+    except ValueError as exc:
+        assert "captured after the State evidence cutoff" in str(exc)
+    else:
+        raise AssertionError("post-cutoff NFL status was accepted into an earlier State")

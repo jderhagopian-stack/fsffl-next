@@ -294,7 +294,7 @@ def materialized():
 def test_full_current_cohort_materializes_and_persists_both_shadow_artifacts(
     materialized,
 ) -> None:
-    persistence, calls, _loader_instance, _context_instance, contract = materialized
+    persistence, calls, loader_instance, context_instance, contract = materialized
 
     assert contract.player_count == FOUNDATION4_CURRENT_COHORT_SIZE == 335
     assert len(contract.estimates) == 335
@@ -319,6 +319,10 @@ def test_full_current_cohort_materializes_and_persists_both_shadow_artifacts(
     kinds = {row.key.artifact_kind for row in persistence.artifacts}
     assert FOUNDATION4_Y4_Y7_ARTIFACT_KIND in kinds
     assert FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND in kinds
+    assert loader_instance._cached_component is None
+    restored_component = loader_instance.current_component(context_instance)
+    assert restored_component is not None
+    assert len(restored_component.estimates) == FOUNDATION4_CURRENT_COHORT_SIZE
 
 
 def test_restart_restore_is_semantically_identical_and_skips_rebuild(

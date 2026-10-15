@@ -1,6 +1,8 @@
 from collections import defaultdict
 from math import sqrt
+from pathlib import Path
 from random import Random
+from types import SimpleNamespace
 
 import pytest
 
@@ -942,3 +944,36 @@ def test_team_origin_ordering_optimization_preserves_complete_simulation(
     assert optimized == legacy_grouping
     assert optimized.model_dump(mode="json") == legacy_grouping.model_dump(mode="json")
 
+
+
+def test_hosted_numpy_pin_matches_durable_simulation_runtime_identity():
+    project = (Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    assert '"numpy==2.5.3"' in project
+
+
+def test_persisted_numpy_simulation_restores_only_on_its_exact_runtime(monkeypatch):
+    import importlib.metadata
+    import platform
+
+    import fsffl.product.simulation_runtime as runtime
+
+    monkeypatch.setattr(
+        runtime, "configured_simulation_rng", lambda: (NUMPY_PCG64_BATCHED_GAUSS_V1, 500)
+    )
+    monkeypatch.setattr(platform, "python_version", lambda: "3.12.10")
+    monkeypatch.setattr(importlib.metadata, "version", lambda name: "2.5.3")
+    saved = SimpleNamespace(
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        simulation_count=50_000,
+        seed=20260905,
+        rng_batch_size=500,
+        rng_runtime_version="numpy-2.5.3;python-3.12.10",
+        rng_bit_generator="PCG64",
+        rng_draw_dtype="float64",
+        rng_draw_layout="batch-major;trial-major;compiled-schedule-major;home-away-v1",
+        rng_seed_derivation="pcg64-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1",
+    )
+
+    assert runtime.simulation_matches_configured_rng(saved)
+    monkeypatch.setattr(importlib.metadata, "version", lambda name: "2.5.4")
+    assert not runtime.simulation_matches_configured_rng(saved)
