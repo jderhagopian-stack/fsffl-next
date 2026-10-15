@@ -452,15 +452,24 @@ def test_dynamic_career_fingerprint_refreshes_unversioned_sources_once_per_windo
 
 
 def test_private_beta_live_provider_diagnostics_require_manual_dispatch():
-    workflow = (
+    private_beta_workflow = (
         Path(__file__).resolve().parents[1]
         / ".github/workflows/private-beta-intrinsic-diagnostics.yml"
     ).read_text(encoding="utf-8")
+    atlas_workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github/workflows/league-atlas-north-star.yml"
+    ).read_text(encoding="utf-8")
 
-    assert "workflow_dispatch:" in workflow
-    assert "if: github.event_name == 'workflow_dispatch'" in workflow
-    assert "if: github.event_name == 'pull_request'" in workflow
-    assert "Provider diagnostics are skipped on pull requests" in workflow
+    assert "workflow_dispatch:" in private_beta_workflow
+    assert "if: github.event_name == 'workflow_dispatch'" in private_beta_workflow
+    assert "if: github.event_name == 'pull_request'" in private_beta_workflow
+    assert "Provider diagnostics are skipped on pull requests" in private_beta_workflow
+
+    assert "workflow_dispatch:" in atlas_workflow
+    assert atlas_workflow.count("if: github.event_name == 'workflow_dispatch'") == 2
+    assert "if: github.event_name == 'pull_request'" in atlas_workflow
+    assert "Live-league checks are skipped on pull requests" in atlas_workflow
 
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
