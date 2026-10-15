@@ -299,7 +299,7 @@ def build_dynamic_rostered_career_contract(
         base_year_one = _year_one_forecasts(year_one_evidence)
         live = candidate_builder(
             state,
-            evaluation_as_of=context.career_fingerprint_evaluation_as_of,
+            projection_history_as_of=context.career_fingerprint_evaluation_as_of,
         )
     except Exception as exc:
         # Dynamic acquisition is an optional extension to the already-built
