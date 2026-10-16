@@ -243,3 +243,41 @@ def test_required_scoring_family_candidate_math_is_deterministic(
     assert translated.anticipated_points / league_points == pytest.approx(
         _result().anticipated_points / standard_points
     )
+
+
+def test_approved_cj_fallback_is_scoped_and_preserves_normal_scoring():
+    from fsffl.product.i1_player_scoring import career_player_scoring_multipliers
+    rules = _rules(receptions=0.5)
+    def points(player_id, mean):
+        return derive_league_fantasy_point_forecasts(
+            _raw_wr(player_id,receptions=2,yards=10,touchdowns=0), rules=rules,
+        )[0].model_copy(update={"distribution":ForecastDistribution(mean=mean,stddev=1.)})
+    cj = "sleeper:player:13270"
+    standard = points(cj,-0.23)
+    league = points(cj,0.343)
+    reference_standard=(points("reference",10.),)
+    reference_league=(points("reference",15.),)
+    kwargs=dict(reference_standard_year_one=reference_standard,
+                reference_league_year_one=reference_league)
+    assert career_player_scoring_multipliers(standard_year_one=(standard,),
+        league_year_one=(league,),**kwargs) == {cj:1.5}
+    with pytest.raises(ValueError,match="nonzero league"):
+        career_player_scoring_multipliers(standard_year_one=(standard,),league_year_one=(league,))
+    other_standard=standard.model_copy(update={"player_id":"other"})
+    other_league=league.model_copy(update={"player_id":"other"})
+    with pytest.raises(ValueError,match="nonzero league"):
+        career_player_scoring_multipliers(standard_year_one=(other_standard,),
+            league_year_one=(other_league,),**kwargs)
+    positive=standard.model_copy(update={"distribution":ForecastDistribution(mean=2.,stddev=1.)})
+    assert career_player_scoring_multipliers(standard_year_one=(positive,),
+        league_year_one=(league,),**kwargs)[cj] == pytest.approx(.343/2)
+    zero=league.model_copy(update={"distribution":ForecastDistribution(mean=0.,stddev=1.)})
+    assert career_player_scoring_multipliers(standard_year_one=(standard,),
+        league_year_one=(zero,),**kwargs)[cj] == 1.
+    with pytest.raises(ValueError,match="identical complete"):
+        career_player_scoring_multipliers(standard_year_one=(standard,),league_year_one=(league,),
+            reference_standard_year_one=reference_standard,
+            reference_league_year_one=(points("different",15.),))
+    with pytest.raises(ValueError,match="multiple full-season"):
+        career_player_scoring_multipliers(standard_year_one=(standard,),
+            league_year_one=(league,league),**kwargs)

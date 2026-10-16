@@ -770,6 +770,8 @@ def build_live_p0_rostered_candidate_forecasts(
     projection_history_reader: ProjectionHistoryReader | None = None,
     status_based_zero_ros_evidence: Mapping[str, StatusBasedZeroRosEvidence] | None = None,
     fallback_ros_observations: tuple[ForecastObservation, ...] = (),
+    reference_standard_year_one: tuple[ForecastObservation, ...] = (),
+    reference_league_year_one: tuple[ForecastObservation, ...] = (),
 ) -> P0LiveCandidateResult:
     """Acquire current inputs once and score rostered non-reference subjects.
 
@@ -1170,13 +1172,25 @@ def build_live_p0_rostered_candidate_forecasts(
             failures[player_id] = str(exc)
 
     if candidate_rows:
-        from .i1_player_scoring import player_scoring_multipliers
+        from .i1_player_scoring import career_player_scoring_multipliers
+        from .p0_forecast_runtime import governed_p0_player_ids
+        reference_ids = set(governed_p0_player_ids(league_state))
+        # Incomplete or late reference evidence disables only the optional
+        # conversion; it must not discard otherwise supported candidates.
+        if any({row.player_id for row in rows} != reference_ids for rows in (
+            reference_standard_year_one, reference_league_year_one,
+        )) or any(row.as_of > cutoff for row in (
+            *reference_standard_year_one, *reference_league_year_one,
+        )):
+            reference_standard_year_one = reference_league_year_one = ()
         future_ready = dict(candidate_rows)
         for player_id in candidate_rows:
             try:
-                player_scoring_multipliers(
+                career_player_scoring_multipliers(
                     standard_year_one=(y1_standard[player_id],),
                     league_year_one=(y1_league[player_id],),
+                    reference_standard_year_one=reference_standard_year_one,
+                    reference_league_year_one=reference_league_year_one,
                 )
             except ValueError as exc:
                 failures[player_id] = f"P0 future authority failure: {exc}"
@@ -1197,6 +1211,8 @@ def build_live_p0_rostered_candidate_forecasts(
                     if player_id in dynamic_ids
                 ),
                 candidate_source_rows=future_ready,
+                reference_standard_year_one=reference_standard_year_one,
+                reference_league_year_one=reference_league_year_one,
                 evaluation_as_of=cutoff,
             ) if future_ready else None
         except ValueError as exc:

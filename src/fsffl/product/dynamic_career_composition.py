@@ -268,7 +268,7 @@ def dynamic_career_fingerprint(
             for row in getattr(evidence, "raw_forecasts", ())
         ],
         "projection_history_revisions": ros_revisions,
-        "contract": "dynamic-rostered-p0-career-bridge-v2:isolated-future-scoring",
+        "contract": "dynamic-rostered-p0-career-bridge-v3:approved-cj-wr-reference",
     }
     status_receipts = recorded_status_based_zero_ros_evidence(
         context.league_state, as_of=evaluated_at,
@@ -308,9 +308,25 @@ def build_dynamic_rostered_career_contract(
         if year_one_evidence.evidence_basis != "preseason_baseline":
             raise ValueError("dynamic Career bridge requires accepted preseason base cohort")
         base_year_one = _year_one_forecasts(year_one_evidence)
+        reference_kwargs = {}
+        from .i1_player_scoring import APPROVED_UNDEFINED_WR_PLAYER_ID
+        if any(entry.player_id == APPROVED_UNDEFINED_WR_PLAYER_ID
+               for team in state.team_states for entry in team.roster):
+            from fsffl.forecast.league_scoring import derive_league_scoring_result
+            from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
+            supplement = getattr(getattr(year_one_evidence, "runtime_result", None),
+                                 "first_party_fumbles_lost_supplement", None)
+            reference_standard = derive_league_scoring_result(
+                year_one_evidence.raw_forecasts,
+                rules=state.league.rules.model_copy(update={"scoring": FROZEN_I1_STANDARD_SCORING}),
+                supplemental_observations=tuple(getattr(supplement, "observations", ())),
+            ).authoritative_forecasts
+            reference_kwargs = dict(reference_standard_year_one=reference_standard,
+                                    reference_league_year_one=base_year_one)
         live = candidate_builder(
             state,
             projection_history_as_of=context.career_fingerprint_evaluation_as_of,
+            **reference_kwargs,
         )
     except Exception as exc:
         # Dynamic acquisition is an optional extension to the already-built
