@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Callable, Mapping
@@ -44,7 +45,12 @@ from .p0_live_candidate_runtime import (
 from .private_beta_shapley_runtime import _year_one_forecasts
 from .runtime import UserRuntimeContext
 from .foundation4_cohort import align_foundation4_cohort
-from .resource_coordinator import release_unused_process_memory
+from .resource_coordinator import (
+    DEFAULT_MEMORY_LIMIT_BYTES,
+    current_rss_bytes,
+    release_unused_process_memory,
+)
+from fsffl.value.shapley_intrinsic import clear_shapley_execution_caches
 
 
 @dataclass(frozen=True)
@@ -66,6 +72,15 @@ DynamicCareerMaterializer = Callable[
 # a reusable dynamic result can hide corrected provider inputs without polling
 # those endpoints on every request.
 DYNAMIC_CAREER_SOURCE_REFRESH_INTERVAL = timedelta(hours=6)
+
+
+def _reclaim_career_stage(label: str) -> None:
+    """Release completed-stage scratch before the next allocation boundary."""
+    clear_shapley_execution_caches()
+    release_unused_process_memory(label=label)
+    limit = int(os.getenv("FSFFL_MEMORY_LIMIT_BYTES", str(DEFAULT_MEMORY_LIMIT_BYTES)))
+    if current_rss_bytes() > limit:
+        raise MemoryError(f"Career hard memory limit reached before {label}")
 
 
 def _scalar_provenance(values: Mapping[str, object]) -> dict[str, object]:
@@ -313,7 +328,9 @@ def build_dynamic_rostered_career_contract(
     # Reuse the configured accepted preseason authority, then the exact same
     # future contract builder as the hosted Shapley loader.
     try:
-        year_one_evidence = current_intrinsic_loader._year_one_loader(state)
+        _reclaim_career_stage("career-before-reference-year-one")
+        with sample_rss_phase("career.reference_year_one"):
+            year_one_evidence = current_intrinsic_loader._year_one_loader(state)
         if year_one_evidence.evidence_basis != "preseason_baseline":
             raise ValueError("dynamic Career bridge requires accepted preseason base cohort")
         base_year_one = _year_one_forecasts(year_one_evidence)
@@ -332,6 +349,7 @@ def build_dynamic_rostered_career_contract(
             ).authoritative_forecasts
             reference_kwargs = dict(reference_standard_year_one=reference_standard,
                                     reference_league_year_one=base_year_one)
+        _reclaim_career_stage("career-before-current-inputs-and-p0")
         with sample_rss_phase("career.current_inputs_and_p0"):
             live = candidate_builder(
                 state,
@@ -401,7 +419,7 @@ def build_dynamic_rostered_career_contract(
     # reference without mutating the builder's result or its evidence.
     live = replace(live, ros_runtime=None)
     try:
-        release_unused_process_memory(label="career-before-dynamic-foundation4")
+        _reclaim_career_stage("career-before-dynamic-foundation4")
         with sample_rss_phase("career.foundation4_materialization"):
             components = materializer(context, live, tuple(sorted(eligible)))
     except Exception as exc:

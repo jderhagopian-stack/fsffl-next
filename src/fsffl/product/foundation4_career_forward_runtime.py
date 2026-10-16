@@ -45,7 +45,9 @@ from .foundation4_shadow_inputs import (
     provide_foundation4_terminal_features,
 )
 from .runtime import UserRuntimeContext
-from .resource_coordinator import HeavyWorkCoordinator
+from .resource_coordinator import HeavyWorkCoordinator, release_unused_process_memory
+from fsffl.value.shapley_intrinsic import clear_shapley_execution_caches
+from fsffl.memory_attribution import sample_rss_phase
 from .foundation4_cohort import align_foundation4_cohort
 
 
@@ -773,6 +775,24 @@ class CareerIntrinsicLoader:
         # typed contract/component, not these transient forecast/tail inputs.
         del long_forecast, terminal_features, tails
         frozen_contract = contract
+        if (self._expanded_career_contract_loader is not None
+                and self._persistence_store is not None):
+            # Save the already accepted reference before allocating the live
+            # expansion. An interrupted expansion can resume this exact base;
+            # without a bound live manifest it is never a completed Career.
+            clear_shapley_execution_caches()
+            release_unused_process_memory(label="career-before-reference-checkpoint")
+            with sample_rss_phase("career.reference_checkpoint"):
+                self._persist(
+                    context,
+                    dependency_fingerprint=dependency_fingerprint,
+                    component=component,
+                    contract=frozen_contract,
+                )
+            # Explicit Y4-Y7 readers restore the persisted component on demand.
+            # Do not hold its full matrix during candidate acquisition/fitting.
+            component = None
+            release_unused_process_memory(label="career-reference-checkpoint-complete")
         contract, source_manifest = self._append_expanded_rostered_contract(context, frozen_contract)
         self._persist(
             context,

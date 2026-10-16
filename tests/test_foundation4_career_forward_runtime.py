@@ -1156,6 +1156,47 @@ def _fixture_source_manifest(context):
         fingerprints={name: "a" * 64 for name in LIVE_INPUT_SOURCE_NAMES})
 
 
+def test_reference_checkpoint_resumes_interrupted_expansion_without_refitting(materialized, monkeypatch):
+    from fsffl.product import foundation4_career_forward_runtime as runtime
+    old_store, _calls, old_loader, context, accepted = materialized
+    component = old_loader.current_component(context)
+    assert component is not None
+    monkeypatch.setattr(runtime, 'build_long_term_intrinsic_shadow', lambda *a, **k: component)
+    store = MemoryPersistence()
+    calls = []
+    def interrupted(ctx, frozen):
+        saved = store.get_reusable_artifact(loader._career_key(ctx, loader.intrinsic_input_fingerprint(ctx)))
+        assert saved is not None
+        assert saved.payload['_career_expansion_complete'] is False
+        assert store.get_reusable_artifact(loader._component_key(ctx, component)) is not None
+        assert loader.restore_compatible(ctx) is None
+        calls.append('interrupted')
+        raise RuntimeError('fixture interrupted expansion')
+    def make(expander, current):
+        return CareerIntrinsicLoader(current_intrinsic_loader=current,
+            current_intrinsic_fingerprint_resolver=lambda _: 'current-fp-v1',
+            persistence_store=store, expanded_career_contract_loader=expander,
+            expanded_career_contract_fingerprint_resolver=lambda _: 'fixture-dynamic')
+    loader = make(interrupted, lambda _: _current_intrinsic())
+    with pytest.raises(RuntimeError, match='fixture interrupted expansion'):
+        loader(context)
+    def forbidden(*args, **kwargs):
+        raise AssertionError('checkpoint resume must not recalculate frozen reference')
+    monkeypatch.setattr(runtime, 'build_long_term_intrinsic_shadow', forbidden)
+    def finish(ctx, frozen):
+        assert frozen.model_dump() == accepted.model_dump()
+        calls.append('resumed')
+        return ExpandedCareerContractResult(contract=None, failures={},
+            source_manifest=_fixture_source_manifest(ctx))
+    resumed = make(finish, forbidden)
+    result = resumed(context)
+    restored = make(forbidden, forbidden).restore_compatible(context)
+    assert restored == result == accepted
+    assert calls == ['interrupted', 'resumed']
+    assert sum(r.key.artifact_kind == FOUNDATION4_Y4_Y7_ARTIFACT_KIND for r in store.artifacts) == 1
+    assert sum(r.key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND for r in store.artifacts) == 2
+
+
 def test_completed_expansion_requires_valid_bound_live_input_manifest(materialized):
     import copy
     persistence, _calls, _base_loader, context, base = materialized

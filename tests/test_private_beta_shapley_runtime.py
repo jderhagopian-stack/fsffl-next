@@ -248,6 +248,37 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
     assert abs(reconstructed - contract.estimates[0].raw_intrinsic_value) <= 1e-9
 
 
+@pytest.mark.parametrize('blocked_stage', [1, 2])
+def test_hosted_career_does_not_allocate_next_stage_above_hard_limit(monkeypatch, blocked_stage):
+    state, year_one = _fixture()
+    state = state.model_copy(update={'team_states': (
+        state.team_states[0].model_copy(update={'roster': (
+            RosterEntry(player_id=year_one.player_id, slot=RosterSlot.BENCH),)}),
+        state.team_states[1],
+    )})
+    calls = []
+    resident = iter(([513] if blocked_stage == 1 else [455, 513]))
+    monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
+    monkeypatch.setattr(bridge, 'current_rss_bytes', lambda: next(resident) * 1024 * 1024)
+    monkeypatch.setattr(bridge, 'clear_shapley_execution_caches', lambda: None)
+    monkeypatch.setattr(bridge, 'release_unused_process_memory', lambda **kw: None)
+    def load(_):
+        calls.append('year-one')
+        return _authority_evidence(year_one)
+    def forbidden(*args, **kwargs):
+        pytest.fail('current-input acquisition must not run above the hard cap')
+    result = bridge.build_dynamic_rostered_career_contract(
+        UserRuntimeContext(user_id='fixture', league_state=state),
+        SimpleNamespace(estimates=()),
+        current_intrinsic_loader=SimpleNamespace(_year_one_loader=load),
+        candidate_builder=forbidden,
+    )
+    assert calls == ([] if blocked_stage == 1 else ['year-one'])
+    assert result.contract is None
+    assert set(result.failures) == {year_one.player_id}
+    assert 'MemoryError: Career hard memory limit reached before' in result.failures[year_one.player_id]
+
+
 def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     monkeypatch,
 ) -> None:
