@@ -256,14 +256,15 @@ def build_p0_candidate_source_rows(
             )
         ):
             raise ValueError(f"P0 candidate facts lack version/digest: {player_id}")
+        # Fantasy scoring can legitimately be negative (e.g. a fumble with
+        # minimal production). Keep the signed governed input. P0 itself owns
+        # its accepted nonnegative log-feature transformation.
         numeric = (facts.age, facts.standard_y1_points, facts.connected_league_y1_points)
         if any(not math.isfinite(float(value)) for value in numeric):
             raise ValueError(f"P0 candidate has non-finite required facts: {player_id}")
         if (
             facts.age < 0
             or facts.experience < 0
-            or facts.standard_y1_points < 0
-            or facts.connected_league_y1_points < 0
         ):
             raise ValueError(f"P0 candidate has invalid age, experience, or Y1: {player_id}")
         thresholds = source_state_authority.thresholds_by_position.get(facts.position)
@@ -274,7 +275,7 @@ def build_p0_candidate_source_rows(
         source_state = _current_state(facts.standard_y1_points, thresholds)
         position_values = by_position.get(facts.position, [])
         state_values = by_cell.get((facts.position, source_state), [])
-        if not position_values or not state_values:
+        if not position_values:
             raise ValueError(
                 "P0 benchmark percentile cell unavailable: "
                 f"{facts.position}/{source_state}"
@@ -330,7 +331,15 @@ def build_p0_candidate_source_rows(
             source_percentile=_benchmark_percentile(
                 float(facts.standard_y1_points), position_values
             ),
-            state_percentile=_benchmark_percentile(float(facts.standard_y1_points), state_values),
+            # An unobserved position/state cell has no empirical percentile.
+            # Preserve missingness: the accepted P0 feature builder already
+            # omits percentile terms for a non-finite/missing observation.
+            # Never substitute another cell, invent a median, or alter the
+            # accepted source-state thresholds to manufacture a benchmark.
+            state_percentile=(
+                _benchmark_percentile(float(facts.standard_y1_points), state_values)
+                if state_values else None
+            ),
             evidence_as_of=facts.facts_as_of.astimezone(UTC).isoformat(),
             evidence_source_version=facts.facts_source_version,
             evidence_sha256=evidence_digest,

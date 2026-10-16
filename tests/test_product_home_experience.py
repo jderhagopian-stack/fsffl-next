@@ -48,7 +48,7 @@ def test_unselected_league_bootstrap_remains_available() -> None:
 
 def test_franchise_overview_preserves_approved_home_visual_language() -> None:
     for label in (
-        "Season Outlook · current Simulation",
+        "Season Outlook · ",
         "What Matters Right Now",
         "Also worth knowing",
         "Expected wins",

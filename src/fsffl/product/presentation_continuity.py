@@ -165,10 +165,16 @@ class PresentationContinuityStore:
         )
         total_bytes = 0
         surface_hashes: list[tuple[str, str, int]] = []
+        career_input_fingerprint = None
         self._local.promoting = True
         try:
             for surface, builder in builders:
                 raw = builder()
+                if (surface == LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE
+                        and raw.get("status") == "ready"
+                        and raw.get("league_state_id") == state.state_id
+                        and raw.get("dynasty_evidence_status") != "last_good"):
+                    career_input_fingerprint = raw.get("input_fingerprint")
                 payload = _json_round_trip(raw)
                 payload["publication_generation_id"] = promotion_id
                 encoded = json.dumps(
@@ -225,6 +231,7 @@ class PresentationContinuityStore:
                 for surface, payload_hash, size in surface_hashes
             ],
             "total_payload_bytes": total_bytes,
+            "career_input_fingerprint": career_input_fingerprint,
         }
         self._persistence.put_artifact(
             ReusableArtifactRecord(
@@ -259,6 +266,34 @@ class PresentationContinuityStore:
             as_of=state.as_of,
             surfaces=surfaces,
             total_payload_bytes=total_bytes,
+        )
+
+    def career_publication_matches(self, runtime: UserRuntimeContext, record) -> bool:
+        """Check compact publication metadata before overlaying completed Career.
+
+        Composition itself can consume completed authority; external readers must
+        wait for the manifest and runtime binding to expose that exact dependency.
+        No large Career or surface artifact is loaded by this check.
+        """
+        if self._persistence is None or getattr(self._local, "promoting", False):
+            return True
+        if runtime.league_state is None or not runtime.publication_generation_id:
+            return False
+        state = runtime.league_state
+        key = _manifest_key(user_id=runtime.user_id, league_id=state.league.league_id,
+                            league_state_id=state.state_id)
+        manifest = self._persistence.get_reusable_artifact(key)
+        if manifest is None or manifest.key != key or not manifest.reusable:
+            return False
+        payload = manifest.payload
+        return bool(
+            payload.get("contract") == PRESENTATION_MODEL_VERSION
+            and payload.get("league_id") == state.league.league_id
+            and payload.get("league_state_id") == state.state_id
+            and payload.get("selected_team_id") == runtime.selected_team_id
+            and payload.get("promotion_id") == runtime.publication_generation_id
+            and record.league_state_id == state.state_id
+            and payload.get("career_input_fingerprint") == record.intrinsic_input_fingerprint
         )
 
     def clear_user_validation_hints(self, user_id: str) -> int:

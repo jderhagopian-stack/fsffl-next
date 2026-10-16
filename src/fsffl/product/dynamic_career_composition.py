@@ -36,6 +36,8 @@ from .foundation4_career_forward_runtime import ExpandedCareerContractResult
 from .p0_live_candidate_runtime import (
     P0LiveCandidateResult,
     build_live_p0_rostered_candidate_forecasts,
+    recorded_status_based_zero_ros_evidence,
+    STATUS_BASED_YEAR_ONE_SCORING_VERSION,
 )
 from .private_beta_shapley_runtime import _year_one_forecasts
 from .runtime import UserRuntimeContext
@@ -228,16 +230,20 @@ def dynamic_career_fingerprint(
     now: datetime | None = None,
     include_freshness_epoch: bool = True,
 ) -> str:
-    """Bind Career reuse to State, ROS revisions, and bounded live-source freshness.
+    """Resolve the governed source-capture identity without provider polling.
 
-    Sleeper stats/catalog inputs have no persisted revision identity in the
-    hosted path. A State-scoped six-hour epoch forces a bounded rebuild while
-    keeping the pre-build resolver free of provider calls. Exact ROS content
-    revisions remain part of the fingerprint below.
+    Explicit Forecast publication advances its precise capture cutoff even when
+    numeric Forecast/ROS rows are unchanged. The durable expansion separately
+    binds every consumed live input through its producer-recorded manifest.
+    Reads/restarts reuse that frozen capture; clock age is refresh-due metadata.
     """
     if context.league_state is None:
         raise ValueError("dynamic Career fingerprint requires canonical State")
-    evaluated_at = now or datetime.now(UTC)
+    evaluated_at = now or context.career_fingerprint_evaluation_as_of or max(
+        context.league_state.as_of,
+        getattr(getattr(context.forecast_evidence, "runtime_result", None),
+                "evaluation_as_of", None) or context.league_state.as_of,
+    )
     if evaluated_at.tzinfo is None:
         raise ValueError("dynamic Career fingerprint clock must be timezone-aware")
     freshness_epoch = int(
@@ -266,10 +272,22 @@ def dynamic_career_fingerprint(
             for row in getattr(evidence, "raw_forecasts", ())
         ],
         "projection_history_revisions": ros_revisions,
-        "contract": "dynamic-rostered-p0-career-bridge-v1",
+        "contract": "dynamic-rostered-p0-career-bridge-v4:captured-live-inputs",
     }
+    status_receipts = recorded_status_based_zero_ros_evidence(
+        context.league_state, as_of=evaluated_at,
+    )
+    if status_receipts:
+        payload["official_nfl_status_scoring"] = STATUS_BASED_YEAR_ONE_SCORING_VERSION
+        payload["official_nfl_status_receipts"] = [
+            (player_id, row.source_version)
+            for player_id, row in sorted(status_receipts.items())
+        ]
     if include_freshness_epoch:
         payload["live_source_freshness_epoch"] = freshness_epoch
+        # Explicit refresh creates a new source capture even when numeric
+        # Forecast/ROS rows are unchanged. Browser reads and restarts do not.
+        payload["published_source_capture"] = evaluated_at.astimezone(UTC).isoformat()
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
@@ -297,9 +315,25 @@ def build_dynamic_rostered_career_contract(
         if year_one_evidence.evidence_basis != "preseason_baseline":
             raise ValueError("dynamic Career bridge requires accepted preseason base cohort")
         base_year_one = _year_one_forecasts(year_one_evidence)
+        reference_kwargs = {}
+        from .i1_player_scoring import APPROVED_UNDEFINED_WR_PLAYER_ID
+        if any(entry.player_id == APPROVED_UNDEFINED_WR_PLAYER_ID
+               for team in state.team_states for entry in team.roster):
+            from fsffl.forecast.league_scoring import derive_league_scoring_result
+            from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
+            supplement = getattr(getattr(year_one_evidence, "runtime_result", None),
+                                 "first_party_fumbles_lost_supplement", None)
+            reference_standard = derive_league_scoring_result(
+                year_one_evidence.raw_forecasts,
+                rules=state.league.rules.model_copy(update={"scoring": FROZEN_I1_STANDARD_SCORING}),
+                supplemental_observations=tuple(getattr(supplement, "observations", ())),
+            ).authoritative_forecasts
+            reference_kwargs = dict(reference_standard_year_one=reference_standard,
+                                    reference_league_year_one=base_year_one)
         live = candidate_builder(
             state,
             projection_history_as_of=context.career_fingerprint_evaluation_as_of,
+            **reference_kwargs,
         )
     except Exception as exc:
         # Dynamic acquisition is an optional extension to the already-built
@@ -320,9 +354,14 @@ def build_dynamic_rostered_career_contract(
             failures={player_id: detail for player_id in candidates},
         )
     failures = dict(live.failures)
+    def result(contract=None, failures=None):
+        return ExpandedCareerContractResult(
+            contract=contract, failures=failures or {},
+            source_manifest=dict(getattr(live, "source_manifest", {})),
+        )
     future = live.future
     if future is None:
-        return ExpandedCareerContractResult(contract=None, failures=failures)
+        return result(contract=None, failures=failures)
     future_rows = {
         (row.player_id, int(row.year_index)): row
         for row in future.contract.forecasts
@@ -344,7 +383,7 @@ def build_dynamic_rostered_career_contract(
             "accepted P0 candidate lacks canonical full-season Year-1 and Y2/Y3 rows"
         )
     if not eligible:
-        return ExpandedCareerContractResult(contract=None, failures=failures)
+        return result(contract=None, failures=failures)
     if materializer is None:
         for player_id in sorted(eligible):
             failures[player_id] = (
@@ -352,7 +391,7 @@ def build_dynamic_rostered_career_contract(
                 "for the hosted process (route/development modules, frozen route inputs, "
                 "and point-in-time historical panel)"
             )
-        return ExpandedCareerContractResult(contract=None, failures=failures)
+        return result(contract=None, failures=failures)
     # ROS acquisition/scoring is complete. Career consumes the retained
     # candidate source, Y1, future and failure contracts; it never consumes
     # the whole-league ROS intermediate. Release this local working-set
@@ -365,7 +404,7 @@ def build_dynamic_rostered_career_contract(
         # The materializer is allowed to fail per candidate; a batch-level
         # infrastructure/configuration error is reflected on each eligible row.
         detail = f"accepted Foundation 4 dynamic materializer failed: {type(exc).__name__}: {exc}"
-        return ExpandedCareerContractResult(
+        return result(
             contract=None,
             failures={**failures, **{player_id: detail for player_id in sorted(eligible)}},
         )
@@ -385,7 +424,7 @@ def build_dynamic_rostered_career_contract(
             "accepted Foundation 4 materializer returned an incomplete Y4-Y7/Y8+ contract",
         )
     if not complete:
-        return ExpandedCareerContractResult(contract=None, failures=failures)
+        return result(contract=None, failures=failures)
 
     # The large future scenario graph is needed only for downstream Shapley.
     # Do not keep it resident alongside Foundation 4's fit workspaces.
@@ -449,4 +488,4 @@ def build_dynamic_rostered_career_contract(
         components=complete_components,
     )
     failures.update(component_failures)
-    return ExpandedCareerContractResult(contract=expanded, failures=failures)
+    return result(contract=expanded, failures=failures)

@@ -13,16 +13,16 @@ from fsffl.product.webapp import require_beta_user
 
 
 def test_dynasty_route_rejects_captured_stale_state_presentation_fallback() -> None:
-    target_state_id = "ee05aa91bd112f40542327a537e24a0efed619dfa307bf0bb9983bfea3176ca2"
-    stale_state_id = "3d7808d45587314cafa3e8fb1e694a57158cd16524b2c2a86b9dfb0e5b5176bf"
-    target_generation_id = "94543b5881a35a381c3766b2a8f1acb1a7229fe19626fe3e4b327b3e489de788"
+    target_state_id = "fixture-identity-4"
+    stale_state_id = "fixture-identity-0"
+    target_generation_id = "fixture-identity-1"
     context = SimpleNamespace(
         league_state=SimpleNamespace(
             state_id=target_state_id,
-            league=SimpleNamespace(league_id="captured-league"),
+            league=SimpleNamespace(league_id="fixture-league"),
             as_of=datetime(2026, 10, 6, tzinfo=timezone.utc),
         ),
-        selected_team_id="captured-team",
+        selected_team_id="fixture-team",
         publication_generation_id=target_generation_id,
     )
     runtime_store = SimpleNamespace(get=lambda _user_id: context)
@@ -40,7 +40,7 @@ def test_dynasty_route_rejects_captured_stale_state_presentation_fallback() -> N
     stale_payload = {
         "status": "ready",
         "capability": "career_intrinsic",
-        "league_id": "captured-league",
+        "league_id": "fixture-league",
         "league_state_id": stale_state_id,
         "publication_generation_id": "verified-last-good-generation",
         "rooms": [{"position": "QB", "value": 123.0}],
@@ -62,25 +62,25 @@ def test_dynasty_route_rejects_captured_stale_state_presentation_fallback() -> N
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "preparing"
+    assert payload["status"] == "refresh_required"
     assert payload["league_state_id"] == target_state_id
     assert payload["publication_generation_id"] == target_generation_id
     assert "rooms" not in payload
-    assert request_calls == [context]
+    assert request_calls == []
 
 
 def test_dynasty_request_for_visible_publication_a_is_superseded_when_runtime_is_b() -> None:
-    atlas_state_id = "3d7808d45587314cafa3e8fb1e694a57158cd16524b2c2a86b9dfb0e5b5176bf"
-    atlas_generation_id = "da5a06b340a8ab7868f1876a91500d53b6da67c89338185d7944fa8eace8a8ab"
-    runtime_state_id = "e582e5ce160226c0ab65f88277c12d5dd4b957a97eacc4d70841f6f360f3a21d"
+    atlas_state_id = "fixture-identity-0"
+    atlas_generation_id = "fixture-identity-2"
+    runtime_state_id = "fixture-identity-3"
     runtime_generation_id = "runtime-generation-b"
     context = SimpleNamespace(
         league_state=SimpleNamespace(
             state_id=runtime_state_id,
-            league=SimpleNamespace(league_id="captured-league"),
+            league=SimpleNamespace(league_id="fixture-league"),
             as_of=datetime(2026, 10, 6, tzinfo=timezone.utc),
         ),
-        selected_team_id="captured-team",
+        selected_team_id="fixture-team",
         publication_generation_id=runtime_generation_id,
     )
     calls: list[str] = []
@@ -152,7 +152,7 @@ def test_dynasty_presentation_builder_passes_captured_publication_identity() -> 
 
 
 def test_dynasty_persisted_surface_reports_rank_completeness_without_relabeling_core_ready() -> None:
-    state_id, generation_id = "captured-state", "captured-generation"
+    state_id, generation_id = "fixture-state", "fixture-generation"
     observed_users: list[str] = []
 
     def rooms(incomplete_position: str | None) -> list[dict[str, object]]:
@@ -176,11 +176,11 @@ def test_dynasty_persisted_surface_reports_rank_completeness_without_relabeling_
     for incomplete_position, expected in (("QB", "incomplete"), (None, "ready")):
         context = SimpleNamespace(
             league_state=SimpleNamespace(state_id=state_id,
-                league=SimpleNamespace(league_id="captured-league"),
+                league=SimpleNamespace(league_id="fixture-league"),
                 as_of=datetime(2026, 10, 6, tzinfo=timezone.utc)),
-            selected_team_id="captured-team", publication_generation_id=generation_id)
+            selected_team_id="fixture-team", publication_generation_id=generation_id)
         persisted = {"status":"ready", "capability":"career_intrinsic",
-            "league_id":"captured-league", "league_state_id":state_id,
+            "league_id":"fixture-league", "league_state_id":state_id,
             "publication_generation_id":generation_id, "rooms":rooms(incomplete_position)}
         app = FastAPI()
         app.dependency_overrides[require_beta_user] = lambda: "tenant-a"

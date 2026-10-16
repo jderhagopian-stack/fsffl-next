@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .career_presentation import career_lens_for_publication, career_reference_ids_from_current
+
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
@@ -250,6 +252,8 @@ def install_player_intelligence_routes(
     history_coordinator: PlayerHistoryBackgroundCoordinator | None = None,
     persistence_store: PersistenceStore | None = None,
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
+    career_record_loader=None,
+    career_publication_validator=None,
 ) -> None:
     future_forecasts = future_cache or PlayerFutureForecastCache()
 
@@ -307,6 +311,21 @@ def install_player_intelligence_routes(
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
         value = dict(payload["value"])
+        career_record = career_record_loader(runtime) if career_record_loader is not None else None
+        if (career_record is not None and career_publication_validator is not None
+                and not career_publication_validator(runtime, career_record)):
+            career_record = None
+        career_summary, career_rows = career_lens_for_publication(
+            career_record,
+            served_state_id=runtime.league_state.state_id,
+            reference_ids=career_reference_ids_from_current(intrinsic_record),
+        )
+        value.update(career_rows.get(player_id, {
+            "career_intrinsic_index": None, "raw_career_forward_reference": None,
+            "career_status": "unavailable",
+        }))
+        value["career_presentation"] = career_summary
+        value["intrinsic_label"] = "3-Year Intrinsic"
         value["intrinsic_lifecycle_status"] = intrinsic_record.status.value
         if intrinsic_record.status in {
             IntrinsicBuildStatus.QUEUED,

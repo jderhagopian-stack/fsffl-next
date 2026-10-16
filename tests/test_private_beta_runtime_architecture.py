@@ -453,10 +453,9 @@ def test_career_intrinsic_is_production_lifecycle_downstream_of_ready_current_in
     assert "_career_intrinsic_loader = CareerIntrinsicLoader(" in source
     assert "_career_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(" in source
     reconcile = source.split("def _reconcile_hosted_intrinsic", 1)[1].split("# Reuse only exact Decision-owned", 1)[0]
-    assert 'if readiness.get("status") == "full":' in reconcile
-    assert "_career_intrinsic_coordinator.restore_compatible_staged(context)" in reconcile
-    assert "_career_intrinsic_coordinator.request(context)" in reconcile
-    assert "_career_intrinsic_coordinator.clear_user(context.user_id)" in reconcile
+    prepare = source.split("def _prepare_presentation_for_user", 1)[1].split("def _promote_presentation_for_user", 1)[0]
+    assert "current.status != IntrinsicBuildStatus.COMPLETED" in prepare
+    assert "_career_intrinsic_coordinator.request(context)" not in reconcile
     startup = source.split("def _run_lightweight_startup_restore", 1)[1].split("def _start_lightweight_startup_restore", 1)[0]
     assert "_career_intrinsic_coordinator.restore_compatible_staged(" in startup
     assert "Career Intrinsic restored compatible production artifact" in startup

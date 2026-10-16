@@ -176,3 +176,61 @@ def translate_future_i1_result_for_player(
             f"{player_id}"
         ) from exc
     return translate_future_i1_result(result, multiplier=float(multiplier))
+
+
+APPROVED_UNDEFINED_WR_SCORING_VERSION = "career-cj-undefined-wr-reference-v1"
+APPROVED_UNDEFINED_WR_PLAYER_ID = "sleeper:player:13270"
+
+
+def career_player_scoring_multipliers(
+    *,
+    standard_year_one: tuple[ForecastObservation, ...],
+    league_year_one: tuple[ForecastObservation, ...],
+    reference_standard_year_one: tuple[ForecastObservation, ...] = (),
+    reference_league_year_one: tuple[ForecastObservation, ...] = (),
+) -> dict[str, float]:
+    """Management-approved CJ-only fallback; normal player ratios stay unchanged.
+
+    The caller owns the complete frozen reference, scoring rules and cutoff.
+    Neither missing input, position mismatch nor an ordinary player-ratio failure
+    is permission to use the reference bridge.
+    """
+    from .i1_scoring_bridge import position_scoring_multipliers
+
+    standard = _season_fantasy_points(standard_year_one)
+    league_rows = _season_fantasy_points(league_year_one)
+    output: dict[str, float] = {}
+    for league in league_rows.values():
+        if league.metric != ForecastMetric.FANTASY_POINTS or league.horizon != ForecastHorizon.SEASON:
+            continue
+        player_id = league.player_id
+        row = standard.get(player_id)
+        approved = (
+            player_id == APPROVED_UNDEFINED_WR_PLAYER_ID
+            and row is not None
+            and row.position == league.position == Position.WR
+            and row.distribution.mean <= 0.0 < league.distribution.mean
+            and bool(reference_standard_year_one)
+            and bool(reference_league_year_one)
+        )
+        if approved:
+            if {r.player_id for r in reference_standard_year_one} != {
+                r.player_id for r in reference_league_year_one
+            }:
+                raise ValueError("undefined WR fallback requires identical complete reference coordinates")
+            if player_id in {r.player_id for r in reference_standard_year_one}:
+                raise ValueError("undefined WR candidate cannot enter its own reference")
+            output[player_id] = position_scoring_multipliers(
+                standard_year_one=reference_standard_year_one,
+                league_year_one=reference_league_year_one,
+            )[Position.WR]
+        else:
+            output.update(player_scoring_multipliers(
+                standard_year_one=(() if row is None else (row,)),
+                league_year_one=(league,),
+            ))
+    if not output:
+        return player_scoring_multipliers(
+            standard_year_one=standard_year_one, league_year_one=league_year_one,
+        )
+    return output

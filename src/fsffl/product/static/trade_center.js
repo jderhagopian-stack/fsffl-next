@@ -1,4 +1,4 @@
-const tradeUiState={browser:null,counterpartyTeamId:'',focalSelected:new Set(),counterpartySelected:new Set(),loading:false};
+const tradeUiState={browser:null,counterpartyTeamId:'',focalSelected:new Set(),counterpartySelected:new Set(),loading:false,valueLenses:null};
 
 function tradeMarketEstimate(option){
   const assetId=option?.player_id||option?.pick_id;
@@ -13,10 +13,11 @@ function tradeMarketLabel(option){
 }
 
 function tradeValueMarkup(option){
-  const item=tradeMarketEstimate(option);
-  if(!item)return'<span class="asset-kind">Broad Market —</span>';
-  const detail=`Governed Broad Market percentile\nModel: ${item.model_version||'—'}\nSources: ${(item.evidence_sources||[]).join(', ')||'—'}\nScale: ${item.scale?.scale_id||'dynasty-market-percentile'}`;
-  return`<span class="asset-kind" title="${escapeHtml(detail)}">Broad Market ${tradeMarketLabel(option)}</span>`;
+  if(!option?.player_id)return '<span class="asset-kind">Broad Market percentile '+tradeMarketLabel(option)+'</span>';
+  const payload=tradeUiState.valueLenses;
+  const row=payload?.league_state_id===state.context?.state_id?(payload.players||[]).find(item=>item.player_id===option.player_id):null;
+  const index=value=>typeof value==='number'&&Number.isFinite(value)?Math.round(value).toLocaleString():'Unavailable';
+  return `<span class="asset-kind" title="Presentation indexes only; never package economics">Broad Market ${index(row?.broad_market_value_index)} · 3-Year Intrinsic ${index(row?.intrinsic_value_index)} · Career Intrinsic ${index(row?.career_intrinsic_index)} <small>0–10,000 indexes · raw Career ${escapeHtml(row?.raw_career_forward_reference??'unavailable')}</small></span>`;
 }
 
 function selectedRefs(side){return side==='focal'?tradeUiState.focalSelected:tradeUiState.counterpartySelected}
@@ -148,7 +149,7 @@ function renderTradeAnalysis(result){
     <div id="trade-simulation-result" style="margin-top:12px"></div>
     <div id="trade-frontier-result" style="margin-top:12px"></div>
     ${warnings?`<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--accent)">Evidence & limitations</summary><ul style="color:var(--muted);font-size:12px;line-height:1.5;padding-left:18px">${warnings}</ul></details>`:''}
-    <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Broad Market and FSFFL Intrinsic are evidence lenses; Trade Decision remains the authority for bilateral package economics and consequences.</p>
+    <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Broad Market and 3-Year Intrinsic are evidence lenses; Trade Decision remains the authority for bilateral package economics and consequences.</p>
   </div>`;
 }
 
@@ -192,7 +193,13 @@ async function exploreTradeFrontier(){
 
 async function loadTradeCenter(){
   if(!state.context?.team_id||tradeUiState.loading)return;tradeUiState.loading=true;const focalAssets=qs('#focal-assets');if(focalAssets)focalAssets.innerHTML='<p class="trade-empty">Loading canonical assets…</p>';
-  try{const browserPromise=api('/api/trade-center/browser');const valuesPromise=state.valueCatalog?Promise.resolve(state.valueCatalog):(state.context?.value_ready?api('/api/values').catch(()=>null):Promise.resolve(null));const[browser,values]=await Promise.all([browserPromise,valuesPromise]);tradeUiState.browser=browser;if(values)state.valueCatalog=values;if(tradeUiState.counterpartyTeamId&&!browser.counterparties.some(team=>team.team_id===tradeUiState.counterpartyTeamId))tradeUiState.counterpartyTeamId='';tradeUiState.focalSelected=new Set([...tradeUiState.focalSelected].filter(ref=>browser.focal_team.assets.some(item=>item.asset_ref===ref)));const counterparty=currentCounterparty();tradeUiState.counterpartySelected=new Set([...tradeUiState.counterpartySelected].filter(ref=>counterparty?.assets.some(item=>item.asset_ref===ref)));ensureTradeFilters('focal');ensureTradeFilters('counterparty');renderTradeCounterparties();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();invalidateTradeScenario();renderTradeAnalysisNotice();const label=qs('#trade-state-label span:last-child');if(label)label.textContent=`Canonical ownership · ${String(browser.state_id).slice(0,12)}…`}
+  try{const browserPromise=api('/api/trade-center/browser');const valuesPromise=state.valueCatalog?Promise.resolve(state.valueCatalog):(state.context?.value_ready?api('/api/values').catch(()=>null):Promise.resolve(null));const[browser,values]=await Promise.all([browserPromise,valuesPromise]);tradeUiState.browser=browser;
+    tradeUiState.valueLenses=null;
+    void api('/api/league/value-lenses').then(payload=>{
+      if(tradeUiState.browser!==browser||state?.route!=='trade_center'||state.context?.state_id!==browser.state_id||payload?.league_state_id!==browser.state_id)return;
+      tradeUiState.valueLenses=payload;renderTradeAssetList('focal');renderTradeAssetList('counterparty');
+    }).catch(()=>{});
+    if(values)state.valueCatalog=values;if(tradeUiState.counterpartyTeamId&&!browser.counterparties.some(team=>team.team_id===tradeUiState.counterpartyTeamId))tradeUiState.counterpartyTeamId='';tradeUiState.focalSelected=new Set([...tradeUiState.focalSelected].filter(ref=>browser.focal_team.assets.some(item=>item.asset_ref===ref)));const counterparty=currentCounterparty();tradeUiState.counterpartySelected=new Set([...tradeUiState.counterpartySelected].filter(ref=>counterparty?.assets.some(item=>item.asset_ref===ref)));ensureTradeFilters('focal');ensureTradeFilters('counterparty');renderTradeCounterparties();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();invalidateTradeScenario();renderTradeAnalysisNotice();const label=qs('#trade-state-label span:last-child');if(label)label.textContent=`Canonical ownership · ${String(browser.state_id).slice(0,12)}…`}
   catch(error){if(focalAssets)focalAssets.innerHTML=`<p class="trade-empty">Unable to load Trade Center: ${escapeHtml(error.message)}</p>`}finally{tradeUiState.loading=false}
 }
 

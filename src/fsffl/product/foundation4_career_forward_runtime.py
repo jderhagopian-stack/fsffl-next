@@ -3,11 +3,14 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field, replace
-from threading import RLock
+from contextlib import nullcontext
+from threading import RLock, Timer
 from typing import Callable, Mapping
+from weakref import ref
 
 from fsffl.persistence.contracts import (
     ArtifactKey,
+    canonical_fingerprint,
     PersistenceStore,
     ReusableArtifactRecord,
     utc_now,
@@ -42,6 +45,7 @@ from .foundation4_shadow_inputs import (
     provide_foundation4_terminal_features,
 )
 from .runtime import UserRuntimeContext
+from .resource_coordinator import HeavyWorkCoordinator
 from .foundation4_cohort import align_foundation4_cohort
 
 
@@ -54,7 +58,7 @@ LEGACY_FOUNDATION4_SCOPE_KIND = "league_intrinsic_shadow"
 FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = CAREER_INTRINSIC_ARTIFACT_KIND
 FOUNDATION4_SCOPE_KIND = CAREER_INTRINSIC_SCOPE_KIND
 FOUNDATION4_RUNTIME_VERSION = (
-    "foundation4-career-forward-runtime-v6:active-cohort:"
+    "foundation4-career-forward-runtime-v7:complete-exact-state-artifact:"
     "dynamic-rostered-y1-y3-shapley-bridge:"
     "fsffl-material-scoring-with-rare-residual-omission"
 )
@@ -73,6 +77,7 @@ class ExpandedCareerContractResult:
 
     contract: CareerForwardIntrinsicShadowContract | None
     failures: Mapping[str, str] = field(default_factory=dict)
+    source_manifest: Mapping[str, object] = field(default_factory=dict)
 
 
 ExpandedCareerContractLoader = Callable[
@@ -139,6 +144,7 @@ class CareerIntrinsicLoader:
         self,
         *,
         current_intrinsic_loader: CurrentIntrinsicLoader,
+        heavy_work_coordinator: HeavyWorkCoordinator | None = None,
         current_intrinsic_fingerprint_resolver: CurrentIntrinsicFingerprintResolver,
         persistence_store: PersistenceStore | None = None,
         expanded_career_contract_loader: ExpandedCareerContractLoader | None = None,
@@ -156,6 +162,7 @@ class CareerIntrinsicLoader:
                 "expanded Career contract loader and semantic fingerprint resolver "
                 "must be configured together"
             )
+        self._heavy_work_coordinator = heavy_work_coordinator
         self._expanded_career_contract_loader = expanded_career_contract_loader
         self._expanded_career_contract_fingerprint_resolver = (
             expanded_career_contract_fingerprint_resolver
@@ -173,15 +180,28 @@ class CareerIntrinsicLoader:
         self._cached_fingerprint: str | None = None
         self._cached_contract: CareerForwardIntrinsicShadowContract | None = None
         self._cached_component: LongTermIntrinsicShadowContract | None = None
+        self._component_timer: Timer | None = None
 
     def pin_build_context(self, context: UserRuntimeContext) -> UserRuntimeContext:
-        """Pin time-sensitive source identity for coordinator key and worker."""
+        """Use the published State/Forecast cutoff, never the reader's clock.
+
+        A newer source capture requires a new governed evidence publication.
+        Visiting a page must not advance its source window or force acquisition.
+        """
         if context.career_fingerprint_evaluation_as_of is not None:
             return context
-        return replace(
-            context,
-            career_fingerprint_evaluation_as_of=utc_now(),
+        cutoff = context.league_state.as_of if context.league_state is not None else utc_now()
+        # The roster State and its governed Forecast publication have distinct
+        # capture times. Preserve a later, already published Forecast cutoff;
+        # using the roster timestamp alone could discard its admitted ROS rows.
+        published_as_of = getattr(
+            getattr(context.forecast_evidence, "runtime_result", None), "evaluation_as_of", None
         )
+        if published_as_of is not None:
+            if published_as_of.tzinfo is None:
+                raise ValueError("published Career evidence cutoff must be timezone-aware")
+            cutoff = max(cutoff, published_as_of)
+        return replace(context, career_fingerprint_evaluation_as_of=cutoff)
 
     def intrinsic_input_fingerprint(self, context: UserRuntimeContext) -> str:
         return self._input_fingerprint(
@@ -203,9 +223,11 @@ class CareerIntrinsicLoader:
         context: UserRuntimeContext,
         expanded_fingerprint_resolver: Callable[[UserRuntimeContext], str] | None,
     ) -> str:
+        context = self.pin_build_context(context)
         if context.league_state is None:
             raise ValueError("Foundation 4 requires canonical league State")
         payload = {
+            "league_state_id": context.league_state.state_id,
             "evaluation_season": context.league_state.league.season,
             "league_id": context.league_state.league.league_id,
             "league_rules": _rules_payload(context),
@@ -279,19 +301,19 @@ class CareerIntrinsicLoader:
         context: UserRuntimeContext,
     ) -> CareerForwardIntrinsicShadowContract | None:
         context = self.pin_build_context(context)
-        frozen = self._restore_frozen_compatible(context)
-        if frozen is None:
-            return None
-        expanded = self._append_expanded_rostered_contract(context, frozen)
+        fingerprint = self.intrinsic_input_fingerprint(context)
         with self._lock:
-            self._cached_user_id = context.user_id
-            self._cached_fingerprint = self.intrinsic_input_fingerprint(context)
-            self._cached_contract = expanded
-        return expanded
+            if (self._cached_user_id == context.user_id
+                    and self._cached_fingerprint == fingerprint
+                    and self._cached_contract is not None):
+                return self._cached_contract
+        return self._restore_frozen_compatible(context, require_complete=True)
 
     def _restore_frozen_compatible(
         self,
         context: UserRuntimeContext,
+        *,
+        require_complete: bool = False,
     ) -> CareerForwardIntrinsicShadowContract | None:
         if self._persistence_store is None or context.league_state is None:
             return None
@@ -321,6 +343,21 @@ class CareerIntrinsicLoader:
             return None
         payload = dict(record.payload)
         dependency = payload.pop("_foundation4_dependency_fingerprint", None)
+        expansion_complete = payload.pop("_career_expansion_complete", False) is True
+        source_manifest = payload.pop("_career_source_manifest", {})
+        complete_fingerprint = payload.pop("_career_complete_input_fingerprint", None)
+        if self._expanded_career_contract_loader is not None:
+            from .p0_live_candidate_runtime import valid_live_source_manifest
+            expansion_complete = (
+                expansion_complete and valid_live_source_manifest(source_manifest)
+                and complete_fingerprint == canonical_fingerprint(
+                    "career-complete-live-inputs-v1", fingerprint, source_manifest["digest"],
+                )
+            )
+        if require_complete and self._expanded_career_contract_loader is not None and not expansion_complete:
+            # Legacy base-only artifacts are inputs for an explicitly scheduled
+            # build, not completed expanded products. Restore never calls providers.
+            return None
         if dependency != fingerprint:
             return None
         try:
@@ -338,7 +375,7 @@ class CareerIntrinsicLoader:
         base_estimates = tuple(
             row for row in contract.estimates if row.player_id in reference_ids
         )
-        if len(base_estimates) != len(contract.estimates):
+        if not expansion_complete and len(base_estimates) != len(contract.estimates):
             contract = contract.model_copy(update={
                 "estimates": base_estimates,
                 "player_count": len(base_estimates),
@@ -351,6 +388,10 @@ class CareerIntrinsicLoader:
         if migrated_legacy:
             migrated_payload = contract.model_dump(mode="json")
             migrated_payload["_foundation4_dependency_fingerprint"] = fingerprint
+            migrated_payload["_career_expansion_complete"] = expansion_complete
+            if expansion_complete and source_manifest:
+                migrated_payload["_career_source_manifest"] = source_manifest
+                migrated_payload["_career_complete_input_fingerprint"] = complete_fingerprint
             self._persistence_store.put_artifact(
                 ReusableArtifactRecord(
                     key=self._career_key(context, fingerprint),
@@ -361,7 +402,7 @@ class CareerIntrinsicLoader:
         with self._lock:
             self._cached_user_id = context.user_id
             self._cached_fingerprint = fingerprint
-            self._cached_contract = contract
+            self._cached_contract = contract if (expansion_complete or self._expanded_career_contract_loader is None) else None
             self._cached_component = None
         return contract
 
@@ -369,6 +410,26 @@ class CareerIntrinsicLoader:
         self,
         context: UserRuntimeContext,
     ) -> LongTermIntrinsicShadowContract | None:
+        context = self.pin_build_context(context)
+        fingerprint = self.intrinsic_input_fingerprint(context)
+        with self._lock:
+            if (self._cached_user_id == context.user_id
+                    and self._cached_fingerprint == fingerprint
+                    and self._cached_component is not None):
+                return self._cached_component
+        guard = (self._heavy_work_coordinator.claim(
+            kind="career_component_restore", key=f"{context.user_id}:component"
+        ) if self._heavy_work_coordinator is not None else nullcontext())
+        with guard, self._lock:
+            # Recheck under the lock: concurrent readers must deserialize once.
+            return self._restore_component(context)
+
+    def _restore_component(self, context: UserRuntimeContext) -> LongTermIntrinsicShadowContract | None:
+        fingerprint = self.intrinsic_input_fingerprint(context)
+        if (self._cached_user_id == context.user_id
+                and self._cached_fingerprint == fingerprint
+                and self._cached_component is not None):
+            return self._cached_component
         if self._persistence_store is None or context.league_state is None:
             return None
         forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
@@ -423,6 +484,27 @@ class CareerIntrinsicLoader:
                     computed_at=utc_now(),
                 )
             )
+        with self._lock:
+            # One component, exact semantic identity, short idle lifetime. Explicit
+            # Y4-Y7 consumers reuse it without repeatedly reading a large JSONB row.
+            if self._cached_user_id == context.user_id and self._cached_fingerprint == fingerprint:
+                self._cached_component = contract
+                if self._component_timer is not None:
+                    self._component_timer.cancel()
+                # A Timer retains its callback after firing. Capture only a
+                # weak reference; otherwise the supposedly evicted full matrix
+                # stays resident through self -> timer -> callback -> contract.
+                component_ref = ref(contract)
+                def evict():
+                    with self._lock:
+                        if self._component_timer is timer:
+                            if self._cached_component is component_ref():
+                                self._cached_component = None
+                            self._component_timer = None
+                timer = Timer(30.0, evict)
+                self._component_timer = timer
+                self._component_timer.daemon = True
+                self._component_timer.start()
         return contract
 
     def _persist(
@@ -430,20 +512,32 @@ class CareerIntrinsicLoader:
         context: UserRuntimeContext,
         *,
         dependency_fingerprint: str,
-        component: LongTermIntrinsicShadowContract,
+        component: LongTermIntrinsicShadowContract | None,
         contract: CareerForwardIntrinsicShadowContract,
+        source_manifest: Mapping[str, object] | None = None,
     ) -> None:
         if self._persistence_store is None:
             return
-        self._persistence_store.put_artifact(
-            ReusableArtifactRecord(
-                key=self._component_key(context, component),
-                payload=component.model_dump(mode="json"),
-                computed_at=utc_now(),
+        if component is not None:
+            self._persistence_store.put_artifact(
+                ReusableArtifactRecord(
+                    key=self._component_key(context, component),
+                    payload=component.model_dump(mode="json"),
+                    computed_at=utc_now(),
+                )
             )
-        )
         payload = contract.model_dump(mode="json")
         payload["_foundation4_dependency_fingerprint"] = dependency_fingerprint
+        from .p0_live_candidate_runtime import valid_live_source_manifest
+        source_complete = valid_live_source_manifest(source_manifest)
+        payload["_career_expansion_complete"] = (
+            self._expanded_career_contract_loader is None or source_complete
+        )
+        if source_complete:
+            payload["_career_source_manifest"] = dict(source_manifest)
+            payload["_career_complete_input_fingerprint"] = canonical_fingerprint(
+                "career-complete-live-inputs-v1", dependency_fingerprint, source_manifest["digest"],
+            )
         self._persistence_store.put_artifact(
             ReusableArtifactRecord(
                 key=self._career_key(context, dependency_fingerprint),
@@ -456,6 +550,9 @@ class CareerIntrinsicLoader:
         with self._lock:
             if self._cached_user_id != user_id:
                 return 0
+            if self._component_timer is not None:
+                self._component_timer.cancel()
+                self._component_timer = None
             self._cached_user_id = None
             self._cached_fingerprint = None
             self._cached_contract = None
@@ -466,13 +563,14 @@ class CareerIntrinsicLoader:
         self,
         context: UserRuntimeContext,
         frozen_reference: CareerForwardIntrinsicShadowContract,
-    ) -> CareerForwardIntrinsicShadowContract:
+    ) -> tuple[CareerForwardIntrinsicShadowContract, Mapping[str, object]]:
         loader = self._expanded_career_contract_loader
         if loader is None:
-            return frozen_reference
+            return frozen_reference, {}
         if context.league_state is None:
             raise ValueError("dynamic Career append requires canonical league State")
         loaded = loader(context, frozen_reference)
+        source_manifest = dict(loaded.source_manifest) if isinstance(loaded, ExpandedCareerContractResult) else {}
         if isinstance(loaded, ExpandedCareerContractResult):
             expanded = loaded.contract
             failures = dict(loaded.failures)
@@ -507,16 +605,11 @@ class CareerIntrinsicLoader:
             if set(failures) & frozen_ids:
                 raise ValueError("expanded Career failure overlaps frozen reference")
         if expanded is None:
-            if not failures:
-                return frozen_reference
-            return frozen_reference.model_copy(
-                update={
-                    "player_coverage_failures": {
-                        **frozen_reference.player_coverage_failures,
-                        **failures,
-                    }
-                }
-            )
+            if failures:
+                frozen_reference = frozen_reference.model_copy(update={
+                    "player_coverage_failures": {**frozen_reference.player_coverage_failures, **failures},
+                })
+            return frozen_reference, source_manifest
         frozen_ids = {row.player_id for row in frozen_reference.estimates}
         expanded_ids = {row.player_id for row in expanded.estimates}
         candidate_ids = expanded_ids - frozen_ids
@@ -548,7 +641,7 @@ class CareerIntrinsicLoader:
             expanded,
             candidate_player_ids=candidate_ids,
         )
-        return appended.model_copy(
+        contract = appended.model_copy(
             update={
                 "player_coverage_failures": {
                     **frozen_reference.player_coverage_failures,
@@ -556,6 +649,7 @@ class CareerIntrinsicLoader:
                 }
             }
         )
+        return contract, source_manifest
 
     def __call__(
         self,
@@ -576,20 +670,23 @@ class CareerIntrinsicLoader:
             ):
                 return self._cached_contract
 
+        completed = self.restore_compatible(context)
+        if completed is not None:
+            return completed
         restored = self._restore_frozen_compatible(context)
         if restored is not None:
-            expanded_restored = self._append_expanded_rostered_contract(
+            expanded_restored, source_manifest = self._append_expanded_rostered_contract(
                 context, restored
             )
-            if expanded_restored != restored:
-                component = self.restore_component(context)
-                if component is not None:
-                    self._persist(
-                        context,
-                        dependency_fingerprint=dependency_fingerprint,
-                        component=component,
-                        contract=restored,
-                    )
+            # Also persist a completed expansion with explicit failures or no
+            # new candidates. Otherwise a restart repeats that acquisition too.
+            self._persist(
+                context,
+                dependency_fingerprint=dependency_fingerprint,
+                component=None,
+                contract=expanded_restored,
+                source_manifest=source_manifest,
+            )
             with self._lock:
                 self._cached_user_id = context.user_id
                 self._cached_fingerprint = dependency_fingerprint
@@ -653,12 +750,13 @@ class CareerIntrinsicLoader:
         # typed contract/component, not these transient forecast/tail inputs.
         del long_forecast, terminal_features, tails
         frozen_contract = contract
-        contract = self._append_expanded_rostered_contract(context, frozen_contract)
+        contract, source_manifest = self._append_expanded_rostered_contract(context, frozen_contract)
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
             component=component,
-            contract=frozen_contract,
+            contract=contract,
+            source_manifest=source_manifest,
         )
         with self._lock:
             self._cached_user_id = context.user_id
@@ -668,16 +766,13 @@ class CareerIntrinsicLoader:
             # demand by explicit Y4–Y7 consumers. Do not keep this second large
             # matrix resident alongside the Career contract after materializing
             # a league; the hosted worker runs below a 512 MiB hard limit.
-            self._cached_component = None
+            self._cached_component = component if self._persistence_store is None else None
         return contract
 
     def current_component(
         self,
         context: UserRuntimeContext,
     ) -> LongTermIntrinsicShadowContract | None:
-        with self._lock:
-            if self._cached_user_id == context.user_id and self._cached_component is not None:
-                return self._cached_component
         return self.restore_component(context)
 
 

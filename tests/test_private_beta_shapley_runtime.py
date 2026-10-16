@@ -463,7 +463,7 @@ def test_dynamic_career_fingerprint_changes_when_ros_revision_identity_changes()
     assert first != second
 
 
-def test_dynamic_career_fingerprint_refreshes_unversioned_sources_once_per_window():
+def test_dynamic_career_fingerprint_changes_for_each_published_capture():
     state, observation = _fixture()
     context = _context(state, observation)
     start = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
@@ -477,7 +477,7 @@ def test_dynamic_career_fingerprint_refreshes_unversioned_sources_once_per_windo
         context, now=next_window_at
     )
 
-    assert within_window == first
+    assert within_window != first  # a new governed capture, even in the same window
     assert next_window != first
     assert bridge.dynamic_career_fingerprint(
         context, now=start, include_freshness_epoch=False

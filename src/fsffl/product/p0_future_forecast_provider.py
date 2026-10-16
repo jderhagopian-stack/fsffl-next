@@ -20,7 +20,9 @@ from fsffl.state.models import LeagueState
 
 from .i1_player_scoring import (
     FUTURE_I1_PLAYER_SCORING_VERSION,
-    build_future_i1_player_scoring_multipliers,
+    career_player_scoring_multipliers,
+    APPROVED_UNDEFINED_WR_SCORING_VERSION,
+    APPROVED_UNDEFINED_WR_PLAYER_ID,
     derive_future_i1_standard_year_one,
     translate_future_i1_result_for_player,
 )
@@ -70,6 +72,8 @@ def build_p0_future_forecast_contract(
     league_year_one: tuple[ForecastObservation, ...],
     candidate_source_rows: Mapping[str, P0SourceRow] | None = None,
     evaluation_as_of: datetime | None = None,
+    reference_standard_year_one: tuple[ForecastObservation, ...] = (),
+    reference_league_year_one: tuple[ForecastObservation, ...] = (),
 ) -> P0FutureForecastContractMaterialization:
     """Materialize current P0 Y2/Y3 authority behind a model-agnostic contract.
 
@@ -83,7 +87,7 @@ def build_p0_future_forecast_contract(
         if evaluation_as_of.tzinfo is None:
             raise ValueError("P0 future evaluation time must be timezone-aware")
         cutoff = evaluation_as_of.astimezone(UTC)
-        if any(item.as_of.astimezone(UTC) > cutoff for item in (*raw_forecasts, *league_year_one)):
+        if any(item.as_of.astimezone(UTC) > cutoff for item in (*raw_forecasts, *league_year_one, *reference_standard_year_one, *reference_league_year_one)):
             raise ValueError("P0 Year-1 evidence postdates evaluation cutoff")
     dynamic_rows = dict(candidate_source_rows or {})
     governed_ids = set(governed_p0_player_ids(league_state))
@@ -125,12 +129,17 @@ def build_p0_future_forecast_contract(
     eligible_league_year_one = tuple(
         item for item in governed_league_year_one if item.player_id in eligible_ids
     )
-    scoring_multipliers = build_future_i1_player_scoring_multipliers(
-        raw_forecasts=tuple(
-            item for item in governed_raw if item.player_id in eligible_ids
-        ),
+    if reference_standard_year_one or reference_league_year_one:
+        expected_reference = set(governed_p0_player_ids(league_state))
+        if any({r.player_id for r in rows} != expected_reference for rows in (
+            reference_standard_year_one, reference_league_year_one,
+        )):
+            raise ValueError("undefined WR fallback requires complete frozen State reference")
+    scoring_multipliers = career_player_scoring_multipliers(
+        standard_year_one=standard_year_one,
         league_year_one=eligible_league_year_one,
-        rules=league_state.league.rules,
+        reference_standard_year_one=reference_standard_year_one,
+        reference_league_year_one=reference_league_year_one,
     )
     p0 = build_p0_standard_future_materialization(
         league_state=league_state,
@@ -146,6 +155,13 @@ def build_p0_future_forecast_contract(
             f"missing_scoring={missing_scoring}; extra_scoring={extra_scoring}"
         )
 
+    fallback_ids = {
+        row.player_id for row in standard_year_one
+        if row.player_id == APPROVED_UNDEFINED_WR_PLAYER_ID
+        and row.distribution.mean <= 0
+        and any(other.player_id == row.player_id and other.distribution.mean > 0
+                for other in eligible_league_year_one)
+    }
     rows: list[FuturePlayerHorizonForecast] = []
     for player_id in sorted(p0.players):
         player_forecast = p0.players[player_id]
@@ -164,7 +180,8 @@ def build_p0_future_forecast_contract(
                     target_season=P0_SOURCE_SEASON + year_index - 1,
                     central_expectation=max(0.0, float(result.anticipated_points)),
                     scoring_coordinate=P0_FUTURE_SCORING_COORDINATE,
-                    model_version=result.model_version,
+                    model_version=(f"{result.model_version}:{APPROVED_UNDEFINED_WR_SCORING_VERSION}"
+                                   if player_id in fallback_ids else result.model_version),
                     source=P0_FUTURE_FORECAST_SOURCE,
                     uncertainty_kind=ForecastUncertaintyKind.DISCRETE_SCENARIOS,
                     scenarios=tuple(
@@ -204,6 +221,16 @@ def build_p0_future_forecast_contract(
         ),
         "future_i1_scoring_multiplier_sha256": _multiplier_digest(scoring_multipliers),
     }
+    if fallback_ids:
+        provenance["future_i1_scoring_method"] = "player_ratio_with_approved_cj_undefined_wr_reference"
+        provenance["undefined_wr_scoring_policy"] = APPROVED_UNDEFINED_WR_SCORING_VERSION
+        provenance["undefined_wr_scoring_player_id"] = APPROVED_UNDEFINED_WR_PLAYER_ID
+        provenance["undefined_wr_reference_standard_sha256"] = _multiplier_digest({
+            row.player_id: row.distribution.mean for row in reference_standard_year_one
+        })
+        provenance["undefined_wr_reference_league_sha256"] = _multiplier_digest({
+            row.player_id: row.distribution.mean for row in reference_league_year_one
+        })
     contract = FutureForecastContract(
         evaluation_season=P0_SOURCE_SEASON,
         scoring_coordinate=P0_FUTURE_SCORING_COORDINATE,

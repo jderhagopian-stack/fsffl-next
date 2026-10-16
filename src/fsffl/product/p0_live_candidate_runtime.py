@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field, asdict
 from datetime import UTC, datetime, timedelta
 from typing import Any, Mapping
 
@@ -23,6 +23,7 @@ from fsffl.forecast.in_season_runtime import (
 )
 from fsffl.forecast.league_scoring import (
     ScoringCoverageStatus,
+    classify_scoring_coverage,
     derive_league_scoring_result,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
@@ -115,6 +116,52 @@ class P0LiveCandidateResult:
     ros_fumbles_lost: tuple[ForecastObservation, ...] = ()
     fumbles_eligible_player_ids: tuple[str, ...] = ()
     fumbles_supplement_failure: str | None = None
+    source_manifest: Mapping[str, object] = field(default_factory=dict)
+
+
+LIVE_INPUT_MANIFEST_VERSION = "career-live-input-manifest-v1"
+LIVE_INPUT_SOURCE_NAMES = frozenset({
+    "canonical_state", "nfl_state", "current_catalog", "completed_week_stats",
+    "prior_season_stats", "ros", "fumbles_supplement", "status_receipts",
+    "reference_scoring", "candidate_facts",
+})
+
+
+def _input_digest(value) -> str:
+    # Streaming encoding avoids a second whole-catalog/observation JSON string.
+    digest = hashlib.sha256()
+    for chunk in json.JSONEncoder(sort_keys=True, separators=(",", ":"), default=str).iterencode(value):
+        digest.update(chunk.encode())
+    return digest.hexdigest()
+
+
+def _rows_digest(rows) -> str:
+    return _input_digest(sorted(_input_digest(
+        row.model_dump(mode="json") if hasattr(row, "model_dump") else asdict(row)
+    ) for row in rows))
+
+
+def live_source_manifest(*, captured_at: datetime, fingerprints: Mapping[str, str]) -> dict[str, object]:
+    payload = {"version": LIVE_INPUT_MANIFEST_VERSION,
+               "captured_at": captured_at.isoformat(), "fingerprints": dict(fingerprints)}
+    return {**payload, "digest": _input_digest(payload)}
+
+
+def valid_live_source_manifest(manifest) -> bool:
+    if not isinstance(manifest, Mapping) or manifest.get("version") != LIVE_INPUT_MANIFEST_VERSION:
+        return False
+    try:
+        captured = datetime.fromisoformat(manifest["captured_at"])
+        fingerprints = manifest["fingerprints"]
+        if captured.tzinfo is None or set(fingerprints) != LIVE_INPUT_SOURCE_NAMES:
+            return False
+        if any(not isinstance(v, str) or len(v) != 64 or any(c not in "0123456789abcdef" for c in v)
+               for v in fingerprints.values()):
+            return False
+        return manifest.get("digest") == live_source_manifest(
+            captured_at=captured, fingerprints=fingerprints)["digest"]
+    except (KeyError, TypeError, ValueError):
+        return False
 
 
 @dataclass(frozen=True)
@@ -127,6 +174,8 @@ class StatusBasedZeroRosEvidence:
     source_version: str
     observed_at: datetime
     no_expected_2026_participation: bool
+    season: int = 2026
+    entire_season_unavailable: bool = False
 
     def validate(self) -> None:
         if self.status not in {"out_for_season", "unsigned_no_expected_2026_participation"}:
@@ -137,6 +186,41 @@ class StatusBasedZeroRosEvidence:
             raise ValueError("status evidence timestamp must be timezone-aware")
         if not self.no_expected_2026_participation:
             raise ValueError("status evidence does not confirm no expected 2026 participation")
+
+
+STATUS_BASED_YEAR_ONE_SCORING_VERSION = "status-y1-v2:verified-whole-season-no-residual"
+
+
+def recorded_status_based_zero_ros_evidence(
+    league_state: LeagueState, *, as_of: datetime,
+) -> dict[str, StatusBasedZeroRosEvidence]:
+    """Admit captured official facts for exact roster identities and cutoff.
+
+    No provider fetch, fantasy-slot inference, or unsigned-player assumption.
+    A newly acquired receipt cannot change a pre-capture replay/publication.
+    """
+    from fsffl.providers.nfl_status_evidence import SEASON_UNAVAILABILITY_RECEIPTS
+
+    if as_of.tzinfo is None:
+        raise ValueError("NFL status admission cutoff must be timezone-aware")
+    roster_ids = {entry.player_id for team in league_state.team_states for entry in team.roster}
+    players = {player.player_id: player for player in league_state.players}
+    return {
+        receipt.player_id: StatusBasedZeroRosEvidence(
+            player_id=receipt.player_id, status="out_for_season",
+            source=receipt.source_url,
+            source_version=f"official-season-unavailability-v1:{receipt.fingerprint}",
+            observed_at=receipt.captured_at,
+            no_expected_2026_participation=True, season=receipt.season,
+            entire_season_unavailable=True,
+        )
+        for receipt in SEASON_UNAVAILABILITY_RECEIPTS
+        if receipt.season == league_state.league.season
+        and receipt.captured_at <= as_of.astimezone(UTC)
+        and receipt.player_id in roster_ids
+        and receipt.player_id in players
+        and players[receipt.player_id].position.value == receipt.position
+    }
 
 
 def _metrics_for_zero_ros(league_state: LeagueState) -> tuple[ForecastMetric, ...]:
@@ -155,6 +239,8 @@ def _status_based_zero_ros(
     as_of: datetime,
 ) -> tuple[ForecastObservation, ...]:
     evidence.validate()
+    if evidence.season != league_state.league.season:
+        raise ValueError("status evidence season differs from governed State")
     if evidence.player_id not in {item.player_id for item in league_state.players}:
         raise ValueError("status evidence identity is outside the exact State")
     if evidence.observed_at.astimezone(UTC) > as_of.astimezone(UTC):
@@ -380,10 +466,31 @@ def _score_season_points(
     *,
     league_state: LeagueState,
     standard: bool,
+    nonparticipation_evidence: StatusBasedZeroRosEvidence | None = None,
 ) -> tuple[dict[str, ForecastObservation], dict[str, Any]]:
     rules = league_state.league.rules
     if standard:
         rules = rules.model_copy(update={"scoring": FROZEN_I1_STANDARD_SCORING})
+    version = "p0-live-y1-scoring-v1"
+    if nonparticipation_evidence is not None and nonparticipation_evidence.entire_season_unavailable:
+        nonparticipation_evidence.validate()
+        if nonparticipation_evidence.season != league_state.league.season:
+            raise ValueError("whole-season nonparticipation evidence season mismatch")
+        if not raw or any(
+            row.player_id != nonparticipation_evidence.player_id
+            or row.distribution.mean != 0.0 or row.distribution.stddev != 0.0
+            or row.as_of < nonparticipation_evidence.observed_at
+            for row in raw
+        ):
+            raise ValueError("whole-season nonparticipation conflicts with Year-1 raw evidence")
+        # Existing residual priors estimate unobserved rare events for players
+        # who may participate. An official entire-season absence establishes
+        # those events as zero; it must not create 0.208 phantom league points.
+        # Keep all ordinary and unsupported scoring coordinates and their gates.
+        known_zero = set(classify_scoring_coverage(rules).provisional_residual_rule_stats)
+        rules = rules.model_copy(update={"scoring":tuple(
+            rule for rule in rules.scoring if rule.stat not in known_zero)})
+        version += ":" + STATUS_BASED_YEAR_ONE_SCORING_VERSION + ":" + nonparticipation_evidence.source_version
     result = derive_league_scoring_result(
         raw,
         rules=rules,
@@ -392,7 +499,7 @@ def _score_season_points(
             if standard
             else "fsffl:p0-live-league-year-one"
         ),
-        model_version="p0-live-y1-scoring-v1",
+        model_version=version,
     )
     if result.coverage.status == ScoringCoverageStatus.INCOMPLETE:
         raise ValueError(
@@ -709,6 +816,8 @@ def build_live_p0_rostered_candidate_forecasts(
     projection_history_reader: ProjectionHistoryReader | None = None,
     status_based_zero_ros_evidence: Mapping[str, StatusBasedZeroRosEvidence] | None = None,
     fallback_ros_observations: tuple[ForecastObservation, ...] = (),
+    reference_standard_year_one: tuple[ForecastObservation, ...] = (),
+    reference_league_year_one: tuple[ForecastObservation, ...] = (),
 ) -> P0LiveCandidateResult:
     """Acquire current inputs once and score rostered non-reference subjects.
 
@@ -717,6 +826,8 @@ def build_live_p0_rostered_candidate_forecasts(
     represented per player where possible; provider ensemble and missingness
     failures remain explicit.
     """
+    source_reference_standard = reference_standard_year_one
+    source_reference_league = reference_league_year_one
     stats = stats_source or SleeperWeeklyStatsSource()
     sleeper = sleeper_source or SleeperLiveSource(max_workers=4)
     nfl_state = stats.fetch_nfl_state()
@@ -877,7 +988,13 @@ def build_live_p0_rostered_candidate_forecasts(
     # accepted player catalog confirms an active NFL backup. No missing metric
     # is synthesized, and a fantasy bench slot alone is not role evidence.
     evidence_modes: dict[str, str] = {}
-    fallback_status_evidence = status_based_zero_ros_evidence or {}
+    fallback_status_evidence = (
+        status_based_zero_ros_evidence
+        if status_based_zero_ros_evidence is not None
+        else recorded_status_based_zero_ros_evidence(
+            league_state, as_of=min(cutoff, ros_revision_cutoff),
+        )
+    )
     one_source_rows: dict[tuple[str, str], tuple[ForecastObservation, ...]] = {}
     for item in (*ros_runtime.source_observations, *fallback_ros_observations):
         if item.horizon != ForecastHorizon.REST_OF_SEASON:
@@ -944,17 +1061,22 @@ def build_live_p0_rostered_candidate_forecasts(
                         tuple(item for item in status_raw if item.player_id == player_id),
                         league_state=league_state,
                         standard=True,
+                        nonparticipation_evidence=status_evidence,
                     )
                     status_league, _ = _score_season_points(
                         tuple(item for item in status_raw if item.player_id == player_id),
                         league_state=league_state,
                         standard=False,
+                        nonparticipation_evidence=status_evidence,
                     )
                     standard_item = status_standard.get(player_id)
                     league_item = status_league.get(player_id)
                     if standard_item is None or league_item is None:
                         raise ValueError("status-based Year-1 scoring remains incomplete")
-                    evidence_mode = f"status_based_zero_ros:{status_evidence.status}"
+                    evidence_mode = (
+                        f"status_based_zero_ros:{status_evidence.status}:"
+                        f"{status_evidence.source_version}"
+                    )
                     y1_raw = tuple(
                         item for item in y1_raw if item.player_id != player_id
                     ) + tuple(item for item in status_raw if item.player_id == player_id)
@@ -1098,12 +1220,35 @@ def build_live_p0_rostered_candidate_forecasts(
             failures[player_id] = str(exc)
 
     if candidate_rows:
+        from .i1_player_scoring import career_player_scoring_multipliers
+        from .p0_forecast_runtime import governed_p0_player_ids
+        reference_ids = set(governed_p0_player_ids(league_state))
+        # Incomplete or late reference evidence disables only the optional
+        # conversion; it must not discard otherwise supported candidates.
+        if any({row.player_id for row in rows} != reference_ids for rows in (
+            reference_standard_year_one, reference_league_year_one,
+        )) or any(row.as_of > cutoff for row in (
+            *reference_standard_year_one, *reference_league_year_one,
+        )):
+            reference_standard_year_one = reference_league_year_one = ()
+        future_ready = dict(candidate_rows)
+        for player_id in candidate_rows:
+            try:
+                career_player_scoring_multipliers(
+                    standard_year_one=(y1_standard[player_id],),
+                    league_year_one=(y1_league[player_id],),
+                    reference_standard_year_one=reference_standard_year_one,
+                    reference_league_year_one=reference_league_year_one,
+                )
+            except ValueError as exc:
+                failures[player_id] = f"P0 future authority failure: {exc}"
+                future_ready.pop(player_id)
         try:
             # Keep the accepted 335 reference inputs/outputs byte-for-byte
             # separate. This live dynamic batch passes only out-of-cohort rows;
             # it must never re-feed current Y1 evidence into the frozen benchmark
             # parity gate or alter a reference output.
-            dynamic_ids = set(candidate_rows)
+            dynamic_ids = set(future_ready)
             future = build_p0_future_forecast_contract(
                 league_state=league_state,
                 raw_forecasts=tuple(
@@ -1113,9 +1258,11 @@ def build_live_p0_rostered_candidate_forecasts(
                     item for player_id, item in y1_league.items()
                     if player_id in dynamic_ids
                 ),
-                candidate_source_rows=candidate_rows,
+                candidate_source_rows=future_ready,
+                reference_standard_year_one=reference_standard_year_one,
+                reference_league_year_one=reference_league_year_one,
                 evaluation_as_of=cutoff,
-            )
+            ) if future_ready else None
         except ValueError as exc:
             for player_id in candidate_rows:
                 failures.setdefault(player_id, f"P0 future authority failure: {exc}")
@@ -1140,5 +1287,18 @@ def build_live_p0_rostered_candidate_forecasts(
         ros_fumbles_lost=ros_fumbles_lost,
         fumbles_eligible_player_ids=tuple(sorted(fumbles_eligible_player_ids)),
         fumbles_supplement_failure=fumbles_supplement_failure,
+        source_manifest=live_source_manifest(captured_at=cutoff, fingerprints={
+            "canonical_state": league_state.state_id,
+            "nfl_state": _input_digest(asdict(nfl_state)),
+            "current_catalog": _input_digest(catalog),
+            "completed_week_stats": _input_digest({str(week): _rows_digest(rows)
+                                                   for week, rows in sorted(weekly.items())}),
+            "prior_season_stats": _rows_digest(prior_lines),
+            "ros": _rows_digest(available_ros_rows),
+            "fumbles_supplement": _rows_digest(ros_fumbles_lost),
+            "status_receipts": _input_digest({pid: asdict(row) for pid, row in sorted(fallback_status_evidence.items())}),
+            "reference_scoring": _rows_digest((*source_reference_standard, *source_reference_league)),
+            "candidate_facts": _input_digest({pid: fact.facts_digest for pid, fact in sorted(facts.items())}),
+        }),
     )
 

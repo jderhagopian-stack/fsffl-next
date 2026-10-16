@@ -209,6 +209,23 @@ class ShapleyIntrinsicBackgroundCoordinator:
         with self._lock:
             if self._user_epochs.get(context.user_id, 0) != expected_epoch:
                 return None
+            # Restoration must obey the same terminal-record retention bound
+            # as a fresh request. Otherwise each restored publication keeps a
+            # second complete contract graph for the lifetime of the process.
+            stale = [record_key for record_key, item in self._records.items()
+                     if record_key != key and record_key[:2] == key[:2]
+                     and item.status in {IntrinsicBuildStatus.COMPLETED, IntrinsicBuildStatus.FAILED}]
+            for record_key in stale:
+                self._records.pop(record_key, None)
+            terminal = sorted(
+                ((record_key, item) for record_key, item in self._records.items()
+                 if record_key != key and item.status in {
+                     IntrinsicBuildStatus.COMPLETED, IntrinsicBuildStatus.FAILED}),
+                key=lambda pair: pair[1].updated_at,
+            )
+            while len(self._records) >= self._max_records and terminal:
+                stale_key, _ = terminal.pop(0)
+                self._records.pop(stale_key, None)
             self._records[key] = record
         _logger.info(
             "FSFFL Intrinsic restored from compatible persisted contract user=%s state=%s forecast=%s fingerprint=%s estimates=%s",
@@ -535,6 +552,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         return record
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
+        context = self._pin_build_context(context)
         key = self._key(context)
         with self._lock:
             return self._records.get(key)

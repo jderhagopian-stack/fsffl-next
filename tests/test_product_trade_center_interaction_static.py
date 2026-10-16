@@ -44,5 +44,7 @@ def test_trade_center_price_frontier_is_backend_governed_not_client_invented() -
 
 
 def test_trade_center_handles_honest_missing_market_value() -> None:
-    assert "Broad Market —" in TRADE_CLIENT
-    assert "if(!item)return'<span class=\"asset-kind\">Broad Market —</span>'" in TRADE_CLIENT
+    assert "Number.isFinite(value)" in TRADE_CLIENT
+    assert "toLocaleString():'Unavailable'" in TRADE_CLIENT
+    assert "row?.broad_market_value_index" in TRADE_CLIENT
+    assert "row?.career_intrinsic_index" in TRADE_CLIENT

@@ -121,9 +121,9 @@ def test_player_board_is_read_only_and_keeps_value_lenses_separate() -> None:
     assert 'api("/api/league/value-lenses?universe=all")' in source
     assert 'api("/api/league/team-views")' in source
     assert "Reading current State, Forecast team views and governed Value lenses. No Search or Decision work is launched." in source
-    assert "FSFFL Intrinsic is preparing for the current State/Forecast coordinate; Broad Market remains live." in source
+    assert "3-Year Intrinsic is preparing for the current State/Forecast coordinate; Broad Market remains live." in source
     assert "Filters & ordering" in source
-    assert "Broad Market and FSFFL Intrinsic are shown side by side and never blended." in source
+    assert "Broad Market and 3-Year Intrinsic are shown side by side and never blended." in source
     assert "League Market Value: unavailable" in source
     assert "Team Utility: not part of this board." in source
     assert "data-player-intelligence-id" in source
@@ -231,7 +231,7 @@ def test_corrective_player_board_headers_are_sortable_and_mobile_columns_scroll(
     assert "data-board-sort-key" in source
     assert "aria-sort=" in source
     assert 'boardSortHeader("market_index","Broad Market")' in source
-    assert 'boardSortHeader("intrinsic_index","FSFFL Intrinsic")' in source
+    assert 'boardSortHeader("intrinsic_index","3-Year Intrinsic")' in source
     assert 'boardSortHeader("ppg","PPG"' in source
     assert 'boardSortHeader("projection","17-game projection"' in source
     assert ".market-ns-player-table table{min-width:900px!important}" in css
@@ -271,7 +271,7 @@ def test_current_beta_market_explains_forecast_and_intrinsic_independently() -> 
     assert "playerIntrinsicSummary" in source
     assert "row.intrinsic_reason" in source
     assert "row.market_reason" in source
-    assert "FSFFL Intrinsic unavailable:" in source
+    assert "3-Year Intrinsic unavailable:" in source
     assert "Governed full-season Forecast coverage is " in source
     assert 'lenses?.surface_readiness?.status==="building_optional"' in source
 
@@ -281,3 +281,10 @@ def test_current_beta_submit_row_and_safe_area_are_mobile_ready() -> None:
     assert ".market-ns-submit-row{" in css
     assert ".market-ns-submit-row .primary-button{width:100%" in css
     assert "padding-top:max(10px,env(safe-area-inset-top))!important" in css
+
+
+def test_mobile_free_agent_lenses_keep_forecast_and_all_three_indexes_visible():
+    css = _source(MARKET_CSS)
+    assert '.market-ns-free-player>span:nth-child(2),.market-ns-free-player>span:nth-child(3){display:grid;grid-column:span 3}' in css
+    assert '.market-ns-free-player>span:nth-child(n+4){display:grid;grid-column:span 2}' in css
+    assert '.market-ns-free-player>span:nth-child(3){display:none}' not in css

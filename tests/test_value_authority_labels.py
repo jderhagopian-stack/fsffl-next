@@ -20,8 +20,10 @@ def test_trade_center_foregrounds_broad_market_and_decision_not_cardinal() -> No
 
     assert "Broad Market percentiles shown above are market context only" in trade
     assert "Decision owns bilateral package economics and consequences" in trade
-    assert "Broad Market and FSFFL Intrinsic are evidence lenses" in trade
-    assert "Broad Market —" in trade
+    assert "Broad Market and 3-Year Intrinsic are evidence lenses" in trade
+    assert "toLocaleString():'Unavailable'" in trade
+    assert "row?.career_intrinsic_index" in trade
+    assert "row?.intrinsic_value_index" in trade
     assert "Broad Market —" in polish
     assert "FSFFL Cardinal Market Values shown above" not in trade
 
@@ -38,7 +40,8 @@ def test_trade_backend_names_missing_cut_value_as_cardinal_market_value() -> Non
 def test_franchise_foregrounds_market_intrinsic_and_preserves_simulator_boundaries() -> None:
     franchise = (STATIC / "my_team_dashboard.js").read_text(encoding="utf-8")
     simulator = (STATIC / "simulator.js").read_text(encoding="utf-8")
-    assert "FSFFL Intrinsic" in franchise
+    assert "3-Year Intrinsic" in franchise
+    assert "Career Intrinsic" in franchise
     assert "Broad Market" in franchise
     assert "fsffl_cardinal_values" not in franchise
     assert "Ownership and governed Value coordinates remain unchanged." in simulator

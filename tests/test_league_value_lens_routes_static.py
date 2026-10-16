@@ -33,7 +33,7 @@ def test_primary_league_presentation_uses_approved_value_hierarchy() -> None:
     assert 'value="total_cardinal_value"' not in html
     assert 'option[value="total_cardinal_value"]' in corrections
     assert "remove()" in corrections
-    assert "Broad Market + FSFFL Intrinsic" in league
+    assert "Broad Market + 3-Year Intrinsic" in league
     assert "Total FSFFL Cardinal Value" not in league
 
 
@@ -78,7 +78,7 @@ def test_first_load_stages_only_until_core_forecast_or_team_is_missing() -> None
     routes = (PRODUCT / "league_value_lens_routes.py").read_text(encoding="utf-8")
     branch = routes.split("if background_coordinator is not None:", 1)[1]
     staging_index = branch.index("first_load_staging = bool(")
-    staged_return_index = branch.index("return payload")
+    staged_return_index = branch.index("return with_career(payload, runtime)")
     current_index = branch.index("background_coordinator.current(runtime)")
 
     assert staging_index < staged_return_index < current_index
