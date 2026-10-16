@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field, asdict
 from datetime import UTC, datetime, timedelta
 from typing import Any, Mapping
 
@@ -116,6 +116,52 @@ class P0LiveCandidateResult:
     ros_fumbles_lost: tuple[ForecastObservation, ...] = ()
     fumbles_eligible_player_ids: tuple[str, ...] = ()
     fumbles_supplement_failure: str | None = None
+    source_manifest: Mapping[str, object] = field(default_factory=dict)
+
+
+LIVE_INPUT_MANIFEST_VERSION = "career-live-input-manifest-v1"
+LIVE_INPUT_SOURCE_NAMES = frozenset({
+    "canonical_state", "nfl_state", "current_catalog", "completed_week_stats",
+    "prior_season_stats", "ros", "fumbles_supplement", "status_receipts",
+    "reference_scoring", "candidate_facts",
+})
+
+
+def _input_digest(value) -> str:
+    # Streaming encoding avoids a second whole-catalog/observation JSON string.
+    digest = hashlib.sha256()
+    for chunk in json.JSONEncoder(sort_keys=True, separators=(",", ":"), default=str).iterencode(value):
+        digest.update(chunk.encode())
+    return digest.hexdigest()
+
+
+def _rows_digest(rows) -> str:
+    return _input_digest(sorted(_input_digest(
+        row.model_dump(mode="json") if hasattr(row, "model_dump") else asdict(row)
+    ) for row in rows))
+
+
+def live_source_manifest(*, captured_at: datetime, fingerprints: Mapping[str, str]) -> dict[str, object]:
+    payload = {"version": LIVE_INPUT_MANIFEST_VERSION,
+               "captured_at": captured_at.isoformat(), "fingerprints": dict(fingerprints)}
+    return {**payload, "digest": _input_digest(payload)}
+
+
+def valid_live_source_manifest(manifest) -> bool:
+    if not isinstance(manifest, Mapping) or manifest.get("version") != LIVE_INPUT_MANIFEST_VERSION:
+        return False
+    try:
+        captured = datetime.fromisoformat(manifest["captured_at"])
+        fingerprints = manifest["fingerprints"]
+        if captured.tzinfo is None or set(fingerprints) != LIVE_INPUT_SOURCE_NAMES:
+            return False
+        if any(not isinstance(v, str) or len(v) != 64 or any(c not in "0123456789abcdef" for c in v)
+               for v in fingerprints.values()):
+            return False
+        return manifest.get("digest") == live_source_manifest(
+            captured_at=captured, fingerprints=fingerprints)["digest"]
+    except (KeyError, TypeError, ValueError):
+        return False
 
 
 @dataclass(frozen=True)
@@ -780,6 +826,8 @@ def build_live_p0_rostered_candidate_forecasts(
     represented per player where possible; provider ensemble and missingness
     failures remain explicit.
     """
+    source_reference_standard = reference_standard_year_one
+    source_reference_league = reference_league_year_one
     stats = stats_source or SleeperWeeklyStatsSource()
     sleeper = sleeper_source or SleeperLiveSource(max_workers=4)
     nfl_state = stats.fetch_nfl_state()
@@ -1239,5 +1287,18 @@ def build_live_p0_rostered_candidate_forecasts(
         ros_fumbles_lost=ros_fumbles_lost,
         fumbles_eligible_player_ids=tuple(sorted(fumbles_eligible_player_ids)),
         fumbles_supplement_failure=fumbles_supplement_failure,
+        source_manifest=live_source_manifest(captured_at=cutoff, fingerprints={
+            "canonical_state": league_state.state_id,
+            "nfl_state": _input_digest(asdict(nfl_state)),
+            "current_catalog": _input_digest(catalog),
+            "completed_week_stats": _input_digest({str(week): _rows_digest(rows)
+                                                   for week, rows in sorted(weekly.items())}),
+            "prior_season_stats": _rows_digest(prior_lines),
+            "ros": _rows_digest(available_ros_rows),
+            "fumbles_supplement": _rows_digest(ros_fumbles_lost),
+            "status_receipts": _input_digest({pid: asdict(row) for pid, row in sorted(fallback_status_evidence.items())}),
+            "reference_scoring": _rows_digest((*source_reference_standard, *source_reference_league)),
+            "candidate_facts": _input_digest({pid: fact.facts_digest for pid, fact in sorted(facts.items())}),
+        }),
     )
 

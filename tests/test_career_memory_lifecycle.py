@@ -99,3 +99,51 @@ def test_optional_career_is_requested_only_after_durable_core_publication(prepar
     run = function('src/fsffl/product/webapp.py','publish_working_generation',ns)
     assert run('fixture-user') is context
     assert calls == ['checkpoint','compose','publish','durable','career'] + (['optional-error'] if preparation_fails else [])
+
+
+def test_hosted_wrapper_forwards_approved_reference_coordinates():
+    standard = (object(),)
+    league = (object(),)
+    seen = {}
+    def builder(state, **kwargs):
+        seen.update(kwargs)
+        return 'candidate-result'
+    reader = object()
+    ns = dict(build_live_p0_rostered_candidate_forecasts=builder,_projection_history_store=reader)
+    run = function('src/fsffl/product/persistent_webapp.py','_hosted_career_candidate_builder',ns)
+    assert "candidate_builder=_hosted_career_candidate_builder" in Path('src/fsffl/product/persistent_webapp.py').read_text()
+    assert run(object(),projection_history_as_of='cutoff',
+               reference_standard_year_one=standard,reference_league_year_one=league) == 'candidate-result'
+    assert seen == dict(projection_history_as_of='cutoff',projection_history_reader=reader,
+                        reference_standard_year_one=standard,reference_league_year_one=league)
+
+
+def test_all_live_source_corrections_change_manifest_binding():
+    from datetime import UTC, datetime
+    from fsffl.product.p0_live_candidate_runtime import (
+        LIVE_INPUT_SOURCE_NAMES, live_source_manifest, valid_live_source_manifest,
+    )
+    from fsffl.persistence.contracts import canonical_fingerprint
+    fingerprints = {name:'a'*64 for name in LIVE_INPUT_SOURCE_NAMES}
+    original = live_source_manifest(captured_at=datetime(2026,10,16,tzinfo=UTC),fingerprints=fingerprints)
+    assert valid_live_source_manifest(original)
+    bound = canonical_fingerprint('career-complete-live-inputs-v1','publication',original['digest'])
+    for name in LIVE_INPUT_SOURCE_NAMES:
+        revised = live_source_manifest(captured_at=datetime(2026,10,16,tzinfo=UTC),
+            fingerprints={**fingerprints,name:'b'*64})
+        assert valid_live_source_manifest(revised)
+        assert canonical_fingerprint('career-complete-live-inputs-v1','publication',revised['digest']) != bound
+    assert not valid_live_source_manifest({**original,'fingerprints':{}})
+
+
+def test_typed_weekly_prior_and_catalog_corrections_change_source_digests():
+    from dataclasses import replace
+    from datetime import UTC, datetime
+    from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatLine, SleeperSeasonStatLine
+    from fsffl.product.p0_live_candidate_runtime import _rows_digest, _input_digest
+    captured = datetime(2026,10,16,tzinfo=UTC)
+    weekly = SleeperWeeklyStatLine('fixture-player',2026,5,{'rush_yd':10.},captured)
+    prior = SleeperSeasonStatLine('fixture-player',2025,{'rush_yd':100.},captured)
+    assert _rows_digest((weekly,)) != _rows_digest((replace(weekly,stats={'rush_yd':11.}),))
+    assert _rows_digest((prior,)) != _rows_digest((replace(prior,stats={'rush_yd':101.}),))
+    assert _input_digest({'fixture-player':{'years_exp':1}}) != _input_digest({'fixture-player':{'years_exp':2}})

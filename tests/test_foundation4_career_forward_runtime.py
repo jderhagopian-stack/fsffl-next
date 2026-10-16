@@ -368,6 +368,7 @@ def test_restart_restores_complete_expanded_contract_without_acquisition(materia
         dependency_fingerprint=loader.intrinsic_input_fingerprint(context),
         component=component,
         contract=expanded,
+        source_manifest=_fixture_source_manifest(context),
     )
     assert loader.restore_compatible(context) == expanded
     assert loader(context) == expanded
@@ -1147,3 +1148,32 @@ def test_repeated_publication_restore_releases_superseded_contract_graphs():
         assert coordinator.restore_compatible(context) is not None
         assert len(coordinator._records) <= 2
     coordinator._executor.shutdown(wait=True)
+
+
+def _fixture_source_manifest(context):
+    from fsffl.product.p0_live_candidate_runtime import LIVE_INPUT_SOURCE_NAMES, live_source_manifest
+    return live_source_manifest(captured_at=context.league_state.as_of,
+        fingerprints={name: "a" * 64 for name in LIVE_INPUT_SOURCE_NAMES})
+
+
+def test_completed_expansion_requires_valid_bound_live_input_manifest(materialized):
+    import copy
+    persistence, _calls, _base_loader, context, base = materialized
+    def forbidden(*args):
+        raise AssertionError("restore must not acquire or fit")
+    loader = CareerIntrinsicLoader(current_intrinsic_loader=forbidden,
+        current_intrinsic_fingerprint_resolver=lambda ctx: "fixture-current",
+        persistence_store=persistence, expanded_career_contract_loader=forbidden,
+        expanded_career_contract_fingerprint_resolver=lambda ctx: "fixture-dynamic")
+    fingerprint = loader.intrinsic_input_fingerprint(context)
+    key = loader._career_key(context,fingerprint)
+    loader._persist(context,dependency_fingerprint=fingerprint,component=None,contract=base)
+    assert loader.restore_compatible(context) is None  # missing source identities
+    manifest = _fixture_source_manifest(context)
+    loader._persist(context,dependency_fingerprint=fingerprint,component=None,contract=base,source_manifest=manifest)
+    assert loader.restore_compatible(context) == base
+    loader.clear_user_cache(context.user_id)
+    payload = copy.deepcopy(persistence.get_reusable_artifact(key).payload)
+    payload['_career_source_manifest']['fingerprints']['current_catalog'] = 'b' * 64
+    persistence.put_artifact(ReusableArtifactRecord(key=key,payload=payload,computed_at=utc_now()))
+    assert loader.restore_compatible(context) is None

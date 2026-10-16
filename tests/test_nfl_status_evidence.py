@@ -157,6 +157,15 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     assert all(row.distribution.mean == 0 for row in result.year_one_league.values())
     assert all(mode.startswith('status_based_zero_ros:out_for_season:official-season-unavailability-v1:')
                for mode in result.year_one_evidence_modes.values())
+    assert runtime.valid_live_source_manifest(result.source_manifest)
+    original_manifest = result.source_manifest
+    player_key = next(iter(snapshot.payload['players']))
+    snapshot.payload['players'][player_key]['years_exp'] = 3
+    corrected = runtime.build_live_p0_rostered_candidate_forecasts(
+        state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=capture,
+        projection_history_as_of=capture)
+    assert corrected.source_manifest['fingerprints']['current_catalog'] != original_manifest['fingerprints']['current_catalog']
+    assert corrected.source_manifest['fingerprints']['completed_week_stats'] == original_manifest['fingerprints']['completed_week_stats']
     # Existing complete provider authority remains first choice, even when the
     # independently recorded status receipt is present.
     evidence = next(iter(recorded_status_based_zero_ros_evidence(state,as_of=capture).values()))

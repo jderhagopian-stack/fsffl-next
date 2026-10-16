@@ -277,6 +277,18 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     heavy_work_coordinator=_heavy_work_coordinator,
     ownership_validator=_execution_state_scope_owned,
 )
+def _hosted_career_candidate_builder(
+    state, *, projection_history_as_of=None,
+    reference_standard_year_one=(), reference_league_year_one=(),
+):
+    return build_live_p0_rostered_candidate_forecasts(
+        state, projection_history_as_of=projection_history_as_of,
+        projection_history_reader=_projection_history_store,
+        reference_standard_year_one=reference_standard_year_one,
+        reference_league_year_one=reference_league_year_one,
+    )
+
+
 _career_intrinsic_loader = CareerIntrinsicLoader(
     current_intrinsic_loader=_shapley_intrinsic_loader,
     heavy_work_coordinator=_heavy_work_coordinator,
@@ -290,11 +302,7 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
             frozen,
             current_intrinsic_loader=_shapley_intrinsic_loader,
             materializer=materialize_foundation4_dynamic_candidates,
-            candidate_builder=lambda state, *, projection_history_as_of=None: build_live_p0_rostered_candidate_forecasts(
-                state,
-                projection_history_as_of=projection_history_as_of,
-                projection_history_reader=_projection_history_store,
-            ),
+            candidate_builder=_hosted_career_candidate_builder,
         )
     ),
     expanded_career_contract_fingerprint_resolver=lambda context: (
