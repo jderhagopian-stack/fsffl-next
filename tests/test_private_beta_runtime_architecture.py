@@ -359,8 +359,9 @@ def test_hosted_surface_acceptance_releases_sequential_payloads_and_bounds_marke
 
 
 def test_heavy_work_snapshot_records_bounded_phase_memory_evidence(monkeypatch) -> None:
-    rss_values = iter((100, 120, 130, 125))
+    rss_values = iter((100, 120, 125, 130, 125))
     peak_values = iter((150, 220, 220))
+    monkeypatch.setattr(resource_coordinator_module, "release_unused_process_memory", lambda **kwargs: {})
     monkeypatch.setattr(
         resource_coordinator_module,
         "current_rss_bytes",
