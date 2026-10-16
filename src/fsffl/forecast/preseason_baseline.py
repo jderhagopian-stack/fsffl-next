@@ -210,6 +210,11 @@ def build_runtime_from_preseason_baseline(
             if fumbles_lost_supplement is not None
             else None
         ),
+        fumbles_lost_supplement_league_state_id=(
+            fumbles_lost_supplement.league_state_id
+            if fumbles_lost_supplement is not None
+            else None
+        ),
         simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
         model_version=PRESEASON_AUTHORITY_RUNTIME_VERSION,

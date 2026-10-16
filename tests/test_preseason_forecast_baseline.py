@@ -583,6 +583,19 @@ def test_preseason_replay_consumes_current_fumbles_supplement_without_mutating_r
     assert result.simulation_authority_blockers == ()
     assert result.fumbles_lost_supplement_authority_fingerprint == supplement.authority_fingerprint
     assert result.fumbles_lost_supplement_player_count == 1
+    assert result.fumbles_lost_supplement_league_state_id == state.state_id
+    from fsffl.forecast.fumbles_lost_materiality import fumbles_lost_runtime_authority_compatible
+    from fsffl.forecast.fumbles_lost_first_party import FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+    from fsffl.persistence.runtime_cache import encode_forecast_evidence, decode_forecast_evidence
+    evidence = LiveForecastEvidence(
+        runtime_result=result, raw_forecasts=baseline.raw_ensemble,
+        league_scored_forecasts=result.fantasy_point_forecasts,
+        successful_source_ids=baseline.successful_source_ids,failed_sources=(),
+        evidence_basis="preseason_baseline", uncertainty_ready=True,
+    )
+    restored = decode_forecast_evidence(encode_forecast_evidence(evidence))
+    assert fumbles_lost_runtime_authority_compatible(state, restored.runtime_result,
+        expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION)
     assert result.first_party_fumbles_lost_supplement == supplement
     assert result.evaluation_as_of == state.as_of
     assert FIRST_PARTY_FUMBLES_LOST_SOURCE in result.fantasy_point_forecasts[0].provenance.source

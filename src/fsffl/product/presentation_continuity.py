@@ -176,6 +176,7 @@ class PresentationContinuityStore:
                         and raw.get("dynasty_evidence_status") != "last_good"):
                     career_input_fingerprint = raw.get("input_fingerprint")
                 payload = _json_round_trip(raw)
+                del raw  # The isolated JSON copy owns this surface from here.
                 payload["publication_generation_id"] = promotion_id
                 encoded = json.dumps(
                     payload,

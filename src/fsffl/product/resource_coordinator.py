@@ -356,6 +356,16 @@ class HeavyWorkCoordinator:
             )
 
         try:
+            # Prior phase frames and serialized presentation buffers may have
+            # become unreachable only after that phase returned. Reclaim them
+            # before the next admitted model starts allocating its own workspace.
+            release_unused_process_memory(label=f"heavy-admission:{kind}")
+            resident = current_rss_bytes()
+            if resident > self._memory_limit_bytes:
+                raise MemoryError(
+                    "memory hard limit exceeded before heavy-work admission: "
+                    f"{resident} > {self._memory_limit_bytes}"
+                )
             yield
         finally:
             after_rss = current_rss_bytes()

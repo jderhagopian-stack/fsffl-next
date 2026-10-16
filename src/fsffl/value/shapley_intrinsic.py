@@ -13,6 +13,10 @@ FROZEN_SHAPLEY_PERMUTATIONS = 2048
 FROZEN_INTRINSIC_DISCOUNT = 0.85
 FROZEN_SHAPLEY_SEED = 20260915
 SHAPLEY_INTRINSIC_MODEL_VERSION = "intrinsic-shapley-i1-v1"
+# Pure integer feasibility memoization is an execution aid, not model authority.
+# Bound process retention across horizons/rules; eviction only recomputes the
+# identical deterministic check and never changes permutations or arithmetic.
+SHAPLEY_FEASIBILITY_CACHE_MAXSIZE = 32_768
 POSITIONS = ("QB", "RB", "WR", "TE")
 POSITION_INDEX = {position: index for index, position in enumerate(POSITIONS)}
 STATE_NAMES = ("out", "depth", "usable", "starter", "premium", "elite")
@@ -46,7 +50,7 @@ def subset_caps_from_rules(rules: LeagueRules) -> tuple[tuple[tuple[int, ...], i
 ReplacementPlan = tuple[int | None, float | None, str | None] | None
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=SHAPLEY_FEASIBILITY_CACHE_MAXSIZE)
 def _valid_counts_cached(
     caps: tuple[tuple[tuple[int, ...], int], ...],
     counts: tuple[int, int, int, int],
@@ -66,7 +70,7 @@ def _valid_counts_cached(
     )
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=SHAPLEY_FEASIBILITY_CACHE_MAXSIZE)
 def _replacement_options_cached(
     caps: tuple[tuple[tuple[int, ...], int], ...],
     counts: tuple[int, int, int, int],

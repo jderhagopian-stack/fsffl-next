@@ -1052,3 +1052,23 @@ def test_career_dependency_is_bound_by_compact_manifest_across_restart():
     raw['dynasty_evidence_status'] = 'last_good'
     assert not continuity.career_publication_matches(promote(), record)
     assert PresentationContinuityStore(None).career_publication_matches(runtime, record)
+
+
+def test_promotion_releases_previous_raw_graph_before_composing_next_surface():
+    import weakref
+    class DisposablePayload(dict):
+        pass
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    runtime = _runtime(_state(datetime(2026, 10, 16, tzinfo=UTC)))
+    reference = []
+    def first():
+        raw = DisposablePayload(players=[{'value':n} for n in range(876)])
+        reference.append(weakref.ref(raw))
+        return raw
+    def second():
+        assert reference[0]() is None
+        return {'status':'ready'}
+    promotion = continuity.promote(user_id=runtime.user_id,runtime=runtime,
+        builders=((HOME_SURFACE,first),(FRANCHISE_SURFACE,second)))
+    assert promotion is not None
