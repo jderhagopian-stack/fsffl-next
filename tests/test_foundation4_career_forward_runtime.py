@@ -1177,3 +1177,24 @@ def test_completed_expansion_requires_valid_bound_live_input_manifest(materializ
     payload['_career_source_manifest']['fingerprints']['current_catalog'] = 'b' * 64
     persistence.put_artifact(ReusableArtifactRecord(key=key,payload=payload,computed_at=utc_now()))
     assert loader.restore_compatible(context) is None
+
+
+def test_bound_base_only_failure_remains_retryable_and_clears_old_dynamic_errors(materialized):
+    persistence, _calls, _base_loader, context, base = materialized
+    loader = CareerIntrinsicLoader(current_intrinsic_loader=lambda ctx:None,
+        current_intrinsic_fingerprint_resolver=lambda ctx:'current-fp-v1',
+        persistence_store=persistence,expanded_career_contract_loader=lambda *args:None,
+        expanded_career_contract_fingerprint_resolver=lambda ctx:'dynamic-fp-v1')
+    failed = base.model_copy(update={'player_coverage_failures':{
+        'sleeper:player:unsupported':'dynamic P0 acquisition failed: fixture'}})
+    assert loader.retryable_incomplete_contract(failed)
+    loader._persist(context,dependency_fingerprint=loader.intrinsic_input_fingerprint(context),
+        component=None,contract=failed,source_manifest=_fixture_source_manifest(context))
+    assert loader.restore_compatible(context) is None
+    frozen = loader._restore_frozen_compatible(context)
+    assert frozen.estimates == base.estimates
+    assert frozen.player_coverage_failures == {}
+    expanded = failed.model_copy(update={'estimates':(*failed.estimates,
+        failed.estimates[0].model_copy(update={'player_id':'sleeper:player:dynamic-success'})),
+        'player_count':failed.player_count+1})
+    assert not loader.retryable_incomplete_contract(expanded)

@@ -364,6 +364,12 @@ class CareerIntrinsicLoader:
             contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
         except (TypeError, ValueError):
             return None
+        if self.retryable_incomplete_contract(contract):
+            # A bound input manifest alone does not prove expansion succeeded.
+            # Keep this frozen base reusable by an explicit retry, not ready.
+            expansion_complete = False
+            if require_complete:
+                return None
         # Older hosted releases persisted the expanded Career contract. Treat
         # only its accepted Foundation 4 reference cohort as the frozen base;
         # dynamic roster rows must be rebuilt against current live evidence.
@@ -375,7 +381,7 @@ class CareerIntrinsicLoader:
         base_estimates = tuple(
             row for row in contract.estimates if row.player_id in reference_ids
         )
-        if not expansion_complete and len(base_estimates) != len(contract.estimates):
+        if not expansion_complete:
             contract = contract.model_copy(update={
                 "estimates": base_estimates,
                 "player_count": len(base_estimates),
@@ -545,6 +551,15 @@ class CareerIntrinsicLoader:
                 computed_at=utc_now(),
             )
         )
+
+    def retryable_incomplete_contract(self, contract) -> bool:
+        """Identify a failed expansion, preserving completed player exceptions."""
+        if (self._expanded_career_contract_loader is None or contract is None
+                or not contract.player_coverage_failures):
+            return False
+        from .p0_forecast_runtime import frozen_p0_source_rows
+        reference_ids = {row.player_id for row in frozen_p0_source_rows()}
+        return all(row.player_id in reference_ids for row in contract.estimates)
 
     def clear_user_cache(self, user_id: str) -> int:
         with self._lock:

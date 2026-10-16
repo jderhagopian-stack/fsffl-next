@@ -503,6 +503,31 @@ class ShapleyIntrinsicBackgroundCoordinator:
         with self._lock:
             self._futures.pop(key, None)
 
+    def discard_terminal(self, context: UserRuntimeContext) -> bool:
+        """Release one terminal attempt before an explicitly owned retry.
+
+        Wait outside the record lock for its already-terminal worker cleanup;
+        otherwise that older worker could pop the replacement Future by key.
+        Active builds and other last-good records remain owned and untouched.
+        """
+        context = self._pin_build_context(context)
+        key = self._key(context)
+        with self._lock:
+            record = self._records.get(key)
+            if record is None or record.status not in {
+                IntrinsicBuildStatus.COMPLETED, IntrinsicBuildStatus.FAILED,
+            }:
+                return False
+            future = self._futures.get(key)
+        if future is not None:
+            future.result()
+        with self._lock:
+            if self._records.get(key) is not record:
+                return False
+            self._records.pop(key, None)
+            self._futures.pop(key, None)
+            return True
+
     def clear_user(self, user_id: str) -> int:
         """Invalidate old waiters and drop user-scoped process lifecycle records."""
 

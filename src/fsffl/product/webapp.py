@@ -2118,7 +2118,9 @@ def create_app(
                 message = reconcile(progress)
                 if retry_optional_after_reuse:
                     require_active_league_identity()
-                    preparer = getattr(application.state, "presentation_preparer", None)
+                    preparer = getattr(application.state, "presentation_retry_preparer", None)
+                    if preparer is None:
+                        preparer = getattr(application.state, "presentation_preparer", None)
                     if callable(preparer):
                         try:
                             preparer(user_id, store.get(user_id))
