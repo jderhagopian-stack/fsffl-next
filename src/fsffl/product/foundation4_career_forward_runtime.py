@@ -364,6 +364,12 @@ class CareerIntrinsicLoader:
             contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
         except (TypeError, ValueError):
             return None
+        if self.retryable_incomplete_contract(contract):
+            # A bound input manifest does not supersede an explicit batch error.
+            # Keep this frozen base reusable by an explicit retry, not ready.
+            expansion_complete = False
+            if require_complete:
+                return None
         # Older hosted releases persisted the expanded Career contract. Treat
         # only its accepted Foundation 4 reference cohort as the frozen base;
         # dynamic roster rows must be rebuilt against current live evidence.
@@ -375,7 +381,7 @@ class CareerIntrinsicLoader:
         base_estimates = tuple(
             row for row in contract.estimates if row.player_id in reference_ids
         )
-        if not expansion_complete and len(base_estimates) != len(contract.estimates):
+        if not expansion_complete:
             contract = contract.model_copy(update={
                 "estimates": base_estimates,
                 "player_count": len(base_estimates),
@@ -545,6 +551,23 @@ class CareerIntrinsicLoader:
                 computed_at=utc_now(),
             )
         )
+
+    def retryable_incomplete_contract(self, contract) -> bool:
+        """Retry producer-owned batch failures, never infer failure from coverage.
+
+        A completed expansion may legitimately have only explicit exceptions.
+        These prefixes are emitted by this bridge's batch error boundaries;
+        player-specific evidence/scoring/identity failures remain completed.
+        """
+        if self._expanded_career_contract_loader is None or contract is None:
+            return False
+        batch_failures = (
+            "dynamic P0 acquisition failed:",
+            "accepted Foundation 4 dynamic materializer failed:",
+            "accepted Foundation 4 dynamic materializer input bundle is not configured",
+        )
+        return any(str(reason).startswith(batch_failures)
+                   for reason in contract.player_coverage_failures.values())
 
     def clear_user_cache(self, user_id: str) -> int:
         with self._lock:

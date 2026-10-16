@@ -1824,7 +1824,7 @@ _dynasty_followup_lock = RLock()
 _dynasty_followups: set[tuple[str, str, str]] = set()
 
 
-def _prepare_presentation_for_user(user_id: str, context) -> None:
+def _prepare_presentation_for_user(user_id: str, context, *, retry_incomplete: bool = False) -> None:
     """Kick Dynasty preparation without putting it on the core publication path."""
     if context.league_state is None:
         return
@@ -1832,6 +1832,20 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
     if (current is None or current.status != IntrinsicBuildStatus.COMPLETED
             or current.contract is None):
         return
+    if retry_incomplete:
+        previous = _career_intrinsic_coordinator.current(context)
+        if previous is not None and (
+            previous.status == IntrinsicBuildStatus.FAILED
+            or (previous.status == IntrinsicBuildStatus.COMPLETED
+                and _career_intrinsic_loader.retryable_incomplete_contract(previous.contract))
+        ):
+            # Explicit user action only. Do not advance source cutoffs or clear
+            # ready expansions, active work, persisted authority or last-good UI.
+            if _career_intrinsic_coordinator.discard_terminal(context):
+                _career_intrinsic_loader.clear_user_cache(user_id)
+                with _dynasty_followup_lock:
+                    _dynasty_followups.discard((user_id, context.league_state.state_id,
+                                                previous.intrinsic_input_fingerprint))
     record = _career_intrinsic_coordinator.request(context)
     if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
         key = (
@@ -2082,6 +2096,9 @@ def _publish_dynasty_presentation_followup(
 
 
 app.state.presentation_preparer = _prepare_presentation_for_user
+app.state.presentation_retry_preparer = lambda user, context: _prepare_presentation_for_user(
+    user, context, retry_incomplete=True,
+)
 # The generic publication owner acquires heavy admission before its sequence
 # lock, then invokes this composer without nesting a second heavy claim.
 app.state.presentation_promoter = _compose_presentation_for_user

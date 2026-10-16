@@ -364,3 +364,158 @@ def test_shapley_integer_memoization_is_bounded_and_eviction_preserves_exact_res
             assert options(caps,(0,0,0,0),incoming) == options.__wrapped__(caps,(0,0,0,0),incoming)
     finally:
         valid.cache_clear(); options.cache_clear()
+
+
+@pytest.mark.parametrize('retry_after_reuse', [False, True])
+@pytest.mark.parametrize('preparation_fails', [False, True])
+def test_explicit_core_reuse_retries_optional_career_without_rebuilding(retry_after_reuse, preparation_fails):
+    calls = []
+    context = NS(league_state=NS(state_id='fixture-state'))
+    def prepare(user, runtime):
+        assert user == 'fixture-user' and runtime is context
+        calls.append('prepare')
+        if preparation_fails:
+            raise RuntimeError('optional failure')
+    ns = dict(reconcile=lambda progress:'core reused',
+        retry_optional_after_reuse=retry_after_reuse,
+        require_active_league_identity=lambda:calls.append('identity'),
+        store=NS(get=lambda user:context,working_generation_active=lambda user:False),
+        application=NS(state=NS(presentation_preparer=prepare)),
+        user_id='fixture-user',_logger=NS(exception=lambda *args:calls.append('optional-error')))
+    run = function('src/fsffl/product/webapp.py','work',ns)
+    assert run(lambda *args:None) == 'core reused'
+    assert calls == (['identity','prepare'] + (['optional-error'] if preparation_fails else [])
+                     if retry_after_reuse else [])
+
+
+@pytest.mark.parametrize('retry', [False, True])
+@pytest.mark.parametrize('status,incomplete', [('failed',False),('completed',True),('completed',False),('running',True)])
+def test_explicit_retry_discards_only_failed_or_base_only_terminal_career(retry,status,incomplete):
+    from threading import RLock
+    calls = []
+    context = NS(league_state=NS(state_id='fixture-state'))
+    old_key = ('fixture-user','fixture-state','fixture-fp')
+    previous = NS(status=status,contract=NS(incomplete=incomplete),intrinsic_input_fingerprint='fixture-fp')
+    ns = dict(_shapley_intrinsic_coordinator=NS(current=lambda ctx:NS(status='completed',contract=object())),
+        _career_intrinsic_coordinator=NS(current=lambda ctx:previous,
+            discard_terminal=lambda ctx:(calls.append('clear-record') or True),
+            request=lambda ctx:(calls.append('request') or NS(status='completed'))),
+        _career_intrinsic_loader=NS(retryable_incomplete_contract=lambda c:c.incomplete,
+            clear_user_cache=lambda user:calls.append('clear-loader')),
+        IntrinsicBuildStatus=NS(COMPLETED='completed',FAILED='failed',QUEUED='queued',RUNNING='running'),
+        _dynasty_followup_lock=RLock(),_dynasty_followups={old_key})
+    run = function('src/fsffl/product/persistent_webapp.py','_prepare_presentation_for_user',ns)
+    run('fixture-user',context,retry_incomplete=retry)
+    cleared = retry and (status == 'failed' or status == 'completed' and incomplete)
+    assert calls == (['clear-record','clear-loader'] if cleared else []) + ['request']
+    assert (old_key in ns['_dynasty_followups']) is not cleared
+
+
+def test_explicit_retry_reexecutes_failed_real_coordinator_with_same_identity():
+    from threading import RLock
+    from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator, IntrinsicBuildStatus
+    calls = []
+    context = NS(user_id='fixture-user',league_state=NS(state_id='fixture-state',league=NS(league_id='fixture-league')))
+    def loader(ctx):
+        assert ctx is context
+        calls.append('load')
+        if len(calls) == 1:
+            raise RuntimeError('fixture transient failure')
+        return NS(estimates=())
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(loader,
+        forecast_coordinate_resolver=lambda ctx:'fixture-coordinate',
+        intrinsic_input_fingerprint_resolver=lambda ctx:'unchanged-fingerprint')
+    try:
+        first = coordinator.wait_for_terminal(context,timeout_seconds=2)
+        assert first.status == IntrinsicBuildStatus.FAILED
+        ns = dict(_shapley_intrinsic_coordinator=NS(current=lambda ctx:NS(
+                status=IntrinsicBuildStatus.COMPLETED,contract=object())),
+            _career_intrinsic_coordinator=coordinator,
+            _career_intrinsic_loader=NS(clear_user_cache=lambda user:None,
+                retryable_incomplete_contract=lambda contract:False),
+            IntrinsicBuildStatus=IntrinsicBuildStatus,
+            _dynasty_followup_lock=RLock(),_dynasty_followups=set(),
+            Thread=lambda **kwargs:NS(start=lambda:None),
+            _publish_dynasty_presentation_followup=lambda *args:None,
+            _logger=NS(exception=lambda *args:None))
+        prepare = function('src/fsffl/product/persistent_webapp.py','_prepare_presentation_for_user',ns)
+        prepare('fixture-user',context,retry_incomplete=True)
+        final = coordinator.wait_for_terminal(context,timeout_seconds=2)
+        assert final.status == IntrinsicBuildStatus.COMPLETED
+        assert final.intrinsic_input_fingerprint == first.intrinsic_input_fingerprint
+        assert calls == ['load','load']
+        prepare('fixture-user',context,retry_incomplete=True)
+        assert calls == ['load','load']
+    finally:
+        coordinator._executor.shutdown(wait=True)
+
+
+def test_explicit_core_reuse_selects_retry_hook_without_generic_preparation():
+    calls = []
+    context = object()
+    def forbidden(*args):
+        raise AssertionError('use the explicit retry hook')
+    ns = dict(reconcile=lambda progress:'core reused',retry_optional_after_reuse=True,
+        require_active_league_identity=lambda:None,
+        store=NS(get=lambda user:context,working_generation_active=lambda user:False),
+        application=NS(state=NS(presentation_preparer=forbidden,
+            presentation_retry_preparer=lambda user,ctx:calls.append((user,ctx)))),
+        user_id='fixture-user',_logger=NS(exception=forbidden))
+    run = function('src/fsffl/product/webapp.py','work',ns)
+    assert run(lambda *args:None) == 'core reused'
+    assert calls == [('fixture-user',context)]
+    assert 'retry_incomplete=True' in Path('src/fsffl/product/persistent_webapp.py').read_text()
+
+
+@pytest.mark.parametrize('watchdog_failed', [False, True])
+def test_explicit_terminal_discard_preserves_active_coalesced_work(watchdog_failed):
+    from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator, IntrinsicBuildStatus
+    from threading import Event
+    entered, release = Event(), Event()
+    context = NS(user_id='fixture-user',league_state=NS(state_id='fixture-state',league=NS(league_id='fixture-league')))
+    def loader(ctx):
+        entered.set()
+        assert release.wait(2)
+        return NS(estimates=())
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(loader,
+        forecast_coordinate_resolver=lambda ctx:'fixture-coordinate',
+        intrinsic_input_fingerprint_resolver=lambda ctx:'fixture-fingerprint')
+    try:
+        coordinator.request(context)
+        assert entered.wait(1)
+        if watchdog_failed:
+            coordinator._set(coordinator._key(context),status=IntrinsicBuildStatus.FAILED,
+                             error='HardWatchdogError: fixture')
+        from time import monotonic
+        started = monotonic()
+        assert not coordinator.discard_terminal(context)
+        assert monotonic() - started < .25
+        assert coordinator.current(context).status == (
+            IntrinsicBuildStatus.FAILED if watchdog_failed else IntrinsicBuildStatus.RUNNING)
+        release.set()
+        coordinator._executor.shutdown(wait=True)
+        completed = coordinator.current(context)
+        assert completed.status == IntrinsicBuildStatus.COMPLETED
+        assert coordinator.discard_terminal(context)
+        assert coordinator.current(context) is None
+    finally:
+        release.set()
+        coordinator._executor.shutdown(wait=True)
+
+
+@pytest.mark.parametrize('reason,retryable', [
+    ('dynamic P0 acquisition failed: fixture provider error',True),
+    ('accepted Foundation 4 dynamic materializer failed: fixture fit error',True),
+    ('accepted Foundation 4 dynamic materializer input bundle is not configured for the hosted process',True),
+    ('active backup lacks a complete single-source Year-1 projection',False),
+    ('Year-1 raw evidence failed strict scoring coverage',False),
+    ('canonical identity/feature evidence missing for player',False),
+    ('verified missing player-specific evidence',False),
+])
+def test_retry_classification_uses_batch_error_boundary_not_numeric_membership(reason,retryable):
+    from fsffl.product.foundation4_career_forward_runtime import CareerIntrinsicLoader
+    loader = CareerIntrinsicLoader(current_intrinsic_loader=lambda ctx:None,
+        current_intrinsic_fingerprint_resolver=lambda ctx:'fixture-current',
+        expanded_career_contract_loader=lambda *args:None,
+        expanded_career_contract_fingerprint_resolver=lambda ctx:'fixture-expansion')
+    assert loader.retryable_incomplete_contract(NS(player_coverage_failures={'fixture':reason})) is retryable

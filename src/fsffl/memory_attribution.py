@@ -66,6 +66,10 @@ def sample_rss_phase(label: str, *, interval_seconds: float = 0.1) -> Iterator[N
     cpu_started = process_time()
     before_rss = current_rss_bytes()
     before_peak = process_peak_rss_bytes()
+    # The process may be killed before the finalizer can log a completed phase.
+    # Record entry too so an OOM can be attributed without guessing its stage.
+    _logger.info("FSFFL memory attribution phase=%s status=start rss_before=%s",
+                 label, before_rss)
     stop = Event()
     sample_state = {"max_rss": before_rss, "max_peak": before_peak, "samples": 0}
 
