@@ -1219,6 +1219,28 @@ def build_live_p0_rostered_candidate_forecasts(
         except ValueError as exc:
             failures[player_id] = str(exc)
 
+    # Facts and source identities are now complete. Do not keep the full live
+    # catalog/snapshot and acquired stat packets alongside the future-model
+    # workspace. Fingerprint the complete inputs before releasing ownership;
+    # the returned contract retains the same evidence and numerical rows.
+    source_manifest = live_source_manifest(captured_at=cutoff, fingerprints={
+        "canonical_state": league_state.state_id,
+        "nfl_state": _input_digest(asdict(nfl_state)),
+        "current_catalog": _input_digest(catalog),
+        "completed_week_stats": _input_digest({str(week): _rows_digest(rows)
+                                               for week, rows in sorted(weekly.items())}),
+        "prior_season_stats": _rows_digest(prior_lines),
+        "ros": _rows_digest(available_ros_rows),
+        "fumbles_supplement": _rows_digest(ros_fumbles_lost),
+        "status_receipts": _input_digest({pid: asdict(row) for pid, row in sorted(fallback_status_evidence.items())}),
+        "reference_scoring": _rows_digest((*source_reference_standard, *source_reference_league)),
+        "candidate_facts": _input_digest({pid: fact.facts_digest for pid, fact in sorted(facts.items())}),
+    })
+    del latest_snapshot, catalog, current_state, current_by_id, governed_by_id
+    del weekly, cached_stats, prior, prior_lines, source_captures, completed_raw
+    from .resource_coordinator import release_unused_process_memory
+    release_unused_process_memory(label="career-p0-acquisition-inputs-released")
+
     if candidate_rows:
         from .i1_player_scoring import career_player_scoring_multipliers
         from .p0_forecast_runtime import governed_p0_player_ids
@@ -1287,18 +1309,6 @@ def build_live_p0_rostered_candidate_forecasts(
         ros_fumbles_lost=ros_fumbles_lost,
         fumbles_eligible_player_ids=tuple(sorted(fumbles_eligible_player_ids)),
         fumbles_supplement_failure=fumbles_supplement_failure,
-        source_manifest=live_source_manifest(captured_at=cutoff, fingerprints={
-            "canonical_state": league_state.state_id,
-            "nfl_state": _input_digest(asdict(nfl_state)),
-            "current_catalog": _input_digest(catalog),
-            "completed_week_stats": _input_digest({str(week): _rows_digest(rows)
-                                                   for week, rows in sorted(weekly.items())}),
-            "prior_season_stats": _rows_digest(prior_lines),
-            "ros": _rows_digest(available_ros_rows),
-            "fumbles_supplement": _rows_digest(ros_fumbles_lost),
-            "status_receipts": _input_digest({pid: asdict(row) for pid, row in sorted(fallback_status_evidence.items())}),
-            "reference_scoring": _rows_digest((*source_reference_standard, *source_reference_league)),
-            "candidate_facts": _input_digest({pid: fact.facts_digest for pid, fact in sorted(facts.items())}),
-        }),
+        source_manifest=source_manifest,
     )
 

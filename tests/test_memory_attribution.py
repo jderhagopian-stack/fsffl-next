@@ -20,3 +20,26 @@ def test_object_graph_size_bounds_walk() -> None:
 
     assert nodes == 11
     assert truncated
+
+
+def test_phase_entry_is_logged_before_work_can_fail(monkeypatch, caplog) -> None:
+    import logging
+    import pytest
+    from fsffl import memory_attribution as memory
+    monkeypatch.setattr(memory, 'enabled', lambda: True)
+    with caplog.at_level(logging.INFO, logger='uvicorn.error'):
+        with pytest.raises(RuntimeError, match='fixture failure'):
+            with memory.sample_rss_phase('career.fixture'):
+                assert 'phase=career.fixture status=start rss_before=' in caplog.text
+                raise RuntimeError('fixture failure')
+    assert 'phase=career.fixture elapsed=' in caplog.text
+
+
+def test_phase_instrumentation_remains_opt_in(monkeypatch, caplog) -> None:
+    import logging
+    from fsffl import memory_attribution as memory
+    monkeypatch.setattr(memory, 'enabled', lambda: False)
+    with caplog.at_level(logging.INFO, logger='uvicorn.error'):
+        with memory.sample_rss_phase('career.disabled'):
+            pass
+    assert 'career.disabled' not in caplog.text

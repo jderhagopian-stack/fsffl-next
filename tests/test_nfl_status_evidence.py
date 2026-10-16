@@ -180,3 +180,44 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     assert len(result.future.contract.forecasts) == 4
     assert {row.player_id for row in result.future.contract.forecasts} == set(
         result.year_one_league)-{evidence.player_id}
+
+
+def test_live_producer_releases_acquisition_payload_before_future_forecast(monkeypatch):
+    import weakref
+    import fsffl.product.p0_live_candidate_runtime as runtime
+    from fsffl.providers.sleeper_weekly_stats import SleeperNflState
+    state = _state()
+    state = state.model_copy(update={'player_states':tuple(
+        row.model_copy(update={'age_years':23.}) for row in state.player_states)})
+    capture = SEASON_UNAVAILABILITY_RECEIPTS[0].captured_at
+    stats = SimpleNamespace(fetch_nfl_state=lambda:SleeperNflState(
+        season=2026,week=1,season_type='regular',captured_at=capture),
+        fetch_season=lambda **_:(),fetch_week=lambda **_:())
+    class Catalog(dict):
+        pass
+    references = []
+    expected_digests = []
+    def acquire(**kwargs):
+        catalog = Catalog({player.player_id.rsplit(':',1)[-1]:{'years_exp':2}
+                           for player in state.players})
+        catalog['unused-public-source-row'] = {'evidence':'included in the full source fingerprint'}
+        references.append(weakref.ref(catalog))
+        expected_digests.append(runtime._input_digest(catalog))
+        return SimpleNamespace(captured_at=capture,payload={'players':catalog})
+    monkeypatch.setattr(runtime.SleeperSnapshotNormalizer,'normalize_snapshot',lambda *_,**__:state)
+    ros = SimpleNamespace(evaluation_as_of=capture,source_observations=(),raw_ensemble=(),
+        successful_source_ids=('cbs','razzball'),model_copy=lambda **_:SimpleNamespace())
+    monkeypatch.setattr(runtime,'build_in_season_forecasts',lambda *_,**__:ros)
+    monkeypatch.setattr('fsffl.forecast.in_season_orchestration.build_current_ros_fumbles_lost_supplement_observations',lambda *_,**__:())
+    accepted = runtime.build_p0_future_forecast_contract
+    def forecast(**kwargs):
+        assert references[-1]() is None, 'whole acquisition catalog still overlaps future forecasting'
+        return accepted(**kwargs)
+    monkeypatch.setattr(runtime,'build_p0_future_forecast_contract',forecast)
+    result = runtime.build_live_p0_rostered_candidate_forecasts(state,
+        stats_source=stats,sleeper_source=SimpleNamespace(fetch_latest=acquire),
+        evaluation_as_of=capture,projection_history_as_of=capture)
+    assert not result.failures
+    assert result.future is not None and len(result.future.contract.forecasts) == 6
+    assert result.source_manifest['fingerprints']['current_catalog'] == expected_digests[0]
+    assert runtime.valid_live_source_manifest(result.source_manifest)

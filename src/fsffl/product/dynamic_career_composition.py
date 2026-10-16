@@ -13,6 +13,8 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Callable, Mapping
 
+from fsffl.memory_attribution import sample_rss_phase
+
 from fsffl.forecast.future_contract import FutureForecastContract
 from fsffl.forecast.long_horizon_contract import (
     LongHorizonForecastAuthorityContract,
@@ -330,11 +332,12 @@ def build_dynamic_rostered_career_contract(
             ).authoritative_forecasts
             reference_kwargs = dict(reference_standard_year_one=reference_standard,
                                     reference_league_year_one=base_year_one)
-        live = candidate_builder(
-            state,
-            projection_history_as_of=context.career_fingerprint_evaluation_as_of,
-            **reference_kwargs,
-        )
+        with sample_rss_phase("career.current_inputs_and_p0"):
+            live = candidate_builder(
+                state,
+                projection_history_as_of=context.career_fingerprint_evaluation_as_of,
+                **reference_kwargs,
+            )
     except Exception as exc:
         # Dynamic acquisition is an optional extension to the already-built
         # frozen Career contract. Preserve that contract and expose each
@@ -399,7 +402,8 @@ def build_dynamic_rostered_career_contract(
     live = replace(live, ros_runtime=None)
     try:
         release_unused_process_memory(label="career-before-dynamic-foundation4")
-        components = materializer(context, live, tuple(sorted(eligible)))
+        with sample_rss_phase("career.foundation4_materialization"):
+            components = materializer(context, live, tuple(sorted(eligible)))
     except Exception as exc:
         # The materializer is allowed to fail per candidate; a batch-level
         # infrastructure/configuration error is reflected on each eligible row.
