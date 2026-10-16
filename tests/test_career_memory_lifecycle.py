@@ -313,3 +313,54 @@ def test_player_intelligence_withholds_unpublished_career_without_changing_curre
     assert checks == [('old',career),('new',career)]
     source = Path('src/fsffl/product/persistent_webapp.py').read_text().split('install_player_intelligence_routes(',1)[1].split('install_provisional_k_dst_routes(',1)[0]
     assert 'career_publication_validator=_presentation_continuity.career_publication_matches' in source
+
+
+def test_heavy_admission_refuses_over_hard_cap_and_releases_ownership(monkeypatch):
+    import fsffl.product.resource_coordinator as resource
+    resident = 513 * 1024 * 1024
+    monkeypatch.setattr(resource, 'current_rss_bytes', lambda: resident)
+    monkeypatch.setattr(resource, 'process_peak_rss_bytes', lambda: resident)
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kwargs: {})
+    coordinator = resource.HeavyWorkCoordinator(memory_limit_bytes=512 * 1024 * 1024)
+    with pytest.raises(MemoryError, match='before heavy-work admission'):
+        with coordinator.claim(kind='intrinsic',key='fixture'):
+            raise AssertionError('over-limit model work must not start')
+    assert coordinator.snapshot().active_kind is None
+    assert coordinator.snapshot().waiting_count == 0
+
+
+def test_heavy_admission_reclaims_before_work_and_preserves_career_target_exception(monkeypatch):
+    import fsffl.product.resource_coordinator as resource
+    resident = [513 * 1024 * 1024]
+    monkeypatch.setattr(resource, 'current_rss_bytes', lambda: resident[0])
+    monkeypatch.setattr(resource, 'process_peak_rss_bytes', lambda: resident[0])
+    def reclaim(**kwargs):
+        resident[0] = 455 * 1024 * 1024
+        return {}
+    monkeypatch.setattr(resource, 'release_unused_process_memory', reclaim)
+    coordinator = resource.HeavyWorkCoordinator(memory_limit_bytes=512 * 1024 * 1024)
+    with coordinator.claim(kind='intrinsic',key='fixture'):
+        assert resident[0] > coordinator.memory_budget_bytes
+        assert resident[0] < 512 * 1024 * 1024
+    assert coordinator.snapshot().active_kind is None
+
+
+def test_shapley_integer_memoization_is_bounded_and_eviction_preserves_exact_results():
+    import fsffl.value.shapley_intrinsic as shapley
+    caps = (((0,),12),((1,),24),((2,),36),((3,),12),((0,1,2,3),96))
+    valid, options = shapley._valid_counts_cached, shapley._replacement_options_cached
+    valid.cache_clear(); options.cache_clear()
+    try:
+        for n in range(shapley.SHAPLEY_FEASIBILITY_CACHE_MAXSIZE + 257):
+            counts = (n%48,(n//48)%48,(n//2304)%24,0)
+            incoming = n%4
+            assert options(caps,counts,incoming) == options.__wrapped__(caps,counts,incoming)
+        for cache in (valid,options):
+            info = cache.cache_info()
+            assert info.maxsize == shapley.SHAPLEY_FEASIBILITY_CACHE_MAXSIZE == 32768
+            assert info.currsize <= info.maxsize
+        # Earlier keys may have been evicted; recomputation is still identical.
+        for incoming in range(4):
+            assert options(caps,(0,0,0,0),incoming) == options.__wrapped__(caps,(0,0,0,0),incoming)
+    finally:
+        valid.cache_clear(); options.cache_clear()
