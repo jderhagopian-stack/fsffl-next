@@ -1775,6 +1775,7 @@ install_league_value_lens_routes(
 install_player_intelligence_routes(
     app,
     career_record_loader=_career_intrinsic_coordinator.current,
+    career_publication_validator=_presentation_continuity.career_publication_matches,
     runtime_store=_runtime_store,
     require_user=_webapp.require_beta_user,
     intrinsic_coordinator=_shapley_intrinsic_coordinator,

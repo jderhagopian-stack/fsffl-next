@@ -253,6 +253,7 @@ def install_player_intelligence_routes(
     persistence_store: PersistenceStore | None = None,
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     career_record_loader=None,
+    career_publication_validator=None,
 ) -> None:
     future_forecasts = future_cache or PlayerFutureForecastCache()
 
@@ -310,8 +311,12 @@ def install_player_intelligence_routes(
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
         value = dict(payload["value"])
+        career_record = career_record_loader(runtime) if career_record_loader is not None else None
+        if (career_record is not None and career_publication_validator is not None
+                and not career_publication_validator(runtime, career_record)):
+            career_record = None
         career_summary, career_rows = career_lens_for_publication(
-            career_record_loader(runtime) if career_record_loader is not None else None,
+            career_record,
             served_state_id=runtime.league_state.state_id,
             reference_ids=career_reference_ids_from_current(intrinsic_record),
         )

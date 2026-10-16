@@ -272,3 +272,44 @@ def test_value_lens_overlay_waits_for_its_published_career_dependency(published)
     overlay = function('src/fsffl/product/league_value_lens_routes.py','with_career',ns)
     overlay({'league_state_id':'fixture-state','publication_generation_id':'generation'},context,persisted=True)
     assert consumed == [record if published else None]
+
+
+def test_player_intelligence_withholds_unpublished_career_without_changing_current():
+    from fastapi import FastAPI
+    from fsffl.product.intrinsic_background import IntrinsicBuildStatus
+    from fsffl.product.career_presentation import career_lens_for_publication
+    from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
+    current = NS(status=NS(value='ready'), estimates=(object(),), status_reason=None)
+    career = NS(status=IntrinsicBuildStatus.COMPLETED, league_state_id='fixture-state',
+        intrinsic_input_fingerprint='career-fp',contract=NS(estimates=(
+            NS(player_id='fixture-a',raw_career_forward_reference=10.),
+            NS(player_id='fixture-b',raw_career_forward_reference=20.))))
+    runtime = NS(league_state=NS(state_id='fixture-state'), publication_generation_id='old')
+    checks = []
+    def validate(context, record):
+        checks.append((context.publication_generation_id, record))
+        return context.publication_generation_id == 'new'
+    ns = dict(app=FastAPI(), Depends=lambda fn:None, require_user=lambda:None,
+        _validated_player_id=lambda pid:pid, runtime_store=NS(get=lambda user:runtime),
+        intrinsic_coordinator=NS(request=lambda ctx:NS(status=IntrinsicBuildStatus.COMPLETED,contract=current)),
+        build_player_intelligence_overview=lambda *args,**kwargs:{'value':{'raw_shapley_marginal_points':7.5}},
+        future_forecasts=object(), career_record_loader=lambda ctx:career,
+        career_publication_validator=validate, career_lens_for_publication=career_lens_for_publication,
+        career_reference_ids_from_current=lambda rec:frozenset({'fixture-a','fixture-b'}),
+        IntrinsicBuildStatus=IntrinsicBuildStatus,ShapleyIntrinsicAvailability=ShapleyIntrinsicAvailability,
+        _logger=NS(info=lambda *args:None))
+    endpoint = function('src/fsffl/product/player_intelligence_routes.py','player_intelligence',ns)
+    pending = endpoint('fixture-a','fixture-user')
+    assert pending['publication_generation_id'] == 'old'
+    assert pending['value']['career_status'] == 'unavailable'
+    assert pending['value']['raw_career_forward_reference'] is None
+    assert pending['value']['raw_shapley_marginal_points'] == 7.5
+    runtime.publication_generation_id = 'new'
+    ready = endpoint('fixture-a','fixture-user')
+    assert ready['publication_generation_id'] == 'new'
+    assert ready['value']['raw_career_forward_reference'] == 10.
+    assert ready['value']['career_intrinsic_index'] == 0.
+    assert ready['value']['raw_shapley_marginal_points'] == 7.5
+    assert checks == [('old',career),('new',career)]
+    source = Path('src/fsffl/product/persistent_webapp.py').read_text().split('install_player_intelligence_routes(',1)[1].split('install_provisional_k_dst_routes(',1)[0]
+    assert 'career_publication_validator=_presentation_continuity.career_publication_matches' in source
