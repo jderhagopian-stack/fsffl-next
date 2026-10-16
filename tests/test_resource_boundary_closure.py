@@ -1456,6 +1456,8 @@ def test_same_state_full_refresh_verifies_without_rebuilding_current_layers(
             "intrinsic": {"status": "full"},
         },
     )
+    optional_requests = []
+    app.state.presentation_preparer = lambda user, runtime: optional_requests.append((user, runtime))
     client = TestClient(app)
 
     response = client.post("/api/intelligence/jobs")
@@ -1490,3 +1492,4 @@ def test_same_state_full_refresh_verifies_without_rebuilding_current_layers(
     assert published.forecast_evidence is forecast
     assert published.simulation_analytics is simulation
     assert published.value_evidence is values
+    assert optional_requests == [("local-beta-user", published)]

@@ -364,3 +364,25 @@ def test_shapley_integer_memoization_is_bounded_and_eviction_preserves_exact_res
             assert options(caps,(0,0,0,0),incoming) == options.__wrapped__(caps,(0,0,0,0),incoming)
     finally:
         valid.cache_clear(); options.cache_clear()
+
+
+@pytest.mark.parametrize('retry_after_reuse', [False, True])
+@pytest.mark.parametrize('preparation_fails', [False, True])
+def test_explicit_core_reuse_retries_optional_career_without_rebuilding(retry_after_reuse, preparation_fails):
+    calls = []
+    context = NS(league_state=NS(state_id='fixture-state'))
+    def prepare(user, runtime):
+        assert user == 'fixture-user' and runtime is context
+        calls.append('prepare')
+        if preparation_fails:
+            raise RuntimeError('optional failure')
+    ns = dict(reconcile=lambda progress:'core reused',
+        retry_optional_after_reuse=retry_after_reuse,
+        require_active_league_identity=lambda:calls.append('identity'),
+        store=NS(get=lambda user:context,working_generation_active=lambda user:False),
+        application=NS(state=NS(presentation_preparer=prepare)),
+        user_id='fixture-user',_logger=NS(exception=lambda *args:calls.append('optional-error')))
+    run = function('src/fsffl/product/webapp.py','work',ns)
+    assert run(lambda *args:None) == 'core reused'
+    assert calls == (['identity','prepare'] + (['optional-error'] if preparation_fails else [])
+                     if retry_after_reuse else [])

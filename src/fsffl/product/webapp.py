@@ -1795,7 +1795,10 @@ def create_app(
                     f"{reason}_before_{phase}"
                 )
 
+        retry_optional_after_reuse = False
+
         def reconcile(progress) -> str | None:
+            nonlocal retry_optional_after_reuse
             log_reconciliation_memory(user_id, "job_start")
             if sync_state:
                 progress(
@@ -1820,6 +1823,10 @@ def create_app(
                         materially_unchanged
                         and published_generation_fully_current(published_now)
                     ):
+                        # The explicit refresh still owns a missing optional
+                        # Career retry. Defer it until reconciliation's frames
+                        # and lifecycle lock are released; core remains reused.
+                        retry_optional_after_reuse = True
                         progress(
                             IntelligenceJobPhase.ATTACHING_RESULTS,
                             "Canonical Sleeper State and all required product intelligence "
@@ -2108,7 +2115,16 @@ def create_app(
 
         def work(progress) -> str | None:
             try:
-                return reconcile(progress)
+                message = reconcile(progress)
+                if retry_optional_after_reuse:
+                    require_active_league_identity()
+                    preparer = getattr(application.state, "presentation_preparer", None)
+                    if callable(preparer):
+                        try:
+                            preparer(user_id, store.get(user_id))
+                        except Exception:
+                            _logger.exception("Optional explicit-refresh preparation failed")
+                return message
             except BaseException as exc:
                 log_reconciliation_memory(user_id, "job_aborted")
                 logging.getLogger("uvicorn.error").info(
