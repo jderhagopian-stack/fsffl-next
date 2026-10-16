@@ -467,7 +467,8 @@ def test_explicit_core_reuse_selects_retry_hook_without_generic_preparation():
     assert 'retry_incomplete=True' in Path('src/fsffl/product/persistent_webapp.py').read_text()
 
 
-def test_explicit_terminal_discard_preserves_active_coalesced_work():
+@pytest.mark.parametrize('watchdog_failed', [False, True])
+def test_explicit_terminal_discard_preserves_active_coalesced_work(watchdog_failed):
     from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator, IntrinsicBuildStatus
     from threading import Event
     entered, release = Event(), Event()
@@ -482,10 +483,18 @@ def test_explicit_terminal_discard_preserves_active_coalesced_work():
     try:
         coordinator.request(context)
         assert entered.wait(1)
+        if watchdog_failed:
+            coordinator._set(coordinator._key(context),status=IntrinsicBuildStatus.FAILED,
+                             error='HardWatchdogError: fixture')
+        from time import monotonic
+        started = monotonic()
         assert not coordinator.discard_terminal(context)
-        assert coordinator.current(context).status == IntrinsicBuildStatus.RUNNING
+        assert monotonic() - started < .25
+        assert coordinator.current(context).status == (
+            IntrinsicBuildStatus.FAILED if watchdog_failed else IntrinsicBuildStatus.RUNNING)
         release.set()
-        completed = coordinator.wait_for_terminal(context,timeout_seconds=2)
+        coordinator._executor.shutdown(wait=True)
+        completed = coordinator.current(context)
         assert completed.status == IntrinsicBuildStatus.COMPLETED
         assert coordinator.discard_terminal(context)
         assert coordinator.current(context) is None
