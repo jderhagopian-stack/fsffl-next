@@ -382,14 +382,15 @@ def test_shapley_stage_cleanup_preserves_integer_results():
 @pytest.mark.parametrize('after_reclaim,blocked', [(455, False), (513, True)])
 def test_career_stage_reclaims_before_checking_unchanged_hard_limit(monkeypatch, after_reclaim, blocked):
     from fsffl.product import dynamic_career_composition as bridge
+    from fsffl.product import resource_coordinator as resource
     calls = []
     monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
     monkeypatch.setattr(bridge, 'clear_shapley_execution_caches', lambda: calls.append('clear'))
-    monkeypatch.setattr(bridge, 'release_unused_process_memory', lambda **kw: calls.append(kw['label']))
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: calls.append(kw['label']))
     def rss():
         calls.append('rss')
         return after_reclaim * 1024 * 1024
-    monkeypatch.setattr(bridge, 'current_rss_bytes', rss)
+    monkeypatch.setattr(resource, 'current_rss_bytes', rss)
     if blocked:
         with pytest.raises(MemoryError, match='hard memory limit reached before fixture-stage'):
             bridge._reclaim_career_stage('fixture-stage')

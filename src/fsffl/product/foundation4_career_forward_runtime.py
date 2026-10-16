@@ -45,7 +45,7 @@ from .foundation4_shadow_inputs import (
     provide_foundation4_terminal_features,
 )
 from .runtime import UserRuntimeContext
-from .resource_coordinator import HeavyWorkCoordinator, release_unused_process_memory
+from .resource_coordinator import HeavyWorkCoordinator, reclaim_before_heavy_allocation
 from fsffl.value.shapley_intrinsic import clear_shapley_execution_caches
 from fsffl.memory_attribution import sample_rss_phase
 from .foundation4_cohort import align_foundation4_cohort
@@ -527,6 +527,8 @@ class CareerIntrinsicLoader:
         if self._persistence_store is None:
             return
         if component is not None:
+            clear_shapley_execution_caches()
+            reclaim_before_heavy_allocation(label="career-before-component-serialization")
             self._persistence_store.put_artifact(
                 ReusableArtifactRecord(
                     key=self._component_key(context, component),
@@ -534,6 +536,8 @@ class CareerIntrinsicLoader:
                     computed_at=utc_now(),
                 )
             )
+        clear_shapley_execution_caches()
+        reclaim_before_heavy_allocation(label="career-before-contract-serialization")
         payload = contract.model_dump(mode="json")
         payload["_foundation4_dependency_fingerprint"] = dependency_fingerprint
         from .p0_live_candidate_runtime import valid_live_source_manifest
@@ -780,8 +784,6 @@ class CareerIntrinsicLoader:
             # Save the already accepted reference before allocating the live
             # expansion. An interrupted expansion can resume this exact base;
             # without a bound live manifest it is never a completed Career.
-            clear_shapley_execution_caches()
-            release_unused_process_memory(label="career-before-reference-checkpoint")
             with sample_rss_phase("career.reference_checkpoint"):
                 self._persist(
                     context,
@@ -792,7 +794,6 @@ class CareerIntrinsicLoader:
             # Explicit Y4-Y7 readers restore the persisted component on demand.
             # Do not hold its full matrix during candidate acquisition/fitting.
             component = None
-            release_unused_process_memory(label="career-reference-checkpoint-complete")
         contract, source_manifest = self._append_expanded_rostered_contract(context, frozen_contract)
         self._persist(
             context,

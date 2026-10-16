@@ -250,6 +250,7 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
 
 @pytest.mark.parametrize('blocked_stage', [1, 2])
 def test_hosted_career_does_not_allocate_next_stage_above_hard_limit(monkeypatch, blocked_stage):
+    from fsffl.product import resource_coordinator as resource
     state, year_one = _fixture()
     state = state.model_copy(update={'team_states': (
         state.team_states[0].model_copy(update={'roster': (
@@ -259,9 +260,9 @@ def test_hosted_career_does_not_allocate_next_stage_above_hard_limit(monkeypatch
     calls = []
     resident = iter(([513] if blocked_stage == 1 else [455, 513]))
     monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
-    monkeypatch.setattr(bridge, 'current_rss_bytes', lambda: next(resident) * 1024 * 1024)
+    monkeypatch.setattr(resource, 'current_rss_bytes', lambda: next(resident) * 1024 * 1024)
     monkeypatch.setattr(bridge, 'clear_shapley_execution_caches', lambda: None)
-    monkeypatch.setattr(bridge, 'release_unused_process_memory', lambda **kw: None)
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: None)
     def load(_):
         calls.append('year-one')
         return _authority_evidence(year_one)
@@ -276,7 +277,7 @@ def test_hosted_career_does_not_allocate_next_stage_above_hard_limit(monkeypatch
     assert calls == ([] if blocked_stage == 1 else ['year-one'])
     assert result.contract is None
     assert set(result.failures) == {year_one.player_id}
-    assert 'MemoryError: Career hard memory limit reached before' in result.failures[year_one.player_id]
+    assert 'MemoryError: hard memory limit reached before' in result.failures[year_one.player_id]
 
 
 def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
@@ -394,6 +395,39 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     assert candidate.ros_runtime is not None  # public builder result unchanged
     assert result.contract is None
     assert result.failures[candidate_id] == "no F4 components"
+
+    # Every later allocation must stop when the preceding workspace leaves
+    # RSS above the same hard cap: Future contract, Shapley, final composition.
+    from fsffl.product import resource_coordinator as resource
+    monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: None)
+    calls = []
+    def base_future(**kwargs):
+        calls.append('future')
+        return SimpleNamespace(player_ids=(base_year_one.player_id,))
+    def merge(**kwargs):
+        calls.append('shapley')
+        return (), None, (), object()
+    monkeypatch.setattr(base_loader, '_resolve_future_contract', base_future)
+    monkeypatch.setattr(bridge, '_merge_candidate_inputs', merge)
+    monkeypatch.setattr(bridge, '_compose_dynamic_career_contract', lambda **kw: pytest.fail(
+        'over-limit final composition must not start'))
+    def complete_components(*args):
+        return bridge.DynamicCareerComponents({candidate_id: ()}, {candidate_id: object()}, {})
+    for index, label, expected in (
+        (4, 'career-foundation4-complete', []),
+        (5, 'career-before-expanded-shapley', ['future']),
+        (6, 'career-before-final-composition', ['future', 'shapley']),
+    ):
+        calls.clear()
+        samples = iter([455] * (index - 1) + [513])
+        monkeypatch.setattr(resource, 'current_rss_bytes', lambda: next(samples) * 1024 * 1024)
+        with pytest.raises(MemoryError, match=f'hard memory limit reached before {label}'):
+            bridge.build_dynamic_rostered_career_contract(
+                context, SimpleNamespace(), current_intrinsic_loader=base_loader,
+                candidate_builder=lambda *a, **kw: candidate, materializer=complete_components,
+            )
+        assert calls == expected
 
 
 def test_hosted_dynamic_career_bridge_scalarizes_structured_provenance() -> None:

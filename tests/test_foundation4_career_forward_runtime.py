@@ -1156,6 +1156,33 @@ def _fixture_source_manifest(context):
         fingerprints={name: "a" * 64 for name in LIVE_INPUT_SOURCE_NAMES})
 
 
+@pytest.mark.parametrize('has_component,samples,writes', [
+    (False, [513], 0), (True, [513], 0), (True, [455, 513], 1),
+])
+def test_checkpoint_and_final_persistence_guard_each_serialization(monkeypatch, has_component, samples, writes):
+    from fsffl.product import resource_coordinator as resource
+    store = MemoryPersistence()
+    loader = CareerIntrinsicLoader(current_intrinsic_loader=lambda _: None,
+        current_intrinsic_fingerprint_resolver=lambda _: 'fixture', persistence_store=store)
+    monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
+    levels = iter(samples)
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: None)
+    monkeypatch.setattr(resource, 'current_rss_bytes', lambda: next(levels) * 1024 * 1024)
+    monkeypatch.setattr(loader, '_component_key', lambda *args: ArtifactKey(
+        artifact_kind='fixture-component', scope_kind='fixture', scope_id='fixture',
+        input_fingerprint='fixture', model_version='fixture'))
+    calls = []
+    component = SimpleNamespace(model_dump=lambda **kw: (calls.append('component') or {}))
+    def forbidden(**kwargs):
+        pytest.fail('Career serialization must not allocate above the hard cap')
+    contract = SimpleNamespace(model_dump=forbidden)
+    with pytest.raises(MemoryError, match='hard memory limit reached before career-before-'):
+        loader._persist(_context(), dependency_fingerprint='fixture',
+            component=component if has_component else None, contract=contract)
+    assert len(store.artifacts) == writes
+    assert calls == (['component'] if writes else [])
+
+
 def test_reference_checkpoint_resumes_interrupted_expansion_without_refitting(materialized, monkeypatch):
     from fsffl.product import foundation4_career_forward_runtime as runtime
     old_store, _calls, old_loader, context, accepted = materialized
