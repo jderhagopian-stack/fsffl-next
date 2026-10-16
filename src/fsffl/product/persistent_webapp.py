@@ -569,39 +569,8 @@ def _reconcile_hosted_intrinsic(context) -> dict[str, object]:
     except IntrinsicBuildSuperseded as exc:
         raise _webapp.IntelligenceJobInterrupted("lifecycle_switch") from exc
     readiness = _intrinsic_readiness_from_record(record)
-    # Career Intrinsic is a production capability downstream of ready Current
-    # Intrinsic. Always attach/reuse its exact-State lifecycle here so a startup
-    # miss cannot remain stranded after Current Intrinsic later becomes ready.
-    if readiness.get("status") == "full":
-        try:
-            career_record = _career_intrinsic_coordinator.current(context)
-            if career_record is not None and career_record.status == IntrinsicBuildStatus.FAILED:
-                # A startup attempt can legitimately fail while Current Intrinsic is
-                # still restoring. Once Current is ready, discard only that stale
-                # execution record and retry the same governed Career coordinate.
-                _career_intrinsic_coordinator.clear_user(context.user_id)
-                career_record = None
-            if career_record is None:
-                restored_career = _career_intrinsic_coordinator.restore_compatible_staged(context)
-                career_record = restored_career or _career_intrinsic_coordinator.request(context)
-            _logger.info(
-                "FSFFL Career Intrinsic production lifecycle state=%s status=%s estimates=%s",
-                context.league_state.state_id,
-                career_record.status.value if career_record is not None else "unavailable",
-                len(career_record.contract.estimates)
-                if career_record is not None and career_record.contract is not None
-                else 0,
-            )
-        except IntrinsicBuildSuperseded:
-            raise
-        except Exception as exc:
-            # Career Intrinsic is downstream product intelligence; core publication
-            # remains usable while this bounded production capability prepares.
-            _logger.warning(
-                "FSFFL Career Intrinsic production attach unavailable state=%s error=%s",
-                context.league_state.state_id,
-                exc,
-            )
+    # Career is scheduled by the post-publication preparer. Starting it here
+    # overlaps its fitting/restore graph with core presentation composition.
     _logger.info(
         "FSFFL hosted Intrinsic reconciliation state=%s status=%s build=%s forecast=%s estimates=%s",
         context.league_state.state_id,
@@ -1848,6 +1817,10 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
     """Kick Dynasty preparation without putting it on the core publication path."""
     if context.league_state is None:
         return
+    current = _shapley_intrinsic_coordinator.current(context)
+    if (current is None or current.status != IntrinsicBuildStatus.COMPLETED
+            or current.contract is None):
+        return
     record = _career_intrinsic_coordinator.request(context)
     if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
         key = (
@@ -1887,6 +1860,16 @@ def _prepare_presentation_for_user(user_id: str, context) -> None:
         _career_intrinsic_coordinator.add_terminal_callback(context, completed)
 
 def _promote_presentation_for_user(user_id: str, context) -> object | None:
+    """Serialize snapshot allocations with model work under the existing owner."""
+    if not _presentation_continuity.enabled or context.league_state is None:
+        return None
+    with _heavy_work_coordinator.claim(
+        kind="presentation", key=f"{user_id}:{context.league_state.state_id}",
+    ):
+        return _compose_presentation_for_user(user_id, context)
+
+
+def _compose_presentation_for_user(user_id: str, context) -> object | None:
     if not _presentation_continuity.enabled or context.league_state is None:
         return None
     # Prime the bounded Future Forecast cache while the exact authoritative
@@ -2127,22 +2110,32 @@ def _run_lightweight_startup_restore() -> None:
                 )
                 if terminal:
                     try:
-                        # This compatibility probe's result was unused: startup
-                        # always prepares Dynasty opportunistically and promotes the
-                        # already-restored runtime. Avoid pre-reading legacy surfaces;
-                        # current publication promotion remains the only write path.
-                        # Startup never waits for Dynasty. It starts any needed work in
-                        # the background and publishes core/presentation continuity.
-                        _prepare_presentation_for_user(_beta_restore_user, context)
-                        promotion = _promote_presentation_for_user(
-                            _beta_restore_user,
-                            context,
-                        )
-                        if promotion is not None:
-                            _runtime_store.bind_publication_generation_id(
-                                _beta_restore_user,
-                                promotion.publication_generation_id,
+                        # Startup restores existing authority. A missing Career
+                        # artifact requires an explicit refresh, never hidden source
+                        # acquisition/fitting concurrent with browser rehydration.
+                        has_presentation = (
+                            context.publication_generation_id is not None
+                            and _presentation_continuity.has_snapshot(
+                                user_id=_beta_restore_user,
+                                league_id=context.league_state.league.league_id,
+                                league_state_id=context.league_state.state_id,
+                                selected_team_id=context.selected_team_id,
+                                expected_generation_id=context.publication_generation_id,
                             )
+                        )
+                        if not has_presentation:
+                            current = _shapley_intrinsic_coordinator.current(context)
+                            if (current is not None
+                                    and current.status == IntrinsicBuildStatus.COMPLETED
+                                    and current.contract is not None):
+                                promotion = _promote_presentation_for_user(
+                                    _beta_restore_user, context,
+                                )
+                                if promotion is not None:
+                                    _runtime_store.bind_publication_generation_id(
+                                        _beta_restore_user,
+                                        promotion.publication_generation_id,
+                                    )
                     except Exception as exc:
                         _logger.warning(
                             "FSFFL startup presentation backfill unavailable user=%s error=%s",

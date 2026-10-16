@@ -130,8 +130,8 @@ def test_player_board_is_read_only_discovery_with_separate_value_lenses() -> Non
     css = _read(STATIC / "north_star_market.css")
     assert 'api("/api/league/value-lenses?universe=all")' in source
     assert 'api("/api/league/team-views")' in source
-    assert "Broad Market and FSFFL Intrinsic are shown side by side and never blended." in source
-    assert "FSFFL Intrinsic is preparing for the current State/Forecast coordinate; Broad Market remains live." in source
+    assert "Broad Market and 3-Year Intrinsic are shown side by side and never blended." in source
+    assert "3-Year Intrinsic is preparing for the current State/Forecast coordinate; Broad Market remains live." in source
     assert "League Market Value: unavailable" in source
     assert "Team Utility: not part of this board." in source
     for token in (

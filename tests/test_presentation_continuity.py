@@ -884,10 +884,11 @@ def test_dynasty_preparation_is_decoupled_from_core_publication() -> None:
     assert "bind_publication_generation_id" in source
     assert "dynasty_last_good" in source
     assert '"status": "preparing" if preparing else "unavailable"' in source
-    assert (
-        "_prepare_presentation_for_user(_beta_restore_user, context)\n"
-        "                        promotion = _promote_presentation_for_user"
-    ) in source
+    startup = source.split("def _run_lightweight_startup_restore", 1)[1].split("def _start_lightweight_startup_restore", 1)[0]
+    assert "_prepare_presentation_for_user(" not in startup
+    assert "_presentation_continuity.has_snapshot(" in startup
+    assert "if not has_presentation:" in startup
+    assert "expected_generation_id=context.publication_generation_id" in startup
 
 
 def test_dynasty_followup_is_presentation_only_and_generation_fenced() -> None:

@@ -1220,13 +1220,6 @@ def create_app(
     ) -> UserRuntimeContext:
         """Durably compose one owned working generation, then expose it in one swap."""
 
-        # Prepare any presentation-only dependency before taking the publication
-        # sequence lock. A slow shadow restore/build must never block team/league
-        # lifecycle changes; ownership is revalidated under the lock below.
-        preparer = getattr(application.state, "presentation_preparer", None)
-        if callable(preparer):
-            preparer(user_id, store.working_context(user_id))
-
         # Team/league identity changes serialize against the final atomic sequence.
         # Revalidate the worker's ownership *inside* that serialization boundary so
         # an older job can never checkpoint/promote/publish a newer job's generation.
@@ -1282,7 +1275,16 @@ def create_app(
                 raise RuntimeError(
                     "Published intelligence generation could not be durably checkpointed"
                 )
-            return published
+        # Core publication is durable and visible before optional Career work
+        # can allocate its fitting graph. This also keeps publication composition
+        # out of the Career worker's critical memory window.
+        preparer = getattr(application.state, "presentation_preparer", None)
+        if callable(preparer):
+            try:
+                preparer(user_id, published)
+            except Exception:
+                _logger.exception("Optional post-publication preparation failed")
+        return published
 
     application.mount(
         "/static",
