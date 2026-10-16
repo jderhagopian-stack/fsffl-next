@@ -365,7 +365,7 @@ class CareerIntrinsicLoader:
         except (TypeError, ValueError):
             return None
         if self.retryable_incomplete_contract(contract):
-            # A bound input manifest alone does not prove expansion succeeded.
+            # A bound input manifest does not supersede an explicit batch error.
             # Keep this frozen base reusable by an explicit retry, not ready.
             expansion_complete = False
             if require_complete:
@@ -553,13 +553,21 @@ class CareerIntrinsicLoader:
         )
 
     def retryable_incomplete_contract(self, contract) -> bool:
-        """Identify a failed expansion, preserving completed player exceptions."""
-        if (self._expanded_career_contract_loader is None or contract is None
-                or not contract.player_coverage_failures):
+        """Retry producer-owned batch failures, never infer failure from coverage.
+
+        A completed expansion may legitimately have only explicit exceptions.
+        These prefixes are emitted by this bridge's batch error boundaries;
+        player-specific evidence/scoring/identity failures remain completed.
+        """
+        if self._expanded_career_contract_loader is None or contract is None:
             return False
-        from .p0_forecast_runtime import frozen_p0_source_rows
-        reference_ids = {row.player_id for row in frozen_p0_source_rows()}
-        return all(row.player_id in reference_ids for row in contract.estimates)
+        batch_failures = (
+            "dynamic P0 acquisition failed:",
+            "accepted Foundation 4 dynamic materializer failed:",
+            "accepted Foundation 4 dynamic materializer input bundle is not configured",
+        )
+        return any(str(reason).startswith(batch_failures)
+                   for reason in contract.player_coverage_failures.values())
 
     def clear_user_cache(self, user_id: str) -> int:
         with self._lock:

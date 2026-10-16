@@ -501,3 +501,21 @@ def test_explicit_terminal_discard_preserves_active_coalesced_work(watchdog_fail
     finally:
         release.set()
         coordinator._executor.shutdown(wait=True)
+
+
+@pytest.mark.parametrize('reason,retryable', [
+    ('dynamic P0 acquisition failed: fixture provider error',True),
+    ('accepted Foundation 4 dynamic materializer failed: fixture fit error',True),
+    ('accepted Foundation 4 dynamic materializer input bundle is not configured for the hosted process',True),
+    ('active backup lacks a complete single-source Year-1 projection',False),
+    ('Year-1 raw evidence failed strict scoring coverage',False),
+    ('canonical identity/feature evidence missing for player',False),
+    ('verified missing player-specific evidence',False),
+])
+def test_retry_classification_uses_batch_error_boundary_not_numeric_membership(reason,retryable):
+    from fsffl.product.foundation4_career_forward_runtime import CareerIntrinsicLoader
+    loader = CareerIntrinsicLoader(current_intrinsic_loader=lambda ctx:None,
+        current_intrinsic_fingerprint_resolver=lambda ctx:'fixture-current',
+        expanded_career_contract_loader=lambda *args:None,
+        expanded_career_contract_fingerprint_resolver=lambda ctx:'fixture-expansion')
+    assert loader.retryable_incomplete_contract(NS(player_coverage_failures={'fixture':reason})) is retryable

@@ -1197,4 +1197,12 @@ def test_bound_base_only_failure_remains_retryable_and_clears_old_dynamic_errors
     expanded = failed.model_copy(update={'estimates':(*failed.estimates,
         failed.estimates[0].model_copy(update={'player_id':'sleeper:player:dynamic-success'})),
         'player_count':failed.player_count+1})
-    assert not loader.retryable_incomplete_contract(expanded)
+    assert loader.retryable_incomplete_contract(expanded)  # batch status, not membership
+    for completed in (failed, expanded):
+        completed = completed.model_copy(update={'player_coverage_failures':{
+            'sleeper:player:unsupported':'verified missing player-specific evidence'}})
+        assert not loader.retryable_incomplete_contract(completed)
+        loader.clear_user_cache(context.user_id)
+        loader._persist(context,dependency_fingerprint=loader.intrinsic_input_fingerprint(context),
+            component=None,contract=completed,source_manifest=_fixture_source_manifest(context))
+        assert loader.restore_compatible(context) == completed
