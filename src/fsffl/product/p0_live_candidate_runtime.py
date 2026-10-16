@@ -127,6 +127,7 @@ class StatusBasedZeroRosEvidence:
     source_version: str
     observed_at: datetime
     no_expected_2026_participation: bool
+    season: int = 2026
 
     def validate(self) -> None:
         if self.status not in {"out_for_season", "unsigned_no_expected_2026_participation"}:
@@ -137,6 +138,37 @@ class StatusBasedZeroRosEvidence:
             raise ValueError("status evidence timestamp must be timezone-aware")
         if not self.no_expected_2026_participation:
             raise ValueError("status evidence does not confirm no expected 2026 participation")
+
+
+def recorded_status_based_zero_ros_evidence(
+    league_state: LeagueState, *, as_of: datetime,
+) -> dict[str, StatusBasedZeroRosEvidence]:
+    """Admit captured official facts for exact roster identities and cutoff.
+
+    No provider fetch, fantasy-slot inference, or unsigned-player assumption.
+    A newly acquired receipt cannot change a pre-capture replay/publication.
+    """
+    from fsffl.providers.nfl_status_evidence import SEASON_UNAVAILABILITY_RECEIPTS
+
+    if as_of.tzinfo is None:
+        raise ValueError("NFL status admission cutoff must be timezone-aware")
+    roster_ids = {entry.player_id for team in league_state.team_states for entry in team.roster}
+    players = {player.player_id: player for player in league_state.players}
+    return {
+        receipt.player_id: StatusBasedZeroRosEvidence(
+            player_id=receipt.player_id, status="out_for_season",
+            source=receipt.source_url,
+            source_version=f"official-season-unavailability-v1:{receipt.fingerprint}",
+            observed_at=receipt.captured_at,
+            no_expected_2026_participation=True, season=receipt.season,
+        )
+        for receipt in SEASON_UNAVAILABILITY_RECEIPTS
+        if receipt.season == league_state.league.season
+        and receipt.captured_at <= as_of.astimezone(UTC)
+        and receipt.player_id in roster_ids
+        and receipt.player_id in players
+        and players[receipt.player_id].position.value == receipt.position
+    }
 
 
 def _metrics_for_zero_ros(league_state: LeagueState) -> tuple[ForecastMetric, ...]:
@@ -155,6 +187,8 @@ def _status_based_zero_ros(
     as_of: datetime,
 ) -> tuple[ForecastObservation, ...]:
     evidence.validate()
+    if evidence.season != league_state.league.season:
+        raise ValueError("status evidence season differs from governed State")
     if evidence.player_id not in {item.player_id for item in league_state.players}:
         raise ValueError("status evidence identity is outside the exact State")
     if evidence.observed_at.astimezone(UTC) > as_of.astimezone(UTC):
@@ -877,7 +911,13 @@ def build_live_p0_rostered_candidate_forecasts(
     # accepted player catalog confirms an active NFL backup. No missing metric
     # is synthesized, and a fantasy bench slot alone is not role evidence.
     evidence_modes: dict[str, str] = {}
-    fallback_status_evidence = status_based_zero_ros_evidence or {}
+    fallback_status_evidence = (
+        status_based_zero_ros_evidence
+        if status_based_zero_ros_evidence is not None
+        else recorded_status_based_zero_ros_evidence(
+            league_state, as_of=min(cutoff, ros_revision_cutoff),
+        )
+    )
     one_source_rows: dict[tuple[str, str], tuple[ForecastObservation, ...]] = {}
     for item in (*ros_runtime.source_observations, *fallback_ros_observations):
         if item.horizon != ForecastHorizon.REST_OF_SEASON:
@@ -954,7 +994,10 @@ def build_live_p0_rostered_candidate_forecasts(
                     league_item = status_league.get(player_id)
                     if standard_item is None or league_item is None:
                         raise ValueError("status-based Year-1 scoring remains incomplete")
-                    evidence_mode = f"status_based_zero_ros:{status_evidence.status}"
+                    evidence_mode = (
+                        f"status_based_zero_ros:{status_evidence.status}:"
+                        f"{status_evidence.source_version}"
+                    )
                     y1_raw = tuple(
                         item for item in y1_raw if item.player_id != player_id
                     ) + tuple(item for item in status_raw if item.player_id == player_id)

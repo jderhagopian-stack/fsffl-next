@@ -36,6 +36,7 @@ from .foundation4_career_forward_runtime import ExpandedCareerContractResult
 from .p0_live_candidate_runtime import (
     P0LiveCandidateResult,
     build_live_p0_rostered_candidate_forecasts,
+    recorded_status_based_zero_ros_evidence,
 )
 from .private_beta_shapley_runtime import _year_one_forecasts
 from .runtime import UserRuntimeContext
@@ -268,6 +269,14 @@ def dynamic_career_fingerprint(
         "projection_history_revisions": ros_revisions,
         "contract": "dynamic-rostered-p0-career-bridge-v1",
     }
+    status_receipts = recorded_status_based_zero_ros_evidence(
+        context.league_state, as_of=evaluated_at,
+    )
+    if status_receipts:
+        payload["official_nfl_status_receipts"] = [
+            (player_id, row.source_version)
+            for player_id, row in sorted(status_receipts.items())
+        ]
     if include_freshness_epoch:
         payload["live_source_freshness_epoch"] = freshness_epoch
     return hashlib.sha256(
