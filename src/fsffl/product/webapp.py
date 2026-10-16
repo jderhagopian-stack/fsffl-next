@@ -1223,58 +1223,59 @@ def create_app(
         # Team/league identity changes serialize against the final atomic sequence.
         # Revalidate the worker's ownership *inside* that serialization boundary so
         # an older job can never checkpoint/promote/publish a newer job's generation.
-        with store.publication_sequence(user_id):
-            published_identity = store.get(user_id)
-            if (
-                expected_generation is not None
-                and store.league_generation(user_id) != expected_generation
-            ):
-                raise IntelligenceJobInterrupted("league_switch")
-            if (
-                expected_league_id is not None
-                and (
-                    published_identity.league_state is None
-                    or published_identity.league_state.league.league_id
-                    != expected_league_id
-                )
-            ):
-                raise IntelligenceJobInterrupted("league_switch")
-            working = store.working_context(user_id)
-            if working.league_state is None:
-                raise RuntimeError("working intelligence generation has no LeagueState")
-
-            checkpoint = getattr(store, "checkpoint_working_generation", None)
-            if callable(checkpoint) and not checkpoint(user_id):
-                raise RuntimeError(
-                    "Working intelligence generation could not be durably checkpointed"
-                )
-
-            promoter = getattr(application.state, "presentation_promoter", None)
-            if callable(promoter):
-                with store.read_context(user_id, working):
-                    result = promoter(user_id, working)
-                if result is None:
-                    raise RuntimeError(
-                        "Published presentation generation could not be durably promoted"
+        with heavy_claim(kind="presentation", key=f"{user_id}:publication"):
+            with store.publication_sequence(user_id):
+                published_identity = store.get(user_id)
+                if (
+                    expected_generation is not None
+                    and store.league_generation(user_id) != expected_generation
+                ):
+                    raise IntelligenceJobInterrupted("league_switch")
+                if (
+                    expected_league_id is not None
+                    and (
+                        published_identity.league_state is None
+                        or published_identity.league_state.league.league_id
+                        != expected_league_id
                     )
-                generation_id = str(result.publication_generation_id)
-            else:
-                generation_id = (
-                    f"runtime:{working.league_state.state_id}:{uuid4().hex}"
-                )
+                ):
+                    raise IntelligenceJobInterrupted("league_switch")
+                working = store.working_context(user_id)
+                if working.league_state is None:
+                    raise RuntimeError("working intelligence generation has no LeagueState")
 
-            published = store.publish_working_generation(
-                user_id,
-                publication_generation_id=generation_id,
-            )
-            wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
-            if callable(wait_for_checkpoint) and not wait_for_checkpoint(
-                user_id,
-                timeout=180.0,
-            ):
-                raise RuntimeError(
-                    "Published intelligence generation could not be durably checkpointed"
+                checkpoint = getattr(store, "checkpoint_working_generation", None)
+                if callable(checkpoint) and not checkpoint(user_id):
+                    raise RuntimeError(
+                        "Working intelligence generation could not be durably checkpointed"
+                    )
+
+                promoter = getattr(application.state, "presentation_promoter", None)
+                if callable(promoter):
+                    with store.read_context(user_id, working):
+                        result = promoter(user_id, working)
+                    if result is None:
+                        raise RuntimeError(
+                            "Published presentation generation could not be durably promoted"
+                        )
+                    generation_id = str(result.publication_generation_id)
+                else:
+                    generation_id = (
+                        f"runtime:{working.league_state.state_id}:{uuid4().hex}"
+                    )
+
+                published = store.publish_working_generation(
+                    user_id,
+                    publication_generation_id=generation_id,
                 )
+                wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+                if callable(wait_for_checkpoint) and not wait_for_checkpoint(
+                    user_id,
+                    timeout=180.0,
+                ):
+                    raise RuntimeError(
+                        "Published intelligence generation could not be durably checkpointed"
+                    )
         # Core publication is durable and visible before optional Career work
         # can allocate its fitting graph. This also keeps publication composition
         # out of the Career worker's critical memory window.

@@ -37,6 +37,7 @@ def install_league_value_lens_routes(
     background_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
     presentation_payload_loader: PresentationPayloadLoader | None = None,
     career_record_loader: Callable | None = None,
+    career_publication_validator: Callable | None = None,
 ) -> None:
     """Expose Atlas-ready player lenses without creating team value authority."""
 
@@ -51,9 +52,13 @@ def install_league_value_lens_routes(
                     and served == runtime.league_state.state_id)
         reference_ids = (career_reference_ids_from_current(background_coordinator.current(runtime))
                          if can_read and background_coordinator is not None else None)
+        career_record = career_record_loader(runtime) if can_read else None
+        if (career_record is not None and career_publication_validator is not None
+                and not career_publication_validator(runtime, career_record)):
+            career_record = None
         result = attach_career_player_lenses(
             payload,
-            record=career_record_loader(runtime) if can_read else None,
+            record=career_record,
             current_state_id=runtime.league_state.state_id,
             current_generation_id=runtime.publication_generation_id,
             reference_ids=reference_ids,

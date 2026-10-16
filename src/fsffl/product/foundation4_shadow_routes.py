@@ -158,6 +158,7 @@ def install_career_intrinsic_routes(
     loader: CareerIntrinsicLoader,
     coordinator: ShapleyIntrinsicBackgroundCoordinator,
     presentation_payload_loader=None,
+    career_publication_validator=None,
     current_intrinsic_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
 ) -> None:
     def _record(user_id: str):
@@ -213,6 +214,15 @@ def install_career_intrinsic_routes(
                 status_code=503,
                 detail="Career Intrinsic lifecycle completed without a governed contract",
             )
+        if (career_publication_validator is not None
+                and not career_publication_validator(_context, record)):
+            return JSONResponse(status_code=202, content={
+                "status": "building", "build_status": "publication_pending",
+                "capability": "career_intrinsic", "retry_after_ms": 3000,
+                "league_state_id": _context.league_state.state_id,
+                "publication_generation_id": _context.publication_generation_id,
+                "reason": "Career is complete; its presentation publication is pending.",
+            })
         # Product readers need economic totals and provenance, not the full
         # per-horizon uncertainty matrices. Keep the explicit detail endpoint
         # compatible, without allocating those matrices for every browser poll.
@@ -279,10 +289,22 @@ def install_career_intrinsic_routes(
                 "reason": "The League Atlas publication has advanced; promote Atlas before retrying.",
             }
 
+        pending_record = coordinator.current(context)
+        if (pending_record is not None
+                and pending_record.status == IntrinsicBuildStatus.COMPLETED
+                and pending_record.contract is not None
+                and career_publication_validator is not None
+                and not career_publication_validator(context, pending_record)):
+            return _dynasty_publication_payload(context, {
+                "status": "preparing", "build_status": "publication_pending",
+                "league_state_id": state.state_id, "retry_after_ms": 3000,
+                "reason": "Career is complete; its presentation publication is pending.",
+            })
+
         # Canonical Career Intrinsic is authoritative. A persisted presentation
         # snapshot is only last-good fallback while the exact-State production
         # artifact is preparing; it must never mask newly ready Career evidence.
-        record = coordinator.current(context)
+        record = pending_record
         if (
             record is not None
             and record.status == IntrinsicBuildStatus.COMPLETED

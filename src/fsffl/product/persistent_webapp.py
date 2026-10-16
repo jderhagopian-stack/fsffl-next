@@ -1750,6 +1750,7 @@ install_career_intrinsic_routes(
     app,
     current_intrinsic_coordinator=_shapley_intrinsic_coordinator,
     runtime_store=_runtime_store,
+    career_publication_validator=_presentation_continuity.career_publication_matches,
     loader=_career_intrinsic_loader,
     coordinator=_career_intrinsic_coordinator,
     presentation_payload_loader=_presentation_payload_loader,
@@ -1765,6 +1766,7 @@ install_league_value_lens_routes(
     app,
     career_record_loader=_career_intrinsic_coordinator.current,
     runtime_store=_runtime_store,
+    career_publication_validator=_presentation_continuity.career_publication_matches,
     contract_loader=_shapley_intrinsic_loader,
     require_user=_webapp.require_beta_user,
     background_coordinator=_shapley_intrinsic_coordinator,
@@ -1874,7 +1876,17 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
     with _heavy_work_coordinator.claim(
         kind="presentation", key=f"{user_id}:{context.league_state.state_id}",
     ):
-        return _compose_presentation_for_user(user_id, context)
+        with _runtime_store.publication_sequence(user_id):
+            active = _runtime_store.get(user_id)
+            if (active.league_state is None
+                    or active.league_state.state_id != context.league_state.state_id
+                    or active.selected_team_id != context.selected_team_id
+                    or active.publication_generation_id != context.publication_generation_id):
+                return None
+            promotion = _compose_presentation_for_user(user_id, context)
+            if promotion is not None:
+                _runtime_store.bind_publication_generation_id(user_id, promotion.publication_generation_id)
+            return promotion
 
 
 def _compose_presentation_for_user(user_id: str, context) -> object | None:
@@ -2028,34 +2040,35 @@ def _publish_dynasty_presentation_followup(
 ) -> None:
     """Atomically republish presentation only after late Dynasty completion."""
     try:
-        with _runtime_store.publication_sequence(user_id):
-            context = _runtime_store.get(user_id)
-            if (
-                context.league_state is None
-                or context.league_state.state_id != expected_state_id
-            ):
-                return
-            record = _career_intrinsic_coordinator.current(context)
-            if (
-                record is None
-                or record.status != IntrinsicBuildStatus.COMPLETED
-                or record.contract is None
-                or record.league_state_id != expected_state_id
-            ):
-                return
-            promotion = _promote_presentation_for_user(user_id, context)
-            if promotion is None:
-                return
-            _runtime_store.bind_publication_generation_id(
-                user_id,
-                promotion.publication_generation_id,
-            )
-            _logger.info(
-                "FSFFL Dynasty presentation-only follow-up promoted user=%s state=%s generation=%s",
-                user_id,
-                expected_state_id,
-                promotion.publication_generation_id,
-            )
+        with _heavy_work_coordinator.claim(kind="presentation", key=f"{user_id}:{expected_state_id}"):
+            with _runtime_store.publication_sequence(user_id):
+                context = _runtime_store.get(user_id)
+                if (
+                    context.league_state is None
+                    or context.league_state.state_id != expected_state_id
+                ):
+                    return
+                record = _career_intrinsic_coordinator.current(context)
+                if (
+                    record is None
+                    or record.status != IntrinsicBuildStatus.COMPLETED
+                    or record.contract is None
+                    or record.league_state_id != expected_state_id
+                ):
+                    return
+                promotion = _compose_presentation_for_user(user_id, context)
+                if promotion is None:
+                    return
+                _runtime_store.bind_publication_generation_id(
+                    user_id,
+                    promotion.publication_generation_id,
+                )
+                _logger.info(
+                    "FSFFL Dynasty presentation-only follow-up promoted user=%s state=%s generation=%s",
+                    user_id,
+                    expected_state_id,
+                    promotion.publication_generation_id,
+                )
     except Exception:
         _logger.exception(
             "FSFFL Dynasty presentation-only follow-up failed user=%s state=%s",
@@ -2068,7 +2081,9 @@ def _publish_dynasty_presentation_followup(
 
 
 app.state.presentation_preparer = _prepare_presentation_for_user
-app.state.presentation_promoter = _promote_presentation_for_user
+# The generic publication owner acquires heavy admission before its sequence
+# lock, then invokes this composer without nesting a second heavy claim.
+app.state.presentation_promoter = _compose_presentation_for_user
 
 
 def _run_lightweight_startup_restore() -> None:
@@ -2131,19 +2146,19 @@ def _run_lightweight_startup_restore() -> None:
                                 expected_generation_id=context.publication_generation_id,
                             )
                         )
+                        restored_career = _career_intrinsic_coordinator.current(context)
+                        if (has_presentation and restored_career is not None
+                                and restored_career.status == IntrinsicBuildStatus.COMPLETED
+                                and restored_career.contract is not None):
+                            has_presentation = _presentation_continuity.career_publication_matches(
+                                context, restored_career,
+                            )
                         if not has_presentation:
                             current = _shapley_intrinsic_coordinator.current(context)
                             if (current is not None
                                     and current.status == IntrinsicBuildStatus.COMPLETED
                                     and current.contract is not None):
-                                promotion = _promote_presentation_for_user(
-                                    _beta_restore_user, context,
-                                )
-                                if promotion is not None:
-                                    _runtime_store.bind_publication_generation_id(
-                                        _beta_restore_user,
-                                        promotion.publication_generation_id,
-                                    )
+                                _promote_presentation_for_user(_beta_restore_user, context)
                     except Exception as exc:
                         _logger.warning(
                             "FSFFL startup presentation backfill unavailable user=%s error=%s",

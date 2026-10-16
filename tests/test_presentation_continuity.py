@@ -899,7 +899,8 @@ def test_dynasty_followup_is_presentation_only_and_generation_fenced() -> None:
     ]
     assert "_runtime_store.publication_sequence(user_id)" in followup
     assert "context.league_state.state_id != expected_state_id" in followup
-    assert "_promote_presentation_for_user(user_id, context)" in followup
+    assert "_compose_presentation_for_user(user_id, context)" in followup
+    assert followup.index("_heavy_work_coordinator.claim(") < followup.index("_runtime_store.publication_sequence(user_id)")
     assert "start_intelligence_reconciliation" not in followup
     assert "state_loader" not in followup
     assert "simulation" not in followup.lower()
@@ -1021,3 +1022,33 @@ def test_presentation_read_contract_is_tenant_scoped() -> None:
         surface=HOME_SURFACE,
     ) is None
     assert persistence.manifest_read_count == before + 1
+
+
+def test_career_dependency_is_bound_by_compact_manifest_across_restart():
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    state = _state(datetime(2026, 10, 16, tzinfo=UTC))
+    runtime = _runtime(state)
+    record = SimpleNamespace(league_state_id=state.state_id, intrinsic_input_fingerprint='career-fp')
+    raw = {'status': 'preparing', 'league_state_id': state.state_id}
+    def promote():
+        result = continuity.promote(user_id=runtime.user_id, runtime=runtime,
+            builders=((LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE, lambda:dict(raw)),))
+        return replace(runtime, publication_generation_id=result.publication_generation_id)
+    old = promote()
+    assert not continuity.career_publication_matches(old, record)
+    raw.update(status='ready', input_fingerprint='career-fp')
+    promoted = promote()
+    assert not continuity.career_publication_matches(old, record)  # Manifest-first is not runtime binding.
+    assert continuity.career_publication_matches(promoted, record)
+    restarted = PresentationContinuityStore(persistence)
+    before = persistence.read_count
+    assert restarted.career_publication_matches(promoted, record)
+    assert persistence.read_count == before + 1
+    assert persistence.manifest_read_count == persistence.read_count  # No surface/Career graph reads.
+    assert not restarted.career_publication_matches(replace(promoted, selected_team_id='other'), record)
+    assert not restarted.career_publication_matches(promoted,
+        SimpleNamespace(league_state_id=state.state_id, intrinsic_input_fingerprint='corrected-fp'))
+    raw['dynasty_evidence_status'] = 'last_good'
+    assert not continuity.career_publication_matches(promote(), record)
+    assert PresentationContinuityStore(None).career_publication_matches(runtime, record)
