@@ -12,7 +12,7 @@ from fsffl.product.dynamic_career_composition import dynamic_career_fingerprint
 from fsffl.providers.nfl_status_evidence import SEASON_UNAVAILABILITY_RECEIPTS
 from fsffl.state.models import (
     League, LeagueRules, LeagueState, Player, PlayerState, Position, Provenance,
-    RosterEntry, Team, TeamState,
+    RosterEntry, ScoringRule, Team, TeamState,
 )
 from fsffl.forecast.models import ForecastMetric
 from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
@@ -23,7 +23,9 @@ def _state():
     # Synthetic league/teams; only the public receipt player identities are real.
     return LeagueState(
         league=League(league_id='fixture',name='Fixture',season=2026,
-            rules=LeagueRules(team_count=2,roster_size=3,lineup=(),scoring=FROZEN_I1_STANDARD_SCORING)),
+            rules=LeagueRules(team_count=2,roster_size=3,lineup=(),scoring=(
+                *FROZEN_I1_STANDARD_SCORING,ScoringRule(stat='rec',points=.5),
+                ScoringRule(stat='fum_rec',points=2.)))),
         as_of=datetime(2026,10,13,tzinfo=UTC),
         teams=(Team(team_id='a',league_id='fixture',display_name='A'),
                Team(team_id='b',league_id='fixture',display_name='B')),
@@ -97,6 +99,33 @@ def test_verified_zero_ros_retains_actuals_and_rejects_another_season():
                 'league':state.league.model_copy(update={'season':2027})}),evidence=evidence,as_of=capture)
 
 
+def test_whole_season_absence_prevents_phantom_residual_but_keeps_evidence_gates():
+    from fsffl.product.p0_live_candidate_runtime import _score_season_points
+    state = _state()
+    capture = SEASON_UNAVAILABILITY_RECEIPTS[0].captured_at
+    evidence = next(iter(recorded_status_based_zero_ros_evidence(state,as_of=capture).values()))
+    ros = _status_based_zero_ros(league_state=state,evidence=evidence,as_of=capture)
+    raw = _year_one_raw_forecasts(league_state=state,completed_actuals=(),ros_forecasts=ros)
+    normal = _score_season_points(raw,league_state=state,standard=False)[0][evidence.player_id]
+    assert normal.distribution.mean == .06
+    for standard in (False,True):
+        scored = _score_season_points(raw,league_state=state,standard=standard,
+            nonparticipation_evidence=evidence)[0][evidence.player_id]
+        assert scored.distribution.mean == scored.distribution.stddev == 0
+        assert evidence.source_version in scored.model_version
+    conflicting = (raw[0].model_copy(update={
+        'distribution':raw[0].distribution.model_copy(update={'mean':1.})}),*raw[1:])
+    with pytest.raises(ValueError,match='conflicts with Year-1 raw evidence'):
+        _score_season_points(conflicting,league_state=state,standard=False,
+            nonparticipation_evidence=evidence)
+    unsupported = state.model_copy(update={'league':state.league.model_copy(update={
+        'rules':state.league.rules.model_copy(update={'scoring':(
+            *state.league.rules.scoring,ScoringRule(stat='unapproved_stat',points=1.))})})})
+    with pytest.raises(ValueError,match='does not support complete'):
+        _score_season_points(raw,league_state=unsupported,standard=False,
+            nonparticipation_evidence=evidence)
+
+
 def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_rows(monkeypatch):
     """Fixture transports only; retain the real Year-1 and accepted P0 scorer."""
     from fsffl.product import p0_live_candidate_runtime as runtime
@@ -137,3 +166,8 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
         state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=capture,
         projection_history_as_of=capture)
     assert result.year_one_evidence_modes[evidence.player_id] == 'two_source'
+    assert 'nonzero league points but zero frozen standard' in result.failures[evidence.player_id]
+    assert result.future is not None
+    assert len(result.future.contract.forecasts) == 4
+    assert {row.player_id for row in result.future.contract.forecasts} == set(
+        result.year_one_league)-{evidence.player_id}

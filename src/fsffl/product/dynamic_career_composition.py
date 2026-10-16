@@ -37,6 +37,7 @@ from .p0_live_candidate_runtime import (
     P0LiveCandidateResult,
     build_live_p0_rostered_candidate_forecasts,
     recorded_status_based_zero_ros_evidence,
+    STATUS_BASED_YEAR_ONE_SCORING_VERSION,
 )
 from .private_beta_shapley_runtime import _year_one_forecasts
 from .runtime import UserRuntimeContext
@@ -267,12 +268,13 @@ def dynamic_career_fingerprint(
             for row in getattr(evidence, "raw_forecasts", ())
         ],
         "projection_history_revisions": ros_revisions,
-        "contract": "dynamic-rostered-p0-career-bridge-v1",
+        "contract": "dynamic-rostered-p0-career-bridge-v2:isolated-future-scoring",
     }
     status_receipts = recorded_status_based_zero_ros_evidence(
         context.league_state, as_of=evaluated_at,
     )
     if status_receipts:
+        payload["official_nfl_status_scoring"] = STATUS_BASED_YEAR_ONE_SCORING_VERSION
         payload["official_nfl_status_receipts"] = [
             (player_id, row.source_version)
             for player_id, row in sorted(status_receipts.items())

@@ -23,6 +23,7 @@ from fsffl.forecast.in_season_runtime import (
 )
 from fsffl.forecast.league_scoring import (
     ScoringCoverageStatus,
+    classify_scoring_coverage,
     derive_league_scoring_result,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
@@ -128,6 +129,7 @@ class StatusBasedZeroRosEvidence:
     observed_at: datetime
     no_expected_2026_participation: bool
     season: int = 2026
+    entire_season_unavailable: bool = False
 
     def validate(self) -> None:
         if self.status not in {"out_for_season", "unsigned_no_expected_2026_participation"}:
@@ -138,6 +140,9 @@ class StatusBasedZeroRosEvidence:
             raise ValueError("status evidence timestamp must be timezone-aware")
         if not self.no_expected_2026_participation:
             raise ValueError("status evidence does not confirm no expected 2026 participation")
+
+
+STATUS_BASED_YEAR_ONE_SCORING_VERSION = "status-y1-v2:verified-whole-season-no-residual"
 
 
 def recorded_status_based_zero_ros_evidence(
@@ -161,6 +166,7 @@ def recorded_status_based_zero_ros_evidence(
             source_version=f"official-season-unavailability-v1:{receipt.fingerprint}",
             observed_at=receipt.captured_at,
             no_expected_2026_participation=True, season=receipt.season,
+            entire_season_unavailable=True,
         )
         for receipt in SEASON_UNAVAILABILITY_RECEIPTS
         if receipt.season == league_state.league.season
@@ -414,10 +420,31 @@ def _score_season_points(
     *,
     league_state: LeagueState,
     standard: bool,
+    nonparticipation_evidence: StatusBasedZeroRosEvidence | None = None,
 ) -> tuple[dict[str, ForecastObservation], dict[str, Any]]:
     rules = league_state.league.rules
     if standard:
         rules = rules.model_copy(update={"scoring": FROZEN_I1_STANDARD_SCORING})
+    version = "p0-live-y1-scoring-v1"
+    if nonparticipation_evidence is not None and nonparticipation_evidence.entire_season_unavailable:
+        nonparticipation_evidence.validate()
+        if nonparticipation_evidence.season != league_state.league.season:
+            raise ValueError("whole-season nonparticipation evidence season mismatch")
+        if not raw or any(
+            row.player_id != nonparticipation_evidence.player_id
+            or row.distribution.mean != 0.0 or row.distribution.stddev != 0.0
+            or row.as_of < nonparticipation_evidence.observed_at
+            for row in raw
+        ):
+            raise ValueError("whole-season nonparticipation conflicts with Year-1 raw evidence")
+        # Existing residual priors estimate unobserved rare events for players
+        # who may participate. An official entire-season absence establishes
+        # those events as zero; it must not create 0.208 phantom league points.
+        # Keep all ordinary and unsupported scoring coordinates and their gates.
+        known_zero = set(classify_scoring_coverage(rules).provisional_residual_rule_stats)
+        rules = rules.model_copy(update={"scoring":tuple(
+            rule for rule in rules.scoring if rule.stat not in known_zero)})
+        version += ":" + STATUS_BASED_YEAR_ONE_SCORING_VERSION + ":" + nonparticipation_evidence.source_version
     result = derive_league_scoring_result(
         raw,
         rules=rules,
@@ -426,7 +453,7 @@ def _score_season_points(
             if standard
             else "fsffl:p0-live-league-year-one"
         ),
-        model_version="p0-live-y1-scoring-v1",
+        model_version=version,
     )
     if result.coverage.status == ScoringCoverageStatus.INCOMPLETE:
         raise ValueError(
@@ -984,11 +1011,13 @@ def build_live_p0_rostered_candidate_forecasts(
                         tuple(item for item in status_raw if item.player_id == player_id),
                         league_state=league_state,
                         standard=True,
+                        nonparticipation_evidence=status_evidence,
                     )
                     status_league, _ = _score_season_points(
                         tuple(item for item in status_raw if item.player_id == player_id),
                         league_state=league_state,
                         standard=False,
+                        nonparticipation_evidence=status_evidence,
                     )
                     standard_item = status_standard.get(player_id)
                     league_item = status_league.get(player_id)
@@ -1141,12 +1170,23 @@ def build_live_p0_rostered_candidate_forecasts(
             failures[player_id] = str(exc)
 
     if candidate_rows:
+        from .i1_player_scoring import player_scoring_multipliers
+        future_ready = dict(candidate_rows)
+        for player_id in candidate_rows:
+            try:
+                player_scoring_multipliers(
+                    standard_year_one=(y1_standard[player_id],),
+                    league_year_one=(y1_league[player_id],),
+                )
+            except ValueError as exc:
+                failures[player_id] = f"P0 future authority failure: {exc}"
+                future_ready.pop(player_id)
         try:
             # Keep the accepted 335 reference inputs/outputs byte-for-byte
             # separate. This live dynamic batch passes only out-of-cohort rows;
             # it must never re-feed current Y1 evidence into the frozen benchmark
             # parity gate or alter a reference output.
-            dynamic_ids = set(candidate_rows)
+            dynamic_ids = set(future_ready)
             future = build_p0_future_forecast_contract(
                 league_state=league_state,
                 raw_forecasts=tuple(
@@ -1156,9 +1196,9 @@ def build_live_p0_rostered_candidate_forecasts(
                     item for player_id, item in y1_league.items()
                     if player_id in dynamic_ids
                 ),
-                candidate_source_rows=candidate_rows,
+                candidate_source_rows=future_ready,
                 evaluation_as_of=cutoff,
-            )
+            ) if future_ready else None
         except ValueError as exc:
             for player_id in candidate_rows:
                 failures.setdefault(player_id, f"P0 future authority failure: {exc}")
