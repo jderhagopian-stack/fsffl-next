@@ -1049,3 +1049,101 @@ def test_default_career_cutoff_preserves_later_governed_forecast_publication():
     context = replace(context, forecast_evidence=SimpleNamespace(
         runtime_result=SimpleNamespace(evaluation_as_of=published_as_of - timedelta(days=7))))
     assert loader.pin_build_context(context).career_fingerprint_evaluation_as_of == context.league_state.as_of
+
+
+def test_component_idle_timer_releases_matrix_even_if_callback_is_retained(materialized, monkeypatch):
+    import gc
+    from weakref import ref
+    from fsffl.product import foundation4_career_forward_runtime as runtime
+
+    timers = []
+    class RetainedTimer:
+        def __init__(self, interval, callback):
+            self.callback = callback
+            self.daemon = False
+            timers.append(self)
+        def start(self):
+            pass
+        def cancel(self):
+            pass
+    monkeypatch.setattr(runtime, "Timer", RetainedTimer)
+    persistence, _calls, _first, context, _contract = materialized
+    loader = _loader(persistence, [])
+    assert loader.restore_compatible(context) is not None
+    component = loader.current_component(context)
+    assert component is not None
+    matrix = ref(component)
+    del component
+    # Keep the timer/callback alive deliberately: a real Timer also retains
+    # its function after its thread exits. Neither may own the evicted matrix.
+    timers[-1].callback()
+    gc.collect()
+    assert loader._cached_component is None
+    assert loader._component_timer is None
+    assert matrix() is None
+
+
+def test_obsolete_component_timer_cannot_evict_replacement(materialized, monkeypatch):
+    from fsffl.product import foundation4_career_forward_runtime as runtime
+    timers = []
+    class RetainedTimer:
+        def __init__(self, interval, callback):
+            self.callback = callback
+            timers.append(self)
+        def start(self):
+            pass
+        def cancel(self):
+            pass
+    monkeypatch.setattr(runtime, "Timer", RetainedTimer)
+    persistence, _calls, _first, context, _contract = materialized
+    loader = _loader(persistence, [])
+    loader.restore_compatible(context)
+    old = loader.current_component(context)
+    loader._cached_component = None
+    replacement = loader.current_component(context)
+    assert replacement is not old
+    timers[0].callback()
+    assert loader._cached_component is replacement
+    assert loader._component_timer is timers[-1]
+    timers[-1].callback()
+    assert loader._cached_component is None
+
+
+def test_repeated_publication_restore_releases_superseded_contract_graphs():
+    import gc
+    from weakref import ref
+    from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
+
+    class Contract:
+        estimates = ()
+        def __init__(self):
+            self.matrix = bytearray(1024 * 1024)
+    class Restorer:
+        forecast_model_version = "fixture"
+        def restore_compatible(self, context):
+            return Contract()
+        def __call__(self, context):
+            raise AssertionError("restore must not build")
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        loader=Restorer(), max_records=2,
+        intrinsic_input_fingerprint_resolver=lambda ctx: ctx.publication_generation_id,
+    )
+    retained = []
+    for publication in range(12):
+        context = replace(_context(), publication_generation_id=f"publication-{publication}")
+        record = coordinator.restore_compatible(context)
+        assert record is not None
+        retained.append(ref(record.contract))
+        assert len(coordinator._records) <= 2
+    del record
+    gc.collect()
+    assert all(item() is None for item in retained[:-1])
+    assert retained[-1]() is coordinator.current(context).contract
+    assert not coordinator._futures
+    # Different tenant scopes also obey the configured process retention cap.
+    for user in range(8):
+        context = replace(_context(), user_id=f"fixture-user-{user}",
+                          publication_generation_id=f"publication-{user}")
+        assert coordinator.restore_compatible(context) is not None
+        assert len(coordinator._records) <= 2
+    coordinator._executor.shutdown(wait=True)

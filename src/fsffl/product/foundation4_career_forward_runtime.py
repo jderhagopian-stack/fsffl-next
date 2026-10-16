@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, replace
 from contextlib import nullcontext
 from threading import RLock, Timer
 from typing import Callable, Mapping
+from weakref import ref
 
 from fsffl.persistence.contracts import (
     ArtifactKey,
@@ -475,11 +476,18 @@ class CareerIntrinsicLoader:
                 self._cached_component = contract
                 if self._component_timer is not None:
                     self._component_timer.cancel()
+                # A Timer retains its callback after firing. Capture only a
+                # weak reference; otherwise the supposedly evicted full matrix
+                # stays resident through self -> timer -> callback -> contract.
+                component_ref = ref(contract)
                 def evict():
                     with self._lock:
-                        if self._cached_component is contract:
-                            self._cached_component = None
-                self._component_timer = Timer(30.0, evict)
+                        if self._component_timer is timer:
+                            if self._cached_component is component_ref():
+                                self._cached_component = None
+                            self._component_timer = None
+                timer = Timer(30.0, evict)
+                self._component_timer = timer
                 self._component_timer.daemon = True
                 self._component_timer.start()
         return contract
