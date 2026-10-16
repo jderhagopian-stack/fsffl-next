@@ -150,5 +150,7 @@ def test_startup_does_not_probe_unused_legacy_presentation_payloads():
     )[0]
 
     assert "legacy_snapshot_available" not in startup
-    assert "_prepare_presentation_for_user(_beta_restore_user, context)" in startup
+    assert "_prepare_presentation_for_user(_beta_restore_user, context)" not in startup
+    assert "_presentation_continuity.has_snapshot(" in startup
+    assert "expected_generation_id=context.publication_generation_id" in startup
     assert "_promote_presentation_for_user" in startup
