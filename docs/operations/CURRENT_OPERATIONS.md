@@ -1,3 +1,7 @@
+## 2026-10-16 ET — Career corrective PR #461 authorized
+
+Management explicitly replied “Please proceed” to the request for one focused corrective PR after460's failed hosted acceptance. That scoped exception resolves the no-new-PR block below. [PR #461](https://github.com/jderhagopian-stack/fsffl-next/pull/461) reuses the existing Career branch and saved correction `fa03e614fa30b475e1772a33f3abecd80cbe402a`; no competing workstream, new model, hosting plan or service. Proceed through exact-head CI/Stable and review, authorized merge/deployment to the existing service, then actual hosted refresh/restart/State/index/Dynasty/Simulation acceptance. Do not repeat a heavy hosted refresh before corrected code is verified and deployed. Keep405 open until outcomes pass. Prior failure evidence and252-player reference ledger remain unchanged.
+
 ## 2026-10-16 ET — Career #405: deployed acceptance failed; narrow correction prepared
 
 PR #460 merged as `82b59fb181bbfefd705205dec6209d9234d86ae1` and deployed to the existing service under Management's latest explicit authorization to merge/deploy if needed to enable testing. Candidate `eee29871daac9ba646e156cadac00d948c17f2fc` passed CI38930857317 (295 focused plus parity) and Stable38934202420 (2,424 passed); merged tree exactly matched the tested tree. This is deployment evidence, not completed acceptance.
