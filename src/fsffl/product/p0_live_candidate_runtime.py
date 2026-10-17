@@ -36,7 +36,6 @@ from fsffl.providers.sleeper_weekly_stats import (
     SleeperWeeklyStatsSource,
 )
 from fsffl.state.models import LeagueState, Position, Provenance, ProviderRef
-from fsffl.forecast.projection_history import ProjectionSelector
 from fsffl.forecast.in_season_orchestration import canonical_week_window
 
 from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
@@ -893,10 +892,12 @@ def build_live_p0_rostered_candidate_forecasts(
     _, period_end = canonical_week_window(league_state.league.season, 18)
     saved_ros_revisions = None
     if projection_history_reader is not None:
+        from fsffl.forecast.projection_history import career_ros_projection_selector
+
         saved_ros_revisions = projection_history_reader.latest_revisions(
-            ProjectionSelector(
+            career_ros_projection_selector(
                 season=league_state.league.season,
-                horizon=ForecastHorizon.REST_OF_SEASON,
+                completed_through_week=completed,
                 as_of=ros_revision_cutoff,
             )
         )
