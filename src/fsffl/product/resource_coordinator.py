@@ -230,6 +230,16 @@ def release_unused_process_memory(*, label: str) -> dict[str, object]:
     return payload
 
 
+def reclaim_before_heavy_allocation(*, label: str) -> None:
+    """Apply the existing process hard cap between serialized heavy stages."""
+    release_unused_process_memory(label=label)
+    limit = int(os.getenv("FSFFL_MEMORY_LIMIT_BYTES", str(DEFAULT_MEMORY_LIMIT_BYTES)))
+    if limit <= 0:
+        raise ValueError("memory_limit_bytes must be positive")
+    if current_rss_bytes() > limit:
+        raise MemoryError(f"hard memory limit reached before {label}")
+
+
 class HeavyWorkCoordinator:
     """Process-wide admission gate for memory-heavy private-beta work.
 

@@ -93,6 +93,19 @@ def _replacement_options_cached(
     return False, tuple(outgoing_options)
 
 
+def clear_shapley_execution_caches() -> int:
+    """Drop pure integer execution aids at a heavy-stage handoff.
+
+    No forecasts, draws, values or model authority are cached here. Clearing
+    these tables merely recomputes the same integer checks on the next use.
+    """
+    removed = (_valid_counts_cached.cache_info().currsize
+               + _replacement_options_cached.cache_info().currsize)
+    _replacement_options_cached.cache_clear()
+    _valid_counts_cached.cache_clear()
+    return removed
+
+
 class _Basis:
     def __init__(self, caps: tuple[tuple[tuple[int, ...], int], ...]) -> None:
         self.caps = caps

@@ -366,6 +366,39 @@ def test_shapley_integer_memoization_is_bounded_and_eviction_preserves_exact_res
         valid.cache_clear(); options.cache_clear()
 
 
+def test_shapley_stage_cleanup_preserves_integer_results():
+    import fsffl.value.shapley_intrinsic as shapley
+    caps = (((0,), 12), ((0, 1, 2, 3), 96))
+    counts = (12, 24, 36, 12)
+    shapley.clear_shapley_execution_caches()
+    expected = tuple(shapley._replacement_options_cached(caps, counts, i) for i in range(4))
+    assert shapley.clear_shapley_execution_caches() > 0
+    assert shapley._valid_counts_cached.cache_info().currsize == 0
+    assert shapley._replacement_options_cached.cache_info().currsize == 0
+    assert tuple(shapley._replacement_options_cached(caps, counts, i) for i in range(4)) == expected
+    shapley.clear_shapley_execution_caches()
+
+
+@pytest.mark.parametrize('after_reclaim,blocked', [(455, False), (513, True)])
+def test_career_stage_reclaims_before_checking_unchanged_hard_limit(monkeypatch, after_reclaim, blocked):
+    from fsffl.product import dynamic_career_composition as bridge
+    from fsffl.product import resource_coordinator as resource
+    calls = []
+    monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
+    monkeypatch.setattr(bridge, 'clear_shapley_execution_caches', lambda: calls.append('clear'))
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: calls.append(kw['label']))
+    def rss():
+        calls.append('rss')
+        return after_reclaim * 1024 * 1024
+    monkeypatch.setattr(resource, 'current_rss_bytes', rss)
+    if blocked:
+        with pytest.raises(MemoryError, match='hard memory limit reached before fixture-stage'):
+            bridge._reclaim_career_stage('fixture-stage')
+    else:
+        bridge._reclaim_career_stage('fixture-stage')
+    assert calls == ['clear', 'fixture-stage', 'rss']
+
+
 @pytest.mark.parametrize('retry_after_reuse', [False, True])
 @pytest.mark.parametrize('preparation_fails', [False, True])
 def test_explicit_core_reuse_retries_optional_career_without_rebuilding(retry_after_reuse, preparation_fails):

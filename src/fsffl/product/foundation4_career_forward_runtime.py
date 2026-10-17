@@ -45,12 +45,16 @@ from .foundation4_shadow_inputs import (
     provide_foundation4_terminal_features,
 )
 from .runtime import UserRuntimeContext
-from .resource_coordinator import HeavyWorkCoordinator
+from .resource_coordinator import HeavyWorkCoordinator, reclaim_before_heavy_allocation
+from fsffl.value.shapley_intrinsic import clear_shapley_execution_caches
+from fsffl.memory_attribution import sample_rss_phase
 from .foundation4_cohort import align_foundation4_cohort
 
 
 FOUNDATION4_Y4_Y7_ARTIFACT_KIND = "foundation4_long_horizon_y4_y7_shadow"
 CAREER_INTRINSIC_ARTIFACT_KIND = "career_intrinsic_v1"
+CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND = "career_intrinsic_reference_checkpoint_v1"
+_UNREAD_CAREER_RECORD = object()
 CAREER_INTRINSIC_SCOPE_KIND = "league_intrinsic"
 # Read-only migration aliases for the accepted Foundation 4 persisted authority.
 LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = "foundation4_career_forward_intrinsic_shadow"
@@ -314,13 +318,27 @@ class CareerIntrinsicLoader:
         context: UserRuntimeContext,
         *,
         require_complete: bool = False,
+        canonical_record: ReusableArtifactRecord | None | object = _UNREAD_CAREER_RECORD,
     ) -> CareerForwardIntrinsicShadowContract | None:
         if self._persistence_store is None or context.league_state is None:
             return None
         fingerprint = self.intrinsic_input_fingerprint(context)
-        record = self._persistence_store.get_reusable_artifact(
-            self._career_key(context, fingerprint)
-        )
+        prefetched = canonical_record is not _UNREAD_CAREER_RECORD
+        record = canonical_record if prefetched else None
+        if not require_complete and record is None:
+            # Only the owned build may read an incomplete reference. A refresh
+            # can share the stable durable key with last-good completed output;
+            # checkpoints must never replace that output or restore as ready.
+            record = self._persistence_store.get_reusable_artifact(
+                self._reference_checkpoint_key(context, fingerprint)
+            )
+            if (record is not None
+                    and record.payload.get("_foundation4_dependency_fingerprint") != fingerprint):
+                record = None
+        if record is None and not prefetched:
+            record = self._persistence_store.get_reusable_artifact(
+                self._career_key(context, fingerprint)
+            )
         migrated_legacy = False
         if record is None:
             # Foundation 4 was accepted with a shadow-named persistence key. Reuse
@@ -513,6 +531,18 @@ class CareerIntrinsicLoader:
                 self._component_timer.start()
         return contract
 
+    def _reference_checkpoint_key(
+        self, context: UserRuntimeContext, fingerprint: str
+    ) -> ArtifactKey:
+        key = self._career_key(context, fingerprint)
+        return ArtifactKey(
+            artifact_kind=CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND,
+            scope_kind=key.scope_kind,
+            scope_id=key.scope_id,
+            input_fingerprint=key.input_fingerprint,
+            model_version=key.model_version,
+        )
+
     def _persist(
         self,
         context: UserRuntimeContext,
@@ -525,6 +555,8 @@ class CareerIntrinsicLoader:
         if self._persistence_store is None:
             return
         if component is not None:
+            clear_shapley_execution_caches()
+            reclaim_before_heavy_allocation(label="career-before-component-serialization")
             self._persistence_store.put_artifact(
                 ReusableArtifactRecord(
                     key=self._component_key(context, component),
@@ -532,13 +564,15 @@ class CareerIntrinsicLoader:
                     computed_at=utc_now(),
                 )
             )
+        clear_shapley_execution_caches()
+        reclaim_before_heavy_allocation(label="career-before-contract-serialization")
         payload = contract.model_dump(mode="json")
         payload["_foundation4_dependency_fingerprint"] = dependency_fingerprint
         from .p0_live_candidate_runtime import valid_live_source_manifest
         source_complete = valid_live_source_manifest(source_manifest)
-        payload["_career_expansion_complete"] = (
-            self._expanded_career_contract_loader is None or source_complete
-        )
+        complete = (self._expanded_career_contract_loader is None
+                    or (source_complete and not self.retryable_incomplete_contract(contract)))
+        payload["_career_expansion_complete"] = complete
         if source_complete:
             payload["_career_source_manifest"] = dict(source_manifest)
             payload["_career_complete_input_fingerprint"] = canonical_fingerprint(
@@ -546,7 +580,8 @@ class CareerIntrinsicLoader:
             )
         self._persistence_store.put_artifact(
             ReusableArtifactRecord(
-                key=self._career_key(context, dependency_fingerprint),
+                key=(self._career_key(context, dependency_fingerprint) if complete
+                     else self._reference_checkpoint_key(context, dependency_fingerprint)),
                 payload=payload,
                 computed_at=utc_now(),
             )
@@ -693,10 +728,19 @@ class CareerIntrinsicLoader:
             ):
                 return self._cached_contract
 
-        completed = self.restore_compatible(context)
+        canonical_record = (self._persistence_store.get_reusable_artifact(
+            self._career_key(context, dependency_fingerprint)
+        ) if self._persistence_store is not None else None)
+        completed = self._restore_frozen_compatible(
+            context, require_complete=True, canonical_record=canonical_record,
+        )
         if completed is not None:
             return completed
-        restored = self._restore_frozen_compatible(context)
+        if (canonical_record is not None
+                and canonical_record.payload.get("_foundation4_dependency_fingerprint") != dependency_fingerprint):
+            canonical_record = None  # Release rejected transport before checkpoint read.
+        restored = self._restore_frozen_compatible(context, canonical_record=canonical_record)
+        canonical_record = None  # Typed frozen contract owns the resumed inputs now.
         if restored is not None:
             expanded_restored, source_manifest = self._append_expanded_rostered_contract(
                 context, restored
@@ -773,6 +817,21 @@ class CareerIntrinsicLoader:
         # typed contract/component, not these transient forecast/tail inputs.
         del long_forecast, terminal_features, tails
         frozen_contract = contract
+        if (self._expanded_career_contract_loader is not None
+                and self._persistence_store is not None):
+            # Save the already accepted reference before allocating the live
+            # expansion. An interrupted expansion can resume this exact base;
+            # without a bound live manifest it is never a completed Career.
+            with sample_rss_phase("career.reference_checkpoint"):
+                self._persist(
+                    context,
+                    dependency_fingerprint=dependency_fingerprint,
+                    component=component,
+                    contract=frozen_contract,
+                )
+            # Explicit Y4-Y7 readers restore the persisted component on demand.
+            # Do not hold its full matrix during candidate acquisition/fitting.
+            component = None
         contract, source_manifest = self._append_expanded_rostered_contract(context, frozen_contract)
         self._persist(
             context,

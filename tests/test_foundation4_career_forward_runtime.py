@@ -13,6 +13,7 @@ from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord, utc
 from fsffl.product.foundation4_career_forward_runtime import (
     validate_foundation4_expanded_acceptance_cohort,
     CAREER_INTRINSIC_ARTIFACT_KIND,
+    CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND,
     CAREER_INTRINSIC_SCOPE_KIND,
     LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
     LEGACY_FOUNDATION4_SCOPE_KIND,
@@ -1154,6 +1155,187 @@ def _fixture_source_manifest(context):
     from fsffl.product.p0_live_candidate_runtime import LIVE_INPUT_SOURCE_NAMES, live_source_manifest
     return live_source_manifest(captured_at=context.league_state.as_of,
         fingerprints={name: "a" * 64 for name in LIVE_INPUT_SOURCE_NAMES})
+
+
+@pytest.mark.parametrize('has_component,samples,writes', [
+    (False, [513], 0), (True, [513], 0), (True, [455, 513], 1),
+])
+def test_checkpoint_and_final_persistence_guard_each_serialization(monkeypatch, has_component, samples, writes):
+    from fsffl.product import resource_coordinator as resource
+    store = MemoryPersistence()
+    loader = CareerIntrinsicLoader(current_intrinsic_loader=lambda _: None,
+        current_intrinsic_fingerprint_resolver=lambda _: 'fixture', persistence_store=store)
+    monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
+    levels = iter(samples)
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: None)
+    monkeypatch.setattr(resource, 'current_rss_bytes', lambda: next(levels) * 1024 * 1024)
+    monkeypatch.setattr(loader, '_component_key', lambda *args: ArtifactKey(
+        artifact_kind='fixture-component', scope_kind='fixture', scope_id='fixture',
+        input_fingerprint='fixture', model_version='fixture'))
+    calls = []
+    component = SimpleNamespace(model_dump=lambda **kw: (calls.append('component') or {}))
+    def forbidden(**kwargs):
+        pytest.fail('Career serialization must not allocate above the hard cap')
+    contract = SimpleNamespace(model_dump=forbidden)
+    with pytest.raises(MemoryError, match='hard memory limit reached before career-before-'):
+        loader._persist(_context(), dependency_fingerprint='fixture',
+            component=component if has_component else None, contract=contract)
+    assert len(store.artifacts) == writes
+    assert calls == (['component'] if writes else [])
+
+
+def test_reference_checkpoint_resumes_interrupted_expansion_without_refitting(materialized, monkeypatch):
+    from fsffl.product import foundation4_career_forward_runtime as runtime
+    old_store, _calls, old_loader, context, accepted = materialized
+    component = old_loader.current_component(context)
+    assert component is not None
+    monkeypatch.setattr(runtime, 'build_long_term_intrinsic_shadow', lambda *a, **k: component)
+    store = MemoryPersistence()
+    calls = []
+    def interrupted(ctx, frozen):
+        assert store.get_reusable_artifact(loader._career_key(ctx, loader.intrinsic_input_fingerprint(ctx))) is None
+        saved = store.get_reusable_artifact(loader._reference_checkpoint_key(ctx, loader.intrinsic_input_fingerprint(ctx)))
+        assert saved is not None
+        assert saved.payload['_career_expansion_complete'] is False
+        assert store.get_reusable_artifact(loader._component_key(ctx, component)) is not None
+        assert loader.restore_compatible(ctx) is None
+        calls.append('interrupted')
+        raise RuntimeError('fixture interrupted expansion')
+    def make(expander, current):
+        return CareerIntrinsicLoader(current_intrinsic_loader=current,
+            current_intrinsic_fingerprint_resolver=lambda _: 'current-fp-v1',
+            persistence_store=store, expanded_career_contract_loader=expander,
+            expanded_career_contract_fingerprint_resolver=lambda _: 'fixture-dynamic')
+    loader = make(interrupted, lambda _: _current_intrinsic())
+    with pytest.raises(RuntimeError, match='fixture interrupted expansion'):
+        loader(context)
+    def forbidden(*args, **kwargs):
+        raise AssertionError('checkpoint resume must not recalculate frozen reference')
+    monkeypatch.setattr(runtime, 'build_long_term_intrinsic_shadow', forbidden)
+    def finish(ctx, frozen):
+        assert frozen.model_dump() == accepted.model_dump()
+        calls.append('resumed')
+        return ExpandedCareerContractResult(contract=None, failures={},
+            source_manifest=_fixture_source_manifest(ctx))
+    resumed = make(finish, forbidden)
+    result = resumed(context)
+    restored = make(forbidden, forbidden).restore_compatible(context)
+    assert restored == result == accepted
+    assert calls == ['interrupted', 'resumed']
+    assert sum(r.key.artifact_kind == FOUNDATION4_Y4_Y7_ARTIFACT_KIND for r in store.artifacts) == 1
+    assert sum(r.key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND for r in store.artifacts) == 1
+    assert sum(r.key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND for r in store.artifacts) == 1
+
+
+def test_refresh_checkpoint_and_batch_failure_preserve_same_key_last_good(materialized, monkeypatch):
+    from datetime import timedelta
+    _store, _calls, _loader, context, accepted = materialized
+    previous = replace(context, career_fingerprint_evaluation_as_of=context.league_state.as_of)
+    refreshed = replace(previous, career_fingerprint_evaluation_as_of=context.league_state.as_of + timedelta(hours=6))
+    store = MemoryPersistence()
+    def forbidden(*args):
+        pytest.fail('restoration must not acquire or recalculate')
+    def make():
+        return CareerIntrinsicLoader(current_intrinsic_loader=forbidden,
+            current_intrinsic_fingerprint_resolver=lambda _: 'unchanged-current',
+            persistence_store=store, expanded_career_contract_loader=forbidden,
+            expanded_career_contract_fingerprint_resolver=lambda ctx: ctx.career_fingerprint_evaluation_as_of.isoformat(),
+            career_artifact_key_fingerprint_resolver=lambda _: 'stable-without-freshness')
+    loader = make()
+    old_fp = loader.intrinsic_input_fingerprint(previous)
+    new_fp = loader.intrinsic_input_fingerprint(refreshed)
+    key = loader._career_key(previous, old_fp)
+    assert old_fp != new_fp and key == loader._career_key(refreshed, new_fp)
+    assert loader._reference_checkpoint_key(previous, old_fp) == loader._reference_checkpoint_key(refreshed, new_fp)
+    loader._persist(previous, dependency_fingerprint=old_fp, component=None,
+        contract=accepted, source_manifest=_fixture_source_manifest(previous))
+    last_good = store.get_reusable_artifact(key)
+    loader._persist(refreshed, dependency_fingerprint=new_fp, component=None, contract=accepted)
+    assert store.get_reusable_artifact(key) is last_good
+    assert make().restore_compatible(previous) == accepted
+    assert make().restore_compatible(refreshed) is None
+    assert make()._restore_frozen_compatible(refreshed) == accepted
+    # Owned recovery reads canonical once, releases its rejected transport,
+    # then reads the exact checkpoint without another full canonical read.
+    from weakref import ref
+    reads, canonical_records = [], []
+    original_read = store.get_reusable_artifact
+    def read(key):
+        record = original_read(key)
+        reads.append(key.artifact_kind)
+        if key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND:
+            assert canonical_records and all(item() is None for item in canonical_records)
+        if record is None:
+            return None
+        transport = replace(record, payload=dict(record.payload))
+        if key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND:
+            canonical_records.append(ref(transport))
+        return transport
+    def interrupted(*args):
+        raise RuntimeError('fixture interrupted resumed expansion')
+    resumed = make()
+    resumed._expanded_career_contract_loader = interrupted
+    with monkeypatch.context() as patch:
+        patch.setattr(store, 'get_reusable_artifact', read)
+        with pytest.raises(RuntimeError, match='fixture interrupted resumed expansion'):
+            resumed(refreshed)
+    assert reads == [CAREER_INTRINSIC_ARTIFACT_KIND, CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND]
+    assert store.get_reusable_artifact(key) is last_good
+    failed = accepted.model_copy(update={'player_coverage_failures': {
+        'fixture-dynamic': 'dynamic P0 acquisition failed: fixture interrupted refresh'}})
+    loader._persist(refreshed, dependency_fingerprint=new_fp, component=None,
+        contract=failed, source_manifest=_fixture_source_manifest(refreshed))
+    assert store.get_reusable_artifact(key) is last_good
+    assert make().restore_compatible(previous) == accepted
+    assert make().restore_compatible(refreshed) is None
+    assert make()._restore_frozen_compatible(refreshed) == accepted
+    # Only a successful completed expansion replaces the canonical row.
+    loader._persist(refreshed, dependency_fingerprint=new_fp, component=None,
+        contract=accepted, source_manifest=_fixture_source_manifest(refreshed))
+    assert store.get_reusable_artifact(key) is not last_good
+    assert make().restore_compatible(refreshed) == accepted
+
+
+@pytest.mark.parametrize('stale_checkpoint', [False, True])
+def test_owned_refresh_does_not_reread_canonical_without_matching_checkpoint(materialized, monkeypatch, stale_checkpoint):
+    from datetime import timedelta
+    from weakref import ref
+    _store, _calls, _loader, context, accepted = materialized
+    previous = replace(context, career_fingerprint_evaluation_as_of=context.league_state.as_of)
+    refreshed = replace(previous, career_fingerprint_evaluation_as_of=context.league_state.as_of + timedelta(hours=6))
+    store = MemoryPersistence()
+    def reference_needed(*args):
+        raise RuntimeError('fixture needs current reference')
+    loader = CareerIntrinsicLoader(current_intrinsic_loader=reference_needed,
+        current_intrinsic_fingerprint_resolver=lambda _: 'same-current', persistence_store=store,
+        expanded_career_contract_loader=reference_needed,
+        expanded_career_contract_fingerprint_resolver=lambda ctx: ctx.career_fingerprint_evaluation_as_of.isoformat(),
+        career_artifact_key_fingerprint_resolver=lambda _: 'stable-without-freshness')
+    old_fp = loader.intrinsic_input_fingerprint(previous)
+    loader._persist(previous, dependency_fingerprint=old_fp, component=None,
+        contract=accepted, source_manifest=_fixture_source_manifest(previous))
+    if stale_checkpoint:
+        loader._persist(previous, dependency_fingerprint=old_fp, component=None, contract=accepted)
+    original = store.get_reusable_artifact
+    reads, transports = [], []
+    def read(key):
+        reads.append(key.artifact_kind)
+        if key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND:
+            assert all(item() is None for item in transports)
+        record = original(key)
+        if record is None:
+            return None
+        transport = replace(record, payload=dict(record.payload))
+        if key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND:
+            transports.append(ref(transport))
+        return transport
+    with monkeypatch.context() as patch:
+        patch.setattr(store, 'get_reusable_artifact', read)
+        with pytest.raises(RuntimeError, match='fixture needs current reference'):
+            loader(refreshed)
+    assert reads.count(CAREER_INTRINSIC_ARTIFACT_KIND) == 1
+    assert reads.count(CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND) == 1
+    assert loader.restore_compatible(previous) == accepted
 
 
 def test_completed_expansion_requires_valid_bound_live_input_manifest(materialized):
