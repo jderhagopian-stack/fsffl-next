@@ -1296,6 +1296,48 @@ def test_refresh_checkpoint_and_batch_failure_preserve_same_key_last_good(materi
     assert make().restore_compatible(refreshed) == accepted
 
 
+@pytest.mark.parametrize('stale_checkpoint', [False, True])
+def test_owned_refresh_does_not_reread_canonical_without_matching_checkpoint(materialized, monkeypatch, stale_checkpoint):
+    from datetime import timedelta
+    from weakref import ref
+    _store, _calls, _loader, context, accepted = materialized
+    previous = replace(context, career_fingerprint_evaluation_as_of=context.league_state.as_of)
+    refreshed = replace(previous, career_fingerprint_evaluation_as_of=context.league_state.as_of + timedelta(hours=6))
+    store = MemoryPersistence()
+    def reference_needed(*args):
+        raise RuntimeError('fixture needs current reference')
+    loader = CareerIntrinsicLoader(current_intrinsic_loader=reference_needed,
+        current_intrinsic_fingerprint_resolver=lambda _: 'same-current', persistence_store=store,
+        expanded_career_contract_loader=reference_needed,
+        expanded_career_contract_fingerprint_resolver=lambda ctx: ctx.career_fingerprint_evaluation_as_of.isoformat(),
+        career_artifact_key_fingerprint_resolver=lambda _: 'stable-without-freshness')
+    old_fp = loader.intrinsic_input_fingerprint(previous)
+    loader._persist(previous, dependency_fingerprint=old_fp, component=None,
+        contract=accepted, source_manifest=_fixture_source_manifest(previous))
+    if stale_checkpoint:
+        loader._persist(previous, dependency_fingerprint=old_fp, component=None, contract=accepted)
+    original = store.get_reusable_artifact
+    reads, transports = [], []
+    def read(key):
+        reads.append(key.artifact_kind)
+        if key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND:
+            assert all(item() is None for item in transports)
+        record = original(key)
+        if record is None:
+            return None
+        transport = replace(record, payload=dict(record.payload))
+        if key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND:
+            transports.append(ref(transport))
+        return transport
+    with monkeypatch.context() as patch:
+        patch.setattr(store, 'get_reusable_artifact', read)
+        with pytest.raises(RuntimeError, match='fixture needs current reference'):
+            loader(refreshed)
+    assert reads.count(CAREER_INTRINSIC_ARTIFACT_KIND) == 1
+    assert reads.count(CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND) == 1
+    assert loader.restore_compatible(previous) == accepted
+
+
 def test_completed_expansion_requires_valid_bound_live_input_manifest(materialized):
     import copy
     persistence, _calls, _base_loader, context, base = materialized

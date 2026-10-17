@@ -54,6 +54,7 @@ from .foundation4_cohort import align_foundation4_cohort
 FOUNDATION4_Y4_Y7_ARTIFACT_KIND = "foundation4_long_horizon_y4_y7_shadow"
 CAREER_INTRINSIC_ARTIFACT_KIND = "career_intrinsic_v1"
 CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND = "career_intrinsic_reference_checkpoint_v1"
+_UNREAD_CAREER_RECORD = object()
 CAREER_INTRINSIC_SCOPE_KIND = "league_intrinsic"
 # Read-only migration aliases for the accepted Foundation 4 persisted authority.
 LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = "foundation4_career_forward_intrinsic_shadow"
@@ -317,12 +318,14 @@ class CareerIntrinsicLoader:
         context: UserRuntimeContext,
         *,
         require_complete: bool = False,
+        canonical_record: ReusableArtifactRecord | None | object = _UNREAD_CAREER_RECORD,
     ) -> CareerForwardIntrinsicShadowContract | None:
         if self._persistence_store is None or context.league_state is None:
             return None
         fingerprint = self.intrinsic_input_fingerprint(context)
-        record = None
-        if not require_complete:
+        prefetched = canonical_record is not _UNREAD_CAREER_RECORD
+        record = canonical_record if prefetched else None
+        if not require_complete and record is None:
             # Only the owned build may read an incomplete reference. A refresh
             # can share the stable durable key with last-good completed output;
             # checkpoints must never replace that output or restore as ready.
@@ -332,7 +335,7 @@ class CareerIntrinsicLoader:
             if (record is not None
                     and record.payload.get("_foundation4_dependency_fingerprint") != fingerprint):
                 record = None
-        if record is None:
+        if record is None and not prefetched:
             record = self._persistence_store.get_reusable_artifact(
                 self._career_key(context, fingerprint)
             )
@@ -725,10 +728,19 @@ class CareerIntrinsicLoader:
             ):
                 return self._cached_contract
 
-        completed = self.restore_compatible(context)
+        canonical_record = (self._persistence_store.get_reusable_artifact(
+            self._career_key(context, dependency_fingerprint)
+        ) if self._persistence_store is not None else None)
+        completed = self._restore_frozen_compatible(
+            context, require_complete=True, canonical_record=canonical_record,
+        )
         if completed is not None:
             return completed
-        restored = self._restore_frozen_compatible(context)
+        if (canonical_record is not None
+                and canonical_record.payload.get("_foundation4_dependency_fingerprint") != dependency_fingerprint):
+            canonical_record = None  # Release rejected transport before checkpoint read.
+        restored = self._restore_frozen_compatible(context, canonical_record=canonical_record)
+        canonical_record = None  # Typed frozen contract owns the resumed inputs now.
         if restored is not None:
             expanded_restored, source_manifest = self._append_expanded_rostered_contract(
                 context, restored
