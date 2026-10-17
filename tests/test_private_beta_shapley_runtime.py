@@ -515,6 +515,13 @@ def test_dynamic_career_fingerprint_changes_when_ros_revision_identity_changes()
         version = "ros-v1"
 
         def latest_revision_fingerprints(self, _selector):
+            from fsffl.forecast.projection_history import career_ros_projection_selector
+
+            assert _selector == career_ros_projection_selector(
+                season=state.league.season,
+                completed_through_week=state.completed_through_week or 0,
+                as_of=now,
+            )
             return ({"provider": "cbs", "content_fingerprint": self.version},)
 
     reader = Reader()
@@ -526,6 +533,20 @@ def test_dynamic_career_fingerprint_changes_when_ros_revision_identity_changes()
         context, projection_history_reader=reader, now=now
     )
     assert first != second
+
+
+def test_terminal_career_fingerprint_does_not_select_a_nonexistent_ros_window():
+    state, observation = _fixture()
+    state = state.model_copy(update={"completed_through_week": 18})
+
+    class Reader:
+        def latest_revision_fingerprints(self, _selector):
+            raise AssertionError("no regular-season ROS remains after Week 18")
+
+    assert bridge.dynamic_career_fingerprint(
+        _context(state, observation), projection_history_reader=Reader(),
+        now=datetime(2026, 10, 15, 12, tzinfo=UTC),
+    )
 
 
 def test_dynamic_career_fingerprint_changes_for_each_published_capture():

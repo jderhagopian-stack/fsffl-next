@@ -25,9 +25,9 @@ const fsfflProductSurfaceCopy={
 };
 
 const fsfflStaticVersion='20260927-dualstate1';
-const leagueAtlasStaticVersion='20261005-atlas-60e3b13f1bff';
+const leagueAtlasStaticVersion='20261005-atlas-61dbb129b96d';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const franchiseNorthStarStaticVersion='20261007-franchise-a5b5b1b9b3e5';
+const franchiseNorthStarStaticVersion='20261007-franchise-089bbf3005c2';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;

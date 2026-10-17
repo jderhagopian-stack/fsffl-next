@@ -34,16 +34,22 @@ class ProjectionSelector(FrozenModel):
     as_of: datetime | None = None
     basis: ProjectionBasis = ProjectionBasis.PROVIDER
     provider: str | None = None
+    period_start: datetime | None = None
+    period_end: datetime | None = None
 
-    @field_validator("as_of")
+    @field_validator("as_of", "period_start", "period_end")
     @classmethod
-    def require_aware_as_of(cls, value: datetime | None) -> datetime | None:
+    def require_aware_timestamp(cls, value: datetime | None) -> datetime | None:
         if value is not None and value.tzinfo is None:
-            raise ValueError("projection selector as_of must be timezone-aware")
+            raise ValueError("projection selector timestamps must be timezone-aware")
         return value.astimezone(UTC) if value is not None else None
 
     @model_validator(mode="after")
     def validate_horizon_contract(self) -> "ProjectionSelector":
+        if (self.period_start is None) != (self.period_end is None):
+            raise ValueError("projection selector requires both period boundaries")
+        if self.period_start is not None and self.period_end is not None and self.period_end <= self.period_start:
+            raise ValueError("projection selector period_end must be after period_start")
         if self.horizon == ForecastHorizon.WEEK and self.week is None:
             raise ValueError("week-specific projection lookup requires week")
         if self.horizon != ForecastHorizon.WEEK and self.week is not None:
@@ -54,6 +60,25 @@ class ProjectionSelector(FrozenModel):
             if self.provider is not None:
                 raise ValueError("preseason baseline is an FSFFL ensemble, not one provider")
         return self
+
+
+def career_ros_projection_selector(
+    *, season: int, completed_through_week: int, as_of: datetime,
+) -> ProjectionSelector:
+    """Select the latest knowable revision *within* Career's exact ROS window.
+
+    Research captures with other structural windows are not interchangeable
+    with the Forecast-normalized evidence for this State. Apply the window
+    before latest-per-provider selection, for both reads and fingerprints.
+    """
+    from .in_season_orchestration import canonical_week_window
+
+    start, _ = canonical_week_window(season, completed_through_week + 1)
+    _, end = canonical_week_window(season, 18)
+    return ProjectionSelector(
+        season=season, horizon=ForecastHorizon.REST_OF_SEASON,
+        as_of=as_of, period_start=start, period_end=end,
+    )
 
 
 class ProjectionSnapshotRecord(FrozenModel):

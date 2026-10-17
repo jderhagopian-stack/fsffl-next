@@ -162,6 +162,9 @@ class PostgresProjectionHistoryStore:
             f"coalesce({prefix}week, 0)=coalesce(%s, 0)",
         ]
         params: list[object] = [selector.season, selector.horizon.value, selector.week]
+        if selector.period_start is not None:
+            clauses.extend((f"{prefix}period_start=%s", f"{prefix}period_end=%s"))
+            params.extend((selector.period_start, selector.period_end))
         if selector.provider is not None:
             clauses.append(f"{prefix}provider=%s")
             params.append(selector.provider)

@@ -261,14 +261,13 @@ def dynamic_career_fingerprint(
     )
     evidence = context.forecast_evidence
     ros_revisions = ()
-    if projection_history_reader is not None:
-        from fsffl.forecast.models import ForecastHorizon
-        from fsffl.forecast.projection_history import ProjectionSelector
+    if projection_history_reader is not None and (context.league_state.completed_through_week or 0) < 18:
+        from fsffl.forecast.projection_history import career_ros_projection_selector
 
         ros_revisions = projection_history_reader.latest_revision_fingerprints(
-            ProjectionSelector(
+            career_ros_projection_selector(
                 season=context.league_state.league.season,
-                horizon=ForecastHorizon.REST_OF_SEASON,
+                completed_through_week=context.league_state.completed_through_week or 0,
                 as_of=evaluated_at.astimezone(UTC),
             )
         )
