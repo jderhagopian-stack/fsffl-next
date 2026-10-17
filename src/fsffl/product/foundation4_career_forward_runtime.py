@@ -321,22 +321,21 @@ class CareerIntrinsicLoader:
         if self._persistence_store is None or context.league_state is None:
             return None
         fingerprint = self.intrinsic_input_fingerprint(context)
-        record = self._persistence_store.get_reusable_artifact(
-            self._career_key(context, fingerprint)
-        )
-        if not require_complete and (
-            record is None
-            or record.payload.get("_foundation4_dependency_fingerprint") != fingerprint
-        ):
+        record = None
+        if not require_complete:
             # Only the owned build may read an incomplete reference. A refresh
             # can share the stable durable key with last-good completed output;
             # checkpoints must never replace that output or restore as ready.
-            checkpoint = self._persistence_store.get_reusable_artifact(
+            record = self._persistence_store.get_reusable_artifact(
                 self._reference_checkpoint_key(context, fingerprint)
             )
-            if (checkpoint is not None
-                    and checkpoint.payload.get("_foundation4_dependency_fingerprint") == fingerprint):
-                record = checkpoint
+            if (record is not None
+                    and record.payload.get("_foundation4_dependency_fingerprint") != fingerprint):
+                record = None
+        if record is None:
+            record = self._persistence_store.get_reusable_artifact(
+                self._career_key(context, fingerprint)
+            )
         migrated_legacy = False
         if record is None:
             # Foundation 4 was accepted with a shadow-named persistence key. Reuse

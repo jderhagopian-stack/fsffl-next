@@ -1227,7 +1227,7 @@ def test_reference_checkpoint_resumes_interrupted_expansion_without_refitting(ma
     assert sum(r.key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND for r in store.artifacts) == 1
 
 
-def test_refresh_checkpoint_and_batch_failure_preserve_same_key_last_good(materialized):
+def test_refresh_checkpoint_and_batch_failure_preserve_same_key_last_good(materialized, monkeypatch):
     from datetime import timedelta
     _store, _calls, _loader, context, accepted = materialized
     previous = replace(context, career_fingerprint_evaluation_as_of=context.league_state.as_of)
@@ -1255,6 +1255,32 @@ def test_refresh_checkpoint_and_batch_failure_preserve_same_key_last_good(materi
     assert make().restore_compatible(previous) == accepted
     assert make().restore_compatible(refreshed) is None
     assert make()._restore_frozen_compatible(refreshed) == accepted
+    # Owned recovery reads canonical once, releases its rejected transport,
+    # then reads the exact checkpoint without another full canonical read.
+    from weakref import ref
+    reads, canonical_records = [], []
+    original_read = store.get_reusable_artifact
+    def read(key):
+        record = original_read(key)
+        reads.append(key.artifact_kind)
+        if key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND:
+            assert canonical_records and all(item() is None for item in canonical_records)
+        if record is None:
+            return None
+        transport = replace(record, payload=dict(record.payload))
+        if key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND:
+            canonical_records.append(ref(transport))
+        return transport
+    def interrupted(*args):
+        raise RuntimeError('fixture interrupted resumed expansion')
+    resumed = make()
+    resumed._expanded_career_contract_loader = interrupted
+    with monkeypatch.context() as patch:
+        patch.setattr(store, 'get_reusable_artifact', read)
+        with pytest.raises(RuntimeError, match='fixture interrupted resumed expansion'):
+            resumed(refreshed)
+    assert reads == [CAREER_INTRINSIC_ARTIFACT_KIND, CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND]
+    assert store.get_reusable_artifact(key) is last_good
     failed = accepted.model_copy(update={'player_coverage_failures': {
         'fixture-dynamic': 'dynamic P0 acquisition failed: fixture interrupted refresh'}})
     loader._persist(refreshed, dependency_fingerprint=new_fp, component=None,
