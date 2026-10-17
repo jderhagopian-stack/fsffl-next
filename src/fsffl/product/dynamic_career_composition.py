@@ -291,6 +291,12 @@ def dynamic_career_fingerprint(
             (player_id, row.source_version)
             for player_id, row in sorted(status_receipts.items())
         ]
+    from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
+    roles = recorded_nfl_role_receipts(context.league_state, as_of=evaluated_at)
+    if roles:
+        payload["official_nfl_role_receipts"] = [
+            (player_id, row.fingerprint) for player_id, row in sorted(roles.items())
+        ]
     if include_freshness_epoch:
         payload["live_source_freshness_epoch"] = freshness_epoch
         # Explicit refresh creates a new source capture even when numeric

@@ -1,4 +1,7 @@
 from datetime import UTC, datetime
+from dataclasses import replace
+
+import pytest
 
 from fsffl.forecast.current_normalization import (
     canonical_season_window,
@@ -237,3 +240,22 @@ def test_shared_mapper_resolves_rostered_player_outside_frozen_reference_univers
         ("cbs:new-roster", "sleeper:player:new-roster")
     ]
     assert [item.player_id for item in observations] == ["sleeper:player:new-roster"]
+
+
+@pytest.mark.parametrize("provider", ["cbs", "razzball"])
+def test_verified_okonkwo_alias_maps_without_changing_source_rows(provider) -> None:
+    player = Player(player_id="sleeper:player:8210", full_name="Chig Okonkwo",
+                    position=Position.TE, nfl_team="WAS")
+    row = CurrentProjectionRow(provider=provider, external_id="TE:WAS:chigoziemokonkwo",
+        player_name="Chigoziem Okonkwo", position=Position.TE, nfl_team="WAS",
+        stats={"rec": 41.4, "rec_yd": 420., "rec_td": 1.9})
+    snapshot = replace(_snapshot(provider, 0., 3), rows=(row,))
+    assert map_projection_rows(snapshot, players=(player,)) == ((row, player),)
+    # A verified alias belongs to one canonical identity, not arbitrary Chigs.
+    other = player.model_copy(update={"player_id": "another-player"})
+    assert map_projection_rows(snapshot, players=(other,)) == ()
+    # The existing ambiguity and position safeguards still apply.
+    duplicate = player.model_copy(update={"player_id": "duplicate", "full_name": row.player_name})
+    assert map_projection_rows(snapshot, players=(player, duplicate)) == ()
+    wrong_position = player.model_copy(update={"position": Position.WR})
+    assert map_projection_rows(snapshot, players=(wrong_position,)) == ()

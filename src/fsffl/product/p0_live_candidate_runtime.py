@@ -276,6 +276,7 @@ def _active_backup_player_ids(
     *,
     current_status_state: LeagueState | None = None,
     as_of: datetime | None = None,
+    role_evidence_as_of: datetime | None = None,
 ) -> set[str]:
     """Require current NFL status and role evidence before one-source fallback.
 
@@ -304,7 +305,13 @@ def _active_backup_player_ids(
         for entry in team_state.roster
     }
     backups: set[str] = set()
+    from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
+    roles = recorded_nfl_role_receipts(
+        league_state, as_of=role_evidence_as_of or as_of or status_state.as_of,
+    )
     for player_id in active & rostered:
+        if player_id in roles and roles[player_id].status == "reserve_left_squad":
+            continue
         catalog_row = current_catalog.get(player_id.rsplit(":", 1)[-1])
         if not isinstance(catalog_row, Mapping):
             continue
@@ -878,6 +885,19 @@ def build_live_p0_rostered_candidate_forecasts(
     catalog = latest_snapshot.payload.get("players")
     if not isinstance(catalog, Mapping):
         raise ValueError("Sleeper current player universe is not a mapping")
+    # Preserve the full source identity, but retain only roster facts while
+    # acquiring stats/projections. The raw NFL catalog is much larger than the
+    # bounded roster and otherwise overlaps every later acquisition workspace.
+    catalog_fingerprint = _input_digest(catalog)
+    roster_external_ids = {
+        entry.player_id.rsplit(":", 1)[-1]
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+    }
+    catalog = {key: value for key, value in catalog.items() if key in roster_external_ids}
+    del latest_snapshot
+    from .resource_coordinator import release_unused_process_memory
+    release_unused_process_memory(label="career-p0-unrostered-catalog-released")
     weekly: dict[int, tuple[SleeperWeeklyStatLine, ...]] = {
         week: stats.fetch_week(season=league_state.league.season, week=week)
         for week in range(1, completed + 1)
@@ -1033,6 +1053,11 @@ def build_live_p0_rostered_candidate_forecasts(
         catalog,
         current_status_state=current_state,
         as_of=cutoff,
+        role_evidence_as_of=min(cutoff, ros_revision_cutoff),
+    )
+    from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
+    role_receipts = recorded_nfl_role_receipts(
+        league_state, as_of=min(cutoff, ros_revision_cutoff),
     )
     for player_id in candidates:
         if player_id not in positions:
@@ -1137,6 +1162,8 @@ def build_live_p0_rostered_candidate_forecasts(
                     league_missing = y1_league_partial.get(player_id)
                     failures[player_id] = (
                         "active backup lacks a complete single-source Year-1 projection; "
+                        "admissible_provider_row_counts="
+                        f"{ {source_id: len(rows) for (pid, source_id), rows in one_source_rows.items() if pid == player_id} }; "
                         f"standard_missing_rule_stats={list(standard_missing.omitted_rule_stats) if standard_missing else []}; "
                         f"league_missing_rule_stats={list(league_missing.omitted_rule_stats) if league_missing else []}"
                     )
@@ -1176,6 +1203,13 @@ def build_live_p0_rostered_candidate_forecasts(
                     f"per-provider canonical ROS metrics={source_metrics}; "
                     f"two-source raw-ensemble metrics={raw_metrics or 'none'}"
                 )
+                if player_id in role_receipts:
+                    role = role_receipts[player_id]
+                    failures[player_id] += (
+                        f"; verified NFL role={role.status}; source={role.source_url}; "
+                        f"captured_at={role.captured_at.isoformat()}; "
+                        "role does not establish whole-season absence or a return projection"
+                    )
                 continue
         if standard_item is None or league_item is None:
             # This is reachable only if a supplied fallback contract was
@@ -1227,19 +1261,21 @@ def build_live_p0_rostered_candidate_forecasts(
     source_manifest = live_source_manifest(captured_at=cutoff, fingerprints={
         "canonical_state": league_state.state_id,
         "nfl_state": _input_digest(asdict(nfl_state)),
-        "current_catalog": _input_digest(catalog),
+        "current_catalog": catalog_fingerprint,
         "completed_week_stats": _input_digest({str(week): _rows_digest(rows)
                                                for week, rows in sorted(weekly.items())}),
         "prior_season_stats": _rows_digest(prior_lines),
         "ros": _rows_digest(available_ros_rows),
         "fumbles_supplement": _rows_digest(ros_fumbles_lost),
-        "status_receipts": _input_digest({pid: asdict(row) for pid, row in sorted(fallback_status_evidence.items())}),
+        "status_receipts": _input_digest({
+            **{pid: asdict(row) for pid, row in sorted(fallback_status_evidence.items())},
+            **{f"nfl_role:{pid}": asdict(row) for pid, row in sorted(role_receipts.items())},
+        }),
         "reference_scoring": _rows_digest((*source_reference_standard, *source_reference_league)),
         "candidate_facts": _input_digest({pid: fact.facts_digest for pid, fact in sorted(facts.items())}),
     })
-    del latest_snapshot, catalog, current_state, current_by_id, governed_by_id
+    del catalog, current_state, current_by_id, governed_by_id
     del weekly, cached_stats, prior, prior_lines, source_captures, completed_raw
-    from .resource_coordinator import release_unused_process_memory
     release_unused_process_memory(label="career-p0-acquisition-inputs-released")
 
     if candidate_rows:

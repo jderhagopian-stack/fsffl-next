@@ -378,6 +378,11 @@ class HeavyWorkCoordinator:
                 )
             yield
         finally:
+            # A completed producer has returned and dropped its local scratch.
+            # Return freed allocator pages before cheap navigation begins, not
+            # only when the next heavy producer eventually claims this lane.
+            # Published/last-good results remain owned by their existing stores.
+            release_unused_process_memory(label=f"heavy-completion:{kind}")
             after_rss = current_rss_bytes()
             peak_rss = process_peak_rss_bytes()
             with self._condition:

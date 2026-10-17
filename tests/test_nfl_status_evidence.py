@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from dataclasses import replace
+from dataclasses import asdict, replace
 from types import SimpleNamespace
 
 import pytest
@@ -126,7 +126,8 @@ def test_whole_season_absence_prevents_phantom_residual_but_keeps_evidence_gates
             nonparticipation_evidence=evidence)
 
 
-def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_rows(monkeypatch):
+@pytest.mark.parametrize('role_boundary', ['before_capture', 'before_expiration'])
+def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_rows(monkeypatch, role_boundary):
     """Fixture transports only; retain the real Year-1 and accepted P0 scorer."""
     from fsffl.product import p0_live_candidate_runtime as runtime
     from fsffl.providers.sleeper_weekly_stats import SleeperNflState
@@ -135,6 +136,21 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     state = state.model_copy(update={'player_states':tuple(
         row.model_copy(update={'age_years':23.}) for row in state.player_states)})
     capture = SEASON_UNAVAILABILITY_RECEIPTS[0].captured_at
+    import fsffl.providers.nfl_status_evidence as provider
+    live_cutoff = capture + timedelta(seconds=2)
+    # Live acquisition can finish after a pinned role-admission boundary. Both
+    # the eligibility decision and retained manifest must use the pinned time.
+    role_capture = (capture + timedelta(seconds=1) if role_boundary == 'before_capture'
+                    else capture - timedelta(hours=6) + timedelta(seconds=1))
+    receipt = replace(provider.NFL_ROLE_RECEIPTS[0],
+                      player_id=state.players[0].player_id, captured_at=role_capture)
+    monkeypatch.setattr(provider, 'NFL_ROLE_RECEIPTS', (receipt,))
+    role_times = []
+    original_roles = provider.recorded_nfl_role_receipts
+    def roles_at_cutoff(state, *, as_of):
+        role_times.append(as_of)
+        return original_roles(state, as_of=as_of)
+    monkeypatch.setattr(provider, 'recorded_nfl_role_receipts', roles_at_cutoff)
     nfl = SleeperNflState(season=2026,week=1,season_type='regular',captured_at=capture)
     stats = SimpleNamespace(fetch_nfl_state=lambda:nfl,
         fetch_season=lambda **_:(),fetch_week=lambda **_:())
@@ -148,7 +164,7 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     monkeypatch.setattr(runtime,'build_in_season_forecasts',lambda *_,**__:ros)
     monkeypatch.setattr('fsffl.forecast.in_season_orchestration.build_current_ros_fumbles_lost_supplement_observations',lambda *_,**__:())
     result = runtime.build_live_p0_rostered_candidate_forecasts(
-        state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=capture,
+        state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=live_cutoff,
         projection_history_as_of=capture)
     assert not result.failures
     assert result.future is not None
@@ -158,11 +174,18 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     assert all(mode.startswith('status_based_zero_ros:out_for_season:official-season-unavailability-v1:')
                for mode in result.year_one_evidence_modes.values())
     assert runtime.valid_live_source_manifest(result.source_manifest)
+    assert role_times == [capture, capture]
+    assert result.source_manifest['fingerprints']['status_receipts'] == runtime._input_digest({
+        **{pid: asdict(row) for pid, row in sorted(
+            recorded_status_based_zero_ros_evidence(state, as_of=capture).items())},
+        **{f'nfl_role:{pid}': asdict(row) for pid, row in sorted(
+            original_roles(state, as_of=capture).items())},
+    })
     original_manifest = result.source_manifest
     player_key = next(iter(snapshot.payload['players']))
     snapshot.payload['players'][player_key]['years_exp'] = 3
     corrected = runtime.build_live_p0_rostered_candidate_forecasts(
-        state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=capture,
+        state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=live_cutoff,
         projection_history_as_of=capture)
     assert corrected.source_manifest['fingerprints']['current_catalog'] != original_manifest['fingerprints']['current_catalog']
     assert corrected.source_manifest['fingerprints']['completed_week_stats'] == original_manifest['fingerprints']['completed_week_stats']
@@ -172,7 +195,7 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     raw = _status_based_zero_ros(league_state=state,evidence=evidence,as_of=capture)
     ros.raw_ensemble = raw
     result = runtime.build_live_p0_rostered_candidate_forecasts(
-        state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=capture,
+        state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=live_cutoff,
         projection_history_as_of=capture)
     assert result.year_one_evidence_modes[evidence.player_id] == 'two_source'
     assert 'nonzero league points but zero frozen standard' in result.failures[evidence.player_id]
@@ -197,6 +220,10 @@ def test_live_producer_releases_acquisition_payload_before_future_forecast(monke
         pass
     references = []
     expected_digests = []
+    def prior_stats(**kwargs):
+        assert references[-1]() is None, 'whole acquisition catalog still overlaps stat acquisition'
+        return ()
+    stats.fetch_season = prior_stats
     def acquire(**kwargs):
         catalog = Catalog({player.player_id.rsplit(':',1)[-1]:{'years_exp':2}
                            for player in state.players})
@@ -221,3 +248,29 @@ def test_live_producer_releases_acquisition_payload_before_future_forecast(monke
     assert result.future is not None and len(result.future.contract.forecasts) == 6
     assert result.source_manifest['fingerprints']['current_catalog'] == expected_digests[0]
     assert runtime.valid_live_source_manifest(result.source_manifest)
+
+
+def test_current_official_role_fences_backup_path_without_inventing_zero_or_backdating():
+    from fsffl.providers.nfl_status_evidence import NFL_ROLE_RECEIPTS, recorded_nfl_role_receipts
+    from fsffl.product.p0_live_candidate_runtime import _active_backup_player_ids
+    receipt = NFL_ROLE_RECEIPTS[0]
+    capture = receipt.captured_at
+    state = _state().model_copy(update={
+        'players': (Player(player_id=receipt.player_id, full_name='Brandon Aiyuk',
+                           position=Position.WR, nfl_team='SF'),),
+        'player_states': (PlayerState(player_id=receipt.player_id, as_of=capture,
+            nfl_team='SF', provenance=Provenance(source='sleeper:current_player_universe',
+                retrieved_at=capture, effective_at=capture)),),
+        'team_states': (TeamState(team_id='a', roster=(RosterEntry(
+            player_id=receipt.player_id, slot='BENCH'),)), TeamState(team_id='b', roster=())),
+    })
+    catalog = {'6803': {'team': 'SF', 'depth_chart_order': 2}}
+    assert recorded_nfl_role_receipts(state, as_of=capture-timedelta(microseconds=1)) == {}
+    assert recorded_nfl_role_receipts(state, as_of=capture) == {receipt.player_id: receipt}
+    assert not _active_backup_player_ids(state, catalog, current_status_state=state, as_of=capture)
+    assert receipt.player_id not in recorded_status_based_zero_ros_evidence(state, as_of=capture)
+    assert recorded_nfl_role_receipts(state, as_of=capture+timedelta(hours=6)) == {}
+    assert recorded_nfl_role_receipts(state.model_copy(update={'team_states': ()}), as_of=capture) == {}
+    context = SimpleNamespace(league_state=state, forecast_evidence=None)
+    assert dynamic_career_fingerprint(context, now=capture, include_freshness_epoch=False) != dynamic_career_fingerprint(
+        context, now=capture-timedelta(microseconds=1), include_freshness_epoch=False)
