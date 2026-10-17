@@ -13,6 +13,7 @@ from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord, utc
 from fsffl.product.foundation4_career_forward_runtime import (
     validate_foundation4_expanded_acceptance_cohort,
     CAREER_INTRINSIC_ARTIFACT_KIND,
+    CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND,
     CAREER_INTRINSIC_SCOPE_KIND,
     LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND,
     LEGACY_FOUNDATION4_SCOPE_KIND,
@@ -1192,7 +1193,8 @@ def test_reference_checkpoint_resumes_interrupted_expansion_without_refitting(ma
     store = MemoryPersistence()
     calls = []
     def interrupted(ctx, frozen):
-        saved = store.get_reusable_artifact(loader._career_key(ctx, loader.intrinsic_input_fingerprint(ctx)))
+        assert store.get_reusable_artifact(loader._career_key(ctx, loader.intrinsic_input_fingerprint(ctx))) is None
+        saved = store.get_reusable_artifact(loader._reference_checkpoint_key(ctx, loader.intrinsic_input_fingerprint(ctx)))
         assert saved is not None
         assert saved.payload['_career_expansion_complete'] is False
         assert store.get_reusable_artifact(loader._component_key(ctx, component)) is not None
@@ -1221,7 +1223,51 @@ def test_reference_checkpoint_resumes_interrupted_expansion_without_refitting(ma
     assert restored == result == accepted
     assert calls == ['interrupted', 'resumed']
     assert sum(r.key.artifact_kind == FOUNDATION4_Y4_Y7_ARTIFACT_KIND for r in store.artifacts) == 1
-    assert sum(r.key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND for r in store.artifacts) == 2
+    assert sum(r.key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND for r in store.artifacts) == 1
+    assert sum(r.key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND for r in store.artifacts) == 1
+
+
+def test_refresh_checkpoint_and_batch_failure_preserve_same_key_last_good(materialized):
+    from datetime import timedelta
+    _store, _calls, _loader, context, accepted = materialized
+    previous = replace(context, career_fingerprint_evaluation_as_of=context.league_state.as_of)
+    refreshed = replace(previous, career_fingerprint_evaluation_as_of=context.league_state.as_of + timedelta(hours=6))
+    store = MemoryPersistence()
+    def forbidden(*args):
+        pytest.fail('restoration must not acquire or recalculate')
+    def make():
+        return CareerIntrinsicLoader(current_intrinsic_loader=forbidden,
+            current_intrinsic_fingerprint_resolver=lambda _: 'unchanged-current',
+            persistence_store=store, expanded_career_contract_loader=forbidden,
+            expanded_career_contract_fingerprint_resolver=lambda ctx: ctx.career_fingerprint_evaluation_as_of.isoformat(),
+            career_artifact_key_fingerprint_resolver=lambda _: 'stable-without-freshness')
+    loader = make()
+    old_fp = loader.intrinsic_input_fingerprint(previous)
+    new_fp = loader.intrinsic_input_fingerprint(refreshed)
+    key = loader._career_key(previous, old_fp)
+    assert old_fp != new_fp and key == loader._career_key(refreshed, new_fp)
+    assert loader._reference_checkpoint_key(previous, old_fp) == loader._reference_checkpoint_key(refreshed, new_fp)
+    loader._persist(previous, dependency_fingerprint=old_fp, component=None,
+        contract=accepted, source_manifest=_fixture_source_manifest(previous))
+    last_good = store.get_reusable_artifact(key)
+    loader._persist(refreshed, dependency_fingerprint=new_fp, component=None, contract=accepted)
+    assert store.get_reusable_artifact(key) is last_good
+    assert make().restore_compatible(previous) == accepted
+    assert make().restore_compatible(refreshed) is None
+    assert make()._restore_frozen_compatible(refreshed) == accepted
+    failed = accepted.model_copy(update={'player_coverage_failures': {
+        'fixture-dynamic': 'dynamic P0 acquisition failed: fixture interrupted refresh'}})
+    loader._persist(refreshed, dependency_fingerprint=new_fp, component=None,
+        contract=failed, source_manifest=_fixture_source_manifest(refreshed))
+    assert store.get_reusable_artifact(key) is last_good
+    assert make().restore_compatible(previous) == accepted
+    assert make().restore_compatible(refreshed) is None
+    assert make()._restore_frozen_compatible(refreshed) == accepted
+    # Only a successful completed expansion replaces the canonical row.
+    loader._persist(refreshed, dependency_fingerprint=new_fp, component=None,
+        contract=accepted, source_manifest=_fixture_source_manifest(refreshed))
+    assert store.get_reusable_artifact(key) is not last_good
+    assert make().restore_compatible(refreshed) == accepted
 
 
 def test_completed_expansion_requires_valid_bound_live_input_manifest(materialized):

@@ -53,6 +53,7 @@ from .foundation4_cohort import align_foundation4_cohort
 
 FOUNDATION4_Y4_Y7_ARTIFACT_KIND = "foundation4_long_horizon_y4_y7_shadow"
 CAREER_INTRINSIC_ARTIFACT_KIND = "career_intrinsic_v1"
+CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND = "career_intrinsic_reference_checkpoint_v1"
 CAREER_INTRINSIC_SCOPE_KIND = "league_intrinsic"
 # Read-only migration aliases for the accepted Foundation 4 persisted authority.
 LEGACY_FOUNDATION4_CAREER_FORWARD_ARTIFACT_KIND = "foundation4_career_forward_intrinsic_shadow"
@@ -323,6 +324,19 @@ class CareerIntrinsicLoader:
         record = self._persistence_store.get_reusable_artifact(
             self._career_key(context, fingerprint)
         )
+        if not require_complete and (
+            record is None
+            or record.payload.get("_foundation4_dependency_fingerprint") != fingerprint
+        ):
+            # Only the owned build may read an incomplete reference. A refresh
+            # can share the stable durable key with last-good completed output;
+            # checkpoints must never replace that output or restore as ready.
+            checkpoint = self._persistence_store.get_reusable_artifact(
+                self._reference_checkpoint_key(context, fingerprint)
+            )
+            if (checkpoint is not None
+                    and checkpoint.payload.get("_foundation4_dependency_fingerprint") == fingerprint):
+                record = checkpoint
         migrated_legacy = False
         if record is None:
             # Foundation 4 was accepted with a shadow-named persistence key. Reuse
@@ -515,6 +529,18 @@ class CareerIntrinsicLoader:
                 self._component_timer.start()
         return contract
 
+    def _reference_checkpoint_key(
+        self, context: UserRuntimeContext, fingerprint: str
+    ) -> ArtifactKey:
+        key = self._career_key(context, fingerprint)
+        return ArtifactKey(
+            artifact_kind=CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND,
+            scope_kind=key.scope_kind,
+            scope_id=key.scope_id,
+            input_fingerprint=key.input_fingerprint,
+            model_version=key.model_version,
+        )
+
     def _persist(
         self,
         context: UserRuntimeContext,
@@ -542,9 +568,9 @@ class CareerIntrinsicLoader:
         payload["_foundation4_dependency_fingerprint"] = dependency_fingerprint
         from .p0_live_candidate_runtime import valid_live_source_manifest
         source_complete = valid_live_source_manifest(source_manifest)
-        payload["_career_expansion_complete"] = (
-            self._expanded_career_contract_loader is None or source_complete
-        )
+        complete = (self._expanded_career_contract_loader is None
+                    or (source_complete and not self.retryable_incomplete_contract(contract)))
+        payload["_career_expansion_complete"] = complete
         if source_complete:
             payload["_career_source_manifest"] = dict(source_manifest)
             payload["_career_complete_input_fingerprint"] = canonical_fingerprint(
@@ -552,7 +578,8 @@ class CareerIntrinsicLoader:
             )
         self._persistence_store.put_artifact(
             ReusableArtifactRecord(
-                key=self._career_key(context, dependency_fingerprint),
+                key=(self._career_key(context, dependency_fingerprint) if complete
+                     else self._reference_checkpoint_key(context, dependency_fingerprint)),
                 payload=payload,
                 computed_at=utc_now(),
             )
