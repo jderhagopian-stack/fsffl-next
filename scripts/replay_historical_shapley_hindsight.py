@@ -55,24 +55,30 @@ def replay_observed_three_year(path: Path, *, seasons: tuple[int, ...],
             year = start + offset
             year_pool = observed.get((start, year), {})
             missing = cohort - set(year_pool)
+            if missing and offset == 0:
+                raise ValueError("evaluation-year player coverage missing")
             if missing:
-                # Retirement and nonappearance require governed evidence;
-                # survivorship must not be manufactured into zero projections.
-                raise ValueError(f"{start} +{offset}: {len(missing)} missing future player seasons")
+                results.append({
+                    "evaluation_season": start,
+                    "target_season": year,
+                    "horizon": offset + 1,
+                    "status": "partial_hindsight_outcomes_not_authorized_for_full_shapley",
+                    "missing_player_count": len(missing),
+                    "cohort_size": len(cohort),
+                })
+                continue
             players = sorted((pid, pos, points) for pid, (pos, points) in year_pool.items())
             game = monte_carlo_shapley_scenarios(
                 players, {pid: (points,) for pid, _, points in players}, caps,
                 permutations=permutations, seed=FROZEN_SHAPLEY_SEED+offset,
             )
-            for pid in cohort:
-                contributions[pid][offset] = game.estimates[pid][0]
-        for pid in sorted(cohort):
-            y = contributions[pid]
-            results.append({"evaluation_season": start, "player_id": pid,
-                            "observed_shapley_y1": y[0], "observed_shapley_y2": y[1],
-                            "observed_shapley_y3": y[2],
-                            "hindsight_three_year": y[0]+0.85*y[1]+0.7225*y[2],
-                            "evidence": "hindsight_shapley_not_career_intrinsic"})
+            results.append({
+                "evaluation_season": start, "target_season": year,
+                "horizon": offset + 1, "status": "complete_observed_cohort_shapley",
+                "cohort_size": len(cohort),
+                "max_raw_annual_shapley": max((game.estimates[pid][0] for pid in cohort), default=0),
+                "source": "hindsight_observed_not_forecast",
+            })
     return results
 
 
