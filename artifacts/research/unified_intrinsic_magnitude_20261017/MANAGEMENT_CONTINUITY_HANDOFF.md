@@ -1,3 +1,11 @@
+## UPDATED execution checkpoint — 20-season replay completed
+
+Most recent research evidence: `EXECUTED_20_SEASON_SHAPLEY_HINDSIGHT.md`. The expanded observed-year full-pool hindsight Shapley replay ran **20 distinct seasons (2003–2022), 11,528 season-player entries** at 2048 permutations. Five starting cohorts have player-by-player Y1–Y8 annual observed Shapley trajectories with missing seasons shown as null, not invented zero. Reported maxima among continuously observed players: Y1–Y3 686.4/707.9/754.2/739.9/679.5 and Y1–Y7 1688.9/1753.6/1870.8/1772.3/1764.4 for 2003/06/09/12/15 respectively. These are NOT production Career estimates; no modeled Y8+ terminal nor vintage forecasts. Standalone implementation not yet parity certified; small Y1 differences with initial replay must be resolved. No cap adopted.
+
+**Archive persisted in Library**: `FSFFL_NEXT_Historical_Multiyear_Shadow_Replay_2026-10-17.zip`, Library record `libfile_a6babd1011608191b7bff8ef754439ce` (full 1.39MB JSON, replay code, manifest/source hashes). Original `player_season_panel.csv` also remains in Library. Retrieve both by name in a NEW conversation; local `/mnt/data` paths may not persist. Source path and archive ID are provenance breadcrumbs, not license evidence. Draft PR #464 remains unmerged. Next actual implementation: parity test, walk-forward forecast construction and full Y4–Y8+ modeled Career research; do not claim a cap is selected.
+
+---
+
 # FSFFL NEXT — Intrinsic calibration continuity (2026-10-17)
 
 ## Where to resume
