@@ -14,7 +14,7 @@ from typing import Literal, Mapping
 
 
 Horizon = Literal["three_year", "career"]
-Curve = Literal["linear", "sqrt"]
+Curve = Literal["linear", "sqrt", "power_075", "piecewise"]
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ class MagnitudeRuler:
             raise ValueError("unsupported Intrinsic horizon")
         if not isfinite(self.anchor) or self.anchor <= 0:
             raise ValueError("anchor must be finite and positive")
-        if self.curve not in ("linear", "sqrt"):
+        if self.curve not in ("linear", "sqrt", "power_075", "piecewise"):
             raise ValueError("unsupported magnitude curve")
         if not self.reference_version.strip():
             raise ValueError("frozen reference provenance is required")
@@ -47,7 +47,20 @@ class MagnitudeRuler:
         # Negative marginal contributions do not create negative presentation
         # scores. The original raw quantity is retained outside this module.
         fraction = max(0.0, min(1.0, raw / self.anchor))
-        transformed = sqrt(fraction) if self.curve == "sqrt" else fraction
+        if self.curve == "sqrt":
+            transformed = sqrt(fraction)
+        elif self.curve == "power_075":
+            transformed = fraction ** 0.75
+        elif self.curve == "piecewise":
+            # Hypothetical monotone nodes, not historically calibrated.
+            points = ((0.0, 0.0), (0.1, 0.06), (0.4, 0.32), (1.0, 1.0))
+            transformed = 1.0
+            for (x0, y0), (x1, y1) in zip(points, points[1:]):
+                if fraction <= x1:
+                    transformed = y0 + (fraction - x0) * (y1 - y0) / (x1 - x0)
+                    break
+        else:
+            transformed = fraction
         return 10000.0 * transformed
 
 
