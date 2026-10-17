@@ -1,8 +1,20 @@
 from pathlib import Path
+import hashlib
 import shutil
 import subprocess
 
 import pytest
+
+
+def test_franchise_card_bundle_and_loader_have_content_specific_cache_keys():
+    static = Path(__file__).parents[1] / "src/fsffl/product/static"
+
+    def blob_prefix(name):
+        data = (static / name).read_bytes()
+        return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()[:12]
+
+    assert f"const franchiseNorthStarStaticVersion='20261007-franchise-{blob_prefix('my_team_dashboard.js')}';" in (static / "product_shell.js").read_text()
+    assert f"product_shell.js?v=20261004-safari-restore380&c=git-{blob_prefix('product_shell.js')}" in (static / "index.html").read_text()
 
 
 def test_franchise_presents_separate_indexes_and_retains_raw_career():
