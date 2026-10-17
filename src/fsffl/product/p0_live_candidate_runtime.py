@@ -276,6 +276,7 @@ def _active_backup_player_ids(
     *,
     current_status_state: LeagueState | None = None,
     as_of: datetime | None = None,
+    role_evidence_as_of: datetime | None = None,
 ) -> set[str]:
     """Require current NFL status and role evidence before one-source fallback.
 
@@ -305,7 +306,9 @@ def _active_backup_player_ids(
     }
     backups: set[str] = set()
     from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
-    roles = recorded_nfl_role_receipts(league_state, as_of=as_of or status_state.as_of)
+    roles = recorded_nfl_role_receipts(
+        league_state, as_of=role_evidence_as_of or as_of or status_state.as_of,
+    )
     for player_id in active & rostered:
         if player_id in roles and roles[player_id].status == "reserve_left_squad":
             continue
@@ -1050,9 +1053,12 @@ def build_live_p0_rostered_candidate_forecasts(
         catalog,
         current_status_state=current_state,
         as_of=cutoff,
+        role_evidence_as_of=min(cutoff, ros_revision_cutoff),
     )
     from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
-    role_receipts = recorded_nfl_role_receipts(league_state, as_of=cutoff)
+    role_receipts = recorded_nfl_role_receipts(
+        league_state, as_of=min(cutoff, ros_revision_cutoff),
+    )
     for player_id in candidates:
         if player_id not in positions:
             failures[player_id] = "live roster candidate is absent from governed State identity universe"
