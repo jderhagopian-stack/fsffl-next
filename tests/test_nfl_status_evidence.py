@@ -197,6 +197,10 @@ def test_live_producer_releases_acquisition_payload_before_future_forecast(monke
         pass
     references = []
     expected_digests = []
+    def prior_stats(**kwargs):
+        assert references[-1]() is None, 'whole acquisition catalog still overlaps stat acquisition'
+        return ()
+    stats.fetch_season = prior_stats
     def acquire(**kwargs):
         catalog = Catalog({player.player_id.rsplit(':',1)[-1]:{'years_exp':2}
                            for player in state.players})
@@ -221,3 +225,29 @@ def test_live_producer_releases_acquisition_payload_before_future_forecast(monke
     assert result.future is not None and len(result.future.contract.forecasts) == 6
     assert result.source_manifest['fingerprints']['current_catalog'] == expected_digests[0]
     assert runtime.valid_live_source_manifest(result.source_manifest)
+
+
+def test_current_official_role_fences_backup_path_without_inventing_zero_or_backdating():
+    from fsffl.providers.nfl_status_evidence import NFL_ROLE_RECEIPTS, recorded_nfl_role_receipts
+    from fsffl.product.p0_live_candidate_runtime import _active_backup_player_ids
+    receipt = NFL_ROLE_RECEIPTS[0]
+    capture = receipt.captured_at
+    state = _state().model_copy(update={
+        'players': (Player(player_id=receipt.player_id, full_name='Brandon Aiyuk',
+                           position=Position.WR, nfl_team='SF'),),
+        'player_states': (PlayerState(player_id=receipt.player_id, as_of=capture,
+            nfl_team='SF', provenance=Provenance(source='sleeper:current_player_universe',
+                retrieved_at=capture, effective_at=capture)),),
+        'team_states': (TeamState(team_id='a', roster=(RosterEntry(
+            player_id=receipt.player_id, slot='BENCH'),)), TeamState(team_id='b', roster=())),
+    })
+    catalog = {'6803': {'team': 'SF', 'depth_chart_order': 2}}
+    assert recorded_nfl_role_receipts(state, as_of=capture-timedelta(microseconds=1)) == {}
+    assert recorded_nfl_role_receipts(state, as_of=capture) == {receipt.player_id: receipt}
+    assert not _active_backup_player_ids(state, catalog, current_status_state=state, as_of=capture)
+    assert receipt.player_id not in recorded_status_based_zero_ros_evidence(state, as_of=capture)
+    assert recorded_nfl_role_receipts(state, as_of=capture+timedelta(hours=6)) == {}
+    assert recorded_nfl_role_receipts(state.model_copy(update={'team_states': ()}), as_of=capture) == {}
+    context = SimpleNamespace(league_state=state, forecast_evidence=None)
+    assert dynamic_career_fingerprint(context, now=capture, include_freshness_epoch=False) != dynamic_career_fingerprint(
+        context, now=capture-timedelta(microseconds=1), include_freshness_epoch=False)

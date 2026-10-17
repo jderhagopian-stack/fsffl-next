@@ -137,6 +137,30 @@ def test_heavy_work_telemetry_is_bounded_and_non_identifying(monkeypatch) -> Non
     assert snapshot.recent_phase_memory[0]["key"].startswith("sha256:")
 
 
+def test_heavy_completion_reclaims_scratch_before_releasing_lane(monkeypatch):
+    coordinator = HeavyWorkCoordinator()
+    labels = []
+    def reclaim(*, label):
+        assert coordinator.snapshot().active_kind == 'intrinsic'
+        labels.append(label)
+        return {}
+    monkeypatch.setattr(resource_module, 'release_unused_process_memory', reclaim)
+    result = object()
+    with coordinator.claim(kind='intrinsic', key='fixture'):
+        retained_result = result
+    assert retained_result is result
+    assert labels == ['heavy-admission:intrinsic', 'heavy-completion:intrinsic']
+    assert coordinator.snapshot().active_kind is None
+    labels.clear()
+    try:
+        with coordinator.claim(kind='intrinsic', key='failed-fixture'):
+            raise ValueError('original failure')
+    except ValueError as exc:
+        assert str(exc) == 'original failure'
+    assert labels == ['heavy-admission:intrinsic', 'heavy-completion:intrinsic']
+    assert coordinator.snapshot().active_kind is None
+
+
 def test_resource_boundary_repeated_a_b_a_releases_prior_objects_and_is_bounded(
     monkeypatch,
 ) -> None:

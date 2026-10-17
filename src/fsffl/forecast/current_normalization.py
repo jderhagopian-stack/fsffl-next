@@ -19,6 +19,14 @@ _TEAM_ALIASES = {
 }
 _NAME_SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
+# NFL's canonical profile uses the formal URL and the shortened display name:
+# https://www.nfl.com/players/chigoziem-okonkwo/ (verified 2026-10-17).
+# Bind spelling equivalence to the asserted player identity and position; this
+# is not fuzzy matching or permission to merge unrelated players by nickname.
+_VERIFIED_PLAYER_NAMES = {
+    ("sleeper:player:8210", Position.TE): frozenset({"chigokonkwo", "chigoziemokonkwo"}),
+}
+
 _STAT_METRICS: dict[str, ForecastMetric] = {
     "pass_yd": ForecastMetric.PASS_YARDS,
     "pass_td": ForecastMetric.PASS_TD,
@@ -77,8 +85,13 @@ def _player_indexes(players: tuple[Player, ...]) -> tuple[
         cooperative_cpu_yield(index)
         name = _normalize_name(player.full_name)
         team = _normalize_team(player.nfl_team)
-        exact.setdefault((name, player.position, team), []).append(player)
-        loose.setdefault((name, player.position), []).append(player)
+        names = {name}
+        verified = _VERIFIED_PLAYER_NAMES.get((player.player_id, player.position), frozenset())
+        if name in verified:
+            names.update(verified)
+        for indexed_name in names:
+            exact.setdefault((indexed_name, player.position, team), []).append(player)
+            loose.setdefault((indexed_name, player.position), []).append(player)
     return exact, loose
 
 
@@ -104,7 +117,8 @@ def map_projection_rows(
     This is shared by normal forecast ingestion and bounded acquisition packets.
     The frozen Career reference cohort is deliberately not consulted here.
     Explicit canonical provider references win; otherwise only unique exact
-    name/position/team or unique name/position matches are accepted.
+    name/position/team or unique name/position matches (including verified
+    canonical identity spellings) are accepted.
     """
     exact_index, loose_index = _player_indexes(players)
     provider_index = _provider_identity_index(players)
