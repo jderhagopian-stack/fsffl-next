@@ -199,3 +199,77 @@ def test_dynasty_room_requires_actual_position_match() -> None:
     alpha = next(row for row in wrong_position if row.team_id == "alpha")
     assert alpha.room_raw is None
     assert alpha.rostered_player_count == 4
+
+
+def _three_year(state, values):
+    from fsffl.value.shapley_intrinsic_contract import (
+        ShapleyIntrinsicContract, ShapleyIntrinsicPlayerEstimate,
+        ShapleyIntrinsicAvailability,
+    )
+    return ShapleyIntrinsicContract.model_construct(
+        status=ShapleyIntrinsicAvailability.READY, evaluation_season=state.league.season,
+        estimates=tuple(ShapleyIntrinsicPlayerEstimate.model_construct(
+            player_id=pid, raw_intrinsic_value=value) for pid, value in values.items()),
+    )
+
+
+def test_three_year_room_uses_existing_shapley_not_career_or_display_values():
+    from fsffl.analytics.dynasty_position_room import build_three_year_position_rooms
+    state = _state()
+    values = {'a1': 2., 'a2': 3., 'a3': 4., 'a4': -1., 'b1': 16.}
+    contract = _three_year(state, values)
+    rows = build_three_year_position_rooms(state, intrinsic=contract,
+        evidence_state_id=state.state_id, positions=(Position.RB,))
+    alpha, beta = rows
+    assert alpha.room_raw == 8 and beta.room_raw == 16
+    assert (alpha.league_rank, beta.league_rank) == (2, 1)
+    assert alpha.strength_index == 100 * 8 / 12
+    assert alpha.model_version == 'analytics-position-room-three-year-intrinsic-v1'
+    assert contract.estimates[0].raw_intrinsic_value == 2
+
+
+def test_three_year_room_preserves_ties_missing_coverage_and_state_fences():
+    from fsffl.analytics.dynasty_position_room import build_three_year_position_rooms
+    state = _state()
+    contract = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'a4': -1., 'b1': 8.})
+    def rooms(c=contract, state_id=state.state_id):
+        return build_three_year_position_rooms(state, intrinsic=c,
+            evidence_state_id=state_id, positions=(Position.RB,))
+    assert [row.league_rank for row in rooms()] == [1, 1]
+    missing = contract.model_copy(update={'estimates': contract.estimates[1:]})
+    incomplete = rooms(missing)
+    assert incomplete[0].room_raw is None and incomplete[1].room_raw == 8
+    assert all(row.league_rank is None for row in incomplete)
+    for bad in (None, contract.model_copy(update={'display_scaling_applied': True}),
+                contract.model_copy(update={'quantity_semantics': 'market'}),
+                contract.model_copy(update={'evaluation_season': 2025})):
+        assert all(row.room_raw is None for row in rooms(bad))
+    assert all(row.room_raw is None for row in rooms(state_id='older-state'))
+
+
+def test_three_year_route_reads_completed_owner_only_and_fences_publication():
+    from types import SimpleNamespace
+    from fastapi import FastAPI
+    from fsffl.product.foundation4_shadow_routes import install_career_intrinsic_routes
+    from fsffl.product.intrinsic_background import IntrinsicBuildStatus
+    state = _state()
+    contract = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'a4': -1., 'b1': 8.})
+    record = SimpleNamespace(status=IntrinsicBuildStatus.COMPLETED, contract=contract,
+        league_state_id=state.state_id, intrinsic_input_fingerprint='owned-current')
+    class ReadOnlyOwner:
+        def current(self, context): return record
+        def request(self, *a): raise AssertionError('GET must not start work')
+    context = SimpleNamespace(league_state=state, publication_generation_id='published')
+    app = FastAPI()
+    install_career_intrinsic_routes(app, runtime_store=SimpleNamespace(get=lambda _: context),
+        loader=None, coordinator=None, current_intrinsic_coordinator=ReadOnlyOwner())
+    endpoint = next(route.endpoint for route in app.routes
+        if route.path == '/api/league/three-year-position-rooms')
+    result = endpoint(state.state_id, 'published', 'user')
+    assert result['status'] == 'ready'
+    assert result['publication_generation_id'] == 'published'
+    assert result['dynasty_rank_readiness']['status'] == 'ready'
+    assert result['input_fingerprint'] == 'owned-current'
+    assert endpoint(state.state_id, 'older-generation', 'user')['status'] == 'superseded'
+    record = None
+    assert endpoint(state.state_id, 'published', 'user')['status'] == 'unavailable'

@@ -934,3 +934,7 @@
     line-height:1.35!important;
   }
 }
+
+/* Three independent outlooks; display mode remains a separate two-way control. */
+.league-atlas-north-star .league-position-lens[aria-label="Position outlook"]{grid-template-columns:repeat(3,1fr)}
+.league-atlas-north-star .league-position-lens-row{flex-wrap:wrap}

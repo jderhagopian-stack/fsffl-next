@@ -5,7 +5,10 @@ from datetime import UTC, datetime
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
+from fsffl.analytics.dynasty_position_room import (
+    build_dynasty_position_rooms,
+    build_three_year_position_rooms,
+)
 from .foundation4_career_forward_runtime import CareerIntrinsicLoader
 from .career_presentation import career_lens_for_publication, career_reference_ids_from_current
 from .career_coverage import (
@@ -263,6 +266,41 @@ def install_career_intrinsic_routes(
             # Foundation 4 contract's historical shadow lifecycle label.
             payload["status"] = "ready"
         return payload
+
+    @app.get("/api/league/three-year-position-rooms")
+    def three_year_position_rooms(
+        state_id: str, publication_generation_id: str,
+        user_id: str = Depends(require_beta_user),
+    ):
+        context = runtime_store.get(user_id)
+        state = context.league_state
+        if state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if state_id != state.state_id or publication_generation_id != context.publication_generation_id:
+            return {"status": "superseded", "superseding_state_id": state.state_id,
+                    "superseding_publication_generation_id": context.publication_generation_id}
+        # Read the completed owner only. This GET never starts fitting or provider work.
+        record = (current_intrinsic_coordinator.current(context)
+                  if current_intrinsic_coordinator is not None else None)
+        base = {"league_state_id": state_id,
+                "publication_generation_id": publication_generation_id,
+                "capability": "three_year_intrinsic"}
+        if record is None or record.league_state_id != state_id:
+            return {**base, "status": "unavailable",
+                    "reason": "No completed 3-Year Intrinsic authority matches this State."}
+        if record.status in {IntrinsicBuildStatus.QUEUED, IntrinsicBuildStatus.RUNNING}:
+            return {**base, "status": "preparing", "retry_after_ms": 1500}
+        if record.status != IntrinsicBuildStatus.COMPLETED or record.contract is None:
+            return {**base, "status": "unavailable", "reason": "3-Year Intrinsic is unavailable."}
+        rooms = build_three_year_position_rooms(
+            state, intrinsic=record.contract, evidence_state_id=record.league_state_id,
+        )
+        rows = [row.model_dump(mode="json") for row in rooms]
+        return {**base, "status": "ready", "input_fingerprint": record.intrinsic_input_fingerprint,
+                "model_version": rooms[0].model_version if rooms else None,
+                "rooms": rows, "dynasty_rank_readiness": _dynasty_rank_readiness(rows),
+                "players": [{"player_id": row.player_id, "raw_intrinsic_value": row.raw_intrinsic_value}
+                            for row in record.contract.estimates]}
 
     @app.get("/api/league/dynasty-position-rooms")
     def dynasty_position_rooms(

@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import math
 
+from fsffl.value.shapley_intrinsic_contract import (
+    RAW_INTRINSIC_QUANTITY,
+    ShapleyIntrinsicContract,
+    ShapleyIntrinsicAvailability,
+)
 from fsffl.state.models import FrozenModel, LeagueState, Position
 from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
@@ -45,9 +50,6 @@ def build_dynasty_position_rooms(
     are emitted only when every team's room for that position is complete.
     """
 
-    teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
-    states = {item.team_id: item for item in league_state.team_states}
-    players = {item.player_id: item for item in league_state.players}
     contract_valid = (
         career_forward is not None
         and career_forward.evaluation_season == league_state.league.season
@@ -58,11 +60,53 @@ def build_dynasty_position_rooms(
         and evidence_state_id == league_state.state_id
         and bool(evidence_state_id)
     )
-    estimates = (
-        {row.player_id: row for row in career_forward.estimates}
-        if contract_valid and career_forward is not None
-        else {}
+    values = (
+        {row.player_id: (row.position, row.raw_career_forward_reference)
+         for row in career_forward.estimates}
+        if contract_valid and career_forward is not None else {}
     )
+    return _position_rooms(
+        league_state, values=values,
+        contract_valid=contract_valid, evidence_state_id=evidence_state_id,
+        positions=positions, model_version=DYNASTY_POSITION_ROOM_MODEL_VERSION,
+    )
+
+
+def build_three_year_position_rooms(
+    league_state: LeagueState, *, intrinsic: ShapleyIntrinsicContract | None,
+    evidence_state_id: str | None,
+    positions: tuple[Position, ...] = DYNASTY_ROOM_POSITIONS,
+) -> tuple[DynastyPositionRoom, ...]:
+    """Allocate existing raw three-year Shapley authority; never fit or scale it."""
+    players = {row.player_id: row for row in league_state.players}
+    valid = (
+        intrinsic is not None
+        and intrinsic.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+        and intrinsic.evaluation_season == league_state.league.season
+        and intrinsic.quantity_semantics == RAW_INTRINSIC_QUANTITY
+        and not intrinsic.display_scaling_applied
+        and not intrinsic.diagnostic_h1_included
+        and bool(evidence_state_id)
+        and evidence_state_id == league_state.state_id
+    )
+    values = ({row.player_id: (players[row.player_id].position, row.raw_intrinsic_value)
+               for row in intrinsic.estimates if row.player_id in players}
+              if valid and intrinsic is not None else {})
+    return _position_rooms(
+        league_state, values=values, contract_valid=valid,
+        evidence_state_id=evidence_state_id, positions=positions,
+        model_version="analytics-position-room-three-year-intrinsic-v1",
+    )
+
+
+def _position_rooms(
+    league_state: LeagueState, *, values: dict[str, tuple[Position, float]],
+    contract_valid: bool, evidence_state_id: str | None,
+    positions: tuple[Position, ...], model_version: str,
+) -> tuple[DynastyPositionRoom, ...]:
+    teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
+    states = {item.team_id: item for item in league_state.team_states}
+    players = {item.player_id: item for item in league_state.players}
     team_rosters: dict[str, tuple[tuple[str, Position], ...] | None] = {}
     for team in teams:
         team_state = states.get(team.team_id)
@@ -92,15 +136,15 @@ def build_dynasty_position_rooms(
             total = 0.0
             complete = contract_valid
             for player_id, actual_position in members:
-                estimate = estimates.get(player_id)
+                estimate = values.get(player_id)
                 if (
                     estimate is None
-                    or estimate.position != actual_position
-                    or not math.isfinite(estimate.raw_career_forward_reference)
+                    or estimate[0] != actual_position
+                    or not math.isfinite(estimate[1])
                 ):
                     complete = False
                     break
-                total += estimate.raw_career_forward_reference
+                total += estimate[1]
             partial[team.team_id] = (len(members), total if complete else None)
 
         complete_totals = {
@@ -144,6 +188,7 @@ def build_dynasty_position_rooms(
                     coverage_count=len(complete_totals),
                     evidence_complete=room is not None and room_raw is not None,
                     league_state_id=(evidence_state_id if room_raw is not None else None),
+                    model_version=model_version,
                 )
             )
     return tuple(output)
