@@ -48,6 +48,10 @@ def compare(archived: dict, production: dict, *, tolerance: float = 1e-7) -> dic
         raise ValueError("invalid tolerance")
     old = archived_rows(archived)
     new = production_rows(production)
+    if archived.get("observed_years") is None:
+        raise ValueError("archive lacks observed-season provenance")
+    if sorted(production.get("years", [])) != sorted(int(x["season"]) for x in archived["observed_years"]):
+        raise ValueError("historical target-year universe mismatch")
     mismatches = []
     all_keys = sorted(set(old) | set(new))
     for key in all_keys:
