@@ -160,6 +160,8 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
     # Product evidence failures are carried beside (never as fabricated values
     # inside) the accepted Career estimates. This is coverage metadata only.
     player_coverage_failures: dict[str, str] = Field(default_factory=dict)
+    # Input-policy qualifications only; never economic/display arithmetic.
+    player_input_assumptions: dict[str, str] = Field(default_factory=dict)
     model_version: str = CAREER_FORWARD_INTRINSIC_MODEL_VERSION
     contract_version: str = CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION
     raw_quantity: str = CAREER_FORWARD_RAW_QUANTITY
@@ -186,6 +188,10 @@ class CareerForwardIntrinsicShadowContract(FrozenModel):
             raise ValueError("career-forward shadow is raw economic authority")
         if self.market_inputs_used:
             raise ValueError("career-forward shadow cannot consume Market")
+        if set(self.player_input_assumptions) - {row.player_id for row in self.estimates}:
+            raise ValueError("Career input assumption has no matching estimate")
+        if any(not note.strip() for note in self.player_input_assumptions.values()):
+            raise ValueError("Career input assumption must be explicit")
         if set(self.player_coverage_failures) & {row.player_id for row in self.estimates}:
             raise ValueError("Career player cannot be both estimated and failed")
         if any(not str(reason).strip() for reason in self.player_coverage_failures.values()):
@@ -451,5 +457,10 @@ def append_dynamic_career_estimates(
             "input_fingerprint": fingerprint,
             "estimates": estimates,
             "player_count": len(estimates),
+            "player_input_assumptions": {
+                **frozen_reference.player_input_assumptions,
+                **{pid: note for pid, note in expanded_cohort.player_input_assumptions.items()
+                   if pid in requested},
+            },
         }
     )

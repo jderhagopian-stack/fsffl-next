@@ -356,6 +356,7 @@ def test_dynamic_career_append_keeps_frozen_rows_after_full_cohort_composition()
         {"p1": frozen_tail, candidate_id: candidate_tail},
     )
 
+    expanded = expanded.model_copy(update={"player_input_assumptions": {candidate_id: "Low confidence: YTD-only"}})
     result = append_dynamic_career_estimates(
         frozen, expanded, candidate_player_ids=(candidate_id,)
     )
@@ -363,6 +364,7 @@ def test_dynamic_career_append_keeps_frozen_rows_after_full_cohort_composition()
     frozen_by_id = {row.player_id: row for row in frozen.estimates}
     expanded_by_id = {row.player_id: row for row in expanded.estimates}
     assert result.player_count == 2
+    assert result.player_input_assumptions == {candidate_id: "Low confidence: YTD-only"}
     assert all(result_by_id[player_id] == row for player_id, row in frozen_by_id.items())
     assert result_by_id[candidate_id] == expanded_by_id[candidate_id]
 
