@@ -78,6 +78,54 @@ def test_normalizer_returns_provider_neutral_state() -> None:
     assert slots["sleeper:player:p2"] == RosterSlot.RB
 
 
+def test_retained_player_text_does_not_pin_raw_catalog_strings(monkeypatch):
+    import json
+    from dataclasses import replace
+    import fsffl.providers.sleeper as sleeper
+    import fsffl.providers.sleeper_snapshot as snapshot_normalizer
+
+    # Decode fresh strings as the live transport does; shared fixture literals
+    # cannot demonstrate ownership of a discarded catalog's memory arenas.
+    raw = json.loads(json.dumps(bundle().players))
+    raw["waiver-12345"] = {"full_name": "Unrostered Receivér", "position": "WR", "team": "BUF"}
+    raw["p1"]["full_name"] = "Quarterback Unicodé"
+    original_payload = json.dumps(raw, sort_keys=True)
+    source = replace(bundle(), players=raw)
+    snapshot = ProviderSnapshot(
+        provider_name="sleeper", league_external_id="123", captured_at=AS_OF,
+        payload={"league": source.league, "users": source.users,
+                 "rosters": source.rosters, "players": raw,
+                 "traded_picks": source.traded_picks},
+    )
+    with monkeypatch.context() as legacy:
+        legacy.setattr(sleeper, "_owned_provider_text", lambda text: text)
+        legacy.setattr(snapshot_normalizer, "_owned_provider_text", lambda text: text)
+        expected_roster = SleeperNormalizer().normalize(source, as_of=AS_OF)
+        expected_enriched = SleeperSnapshotNormalizer().normalize_snapshot(snapshot, as_of=AS_OF)
+        expected_discovered = canonical_players_from_sleeper_player_universe(raw)
+    roster_state = SleeperNormalizer().normalize(source, as_of=AS_OF)
+    enriched = SleeperSnapshotNormalizer().normalize_snapshot(snapshot, as_of=AS_OF)
+    discovered = canonical_players_from_sleeper_player_universe(raw)
+    assert roster_state.model_dump_json() == expected_roster.model_dump_json()
+    assert enriched.model_dump_json() == expected_enriched.model_dump_json()
+    assert discovered == expected_discovered
+    raw_keys = {key: key for key in raw}
+    for players in (roster_state.players, enriched.players, discovered):
+        for player in players:
+            external_id = player.provider_refs[0].external_id
+            assert player.full_name == raw[external_id]["full_name"]
+            assert player.full_name is not raw[external_id]["full_name"]
+            assert external_id == raw_keys[external_id]
+            assert external_id is not raw_keys[external_id]
+    # Detachment is an allocation contract, not a different State or source.
+    independent = replace(source, players=json.loads(json.dumps(raw)))
+    repeated = SleeperNormalizer().normalize(independent, as_of=AS_OF)
+    assert roster_state == repeated
+    assert roster_state.state_id == repeated.state_id
+    assert snapshot.payload["players"] is raw
+    assert json.dumps(raw, sort_keys=True) == original_payload
+
+
 def test_explicit_player_age_is_preserved_without_guessing() -> None:
     state = SleeperNormalizer().normalize(bundle(), as_of=AS_OF)
     ages = {item.player_id: item.age_years for item in state.player_states}

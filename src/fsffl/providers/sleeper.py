@@ -27,6 +27,16 @@ from fsffl.state.models import (
 )
 
 
+def _owned_provider_text(value: str) -> str:
+    """Detach retained text from large raw-catalog allocator arenas.
+
+    A handful of names/IDs can otherwise pin arenas containing thousands of
+    discarded catalog rows. Copy only these retained scalars, preserving exact
+    Unicode content; neither the provider payload nor canonical facts change.
+    """
+    return (" " + value)[1:]
+
+
 def _normalize_sleeper_player_status(raw: Mapping[str, Any]) -> PlayerStatus:
     """Normalize available NFL status facts without inferring season-long absence."""
     injury = str(raw.get("injury_status") or "").strip().lower()
@@ -418,10 +428,10 @@ class SleeperNormalizer:
             players.append(
                 Player(
                     player_id=player_id,
-                    full_name=full_name,
+                    full_name=_owned_provider_text(full_name),
                     position=position,
                     nfl_team=nfl_team,
-                    provider_refs=(ProviderRef(provider="sleeper", external_id=external_id),),
+                    provider_refs=(ProviderRef(provider="sleeper", external_id=_owned_provider_text(external_id)),),
                 )
             )
             status = _normalize_sleeper_player_status(raw)
