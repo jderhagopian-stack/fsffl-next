@@ -2,9 +2,9 @@ from scripts.compare_historical_shapley_replays import compare
 
 
 def _inputs():
-    old = {"cohorts": [{"start_season": 2003, "players": [
+    old = {"observed_years": [{"season": 2003}, {"season": 2004}], "cohorts": [{"start_season": 2003, "players": [
         {"id": "p", "annual_shapley_hindsight": [12.5, None]}]}]}
-    new = {"evidence_kind": "hindsight_production_shapley_not_career_intrinsic",
+    new = {"years": [2003, 2004], "evidence_kind": "hindsight_production_shapley_not_career_intrinsic",
            "cohorts": [{"start_season": 2003, "players": [
                {"player_id": "p", "annual_observed_shapley": [12.5, None]}]}]}
     return old, new
