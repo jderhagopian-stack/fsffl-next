@@ -406,6 +406,26 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     assert result.contract is None
     assert result.failures[candidate_id] == "no F4 components"
 
+    from weakref import ref
+    unneeded = []
+    class UnusedObservation:
+        pass
+    def temporary_builder(_state, *, projection_history_as_of=None):
+        unused = UnusedObservation()
+        unneeded.append(ref(unused))
+        return replace(candidate,
+            year_one_standard={**candidate.year_one_standard, "unused": unused},
+            year_one_league={**candidate.year_one_league, "unused": unused},
+            ros_fumbles_lost=(unused,))
+    def reclaimed_before_fit(_context, retained, ids):
+        assert unneeded[0]() is None, "unused acquisition row still overlaps Foundation4"
+        return no_components(_context, retained, ids)
+    reclaimed = bridge.build_dynamic_rostered_career_contract(
+        context, SimpleNamespace(), current_intrinsic_loader=base_loader,
+        candidate_builder=temporary_builder, materializer=reclaimed_before_fit,
+    )
+    assert reclaimed.failures == result.failures
+
     # Every later allocation must stop when the preceding workspace leaves
     # RSS above the same hard cap: Future contract, Shapley, final composition.
     from fsffl.product import resource_coordinator as resource
