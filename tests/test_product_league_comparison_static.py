@@ -3,6 +3,38 @@ import re
 from pathlib import Path
 
 
+def test_dynasty_chart_cells_show_rank_or_index_without_player_counts():
+    import subprocess
+
+    script = r"""
+    const fs=require('fs'),vm=require('vm'),assert=require('assert');
+    const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+    const cell=source.slice(source.indexOf('function laPositionCell('),source.indexOf('function laPositionMatrix('));
+    let row=null;
+    const state={positionLens:'dynasty',positionLensMode:'rank',dynastyRoomStatus:'building',dynastyRooms:{rooms:[]}};
+    const sandbox={fsfflLeagueStructureState:state,laDynastyRoom:()=>row,
+      laRosterBreadth:()=>{throw Error('chart must not read roster breadth')},
+      laEsc:String,laNum:(n,d)=>n.toFixed(d)};
+    vm.runInNewContext(cell+'\nthis.cell=laPositionCell;',sandbox);
+    const view={team_id:'a',display_name:'Alpha'};
+    for(const candidate of [null,{evidence_complete:false},{evidence_complete:true,league_rank:null}]){
+      row=candidate;const html=sandbox.cell(view,'WR');
+      assert(html.includes('disabled'));assert(html.includes('—'));
+      assert(!/rostered|breadth|<small>/.test(html));
+    }
+    row={evidence_complete:true,league_rank:3,team_count:12,room_raw:120,strength_index:105};
+    state.dynastyRooms.rooms=[{...row,position:'WR'}];
+    for(const [mode,value] of [['rank','#3'],['strength','105']]){
+      state.positionLensMode=mode;const html=sandbox.cell(view,'WR');
+      assert(html.includes('<b>'+value+'</b>'));
+      assert(html.includes('data-room-position="WR"'));
+      assert(!/rostered|breadth|<small>/.test(html));
+    }
+    """
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr
+
+
 def test_league_comparison_consumes_authoritative_atlas_analytics_and_value_contracts() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     for evidence in (
@@ -30,7 +62,7 @@ def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authorit
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     assert "Current = finalized actuals" in source
     assert "configured league starter slots" in source
-    assert "Career-forward room rank; roster counts are breadth only." in source
+    assert "Career-forward room rank." in source
     assert "data-position-view=\"current\"" in source
     assert "data-position-view=\"dynasty\"" in source
     assert "dynasty?laDynastyRoom(view.team_id,position):laCurrentStrength(view.team_id,position)" in source
@@ -296,8 +328,8 @@ def test_position_lens_controls_and_dynasty_loading_are_mobile_readable() -> Non
 
     assert "league-position-lens-row" in source
     assert 'class="league-position-lens-note" role="status" aria-live="polite"' in source
-    assert "Loading Dynasty room values… roster counts are breadth only." in source
-    assert "Long-Term evidence is building… roster counts are breadth only." in source
+    assert "Loading Dynasty room values…" in source
+    assert "Long-Term evidence is building…" in source
     assert ".league-position-lens-row{" in styles
     assert "grid-template-columns:minmax(0,1fr)!important" in styles
     assert "width:100%;" in styles
