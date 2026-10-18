@@ -1,3 +1,9 @@
+## October 18 continuation: compared against actual archived source schema
+
+Verified mounted historical source in working container: `/mnt/data/files/player_season_panel.csv` (1,926,430 bytes) and latest corrected Library archive `FSFFL_NEXT_Corrected_Historical_Shapley_Replay_2026-10-17.zip`. Unpacked archive JSON schema: `cohorts[].start_season`, `cohorts[].players[].id`, `annual_shapley_hindsight` (null for absent observations), and `observed_years[].season`. Comparator `scripts/compare_historical_shapley_replays.py` now checks that archived `observed_years` matches production replay `years` exactly as a source-universe guard; companion unit test updated. **Production-engine 20-season execution remains pending** because an authenticated repository checkout/runner receiving Library historical CSV is not yet established. Do not repeat standalone 20-season run as a false substitute. Latest source archive has full 20-season hindsight JSON; no Career forecast/tail.
+
+---
+
 ## Latest 2026-10-17 execution gate (PR #464)
 
 The real historical production-engine replay has **NOT yet run** in a checked-out repository environment. Local historical CSV and prior corrected hindsight results were verified present in the conversation workspace, but this environment had no fsffl package checkout, and GitHub connection could inspect/change code/CI but not launch an arbitrary full dataset job. Do NOT call this gate complete.
