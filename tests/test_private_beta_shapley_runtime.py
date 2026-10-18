@@ -385,16 +385,46 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         assert retained.ros_runtime is None
         assert retained.future is candidate.future
         assert retained.candidate_source_rows == candidate.candidate_source_rows
-        assert retained.year_one_league == candidate.year_one_league
+        assert retained.year_one_league == {candidate_id: candidate_y1}
+        assert retained.year_one_standard == {candidate_id: candidate_y1}
+        assert retained.ros_fumbles_lost == ()
+        assert retained.source_manifest is candidate.source_manifest
         return bridge.DynamicCareerComponents({}, {}, {candidate_id: "no F4 components"})
 
+    candidate = replace(candidate,
+        year_one_standard={**candidate.year_one_standard, "noncandidate": base_year_one},
+        year_one_league={**candidate.year_one_league, "noncandidate": base_year_one},
+        ros_fumbles_lost=(base_year_one,))
     result = bridge.build_dynamic_rostered_career_contract(
         context, SimpleNamespace(), current_intrinsic_loader=base_loader,
         candidate_builder=lambda _state, *, projection_history_as_of=None: candidate, materializer=no_components,
     )
+    assert "noncandidate" in candidate.year_one_standard
+    assert "noncandidate" in candidate.year_one_league
+    assert candidate.ros_fumbles_lost == (base_year_one,)
     assert candidate.ros_runtime is not None  # public builder result unchanged
     assert result.contract is None
     assert result.failures[candidate_id] == "no F4 components"
+
+    from weakref import ref
+    unneeded = []
+    class UnusedObservation:
+        pass
+    def temporary_builder(_state, *, projection_history_as_of=None):
+        unused = UnusedObservation()
+        unneeded.append(ref(unused))
+        return replace(candidate,
+            year_one_standard={**candidate.year_one_standard, "unused": unused},
+            year_one_league={**candidate.year_one_league, "unused": unused},
+            ros_fumbles_lost=(unused,))
+    def reclaimed_before_fit(_context, retained, ids):
+        assert unneeded[0]() is None, "unused acquisition row still overlaps Foundation4"
+        return no_components(_context, retained, ids)
+    reclaimed = bridge.build_dynamic_rostered_career_contract(
+        context, SimpleNamespace(), current_intrinsic_loader=base_loader,
+        candidate_builder=temporary_builder, materializer=reclaimed_before_fit,
+    )
+    assert reclaimed.failures == result.failures
 
     # Every later allocation must stop when the preceding workspace leaves
     # RSS above the same hard cap: Future contract, Shapley, final composition.
