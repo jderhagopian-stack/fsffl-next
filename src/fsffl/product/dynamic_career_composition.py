@@ -430,7 +430,15 @@ def build_dynamic_rostered_career_contract(
     # candidate source, Y1, future and failure contracts; it never consumes
     # the whole-league ROS intermediate. Release this local working-set
     # reference without mutating the builder's result or its evidence.
-    live = replace(live, ros_runtime=None)
+    live = replace(
+        live, ros_runtime=None,
+        year_one_standard={pid: live.year_one_standard[pid] for pid in sorted(eligible)},
+        year_one_league={pid: live.year_one_league[pid] for pid in sorted(eligible)},
+        # These already-digested acquisition coordinates are not inputs to
+        # Foundation 4 or subsequent candidate composition. Keep the source
+        # manifest and accepted candidate observations/future contracts intact.
+        ros_fumbles_lost=(), fumbles_eligible_player_ids=(),
+    )
     try:
         _reclaim_career_stage("career-before-dynamic-foundation4")
         with sample_rss_phase("career.foundation4_materialization"):

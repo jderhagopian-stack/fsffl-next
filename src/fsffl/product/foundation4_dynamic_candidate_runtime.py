@@ -134,7 +134,7 @@ def _run_materializer_in_process(script: Path, arguments: list[str]) -> None:
         gc.collect()
 
 
-def _roster_input(context, player_id: str) -> dict[str, Any]:
+def _roster_input(context, player_id: str, *, _state_hash: str | None = None) -> dict[str, Any]:
     state = context.league_state
     assert state is not None
     players = {row.player_id: row for row in state.players}
@@ -150,7 +150,7 @@ def _roster_input(context, player_id: str) -> dict[str, Any]:
     if player is None or roster is None:
         raise ValueError(f"exact-State materializer identity/roster missing for {player_id}")
     return {
-        "state_hash": state.state_id,
+        "state_hash": state.state_id if _state_hash is None else _state_hash,
         "player_id": player_id,
         "position": player.position.value,
         "team_id": roster[0],
@@ -174,7 +174,8 @@ def _roster_inputs(context, candidate_ids: tuple[str, ...] | None = None) -> lis
             for entry in team.roster
             if entry.player_id in supported
         ))
-    return [_roster_input(context, player_id) for player_id in candidate_ids]
+    state_hash = context.league_state.state_id
+    return [_roster_input(context, player_id, _state_hash=state_hash) for player_id in candidate_ids]
 
 
 def _candidate_rows(context, live, candidate_ids: tuple[str, ...], forecasts):
@@ -183,13 +184,14 @@ def _candidate_rows(context, live, candidate_ids: tuple[str, ...], forecasts):
     failures: dict[str, str] = {}
     future = live.future
     assert future is not None
+    state_hash = context.league_state.state_id
     for player_id in candidate_ids:
         try:
             source = live.candidate_source_rows[player_id]
             y2, y3 = forecasts.get((player_id, 2)), forecasts.get((player_id, 3))
             if y2 is None or y3 is None:
                 raise ValueError("accepted P0 Y2/Y3 FutureForecastContract rows missing")
-            roster = _roster_input(context, player_id)
+            roster = _roster_input(context, player_id, _state_hash=state_hash)
             rows.append({
                 **roster,
                 "historical_gsis_id": source.historical_gsis_id or "",

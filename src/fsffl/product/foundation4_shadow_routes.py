@@ -108,6 +108,7 @@ def _career_position_depth_rows(state, career_forward) -> list[dict[str, object]
     missing Career estimate stays visible for that player and cannot suppress
     the rest of the matching-State publication.
     """
+    state_hash = state.state_id
     player_by_id = {player.player_id: player for player in state.players}
     roster_rows: list[dict[str, object]] = []
     for team_state in state.team_states:
@@ -121,7 +122,7 @@ def _career_position_depth_rows(state, career_forward) -> list[dict[str, object]
                 "position": position,
                 "team_id": team_state.team_id,
                 "roster_slot": str(entry.slot.value),
-                "state_hash": state.state_id,
+                "state_hash": state_hash,
             })
 
     state_players = [
@@ -131,7 +132,7 @@ def _career_position_depth_rows(state, career_forward) -> list[dict[str, object]
     subjects = select_career_coverage(
         state_players=state_players,
         roster_rows=roster_rows,
-        state_hash=state.state_id,
+        state_hash=state_hash,
     )
     estimate_ids = {row.player_id for row in career_forward.estimates}
     roster_ids = {str(row["player_id"]) for row in roster_rows}
@@ -142,7 +143,7 @@ def _career_position_depth_rows(state, career_forward) -> list[dict[str, object]
         if player_id not in failures
     })
     rows = build_career_position_depth_refresh(
-        state_hash=state.state_id,
+        state_hash=state_hash,
         roster_rows=roster_rows,
         subjects=subjects,
         authority={player_id: True for player_id in estimate_ids},
