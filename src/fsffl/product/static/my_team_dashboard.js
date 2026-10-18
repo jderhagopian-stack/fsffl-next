@@ -366,7 +366,7 @@ function franchiseNSCareerDisplay(player){
   const ready=typeof index==='number'&&Number.isFinite(index);
   const reason=fsfflMyTeamState.careerIntrinsic?.player_coverage_failures?.[player?.player_id]||fsfflMyTeamState.careerIntrinsic?.reason||'Career evidence is unavailable for this player and State.';
   const label=ready?Math.round(index).toLocaleString():fsfflMyTeamState.careerIntrinsic?.status==='building'?'Preparing…':'Unavailable';
-  return '<strong'+(ready?'':' title="'+myTeamEsc(reason)+'"')+'>'+label+'</strong><small>'+(typeof raw==='number'&&Number.isFinite(raw)?'Raw Career '+myTeamNum(raw,1):'0–10,000 index')+'</small>';
+  return '<strong'+(ready?(estimate?.career_input_assumption?' title="'+myTeamEsc(estimate.career_input_assumption)+'"':''):' title="'+myTeamEsc(reason)+'"')+'>'+label+'</strong><small>'+(typeof raw==='number'&&Number.isFinite(raw)?'Raw Career '+myTeamNum(raw,1):'0–10,000 index')+'</small>'+(estimate?.career_input_assumption?'<small class="career-input-assumption">Low confidence · YTD-only Year 1</small>':'');
 }
 function franchiseNSProjectedStarter(player){
   return player?.projected_starter===true;

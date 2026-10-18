@@ -36,7 +36,7 @@ def test_product_overlay_preserves_other_lenses_and_rejects_last_good_state(monk
     monkeypatch.setattr('fsffl.product.career_presentation.career_reference_player_ids',
                         lambda: frozenset({'a', 'b'}))
     record = SimpleNamespace(status=SimpleNamespace(value='completed'), league_state_id='new',
-        contract=SimpleNamespace(estimates=(SimpleNamespace(player_id='a',raw_career_forward_reference=-5.),
+        contract=SimpleNamespace(player_input_assumptions={"a":"Low confidence: YTD-only"},estimates=(SimpleNamespace(player_id='a',raw_career_forward_reference=-5.),
                                           SimpleNamespace(player_id='b',raw_career_forward_reference=15.))))
     payload = {'league_state_id':'new', 'fsffl_intrinsic':{'status':'ready'},
         'players':[{'player_id':'a','intrinsic_value_index':7777.,'broad_market_value_index':3333.},
@@ -47,6 +47,7 @@ def test_product_overlay_preserves_other_lenses_and_rejects_last_good_state(monk
     assert first['broad_market_value_index'] == 3333
     assert first['career_intrinsic_index'] == 0
     assert first['raw_career_forward_reference'] == -5.
+    assert first['career_input_assumption'] == 'Low confidence: YTD-only'
     assert missing['career_intrinsic_index'] is None
     assert result['fsffl_intrinsic']['label'] == '3-Year Intrinsic'
     assert 'career_intrinsic_index' not in payload['players'][0]

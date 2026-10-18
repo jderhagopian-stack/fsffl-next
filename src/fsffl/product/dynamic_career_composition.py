@@ -297,6 +297,12 @@ def dynamic_career_fingerprint(
         payload["official_nfl_role_receipts"] = [
             (player_id, row.fingerprint) for player_id, row in sorted(roles.items())
         ]
+    from .p0_live_candidate_runtime import recorded_ytd_only_year_one_evidence
+    ytd_only = recorded_ytd_only_year_one_evidence(context.league_state, as_of=evaluated_at)
+    if ytd_only:
+        payload["approved_ytd_only_year_one"] = [
+            (pid, row.source_version) for pid, row in sorted(ytd_only.items())
+        ]
     if include_freshness_epoch:
         payload["live_source_freshness_epoch"] = freshness_epoch
         # Explicit refresh creates a new source capture even when numeric
@@ -373,6 +379,16 @@ def build_dynamic_rostered_career_contract(
         )
     failures = dict(live.failures)
     def result(contract=None, failures=None):
+        if contract is not None:
+            estimated = {row.player_id for row in contract.estimates}
+            assumptions = {
+                pid: "Low confidence: Year 1 retains earned YTD points; no additional "
+                     "remaining-season production assumed. Accepted future-year models retained."
+                for pid, mode in getattr(live, "year_one_evidence_modes", {}).items()
+                if pid in estimated and mode.startswith("low_confidence_ytd_only:")
+            }
+            if assumptions:
+                contract = contract.model_copy(update={"player_input_assumptions": assumptions})
         return ExpandedCareerContractResult(
             contract=contract, failures=failures or {},
             source_manifest=dict(getattr(live, "source_manifest", {})),

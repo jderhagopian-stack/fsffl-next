@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field, asdict
 from datetime import UTC, datetime, timedelta
 from typing import Any, Mapping
@@ -222,6 +223,40 @@ def recorded_status_based_zero_ros_evidence(
     }
 
 
+@dataclass(frozen=True)
+class YtdOnlyYearOneEvidence:
+    """Approved low-confidence input assumption; never an NFL absence fact."""
+
+    player_id: str
+    season: int
+    source: str
+    source_version: str
+    observed_at: datetime
+    status: str = "low_confidence_ytd_only_no_additional_production_assumed"
+
+    def validate(self) -> None:
+        if (not self.source or not self.source_version or self.observed_at.tzinfo is None
+                or self.status != "low_confidence_ytd_only_no_additional_production_assumed"):
+            raise ValueError("YTD-only assumption lacks approved provenance")
+
+
+def recorded_ytd_only_year_one_evidence(
+    league_state: LeagueState, *, as_of: datetime,
+) -> dict[str, YtdOnlyYearOneEvidence]:
+    from fsffl.providers.nfl_status_evidence import (
+        recorded_nfl_role_receipts, YTD_ONLY_APPROVED_ROLES,
+        YTD_ONLY_POLICY_VERSION, YTD_ONLY_POLICY_APPROVED_AT,
+    )
+    roles = recorded_nfl_role_receipts(league_state, as_of=as_of)
+    if as_of < YTD_ONLY_POLICY_APPROVED_AT:
+        return {}
+    return {pid: YtdOnlyYearOneEvidence(
+        player_id=pid, season=row.season, source=row.source_url,
+        source_version=f"{YTD_ONLY_POLICY_VERSION}:{row.fingerprint}",
+        observed_at=max(row.captured_at, YTD_ONLY_POLICY_APPROVED_AT),
+    ) for pid, row in roles.items() if YTD_ONLY_APPROVED_ROLES.get(pid) == row.status}
+
+
 def _metrics_for_zero_ros(league_state: LeagueState) -> tuple[ForecastMetric, ...]:
     stats = {rule.stat for rule in FROZEN_I1_STANDARD_SCORING}
     stats.update(rule.stat for rule in league_state.league.rules.scoring)
@@ -234,7 +269,7 @@ def _metrics_for_zero_ros(league_state: LeagueState) -> tuple[ForecastMetric, ..
 def _status_based_zero_ros(
     *,
     league_state: LeagueState,
-    evidence: StatusBasedZeroRosEvidence,
+    evidence: StatusBasedZeroRosEvidence | YtdOnlyYearOneEvidence,
     as_of: datetime,
 ) -> tuple[ForecastObservation, ...]:
     evidence.validate()
@@ -310,7 +345,7 @@ def _active_backup_player_ids(
         league_state, as_of=role_evidence_as_of or as_of or status_state.as_of,
     )
     for player_id in active & rostered:
-        if player_id in roles and roles[player_id].status == "reserve_left_squad":
+        if player_id in roles and roles[player_id].status in {"reserve_left_squad", "unsigned"}:
             continue
         catalog_row = current_catalog.get(player_id.rsplit(":", 1)[-1])
         if not isinstance(catalog_row, Mapping):
@@ -516,6 +551,60 @@ def _score_season_points(
         {item.player_id: item for item in result.authoritative_forecasts},
         {item.player_id: item for item in result.partial_forecasts},
     )
+
+
+def _score_ytd_only_year_one(
+    *, league_state: LeagueState, evidence: YtdOnlyYearOneEvidence,
+    completed_actuals: tuple[ForecastObservation, ...],
+    lines_by_week: Mapping[int, tuple[SleeperWeeklyStatLine, ...]],
+    completed_through_week: int, as_of: datetime,
+) -> tuple[tuple[ForecastObservation, ...], ForecastObservation, ForecastObservation]:
+    """Retain earned actuals; assume no extra production, including rare events.
+
+    This is an approved input assumption, not a change to P0 or Career math.
+    Residual *forecast* priors cannot represent YTD: score their actually earned
+    weekly statistics instead. Unsupported scoring still fails closed.
+    """
+    zero_ros = _status_based_zero_ros(league_state=league_state, evidence=evidence, as_of=as_of)
+    actuals = tuple(row for row in completed_actuals if row.player_id == evidence.player_id)
+    if any(row.as_of > as_of or row.provenance.retrieved_at > as_of for row in actuals):
+        raise ValueError("YTD actuals postdate evaluation")
+    raw = _year_one_raw_forecasts(league_state=league_state, completed_actuals=actuals,
+                                 ros_forecasts=zero_ros)
+    scored = []
+    for standard in (True, False):
+        rules = league_state.league.rules
+        if standard:
+            rules = rules.model_copy(update={"scoring": FROZEN_I1_STANDARD_SCORING})
+        coverage = classify_scoring_coverage(rules)
+        if coverage.status == ScoringCoverageStatus.INCOMPLETE:
+            raise ValueError("YTD-only scoring contains unsupported rules")
+        residual = set(coverage.provisional_residual_rule_stats)
+        earned_residual = 0.0
+        for week in range(1, completed_through_week + 1):
+            if week not in lines_by_week:
+                raise ValueError("YTD-only scoring lacks a completed weekly acquisition")
+            for line in lines_by_week[week]:
+                if line.season != evidence.season or line.week != week or line.captured_at > as_of:
+                    raise ValueError("YTD-only weekly evidence window mismatch")
+                if line.player_id == evidence.player_id:
+                    earned_residual += sum(float(line.stats.get(rule.stat, 0.0)) * rule.points
+                                           for rule in rules.scoring if rule.stat in residual)
+        reduced = league_state.model_copy(update={"league": league_state.league.model_copy(
+            update={"rules": rules.model_copy(update={"scoring": tuple(
+                rule for rule in rules.scoring if rule.stat not in residual)})})})
+        index, _ = _score_season_points(raw, league_state=reduced, standard=False)
+        item = index.get(evidence.player_id)
+        if item is None:
+            raise ValueError("YTD-only scoring remains incomplete")
+        mean = float(item.distribution.mean) + earned_residual
+        if not math.isfinite(mean):
+            raise ValueError("YTD-only actual scoring is nonfinite")
+        scored.append(item.model_copy(update={
+            "distribution": _constant_distribution(mean),
+            "model_version": item.model_version + ":" + evidence.source_version,
+        }))
+    return raw, scored[0], scored[1]
 
 
 def _score_complete_single_source_year_one(
@@ -1059,6 +1148,27 @@ def build_live_p0_rostered_candidate_forecasts(
     role_receipts = recorded_nfl_role_receipts(
         league_state, as_of=min(cutoff, ros_revision_cutoff),
     )
+    ytd_only_receipts = recorded_ytd_only_year_one_evidence(
+        league_state, as_of=min(cutoff, ros_revision_cutoff),
+    )
+    def admit_ytd_only(player_id):
+        evidence = ytd_only_receipts.get(player_id)
+        if evidence is None:
+            return None
+        # This approval covers projectionless cases, not replacing partial or
+        # malformed provider evidence with a more convenient assumption.
+        if any(row.player_id == player_id for row in available_ros_rows):
+            return None
+        try:
+            return _score_ytd_only_year_one(
+                league_state=league_state, evidence=evidence, completed_actuals=completed_raw,
+                lines_by_week=weekly, completed_through_week=completed,
+                as_of=cutoff,
+            )
+        except ValueError as exc:
+            failures[player_id] = f"approved YTD-only fallback rejected: {exc}"
+            return None
+
     for player_id in candidates:
         if player_id not in positions:
             failures[player_id] = "live roster candidate is absent from governed State identity universe"
@@ -1167,7 +1277,6 @@ def build_live_p0_rostered_candidate_forecasts(
                         f"standard_missing_rule_stats={list(standard_missing.omitted_rule_stats) if standard_missing else []}; "
                         f"league_missing_rule_stats={list(league_missing.omitted_rule_stats) if league_missing else []}"
                     )
-                    continue
             else:
                 standard_missing = y1_standard_partial.get(player_id)
                 league_missing = y1_league_partial.get(player_id)
@@ -1182,35 +1291,48 @@ def build_live_p0_rostered_candidate_forecasts(
                             "; accepted first-party FUMBLES_LOST supplement unavailable: "
                             f"{fumbles_supplement_failure}"
                         )
+                else:
+                    source_metrics = {
+                        source_id: sorted(
+                            {
+                                item.metric.value
+                                for item in available_ros_rows
+                                if item.player_id == player_id and item.source == source_id
+                            }
+                        )
+                        for source_id in ros_runtime.successful_source_ids
+                    }
+                    raw_metrics = sorted({
+                        item.metric.value
+                        for item in y1_raw
+                        if item.player_id == player_id
+                    })
+                    failures[player_id] = (
+                        "no complete Year-1 raw scoring row; "
+                        f"per-provider canonical ROS metrics={source_metrics}; "
+                        f"two-source raw-ensemble metrics={raw_metrics or 'none'}"
+                    )
+                    if player_id in role_receipts:
+                        role = role_receipts[player_id]
+                        failures[player_id] += (
+                            f"; verified NFL role={role.status}; source={role.source_url}; "
+                            f"captured_at={role.captured_at.isoformat()}; "
+                            "role does not establish whole-season absence or a return projection"
+                        )
+            if standard_item is None or league_item is None:
+                fallback = admit_ytd_only(player_id)
+                if fallback is None:
                     continue
-                source_metrics = {
-                    source_id: sorted(
-                        {
-                            item.metric.value
-                            for item in available_ros_rows
-                            if item.player_id == player_id and item.source == source_id
-                        }
-                    )
-                    for source_id in ros_runtime.successful_source_ids
-                }
-                raw_metrics = sorted({
-                    item.metric.value
-                    for item in y1_raw
-                    if item.player_id == player_id
-                })
-                failures[player_id] = (
-                    "no complete Year-1 raw scoring row; "
-                    f"per-provider canonical ROS metrics={source_metrics}; "
-                    f"two-source raw-ensemble metrics={raw_metrics or 'none'}"
+                source_raw, standard_item, league_item = fallback
+                evidence_mode = (
+                    "low_confidence_ytd_only:no_additional_production_assumed:"
+                    + ytd_only_receipts[player_id].source_version
                 )
-                if player_id in role_receipts:
-                    role = role_receipts[player_id]
-                    failures[player_id] += (
-                        f"; verified NFL role={role.status}; source={role.source_url}; "
-                        f"captured_at={role.captured_at.isoformat()}; "
-                        "role does not establish whole-season absence or a return projection"
-                    )
-                continue
+                y1_raw = tuple(item for item in y1_raw if item.player_id != player_id) + source_raw
+                y1_standard[player_id] = standard_item
+                y1_league[player_id] = league_item
+                evidence_modes[player_id] = evidence_mode
+                failures.pop(player_id, None)
         if standard_item is None or league_item is None:
             # This is reachable only if a supplied fallback contract was
             # malformed; retain a player-specific failure rather than aborting.
@@ -1270,6 +1392,7 @@ def build_live_p0_rostered_candidate_forecasts(
         "status_receipts": _input_digest({
             **{pid: asdict(row) for pid, row in sorted(fallback_status_evidence.items())},
             **{f"nfl_role:{pid}": asdict(row) for pid, row in sorted(role_receipts.items())},
+            **{f"ytd_only:{pid}": asdict(row) for pid, row in sorted(ytd_only_receipts.items())},
         }),
         "reference_scoring": _rows_digest((*source_reference_standard, *source_reference_league)),
         "candidate_facts": _input_digest({pid: fact.facts_digest for pid, fact in sorted(facts.items())}),

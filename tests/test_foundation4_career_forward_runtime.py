@@ -362,6 +362,7 @@ def test_restart_restores_complete_expanded_contract_without_acquisition(materia
         "estimates": (*base.estimates, dynamic_row),
         "player_count": base.player_count + 1,
         "player_coverage_failures": {"sleeper:player:unsupported": "verified missing evidence"},
+        "player_input_assumptions": {dynamic_id: "Low confidence: YTD-only"},
     })
     component = _base_loader.current_component(context)
     loader._persist(

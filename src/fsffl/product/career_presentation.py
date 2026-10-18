@@ -118,7 +118,8 @@ def career_lens_for_publication(record, *, served_state_id: str,
              "contract_version": getattr(record.contract, "contract_version", None),
              "presentation": coordinate.summary()},
             {pid: {"career_intrinsic_index": coordinate.index(value),
-                   "raw_career_forward_reference": value, "career_status": "ready"}
+                   "raw_career_forward_reference": value, "career_status": "ready",
+                   "career_input_assumption": getattr(record.contract, "player_input_assumptions", {}).get(pid)}
              for pid, value in raw.items()})
 
 

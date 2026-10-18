@@ -66,13 +66,34 @@ class NflRoleReceipt:
         return hashlib.sha256(json.dumps(asdict(self), sort_keys=True, default=str).encode()).hexdigest()
 
 
+# Independently re-read official pages at this instant. These are current-role
+# facts, not proof of an entire-season absence or provider projections.
+_ROLE_CAPTURE = datetime(2026, 10, 18, 13, 33, 0, tzinfo=UTC)
 NFL_ROLE_RECEIPTS = (
-    NflRoleReceipt(
-        "sleeper:player:6803", "WR", 2026, "reserve_left_squad",
+    # Retain the prior receipt: published historical States keep their exact
+    # dependency identity when a newer current-role capture is appended.
+    NflRoleReceipt("sleeper:player:6803", "WR", 2026, "reserve_left_squad",
         "https://www.nfl.com/teams/san-francisco-49ers/roster",
-        datetime(2026, 10, 17, 21, 10, 38, tzinfo=UTC),
-    ),
+        datetime(2026, 10, 17, 21, 10, 38, tzinfo=UTC)),
+    NflRoleReceipt("sleeper:player:6803", "WR", 2026, "reserve_left_squad",
+        "https://www.nfl.com/teams/san-francisco-49ers/roster", _ROLE_CAPTURE),
+    NflRoleReceipt("sleeper:player:3321", "WR", 2026, "unsigned",
+        "https://www.nfl.com/players/tyreek-hill/", _ROLE_CAPTURE),
+    NflRoleReceipt("sleeper:player:13268", "WR", 2026, "developmental_depth",
+        "https://www.baltimoreravens.com/team/depth-chart", _ROLE_CAPTURE),
 )
+
+# Management explicitly approved this input assumption in the Career #405
+# continuation on 2026-10-18. Scope is these three verified identities/roles;
+# another player needs an explicit policy admission, not an inferred zero.
+YTD_ONLY_POLICY_VERSION = "career-ytd-only-v1:management-approved-20261018"
+YTD_ONLY_POLICY_APPROVED_AT = datetime(2026, 10, 18, 13, 32, 35, tzinfo=UTC)
+YTD_ONLY_APPROVED_ROLES = {
+    "sleeper:player:3321": "unsigned",
+    "sleeper:player:6803": "reserve_left_squad",
+    "sleeper:player:13268": "developmental_depth",
+}
+
 
 
 def recorded_nfl_role_receipts(league_state, *, as_of: datetime) -> dict[str, NflRoleReceipt]:
@@ -86,7 +107,7 @@ def recorded_nfl_role_receipts(league_state, *, as_of: datetime) -> dict[str, Nf
         raise ValueError("NFL role cutoff must be timezone-aware")
     rostered = {entry.player_id for team in league_state.team_states for entry in team.roster}
     players = {player.player_id: player for player in league_state.players}
-    return {row.player_id: row for row in NFL_ROLE_RECEIPTS
+    return {row.player_id: row for row in sorted(NFL_ROLE_RECEIPTS, key=lambda row: row.captured_at)
             if row.player_id in rostered and row.player_id in players
             and players[row.player_id].position.value == row.position
             and league_state.league.season == row.season

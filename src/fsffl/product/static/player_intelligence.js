@@ -175,7 +175,7 @@
     const row=y1();
     return `<article class="pi-summary-card"><div><small>Season Projection</small><strong>${num(row?.fantasy_points,1)}</strong><span>fantasy points</span><em>${finite(row?.fantasy_ppg)?`${num(row.fantasy_ppg,1)} PPG`:'PPG unavailable'}</em></div></article>`;
   }
-  function overviewCards(){const v=overview?.value||{};return `<div class="pi-summary-grid">${projectionCard()}${valueCard('Broad Market',v.broad_market_value_index,v.broad_market_percentile)}${valueCard('3-Year Intrinsic',v.intrinsic_value_index,v.intrinsic_percentile)}${valueCard('Career Intrinsic',v.career_intrinsic_index,null)}</div>`}
+  function overviewCards(){const v=overview?.value||{};return `<div class="pi-summary-grid">${projectionCard()}${valueCard('Broad Market',v.broad_market_value_index,v.broad_market_percentile)}${valueCard('3-Year Intrinsic',v.intrinsic_value_index,v.intrinsic_percentile)}${valueCard('Career Intrinsic',v.career_intrinsic_index,null)}${v.career_input_assumption?`<p class="pi-muted">${esc(v.career_input_assumption)}</p>`:''}</div>`}
   function forecastProvenance(){
     const f=overview?.forecast||{},basis=f.current_evidence_basis||'unavailable',fallback=basis==='preseason_baseline';
     return `<div class="pi-provenance ${fallback?'fallback':''}"><strong>${fallback?'Preserved Preseason Forecast fallback':'Current governed Forecast'}</strong><span>Evidence basis: ${esc(basis)} · as of ${esc(f.current_as_of||'—')}</span><span>Sources: ${esc((f.successful_source_ids||[]).join(', ')||'preserved / unavailable')}</span></div>`;

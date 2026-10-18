@@ -54,6 +54,8 @@ const html=franchiseNSPlayerRow({player_id:'p',full_name:'A very long player nam
 assert.equal((html.match(/class="franchise-ns-player-value /g)||[]).length,3);
 assert.match(html,/class="franchise-ns-player-value career"[^>]*><small>Career Intrinsic<\/small><strong>6,789<\/strong><small>Raw Career 123.5<\/small>/);
 assert.doesNotMatch(html,/<strong>[^<]*<small>/);
+fsfflMyTeamState.careerIntrinsic.estimates[0].career_input_assumption='Low confidence: YTD-only <assumption>';
+assert.match(franchiseNSCareerDisplay({player_id:'p'}),/Low confidence: YTD-only &lt;assumption&gt;/);
 fsfflMyTeamState.careerIntrinsic.player_coverage_failures={q:'No admissible <projection>'};
 const missing=franchiseNSCareerDisplay({player_id:'q'});
 assert.match(missing,/Unavailable<\/strong>/);assert.match(missing,/No admissible &lt;projection&gt;/);

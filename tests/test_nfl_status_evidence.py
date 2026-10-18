@@ -174,7 +174,7 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     assert all(mode.startswith('status_based_zero_ros:out_for_season:official-season-unavailability-v1:')
                for mode in result.year_one_evidence_modes.values())
     assert runtime.valid_live_source_manifest(result.source_manifest)
-    assert role_times == [capture, capture]
+    assert role_times == [capture, capture, capture]
     assert result.source_manifest['fingerprints']['status_receipts'] == runtime._input_digest({
         **{pid: asdict(row) for pid, row in sorted(
             recorded_status_based_zero_ros_evidence(state, as_of=capture).items())},
@@ -274,3 +274,143 @@ def test_current_official_role_fences_backup_path_without_inventing_zero_or_back
     context = SimpleNamespace(league_state=state, forecast_evidence=None)
     assert dynamic_career_fingerprint(context, now=capture, include_freshness_epoch=False) != dynamic_career_fingerprint(
         context, now=capture-timedelta(microseconds=1), include_freshness_epoch=False)
+
+
+def _approved_ytd_state():
+    from fsffl.providers.nfl_status_evidence import NFL_ROLE_RECEIPTS
+    rows = tuple({row.player_id:row for row in sorted(NFL_ROLE_RECEIPTS, key=lambda row:row.captured_at)}.values())
+    capture = max(row.captured_at for row in rows)
+    base = _state()
+    return base.model_copy(update={
+        'as_of': capture, 'completed_through_week': 5,
+        'players': tuple(Player(player_id=row.player_id, full_name=row.player_id,
+                                position=Position.WR) for row in rows),
+        'player_states': tuple(PlayerState(player_id=row.player_id, age_years=23.,
+            as_of=capture, provenance=Provenance(source='fixture',
+                retrieved_at=capture,effective_at=capture)) for row in rows),
+        'team_states': (TeamState(team_id='a',roster=tuple(RosterEntry(
+            player_id=row.player_id,slot='BENCH') for row in rows)),TeamState(team_id='b',roster=())),
+    })
+
+
+def test_approved_ytd_input_preserves_earned_points_and_scores_actual_rare_events():
+    from fsffl.product import p0_live_candidate_runtime as runtime
+    from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatLine
+    state = _approved_ytd_state()
+    receipts = runtime.recorded_ytd_only_year_one_evidence(state,as_of=state.as_of)
+    assert set(receipts) == {'sleeper:player:3321','sleeper:player:6803','sleeper:player:13268'}
+    weekly = {week: () for week in range(1,6)}
+    weekly[4] = (SleeperWeeklyStatLine('sleeper:player:13268',2026,4,
+                                      {'rec':1.,'rec_yd':13.},state.as_of),)
+    actuals = runtime._weekly_actual_observations(league_state=state,lines_by_week=weekly,
+                                                 completed_through_week=5)
+    for pid, receipt in receipts.items():
+        raw, standard, league = runtime._score_ytd_only_year_one(
+            league_state=state,evidence=receipt,completed_actuals=actuals,
+            lines_by_week=weekly,completed_through_week=5,as_of=state.as_of)
+        assert standard.distribution.mean == (1.3 if pid.endswith(':13268') else 0.)
+        assert league.distribution.mean == (1.8 if pid.endswith(':13268') else 0.)
+        assert all(item.distribution.stddev == 0 for item in (standard,league))
+        assert receipt.source_version in league.model_version
+        assert 'management-approved' in receipt.source_version
+        assert all(row.provenance.retrieved_at <= state.as_of for row in raw)
+    # Earned rare events are scored, not silently dropped with forecast priors.
+    pid = 'sleeper:player:13268'
+    weekly[4] = (replace(weekly[4][0],stats={'rec':1.,'rec_yd':13.,'fum_rec':1.}),)
+    _, _, league = runtime._score_ytd_only_year_one(league_state=state,evidence=receipts[pid],
+        completed_actuals=actuals,lines_by_week=weekly,completed_through_week=5,as_of=state.as_of)
+    assert league.distribution.mean == 3.8
+    unsupported = state.model_copy(update={'league':state.league.model_copy(update={
+        'rules':state.league.rules.model_copy(update={'scoring':(
+            *state.league.rules.scoring,ScoringRule(stat='unapproved_stat',points=1.))})})})
+    with pytest.raises(ValueError,match='unsupported rules'):
+        runtime._score_ytd_only_year_one(league_state=unsupported,evidence=receipts[pid],
+            completed_actuals=actuals,lines_by_week=weekly,completed_through_week=5,as_of=state.as_of)
+    with pytest.raises(ValueError,match='weekly acquisition'):
+        runtime._score_ytd_only_year_one(league_state=state,evidence=receipts[pid],
+            completed_actuals=actuals,lines_by_week={},completed_through_week=5,as_of=state.as_of)
+
+
+def test_ytd_policy_is_cutoff_role_roster_and_approval_scoped(monkeypatch):
+    from fsffl.product import p0_live_candidate_runtime as runtime
+    import fsffl.providers.nfl_status_evidence as provider
+    state = _approved_ytd_state()
+    captured = state.as_of
+    assert not runtime.recorded_ytd_only_year_one_evidence(state,as_of=captured-timedelta(microseconds=1))
+    assert not runtime.recorded_ytd_only_year_one_evidence(state,as_of=captured+timedelta(hours=6))
+    assert not runtime.recorded_ytd_only_year_one_evidence(state.model_copy(update={
+        'team_states':()}),as_of=captured)
+    key = dynamic_career_fingerprint(SimpleNamespace(league_state=state,forecast_evidence=None),
+                                     now=captured,include_freshness_epoch=False)
+    monkeypatch.setattr(provider,'YTD_ONLY_POLICY_VERSION',provider.YTD_ONLY_POLICY_VERSION+':revision2')
+    assert dynamic_career_fingerprint(SimpleNamespace(league_state=state,forecast_evidence=None),
+                                     now=captured,include_freshness_epoch=False) != key
+    monkeypatch.setattr(provider,'NFL_ROLE_RECEIPTS',tuple(replace(row,status='active_starter')
+                                                        for row in provider.NFL_ROLE_RECEIPTS))
+    assert not runtime.recorded_ytd_only_year_one_evidence(state,as_of=captured)
+
+
+@pytest.mark.parametrize('provider_available', [False,True,'partial'])
+def test_default_live_producer_applies_approved_ytd_only_after_provider_path(monkeypatch,provider_available):
+    from fsffl.product import p0_live_candidate_runtime as runtime
+    from fsffl.providers.sleeper_weekly_stats import SleeperNflState, SleeperWeeklyStatLine
+    state = _approved_ytd_state()
+    capture = state.as_of
+    weekly = {week:() for week in range(1,6)}
+    weekly[4] = (SleeperWeeklyStatLine('sleeper:player:13268',2026,4,
+                                      {'rec':1.,'rec_yd':13.},capture),)
+    stats = SimpleNamespace(fetch_nfl_state=lambda:SleeperNflState(
+        season=2026,week=6,season_type='regular',captured_at=capture),
+        fetch_season=lambda **_:(),fetch_week=lambda **kw:weekly[kw['week']])
+    snapshot = SimpleNamespace(captured_at=capture,payload={'players':{
+        p.player_id.rsplit(':',1)[-1]:{'years_exp':0} for p in state.players}})
+    monkeypatch.setattr(runtime.SleeperSnapshotNormalizer,'normalize_snapshot',lambda *_,**__:state)
+    raw = ()
+    if provider_available:
+        # Complete provider authority must win even for a recorded role receipt.
+        evidence = next(iter(runtime.recorded_ytd_only_year_one_evidence(state,as_of=capture).values()))
+        raw = runtime._status_based_zero_ros(league_state=state,evidence=evidence,as_of=capture)
+        raw = tuple(row.model_copy(update={'distribution':runtime._constant_distribution(2.)}) for row in raw)
+    source_rows = raw[:1] if provider_available == 'partial' else ()
+    if provider_available == 'partial':
+        raw = ()
+    ros = SimpleNamespace(evaluation_as_of=capture,source_observations=source_rows,raw_ensemble=raw,
+        successful_source_ids=('cbs','razzball'),model_copy=lambda **_:SimpleNamespace())
+    monkeypatch.setattr(runtime,'build_in_season_forecasts',lambda *_,**__:ros)
+    monkeypatch.setattr('fsffl.forecast.in_season_orchestration.build_current_ros_fumbles_lost_supplement_observations',lambda *_,**__:())
+    result = runtime.build_live_p0_rostered_candidate_forecasts(state,stats_source=stats,
+        sleeper_source=SimpleNamespace(fetch_latest=lambda **_:snapshot),
+        evaluation_as_of=capture,projection_history_as_of=capture)
+    if provider_available == 'partial':
+        assert set(result.failures) == {evidence.player_id}
+        assert len(result.future.contract.forecasts) == 4
+        assert evidence.player_id not in result.year_one_evidence_modes
+        return
+    assert not result.failures
+    assert len(result.future.contract.forecasts) == 6
+    assert runtime.valid_live_source_manifest(result.source_manifest)
+    for pid, row in result.year_one_standard.items():
+        if provider_available and pid == evidence.player_id:
+            assert result.year_one_evidence_modes[pid] == 'two_source'
+            assert row.distribution.mean > 0
+        else:
+            assert result.year_one_evidence_modes[pid].startswith('low_confidence_ytd_only:')
+            assert row.distribution.mean == (1.3 if pid.endswith(':13268') else 0.)
+            assert result.year_one_league[pid].distribution.mean == (1.8 if pid.endswith(':13268') else 0.)
+
+
+def test_appending_role_receipts_preserves_published_state_reuse_identity(monkeypatch):
+    import fsffl.providers.nfl_status_evidence as provider
+    state = _approved_ytd_state()
+    old_cutoff = datetime(2026,10,18,1,25,53,tzinfo=UTC)
+    context = SimpleNamespace(league_state=state,forecast_evidence=None)
+    all_receipts = provider.NFL_ROLE_RECEIPTS
+    old = tuple(row for row in all_receipts if row.captured_at <= old_cutoff)
+    assert len(old) == 1
+    monkeypatch.setattr(provider,'NFL_ROLE_RECEIPTS',old)
+    original = dynamic_career_fingerprint(context,now=old_cutoff,include_freshness_epoch=False)
+    monkeypatch.setattr(provider,'NFL_ROLE_RECEIPTS',tuple(reversed(all_receipts)))
+    assert dynamic_career_fingerprint(context,now=old_cutoff,include_freshness_epoch=False) == original
+    current = provider.recorded_nfl_role_receipts(state,as_of=state.as_of)
+    assert set(current) == {row.player_id for row in state.players}
+    assert all(row.captured_at == state.as_of for row in current.values())

@@ -8,6 +8,7 @@ from fsffl.providers.sleeper import (
     SleeperNormalizer,
     SleeperPayloadBundle,
     _normalize_sleeper_player_status,
+    _owned_provider_text,
 )
 from fsffl.state.models import (
     LeagueState,
@@ -133,11 +134,11 @@ def canonical_players_from_sleeper_player_universe(
         )
         players[player_id] = Player(
             player_id=player_id,
-            full_name=full_name,
+            full_name=_owned_provider_text(full_name),
             position=position,
             nfl_team=nfl_team,
             provider_refs=(
-                ProviderRef(provider="sleeper", external_id=str(external_id)),
+                ProviderRef(provider="sleeper", external_id=_owned_provider_text(str(external_id))),
             ),
         )
     return tuple(sorted(players.values(), key=lambda item: item.player_id))
@@ -194,10 +195,10 @@ def _attach_current_fantasy_player_universe(
         )
         players_by_id[player_id] = Player(
             player_id=player_id,
-            full_name=full_name,
+            full_name=_owned_provider_text(full_name),
             position=position,
             nfl_team=nfl_team,
-            provider_refs=(ProviderRef(provider="sleeper", external_id=str(external_id)),),
+            provider_refs=(ProviderRef(provider="sleeper", external_id=_owned_provider_text(str(external_id))),),
         )
         status = _normalize_sleeper_player_status(raw)
         states_by_id[player_id] = PlayerState(
