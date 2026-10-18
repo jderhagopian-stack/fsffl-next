@@ -1,3 +1,9 @@
+## Oct 18: isolated GitHub Actions research workflow committed, not launched
+
+`.github/workflows/intrinsic-historical-shapley-research.yml` added on draft PR #464. Manual dispatch only, branch guard, contents read/actions read, no deploy/merge/production changes, independent concurrency. Production-engine 2048-permutation diagnostic runner will run Superflex and single-QB once enabled. **GitHub manual workflow dispatch requires default-branch workflow registration; this branch-only workflow cannot yet be manually launched.** Required authorized input artifact `intrinsic-historical-panel-authorized` containing `player_season_panel.csv` not yet present/verified in GitHub. No production 20-season historical job executed. Exact enablement gates and safe paths in `MANUAL_REPLAY_WORKFLOW_ENABLEMENT.md`. Do not alter Codex branches, nor silently register on default or publish historical CSV without review.
+
+---
+
 ## October 18 continuation: compared against actual archived source schema
 
 Verified mounted historical source in working container: `/mnt/data/files/player_season_panel.csv` (1,926,430 bytes) and latest corrected Library archive `FSFFL_NEXT_Corrected_Historical_Shapley_Replay_2026-10-17.zip`. Unpacked archive JSON schema: `cohorts[].start_season`, `cohorts[].players[].id`, `annual_shapley_hindsight` (null for absent observations), and `observed_years[].season`. Comparator `scripts/compare_historical_shapley_replays.py` now checks that archived `observed_years` matches production replay `years` exactly as a source-universe guard; companion unit test updated. **Production-engine 20-season execution remains pending** because an authenticated repository checkout/runner receiving Library historical CSV is not yet established. Do not repeat standalone 20-season run as a false substitute. Latest source archive has full 20-season hindsight JSON; no Career forecast/tail.
