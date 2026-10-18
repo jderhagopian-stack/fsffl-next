@@ -70,6 +70,11 @@ class NflRoleReceipt:
 # facts, not proof of an entire-season absence or provider projections.
 _ROLE_CAPTURE = datetime(2026, 10, 18, 13, 33, 0, tzinfo=UTC)
 NFL_ROLE_RECEIPTS = (
+    # Retain the prior receipt: published historical States keep their exact
+    # dependency identity when a newer current-role capture is appended.
+    NflRoleReceipt("sleeper:player:6803", "WR", 2026, "reserve_left_squad",
+        "https://www.nfl.com/teams/san-francisco-49ers/roster",
+        datetime(2026, 10, 17, 21, 10, 38, tzinfo=UTC)),
     NflRoleReceipt("sleeper:player:6803", "WR", 2026, "reserve_left_squad",
         "https://www.nfl.com/teams/san-francisco-49ers/roster", _ROLE_CAPTURE),
     NflRoleReceipt("sleeper:player:3321", "WR", 2026, "unsigned",
@@ -102,7 +107,7 @@ def recorded_nfl_role_receipts(league_state, *, as_of: datetime) -> dict[str, Nf
         raise ValueError("NFL role cutoff must be timezone-aware")
     rostered = {entry.player_id for team in league_state.team_states for entry in team.roster}
     players = {player.player_id: player for player in league_state.players}
-    return {row.player_id: row for row in NFL_ROLE_RECEIPTS
+    return {row.player_id: row for row in sorted(NFL_ROLE_RECEIPTS, key=lambda row: row.captured_at)
             if row.player_id in rostered and row.player_id in players
             and players[row.player_id].position.value == row.position
             and league_state.league.season == row.season

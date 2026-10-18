@@ -396,6 +396,8 @@ def test_current_position_grid_uses_governed_slot_contract_and_dynasty_stays_fix
     assert "positions=dynasty?['QB','RB','WR','TE']:[...laCurrentSlotOrder()].sort" in matrix
     assert "FLEX/SF stay separate from fixed positions" in matrix
     assert "Current columns follow configured league starter slots" in matrix
+    assert "roster count shown beneath" not in matrix
+    assert "Tap any position to see the players and evidence behind its rank." in matrix
     assert "grid-template-columns:'+franchiseWidth+'px repeat('+columnCount+','+positionWidth+'px)" in matrix
     assert "franchiseWidth=104,positionWidth=64" in matrix
     assert "width:'+gridWidth+'px!important;min-width:'+gridWidth+'px!important" in matrix

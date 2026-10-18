@@ -278,7 +278,7 @@ def test_current_official_role_fences_backup_path_without_inventing_zero_or_back
 
 def _approved_ytd_state():
     from fsffl.providers.nfl_status_evidence import NFL_ROLE_RECEIPTS
-    rows = NFL_ROLE_RECEIPTS
+    rows = tuple({row.player_id:row for row in sorted(NFL_ROLE_RECEIPTS, key=lambda row:row.captured_at)}.values())
     capture = max(row.captured_at for row in rows)
     base = _state()
     return base.model_copy(update={
@@ -397,3 +397,20 @@ def test_default_live_producer_applies_approved_ytd_only_after_provider_path(mon
             assert result.year_one_evidence_modes[pid].startswith('low_confidence_ytd_only:')
             assert row.distribution.mean == (1.3 if pid.endswith(':13268') else 0.)
             assert result.year_one_league[pid].distribution.mean == (1.8 if pid.endswith(':13268') else 0.)
+
+
+def test_appending_role_receipts_preserves_published_state_reuse_identity(monkeypatch):
+    import fsffl.providers.nfl_status_evidence as provider
+    state = _approved_ytd_state()
+    old_cutoff = datetime(2026,10,18,1,25,53,tzinfo=UTC)
+    context = SimpleNamespace(league_state=state,forecast_evidence=None)
+    all_receipts = provider.NFL_ROLE_RECEIPTS
+    old = tuple(row for row in all_receipts if row.captured_at <= old_cutoff)
+    assert len(old) == 1
+    monkeypatch.setattr(provider,'NFL_ROLE_RECEIPTS',old)
+    original = dynamic_career_fingerprint(context,now=old_cutoff,include_freshness_epoch=False)
+    monkeypatch.setattr(provider,'NFL_ROLE_RECEIPTS',tuple(reversed(all_receipts)))
+    assert dynamic_career_fingerprint(context,now=old_cutoff,include_freshness_epoch=False) == original
+    current = provider.recorded_nfl_role_receipts(state,as_of=state.as_of)
+    assert set(current) == {row.player_id for row in state.players}
+    assert all(row.captured_at == state.as_of for row in current.values())
