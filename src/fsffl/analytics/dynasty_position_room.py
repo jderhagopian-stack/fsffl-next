@@ -6,6 +6,7 @@ from typing import Literal
 from fsffl.value.shapley_intrinsic_contract import (
     RAW_INTRINSIC_QUANTITY,
     SHAPLEY_INTRINSIC_CONTRACT_VERSION,
+    SHAPLEY_INTRINSIC_MODEL_VERSION,
     ShapleyIntrinsicContract,
     ShapleyIntrinsicAvailability,
     discounted_three_year_shapley_value,
@@ -13,6 +14,8 @@ from fsffl.value.shapley_intrinsic_contract import (
 from fsffl.state.models import FrozenModel, LeagueState, Position
 from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
+    CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
+    CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
     CAREER_FORWARD_RAW_QUANTITY,
     CareerForwardIntrinsicShadowContract,
 )
@@ -137,7 +140,11 @@ def build_three_year_intrinsic_player_values(
         intrinsic is not None
         and intrinsic.status == ShapleyIntrinsicAvailability.READY
         and intrinsic.contract_version == SHAPLEY_INTRINSIC_CONTRACT_VERSION
+        and intrinsic.intrinsic_model_version == SHAPLEY_INTRINSIC_MODEL_VERSION
         and intrinsic.evaluation_season == league_state.league.season
+        and intrinsic.target_years == tuple(
+            league_state.league.season + offset for offset in range(3)
+        )
         and intrinsic.quantity_semantics == RAW_INTRINSIC_QUANTITY
         and math.isclose(
             intrinsic.discount, FROZEN_INTRINSIC_DISCOUNT,
@@ -173,6 +180,8 @@ def build_three_year_intrinsic_player_values(
         and not standalone_ambiguous
         and career_forward is not None
         and career_forward.status == "shadow_ready"
+        and career_forward.contract_version == CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION
+        and career_forward.model_version == CAREER_FORWARD_INTRINSIC_MODEL_VERSION
         and career_forward.evaluation_season == league_state.league.season
         and career_forward.current_intrinsic_contract_version
             == SHAPLEY_INTRINSIC_CONTRACT_VERSION

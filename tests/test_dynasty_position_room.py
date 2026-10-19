@@ -207,9 +207,12 @@ def _three_year(state, values):
     from fsffl.value.shapley_intrinsic_contract import (
         ShapleyIntrinsicContract, ShapleyIntrinsicPlayerEstimate,
         ShapleyIntrinsicAvailability,
+        SHAPLEY_INTRINSIC_MODEL_VERSION,
     )
     return ShapleyIntrinsicContract.model_construct(
         status=ShapleyIntrinsicAvailability.READY, evaluation_season=state.league.season,
+        intrinsic_model_version=SHAPLEY_INTRINSIC_MODEL_VERSION,
+        target_years=tuple(state.league.season + offset for offset in range(3)),
         estimates=tuple(ShapleyIntrinsicPlayerEstimate.model_construct(
             player_id=pid, raw_intrinsic_value=value) for pid, value in values.items()),
     )
@@ -328,6 +331,15 @@ def test_three_year_extension_uses_only_missing_rostered_career_annual_component
     assert by_id['a4'].source == 'career_current_y1_y3_discounted_extension'
     assert 'unrostered' not in by_id
 
+    stale_career_version = career.model_copy(update={
+        'contract_version': 'unrecognized-career-contract',
+    })
+    version_fenced = build_three_year_intrinsic_player_values(
+        state, intrinsic=standalone, evidence_state_id=state.state_id,
+        career_forward=stale_career_version, career_evidence_state_id=state.state_id,
+    )
+    assert {row.player_id for row in version_fenced} == {'a1', 'a2', 'a3', 'b1'}
+
     rooms = build_three_year_position_rooms(
         state, intrinsic=standalone, evidence_state_id=state.state_id,
         career_forward=career, career_evidence_state_id=state.state_id,
@@ -363,6 +375,15 @@ def test_three_year_extension_fails_closed_on_state_position_horizon_or_numeric_
         career_forward=complete_career, career_evidence_state_id=state.state_id,
     )
     assert degraded_values == ()
+
+    wrong_standalone_years = standalone.model_copy(update={
+        'target_years': (2025, 2026, 2027),
+    })
+    mismatched_year_values = build_three_year_intrinsic_player_values(
+        state, intrinsic=wrong_standalone_years, evidence_state_id=state.state_id,
+        career_forward=complete_career, career_evidence_state_id=state.state_id,
+    )
+    assert mismatched_year_values == ()
 
     wrong_position = build_three_year_intrinsic_player_values(
         state, intrinsic=standalone, evidence_state_id=state.state_id,
