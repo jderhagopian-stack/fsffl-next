@@ -887,7 +887,7 @@ def test_dynasty_preparation_is_decoupled_from_core_publication() -> None:
     startup = source.split("def _run_lightweight_startup_restore", 1)[1].split("def _start_lightweight_startup_restore", 1)[0]
     assert "_prepare_presentation_for_user(" not in startup
     assert "_presentation_continuity.has_snapshot(" in startup
-    assert "if current_ready and (not has_presentation" in startup
+    assert "if current_ready and (" in startup
     assert "three_year_publication_matches(" in startup
     assert "expected_generation_id=context.publication_generation_id" in startup
 

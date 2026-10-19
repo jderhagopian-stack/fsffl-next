@@ -308,7 +308,10 @@ def install_career_intrinsic_routes(
             or not three_year_publication_validator(context, record, career_record)
         ):
             return {**base, "status": "unavailable",
-                    "reason": "3-Year and Career evidence are not bound to the active publication generation."}
+                    "reason": (
+                        "3-Year and Career evidence are not bound to the "
+                        "active publication generation."
+                    )}
         player_values = build_three_year_intrinsic_player_values(
             state,
             intrinsic=intrinsic,

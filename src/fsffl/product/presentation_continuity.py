@@ -134,7 +134,8 @@ class PresentationContinuityStore:
         self._local = local()
         self._validation_lock = RLock()
         self._known_snapshot_manifests: dict[
-            tuple[str, str, str, str | None], tuple[str, str | None, str | None, str | None]
+            tuple[str, str, str, str | None],
+            tuple[str, str | None, str | None, str | None],
         ] = {}
 
     @property

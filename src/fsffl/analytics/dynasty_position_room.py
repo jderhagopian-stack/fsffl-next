@@ -309,10 +309,19 @@ def three_year_source_reconciles_career_components(
         return False
 
     career_rows = {row.player_id: row for row in career_forward.estimates}
-    if len(career_rows) != len(career_forward.estimates):
+    if (
+        len(career_rows) != len(career_forward.estimates)
+        or career_forward.player_count != len(career_forward.estimates)
+    ):
         return False
     intrinsic_ids = {row.player_id for row in intrinsic.estimates}
-    if not intrinsic_ids or len(intrinsic_ids) != len(intrinsic.estimates):
+    coverage = getattr(intrinsic, "coverage", None)
+    if (
+        not intrinsic_ids
+        or len(intrinsic_ids) != len(intrinsic.estimates)
+        or coverage is None
+        or getattr(coverage, "player_count", None) != len(intrinsic.estimates)
+    ):
         return False
     shared_count = 0
     for row in intrinsic.estimates:
@@ -329,32 +338,37 @@ def three_year_source_reconciles_career_components(
             or estimate.current_intrinsic_replaced
         ):
             return False
-        annual = estimate.uncertainty.current_y1_y3
-        if (
-            tuple(item.year_index for item in annual) != (1, 2, 3)
-            or tuple(item.target_season for item in annual)
-            != tuple(league_state.league.season + offset for offset in range(3))
-        ):
+        try:
+            annual = estimate.uncertainty.current_y1_y3
+            if (
+                tuple(item.year_index for item in annual) != (1, 2, 3)
+                or tuple(item.target_season for item in annual)
+                != tuple(league_state.league.season + offset for offset in range(3))
+            ):
+                return False
+            contributions = tuple(
+                float(item.raw_shapley_contribution) for item in annual
+            )
+            raw_current = float(estimate.current_intrinsic_raw_y1_y3)
+            raw_three_year = float(row.raw_intrinsic_value)
+        except (AttributeError, TypeError, ValueError, OverflowError):
             return False
-        contributions = tuple(float(item.raw_shapley_contribution) for item in annual)
         if not all(math.isfinite(value) for value in contributions):
             return False
         if (
-            not math.isfinite(estimate.current_intrinsic_raw_y1_y3)
+            not math.isfinite(raw_current)
             or not math.isclose(
-                sum(contributions), estimate.current_intrinsic_raw_y1_y3,
+                sum(contributions), raw_current,
                 rel_tol=0.0, abs_tol=1e-9,
             )
-            or not math.isfinite(row.raw_intrinsic_value)
+            or not math.isfinite(raw_three_year)
         ):
             return False
         try:
             rebuilt = discounted_three_year_shapley_value(contributions)
         except ValueError:
             return False
-        if not math.isclose(
-            rebuilt, row.raw_intrinsic_value, rel_tol=0.0, abs_tol=1e-9,
-        ):
+        if not math.isclose(rebuilt, raw_three_year, rel_tol=0.0, abs_tol=1e-9):
             return False
     return shared_count > 0
 

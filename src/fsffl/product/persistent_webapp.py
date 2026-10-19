@@ -2191,7 +2191,10 @@ def _run_lightweight_startup_restore() -> None:
                                 context, current, restored_career,
                             )
                         )
-                        if current_ready and (not has_presentation or (career_ready and not source_generation_ready)):
+                        if current_ready and (
+                            not has_presentation
+                            or (career_ready and not source_generation_ready)
+                        ):
                             _promote_presentation_for_user(_beta_restore_user, context)
                     except Exception as exc:
                         _logger.warning(

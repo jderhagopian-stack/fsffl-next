@@ -206,13 +206,14 @@ def test_dynasty_room_requires_actual_position_match() -> None:
 def _three_year(state, values):
     from fsffl.value.shapley_intrinsic_contract import (
         ShapleyIntrinsicContract, ShapleyIntrinsicPlayerEstimate,
-        ShapleyIntrinsicAvailability,
+        ShapleyIntrinsicAvailability, ShapleyIntrinsicCoverage,
         SHAPLEY_INTRINSIC_MODEL_VERSION,
     )
     return ShapleyIntrinsicContract.model_construct(
         status=ShapleyIntrinsicAvailability.READY, evaluation_season=state.league.season,
         intrinsic_model_version=SHAPLEY_INTRINSIC_MODEL_VERSION,
         target_years=tuple(state.league.season + offset for offset in range(3)),
+        coverage=ShapleyIntrinsicCoverage.model_construct(player_count=len(values)),
         estimates=tuple(ShapleyIntrinsicPlayerEstimate.model_construct(
             player_id=pid, raw_intrinsic_value=value) for pid, value in values.items()),
     )
