@@ -556,6 +556,8 @@ def test_three_year_route_extends_only_from_matching_completed_career_record():
     assert player['source'] == 'career_current_y1_y3_discounted_extension'
     assert player['raw_intrinsic_value'] == pytest.approx(10 + .85 * 20 + .85**2 * 30)
     assert current_owner.calls == career_owner.calls == 1
+    context.publication_generation_id = None
+    assert endpoint(state.state_id, 'published', 'user')['status'] == 'superseded'
 
 
 def test_three_year_publication_source_reconciliation_checks_shared_values():
@@ -641,7 +643,9 @@ def test_three_year_completed_state_lookup_cannot_touch_loader_or_fingerprints()
         assert coordinator.completed_for_state(SimpleNamespace(
             user_id='other-user', league_state=state, publication_generation_id='published')) is None
         context.publication_generation_id = None
-        assert coordinator.completed_for_state(context) is None
+        # Publication composition must be able to bind retained owners to its
+        # replacement manifest before the runtime has a generation ID.
+        assert coordinator.completed_for_state(context) is record
         context.publication_generation_id = 'published'
         coordinator._records[('owner', state.league.league_id, 'other-source')] = record
         assert coordinator.completed_for_state(context) is None  # never guess source identity

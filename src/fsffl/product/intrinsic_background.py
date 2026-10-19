@@ -574,15 +574,17 @@ class ShapleyIntrinsicBackgroundCoordinator:
         return record
 
     def completed_for_state(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
-        """Memory-only read for an already published exact State.
+        """Memory-only exact-State read for publication composition or a GET.
 
         The caller fences the requested publication against runtime first. Never
         resolve dependency fingerprints, pin/restore inputs or invoke the loader
-        on this path. If retained attempts disagree, fail closed rather than
-        choosing a newer unproven source fingerprint. Storage is already bounded
-        by this coordinator's normal ownership/retention policy.
+        on this path. Composition may call this before the replacement generation
+        is bound; read routes must separately require an active exact generation.
+        If retained attempts disagree, fail closed rather than choosing a newer
+        unproven source fingerprint. Storage is already bounded by this
+        coordinator's normal ownership/retention policy.
         """
-        if context.league_state is None or not context.publication_generation_id:
+        if context.league_state is None:
             return None
         state_id = context.league_state.state_id
         league_id = context.league_state.league.league_id
