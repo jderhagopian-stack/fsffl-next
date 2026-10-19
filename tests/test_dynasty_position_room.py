@@ -458,6 +458,13 @@ def test_three_year_route_reads_completed_owner_only_and_fences_publication():
     contract = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'a4': -1., 'b1': 8.})
     record = SimpleNamespace(status=IntrinsicBuildStatus.COMPLETED, contract=contract,
         league_state_id=state.state_id, intrinsic_input_fingerprint='owned-current')
+    career_contract = _career_current_components(state, {
+        'a1': (1., 2., 3.), 'a2': (2., 3., 4.), 'a3': (3., 4., 5.),
+        'a4': (4., 5., 6.), 'b1': (5., 6., 7.),
+    })
+    career_record = SimpleNamespace(status=IntrinsicBuildStatus.COMPLETED,
+        contract=career_contract, league_state_id=state.state_id,
+        intrinsic_input_fingerprint='owned-career')
     class ReadOnlyOwner:
         def completed_for_state(self, context): return record
         def current(self, context): raise AssertionError("GET must not resolve fingerprints")
@@ -465,7 +472,9 @@ def test_three_year_route_reads_completed_owner_only_and_fences_publication():
     context = SimpleNamespace(league_state=state, publication_generation_id='published')
     app = FastAPI()
     install_career_intrinsic_routes(app, runtime_store=SimpleNamespace(get=lambda _: context),
-        loader=None, coordinator=None, current_intrinsic_coordinator=ReadOnlyOwner())
+        loader=None, coordinator=SimpleNamespace(completed_for_state=lambda _: career_record),
+        current_intrinsic_coordinator=ReadOnlyOwner(),
+        three_year_publication_validator=lambda *_: True)
     endpoint = next(route.endpoint for route in app.routes
         if route.path == '/api/league/three-year-position-rooms')
     result = endpoint(state.state_id, 'published', 'user')
@@ -474,6 +483,16 @@ def test_three_year_route_reads_completed_owner_only_and_fences_publication():
     assert result['dynasty_rank_readiness']['status'] == 'ready'
     assert result['input_fingerprint'] == 'owned-current'
     assert endpoint(state.state_id, 'older-generation', 'user')['status'] == 'superseded'
+    # A later completed owner cannot be presented under an older publication.
+    app2 = FastAPI()
+    install_career_intrinsic_routes(app2,
+        runtime_store=SimpleNamespace(get=lambda _: context), loader=None,
+        coordinator=SimpleNamespace(completed_for_state=lambda _: career_record),
+        current_intrinsic_coordinator=ReadOnlyOwner(),
+        three_year_publication_validator=lambda *_: False)
+    endpoint2 = next(route.endpoint for route in app2.routes
+        if route.path == '/api/league/three-year-position-rooms')
+    assert endpoint2(state.state_id, 'published', 'user')['status'] == 'unavailable'
     record = None
     assert endpoint(state.state_id, 'published', 'user')['status'] == 'unavailable'
 
@@ -517,6 +536,7 @@ def test_three_year_route_extends_only_from_matching_completed_career_record():
         app, runtime_store=SimpleNamespace(get=lambda _: context),
         loader=None, coordinator=career_owner,
         current_intrinsic_coordinator=current_owner,
+        three_year_publication_validator=lambda *_: True,
     )
     endpoint = next(route.endpoint for route in app.routes
         if route.path == '/api/league/three-year-position-rooms')
@@ -535,6 +555,31 @@ def test_three_year_route_extends_only_from_matching_completed_career_record():
     assert player['source'] == 'career_current_y1_y3_discounted_extension'
     assert player['raw_intrinsic_value'] == pytest.approx(10 + .85 * 20 + .85**2 * 30)
     assert current_owner.calls == career_owner.calls == 1
+
+
+def test_three_year_publication_source_reconciliation_checks_shared_values():
+    from fsffl.analytics.dynasty_position_room import (
+        three_year_source_reconciles_career_components,
+    )
+
+    state = _state()
+    contributions = (10., 20., 30.)
+    expected = 10. + .85 * 20. + .85**2 * 30.
+    standalone = _three_year(state, {'a1': expected, 'a2': 4.})
+    career = _career_current_components(state, {
+        'a1': contributions,
+        # A row outside the overlapping cohort is not a contradiction.
+        'b1': (4., 0., 0.),
+    })
+    assert three_year_source_reconciles_career_components(
+        state, intrinsic=standalone, evidence_state_id=state.state_id,
+        career_forward=career, career_evidence_state_id=state.state_id,
+    )
+    mismatched = _three_year(state, {'a1': expected + .01, 'a2': 4.})
+    assert not three_year_source_reconciles_career_components(
+        state, intrinsic=mismatched, evidence_state_id=state.state_id,
+        career_forward=career, career_evidence_state_id=state.state_id,
+    )
 
 
 def test_three_year_route_requires_completed_standalone_owner_before_extension():
@@ -568,7 +613,7 @@ def test_three_year_route_requires_completed_standalone_owner_before_extension()
         if route.path == '/api/league/three-year-position-rooms')
     result = endpoint(state.state_id, 'published', 'user')
     assert result['status'] == 'unavailable'
-    assert 'No completed 3-Year' in result['reason']
+    assert 'not bound to the active publication generation' in result['reason']
 
 
 def test_three_year_completed_state_lookup_cannot_touch_loader_or_fingerprints():

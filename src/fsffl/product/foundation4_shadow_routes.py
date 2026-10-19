@@ -9,6 +9,7 @@ from fsffl.analytics.dynasty_position_room import (
     build_dynasty_position_rooms,
     build_three_year_position_rooms,
     build_three_year_intrinsic_player_values,
+    three_year_source_reconciles_career_components,
 )
 from .foundation4_career_forward_runtime import CareerIntrinsicLoader
 from .career_presentation import career_lens_for_publication, career_reference_ids_from_current
@@ -164,6 +165,7 @@ def install_career_intrinsic_routes(
     coordinator: ShapleyIntrinsicBackgroundCoordinator,
     presentation_payload_loader=None,
     career_publication_validator=None,
+    three_year_publication_validator=None,
     current_intrinsic_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
 ) -> None:
     def _record(user_id: str):
@@ -299,6 +301,14 @@ def install_career_intrinsic_routes(
                 "capability": "three_year_intrinsic"}
         intrinsic = record.contract if record is not None else None
         career_forward = career_record.contract if career_record is not None else None
+        if (
+            record is None
+            or career_record is None
+            or three_year_publication_validator is None
+            or not three_year_publication_validator(context, record, career_record)
+        ):
+            return {**base, "status": "unavailable",
+                    "reason": "3-Year and Career evidence are not bound to the active publication generation."}
         player_values = build_three_year_intrinsic_player_values(
             state,
             intrinsic=intrinsic,
@@ -414,6 +424,25 @@ def install_career_intrinsic_routes(
                 career_forward=record.contract,
                 evidence_state_id=record.league_state_id,
             )
+            current_record = (
+                current_intrinsic_coordinator.completed_for_state(context)
+                if current_intrinsic_coordinator is not None else None
+            )
+            current_intrinsic_input_fingerprint = None
+            if (
+                current_record is not None
+                and current_record.league_state_id == state.state_id
+                and three_year_source_reconciles_career_components(
+                    state,
+                    intrinsic=current_record.contract,
+                    evidence_state_id=current_record.league_state_id,
+                    career_forward=record.contract,
+                    career_evidence_state_id=record.league_state_id,
+                )
+            ):
+                current_intrinsic_input_fingerprint = (
+                    current_record.intrinsic_input_fingerprint
+                )
             return _dynasty_publication_payload(
                 context,
                 {
@@ -421,6 +450,7 @@ def install_career_intrinsic_routes(
                     "capability": "career_intrinsic",
                     "league_state_id": state.state_id,
                     "input_fingerprint": record.intrinsic_input_fingerprint,
+                    "current_intrinsic_input_fingerprint": current_intrinsic_input_fingerprint,
                     "model_version": rooms[0].model_version if rooms else None,
                     "rooms": [row.model_dump(mode="json") for row in rooms],
                     "career_position_depth": _career_position_depth_rows(

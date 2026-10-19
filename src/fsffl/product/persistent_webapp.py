@@ -1751,6 +1751,7 @@ install_career_intrinsic_routes(
     current_intrinsic_coordinator=_shapley_intrinsic_coordinator,
     runtime_store=_runtime_store,
     career_publication_validator=_presentation_continuity.career_publication_matches,
+    three_year_publication_validator=_presentation_continuity.three_year_publication_matches,
     loader=_career_intrinsic_loader,
     coordinator=_career_intrinsic_coordinator,
     presentation_payload_loader=_presentation_payload_loader,
@@ -2171,12 +2172,27 @@ def _run_lightweight_startup_restore() -> None:
                             has_presentation = _presentation_continuity.career_publication_matches(
                                 context, restored_career,
                             )
-                        if not has_presentation:
-                            current = _shapley_intrinsic_coordinator.current(context)
-                            if (current is not None
-                                    and current.status == IntrinsicBuildStatus.COMPLETED
-                                    and current.contract is not None):
-                                _promote_presentation_for_user(_beta_restore_user, context)
+                        current = _shapley_intrinsic_coordinator.current(context)
+                        current_ready = bool(
+                            current is not None
+                            and current.status == IntrinsicBuildStatus.COMPLETED
+                            and current.contract is not None
+                        )
+                        career_ready = bool(
+                            restored_career is not None
+                            and restored_career.status == IntrinsicBuildStatus.COMPLETED
+                            and restored_career.contract is not None
+                        )
+                        source_generation_ready = bool(
+                            has_presentation
+                            and current_ready
+                            and career_ready
+                            and _presentation_continuity.three_year_publication_matches(
+                                context, current, restored_career,
+                            )
+                        )
+                        if current_ready and (not has_presentation or (career_ready and not source_generation_ready)):
+                            _promote_presentation_for_user(_beta_restore_user, context)
                     except Exception as exc:
                         _logger.warning(
                             "FSFFL startup presentation backfill unavailable user=%s error=%s",

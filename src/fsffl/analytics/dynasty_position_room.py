@@ -259,6 +259,106 @@ def build_three_year_intrinsic_player_values(
     return tuple(output[key] for key in sorted(output))
 
 
+def three_year_source_reconciles_career_components(
+    league_state: LeagueState,
+    *,
+    intrinsic: ShapleyIntrinsicContract | None,
+    evidence_state_id: str | None,
+    career_forward: CareerForwardIntrinsicShadowContract | None,
+    career_evidence_state_id: str | None,
+) -> bool:
+    """Prove that one exact-State 3-Year source matches Career's Current rows.
+
+    This is used when creating a publication manifest. It lets the manifest bind
+    both input fingerprints to one generation; it never loads or resolves inputs.
+    """
+    if (
+        intrinsic is None
+        or intrinsic.status != ShapleyIntrinsicAvailability.READY
+        or intrinsic.contract_version != SHAPLEY_INTRINSIC_CONTRACT_VERSION
+        or intrinsic.intrinsic_model_version != SHAPLEY_INTRINSIC_MODEL_VERSION
+        or intrinsic.evaluation_season != league_state.league.season
+        or intrinsic.target_years != tuple(
+            league_state.league.season + offset for offset in range(3)
+        )
+        or intrinsic.quantity_semantics != RAW_INTRINSIC_QUANTITY
+        or not math.isclose(
+            intrinsic.discount, FROZEN_INTRINSIC_DISCOUNT,
+            rel_tol=0.0, abs_tol=1e-12,
+        )
+        or intrinsic.display_scaling_applied
+        or intrinsic.diagnostic_h1_included
+        or not evidence_state_id
+        or evidence_state_id != league_state.state_id
+        or career_forward is None
+        or career_forward.status != "shadow_ready"
+        or career_forward.contract_version != CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION
+        or career_forward.model_version != CAREER_FORWARD_INTRINSIC_MODEL_VERSION
+        or career_forward.evaluation_season != league_state.league.season
+        or career_forward.current_intrinsic_contract_version
+            != SHAPLEY_INTRINSIC_CONTRACT_VERSION
+        or career_forward.raw_quantity != CAREER_FORWARD_RAW_QUANTITY
+        or career_forward.aggregation != CAREER_FORWARD_AGGREGATION
+        or career_forward.display_scaling_applied
+        or career_forward.market_inputs_used
+        or career_forward.authoritative_for_current_intrinsic
+        or career_forward.current_intrinsic_replaced
+        or not career_evidence_state_id
+        or career_evidence_state_id != league_state.state_id
+    ):
+        return False
+
+    career_rows = {row.player_id: row for row in career_forward.estimates}
+    if len(career_rows) != len(career_forward.estimates):
+        return False
+    intrinsic_ids = {row.player_id for row in intrinsic.estimates}
+    if not intrinsic_ids or len(intrinsic_ids) != len(intrinsic.estimates):
+        return False
+    shared_count = 0
+    for row in intrinsic.estimates:
+        estimate = career_rows.get(row.player_id)
+        if estimate is None:
+            continue
+        shared_count += 1
+        if (
+            estimate.raw_quantity != CAREER_FORWARD_RAW_QUANTITY
+            or estimate.aggregation != CAREER_FORWARD_AGGREGATION
+            or estimate.discounting_applied
+            or estimate.display_index_arithmetic_used
+            or estimate.market_inputs_used
+            or estimate.current_intrinsic_replaced
+        ):
+            return False
+        annual = estimate.uncertainty.current_y1_y3
+        if (
+            tuple(item.year_index for item in annual) != (1, 2, 3)
+            or tuple(item.target_season for item in annual)
+            != tuple(league_state.league.season + offset for offset in range(3))
+        ):
+            return False
+        contributions = tuple(float(item.raw_shapley_contribution) for item in annual)
+        if not all(math.isfinite(value) for value in contributions):
+            return False
+        if (
+            not math.isfinite(estimate.current_intrinsic_raw_y1_y3)
+            or not math.isclose(
+                sum(contributions), estimate.current_intrinsic_raw_y1_y3,
+                rel_tol=0.0, abs_tol=1e-9,
+            )
+            or not math.isfinite(row.raw_intrinsic_value)
+        ):
+            return False
+        try:
+            rebuilt = discounted_three_year_shapley_value(contributions)
+        except ValueError:
+            return False
+        if not math.isclose(
+            rebuilt, row.raw_intrinsic_value, rel_tol=0.0, abs_tol=1e-9,
+        ):
+            return False
+    return shared_count > 0
+
+
 def _position_rooms(
     league_state: LeagueState, *, values: dict[str, tuple[Position, float]],
     contract_valid: bool, evidence_state_id: str | None,
