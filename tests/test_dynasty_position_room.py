@@ -319,6 +319,9 @@ def test_three_year_extension_uses_only_missing_rostered_career_annual_component
         'b1': (200., 200., 200.),
         'unrostered': (1., 2., 3.),
     })
+    career = career.model_copy(update={
+        'player_input_assumptions': {'a4': 'Approved YTD-only Current input'},
+    })
     values = build_three_year_intrinsic_player_values(
         state, intrinsic=standalone, evidence_state_id=state.state_id,
         career_forward=career, career_evidence_state_id=state.state_id,
@@ -330,6 +333,8 @@ def test_three_year_extension_uses_only_missing_rostered_career_annual_component
     assert by_id['a4'].raw_intrinsic_value == pytest.approx(10 + .85 * 20 + .85**2 * 40)
     assert by_id['a4'].raw_intrinsic_value != career.estimates[1].raw_career_forward_reference
     assert by_id['a4'].source == 'career_current_y1_y3_discounted_extension'
+    assert by_id['a4'].input_assumption == 'Approved YTD-only Current input'
+    assert by_id['a1'].input_assumption is None
     assert 'unrostered' not in by_id
 
     stale_career_version = career.model_copy(update={
@@ -506,6 +511,9 @@ def test_three_year_route_extends_only_from_matching_completed_career_record():
     state = _state()
     standalone = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'b1': 8.})
     career = _career_current_components(state, {'a4': (10., 20., 30.)})
+    career = career.model_copy(update={
+        'player_input_assumptions': {'a4': 'Approved YTD-only Current input'},
+    })
     current_record = SimpleNamespace(
         status=IntrinsicBuildStatus.COMPLETED, contract=standalone,
         league_state_id=state.state_id, intrinsic_input_fingerprint='three-year-fp',
@@ -554,6 +562,7 @@ def test_three_year_route_extends_only_from_matching_completed_career_record():
     assert result['dynasty_rank_readiness']['status'] == 'ready'
     player = next(row for row in result['players'] if row['player_id'] == 'a4')
     assert player['source'] == 'career_current_y1_y3_discounted_extension'
+    assert player['input_assumption'] == 'Approved YTD-only Current input'
     assert player['raw_intrinsic_value'] == pytest.approx(10 + .85 * 20 + .85**2 * 30)
     assert current_owner.calls == career_owner.calls == 1
     context.publication_generation_id = None

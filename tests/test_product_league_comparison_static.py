@@ -646,6 +646,24 @@ def test_three_year_and_career_cells_keep_distinct_raw_rooms_and_no_counts():
     assert result.returncode == 0, result.stderr
 
 
+def test_three_year_player_drawer_preserves_and_escapes_input_assumptions():
+    import subprocess
+    script = r"""
+    const fs=require('fs'),vm=require('vm'),assert=require('assert');
+    const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+    const drawer=source.slice(source.indexOf('function laThreeYearRoomDrawer('),source.indexOf('async function laLoadDynastyRooms('));
+    const state={views:[{team_id:'a',display_name:'Alpha',players:[{player_id:'a4',full_name:'Player Four',position:'RB'}]}],threeYearRooms:{players:[{player_id:'a4',raw_intrinsic_value:12.5,input_assumption:'Approved <YTD-only> Current input'}]}};
+    const esc=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+    const sandbox={fsfflLeagueStructureState:state,laDynastyRoom:()=>({room_raw:12.5,league_rank:1}),laEsc:esc,laNum:(value,digits)=>Number.isFinite(value)?value.toFixed(digits):'—'};
+    vm.runInNewContext(drawer+'\nthis.drawer=laThreeYearRoomDrawer;',sandbox);
+    const html=sandbox.drawer({teamId:'a',position:'RB'});
+    assert(html.includes('Input assumption · Approved &lt;YTD-only&gt; Current input'));
+    assert(html.includes('<b>12.50</b>'));
+    """
+    result = subprocess.run(['node', '-e', script], capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr
+
+
 def test_three_year_missing_cells_report_own_status_and_evidence_horizon():
     import subprocess
     script = r"""

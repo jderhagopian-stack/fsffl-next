@@ -35,6 +35,7 @@ class ThreeYearIntrinsicPlayerValue(FrozenModel):
     player_id: str
     position: Position
     raw_intrinsic_value: float
+    input_assumption: str | None = None
     source: Literal[
         "standalone_three_year_shapley",
         "career_current_y1_y3_discounted_extension",
@@ -254,6 +255,7 @@ def build_three_year_intrinsic_player_values(
             player_id=player_id,
             position=player.position,
             raw_intrinsic_value=raw_three_year,
+            input_assumption=career_forward.player_input_assumptions.get(player_id),
             source="career_current_y1_y3_discounted_extension",
         )
     return tuple(output[key] for key in sorted(output))

@@ -403,8 +403,8 @@ async function laLoadThreeYearRooms(){
 }
 function laThreeYearRoomDrawer(room){
   const view=fsfflLeagueStructureState.views.find(row=>row.team_id===room.teamId);if(!view)return'';
-  const rank=laDynastyRoom(room.teamId,room.position),values=new Map((fsfflLeagueStructureState.threeYearRooms?.players||[]).map(row=>[row.player_id,row.raw_intrinsic_value]));
-  const players=(view.players||[]).filter(row=>row.position===room.position).map(row=>'<button type="button" data-player-intelligence-id="'+laEsc(row.player_id)+'"><span><strong>'+laEsc(row.full_name)+'</strong><small>3-Year Intrinsic · raw economic value</small></span><span><b>'+laNum(values.get(row.player_id),2)+'</b></span></button>').join('');
+  const rank=laDynastyRoom(room.teamId,room.position),values=new Map((fsfflLeagueStructureState.threeYearRooms?.players||[]).map(row=>[row.player_id,row]));
+  const players=(view.players||[]).filter(row=>row.position===room.position).map(row=>{const evidence=values.get(row.player_id),assumption=evidence?.input_assumption?'<small>Input assumption · '+laEsc(evidence.input_assumption)+'</small>':'';return '<button type="button" data-player-intelligence-id="'+laEsc(row.player_id)+'"><span><strong>'+laEsc(row.full_name)+'</strong><small>3-Year Intrinsic · raw economic value</small>'+assumption+'</span><span><b>'+laNum(evidence?.raw_intrinsic_value,2)+'</b></span></button>'}).join('');
   return '<aside class="atlas-drawer"><button type="button" data-atlas-close class="atlas-drawer-close" aria-label="Close">×</button><header><p class="eyebrow">3-Year Intrinsic</p><h3>'+laEsc(view.display_name)+' · '+laEsc(room.position)+'</h3></header><p>Room raw value: '+laNum(rank?.room_raw,2)+' · League rank: '+(typeof rank?.league_rank==='number'?'#'+rank.league_rank:'Unavailable')+'</p><p>Sum of existing discounted Y1–Y3 Shapley values. Unavailable player evidence is shown as a dash. Market, Career later horizons and player display indexes do not enter this sum.</p><div class="atlas-player-room">'+players+'</div></aside>';
 }
 async function laLoadDynastyRooms(){
