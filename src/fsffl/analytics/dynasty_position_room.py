@@ -135,7 +135,7 @@ def build_three_year_intrinsic_player_values(
     players = {row.player_id: row for row in league_state.players}
     standalone_valid = (
         intrinsic is not None
-        and intrinsic.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+        and intrinsic.status == ShapleyIntrinsicAvailability.READY
         and intrinsic.contract_version == SHAPLEY_INTRINSIC_CONTRACT_VERSION
         and intrinsic.evaluation_season == league_state.league.season
         and intrinsic.quantity_semantics == RAW_INTRINSIC_QUANTITY

@@ -353,6 +353,17 @@ def test_three_year_extension_fails_closed_on_state_position_horizon_or_numeric_
     )
     assert {row.player_id for row in wrong_state} == {'a1', 'a2', 'a3', 'b1'}
 
+    degraded = standalone.model_copy(update={'status': 'degraded'})
+    complete_career = _career_current_components(state, {
+        'a1': (1., 2., 3.), 'a2': (1., 2., 3.), 'a3': (1., 2., 3.),
+        'a4': (1., 2., 3.), 'b1': (1., 2., 3.),
+    })
+    degraded_values = build_three_year_intrinsic_player_values(
+        state, intrinsic=degraded, evidence_state_id=state.state_id,
+        career_forward=complete_career, career_evidence_state_id=state.state_id,
+    )
+    assert degraded_values == ()
+
     wrong_position = build_three_year_intrinsic_player_values(
         state, intrinsic=standalone, evidence_state_id=state.state_id,
         career_forward=career, career_evidence_state_id=state.state_id,
