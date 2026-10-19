@@ -27,6 +27,31 @@ SHAPLEY_INTRINSIC_ENDPOINT_PATH = "/api/value/intrinsic-shapley-v1"
 RAW_INTRINSIC_QUANTITY = "raw_governed_shapley_marginal_fantasy_points"
 
 
+def discounted_three_year_shapley_value(
+    raw_annual_contributions: tuple[float, float, float],
+    *,
+    discount: float = FROZEN_INTRINSIC_DISCOUNT,
+) -> float:
+    """Apply the accepted direct three-year Intrinsic discount schedule.
+
+    The caller is responsible for establishing that the three components are
+    the governed Y1, Y2 and Y3 Shapley contributions for one player and State.
+    Career's separate lifetime aggregate is deliberately not an input here.
+    """
+
+    if len(raw_annual_contributions) != 3:
+        raise ValueError("three-year Shapley Intrinsic requires exactly Y1-Y3")
+    if not math.isfinite(discount) or discount <= 0.0:
+        raise ValueError("three-year Shapley discount must be finite and positive")
+    if any(not math.isfinite(value) for value in raw_annual_contributions):
+        raise ValueError("three-year Shapley annual contributions must be finite")
+    return (
+        raw_annual_contributions[0]
+        + discount * raw_annual_contributions[1]
+        + discount**2 * raw_annual_contributions[2]
+    )
+
+
 class ShapleyIntrinsicAvailability(StrEnum):
     READY = "ready"
     DEGRADED = "degraded"
@@ -223,7 +248,10 @@ def build_shapley_intrinsic_contract(
                 uncertainty=year_3_uncertainty,
             ),
         )
-        reconstructed = sum(item.discounted_contribution for item in contributions)
+        reconstructed = discounted_three_year_shapley_value(
+            tuple(item.raw_shapley_contribution for item in contributions),
+            discount=result.discount,
+        )
         if not math.isclose(reconstructed, estimate.value, rel_tol=0.0, abs_tol=1e-9):
             raise ValueError(
                 f"discounted Shapley contributions do not reconcile for {player_id}: "

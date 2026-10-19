@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import math
+from typing import Literal
 
 from fsffl.value.shapley_intrinsic_contract import (
     RAW_INTRINSIC_QUANTITY,
+    SHAPLEY_INTRINSIC_CONTRACT_VERSION,
     ShapleyIntrinsicContract,
     ShapleyIntrinsicAvailability,
+    discounted_three_year_shapley_value,
 )
 from fsffl.state.models import FrozenModel, LeagueState, Position
 from fsffl.value.career_forward_intrinsic import (
@@ -13,10 +16,26 @@ from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_RAW_QUANTITY,
     CareerForwardIntrinsicShadowContract,
 )
+from fsffl.value.shapley_intrinsic import FROZEN_INTRINSIC_DISCOUNT
 
 
 DYNASTY_POSITION_ROOM_MODEL_VERSION = "analytics-dynasty-position-room-career-forward-v1"
 DYNASTY_ROOM_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
+THREE_YEAR_POSITION_ROOM_MODEL_VERSION = (
+    "analytics-position-room-three-year-intrinsic-v2:career-current-annual-extension"
+)
+
+
+class ThreeYearIntrinsicPlayerValue(FrozenModel):
+    """One raw, exact-State 3-Year value and its accepted component source."""
+
+    player_id: str
+    position: Position
+    raw_intrinsic_value: float
+    source: Literal[
+        "standalone_three_year_shapley",
+        "career_current_y1_y3_discounted_extension",
+    ]
 
 
 class DynastyPositionRoom(FrozenModel):
@@ -75,28 +94,160 @@ def build_dynasty_position_rooms(
 def build_three_year_position_rooms(
     league_state: LeagueState, *, intrinsic: ShapleyIntrinsicContract | None,
     evidence_state_id: str | None,
+    career_forward: CareerForwardIntrinsicShadowContract | None = None,
+    career_evidence_state_id: str | None = None,
     positions: tuple[Position, ...] = DYNASTY_ROOM_POSITIONS,
 ) -> tuple[DynastyPositionRoom, ...]:
-    """Allocate existing raw three-year Shapley authority; never fit or scale it."""
+    """Allocate raw 3-Year Shapley values with exact-State roster gap recovery.
+
+    Existing stand-alone discounted 3-Year values always win unchanged. Only a
+    current-State roster gap may be derived from the completed Career object's
+    retained raw Current Y1-Y3 Shapley components, using the same Value-owned
+    discount function. Later Career horizons and the Career total never enter.
+    """
+    player_values = build_three_year_intrinsic_player_values(
+        league_state,
+        intrinsic=intrinsic,
+        evidence_state_id=evidence_state_id,
+        career_forward=career_forward,
+        career_evidence_state_id=career_evidence_state_id,
+    )
+    values = {
+        row.player_id: (row.position, row.raw_intrinsic_value)
+        for row in player_values
+    }
+    evidence_valid = bool(player_values)
+    return _position_rooms(
+        league_state, values=values, contract_valid=evidence_valid,
+        evidence_state_id=(league_state.state_id if evidence_valid else None),
+        positions=positions,
+        model_version=THREE_YEAR_POSITION_ROOM_MODEL_VERSION,
+    )
+
+
+def build_three_year_intrinsic_player_values(
+    league_state: LeagueState, *, intrinsic: ShapleyIntrinsicContract | None,
+    evidence_state_id: str | None,
+    career_forward: CareerForwardIntrinsicShadowContract | None = None,
+    career_evidence_state_id: str | None = None,
+) -> tuple[ThreeYearIntrinsicPlayerValue, ...]:
+    """Return accepted stand-alone values plus missing roster values if proven."""
     players = {row.player_id: row for row in league_state.players}
-    valid = (
+    standalone_valid = (
         intrinsic is not None
         and intrinsic.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+        and intrinsic.contract_version == SHAPLEY_INTRINSIC_CONTRACT_VERSION
         and intrinsic.evaluation_season == league_state.league.season
         and intrinsic.quantity_semantics == RAW_INTRINSIC_QUANTITY
+        and math.isclose(
+            intrinsic.discount, FROZEN_INTRINSIC_DISCOUNT,
+            rel_tol=0.0, abs_tol=1e-12,
+        )
         and not intrinsic.display_scaling_applied
         and not intrinsic.diagnostic_h1_included
         and bool(evidence_state_id)
         and evidence_state_id == league_state.state_id
     )
-    values = ({row.player_id: (players[row.player_id].position, row.raw_intrinsic_value)
-               for row in intrinsic.estimates if row.player_id in players}
-              if valid and intrinsic is not None else {})
-    return _position_rooms(
-        league_state, values=values, contract_valid=valid,
-        evidence_state_id=evidence_state_id, positions=positions,
-        model_version="analytics-position-room-three-year-intrinsic-v1",
+    standalone_rows = intrinsic.estimates if standalone_valid and intrinsic is not None else ()
+    standalone_ids = [row.player_id for row in standalone_rows]
+    standalone_ambiguous = len(set(standalone_ids)) != len(standalone_ids)
+    if standalone_ambiguous:
+        standalone_rows = ()
+
+    output: dict[str, ThreeYearIntrinsicPlayerValue] = {}
+    for row in standalone_rows:
+        player = players.get(row.player_id)
+        if player is None or player.position not in DYNASTY_ROOM_POSITIONS:
+            continue
+        if not math.isfinite(row.raw_intrinsic_value):
+            continue
+        output[row.player_id] = ThreeYearIntrinsicPlayerValue(
+            player_id=row.player_id,
+            position=player.position,
+            raw_intrinsic_value=float(row.raw_intrinsic_value),
+            source="standalone_three_year_shapley",
+        )
+
+    career_valid = (
+        (intrinsic is None or (standalone_valid and not standalone_ambiguous))
+        and
+        career_forward is not None
+        and career_forward.status == "shadow_ready"
+        and career_forward.evaluation_season == league_state.league.season
+        and career_forward.current_intrinsic_contract_version
+            == SHAPLEY_INTRINSIC_CONTRACT_VERSION
+        and career_forward.raw_quantity == CAREER_FORWARD_RAW_QUANTITY
+        and career_forward.aggregation == CAREER_FORWARD_AGGREGATION
+        and not career_forward.display_scaling_applied
+        and not career_forward.market_inputs_used
+        and not career_forward.authoritative_for_current_intrinsic
+        and not career_forward.current_intrinsic_replaced
+        and bool(career_evidence_state_id)
+        and career_evidence_state_id == league_state.state_id
     )
+    if not career_valid or career_forward is None:
+        return tuple(output[key] for key in sorted(output))
+
+    rostered_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+    }
+    career_rows = {row.player_id: row for row in career_forward.estimates}
+    if len(career_rows) != len(career_forward.estimates):
+        return tuple(output[key] for key in sorted(output))
+
+    # Extension is strictly additive for absent cohort identities. An existing
+    # but malformed stand-alone row is not silently replaced by another source.
+    standalone_present_ids = set(standalone_ids) if standalone_valid else set()
+    for player_id in sorted(rostered_ids - standalone_present_ids - set(output)):
+        player = players.get(player_id)
+        estimate = career_rows.get(player_id)
+        if (
+            player is None
+            or player.position not in DYNASTY_ROOM_POSITIONS
+            or estimate is None
+            or estimate.position != player.position
+            or estimate.raw_quantity != CAREER_FORWARD_RAW_QUANTITY
+            or estimate.aggregation != CAREER_FORWARD_AGGREGATION
+            or estimate.discounting_applied
+            or estimate.display_index_arithmetic_used
+            or estimate.market_inputs_used
+            or estimate.current_intrinsic_replaced
+        ):
+            continue
+        annual = estimate.uncertainty.current_y1_y3
+        if tuple(item.year_index for item in annual) != (1, 2, 3):
+            continue
+        if tuple(item.target_season for item in annual) != tuple(
+            league_state.league.season + offset for offset in range(3)
+        ):
+            continue
+        contributions = tuple(float(item.raw_shapley_contribution) for item in annual)
+        if not all(math.isfinite(value) for value in contributions):
+            continue
+        current_total = sum(contributions)
+        if (
+            not math.isfinite(estimate.current_intrinsic_raw_y1_y3)
+            or not math.isclose(
+                current_total,
+                estimate.current_intrinsic_raw_y1_y3,
+                rel_tol=0.0,
+                abs_tol=1e-9,
+            )
+        ):
+            continue
+        try:
+            raw_three_year = discounted_three_year_shapley_value(contributions)
+        except ValueError:
+            continue
+        output[player_id] = ThreeYearIntrinsicPlayerValue(
+            player_id=player_id,
+            position=player.position,
+            raw_intrinsic_value=raw_three_year,
+            source="career_current_y1_y3_discounted_extension",
+        )
+    return tuple(output[key] for key in sorted(output))
 
 
 def _position_rooms(
