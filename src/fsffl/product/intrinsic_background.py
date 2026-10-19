@@ -573,6 +573,29 @@ class ShapleyIntrinsicBackgroundCoordinator:
             record = self.request(context, expected_epoch=expected_epoch)
         return record
 
+    def completed_for_state(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
+        """Memory-only read for an already published exact State.
+
+        The caller fences the requested publication against runtime first. Never
+        resolve dependency fingerprints, pin/restore inputs or invoke the loader
+        on this path. If retained attempts disagree, fail closed rather than
+        choosing a newer unproven source fingerprint. Storage is already bounded
+        by this coordinator's normal ownership/retention policy.
+        """
+        if context.league_state is None or not context.publication_generation_id:
+            return None
+        state_id = context.league_state.state_id
+        league_id = context.league_state.league.league_id
+        with self._lock:
+            matches = [record for key, record in self._records.items()
+                       if key[0] == context.user_id and key[1] == league_id
+                       and record.league_state_id == state_id]
+            if len(matches) != 1:
+                return None
+            record = matches[0]
+            return (record if record.status == IntrinsicBuildStatus.COMPLETED
+                    and record.contract is not None else None)
+
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
         context = self._pin_build_context(context)
         key = self._key(context)

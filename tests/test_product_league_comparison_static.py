@@ -644,3 +644,24 @@ def test_three_year_and_career_cells_keep_distinct_raw_rooms_and_no_counts():
     """
     result = subprocess.run(['node', '-e', script], capture_output=True, text=True, timeout=5)
     assert result.returncode == 0, result.stderr
+
+
+def test_three_year_missing_cells_report_own_status_and_evidence_horizon():
+    import subprocess
+    script = r"""
+    const fs=require('fs'),vm=require('vm'),assert=require('assert');
+    const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+    const cell=source.slice(source.indexOf('function laPositionCell('),source.indexOf('function laPositionMatrix('));
+    let row=null;
+    const state={positionLens:'three-year',threeYearStatus:'loading',dynastyRoomStatus:'ready'};
+    const sandbox={fsfflLeagueStructureState:state,laDynastyRoom:()=>row,laEsc:String};
+    vm.runInNewContext(cell+'\nthis.cell=laPositionCell;',sandbox);
+    for(const status of ['loading','unavailable','incomplete']){
+      state.threeYearStatus=status;const html=sandbox.cell({team_id:'a'},'WR');
+      assert(html.includes('3-Year Intrinsic evidence is '+status));
+      assert(!html.includes('career-forward'));
+    }
+    row={evidence_complete:false};assert(sandbox.cell({team_id:'a'},'WR').includes('3-Year Intrinsic evidence is incomplete'));
+    """
+    result = subprocess.run(['node', '-e', script], capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr

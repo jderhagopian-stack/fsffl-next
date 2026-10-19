@@ -87,12 +87,13 @@ function laPrimaryTakeaway(){
 
 function laPositionCell(view,position){
   const dynasty=fsfflLeagueStructureState.positionLens!=='current',row=dynasty?laDynastyRoom(view.team_id,position):laCurrentStrength(view.team_id,position);
+  const threeYear=fsfflLeagueStructureState.positionLens==='three-year',evidenceLabel=threeYear?'3-Year Intrinsic':'Holistic career-forward',roomStatus=threeYear?fsfflLeagueStructureState.threeYearStatus:fsfflLeagueStructureState.dynastyRoomStatus;
   if(!row){
-    if(dynasty)return '<button type="button" class="league-edge-cell missing" disabled title="Holistic career-forward evidence is '+laEsc(fsfflLeagueStructureState.dynastyRoomStatus)+'">—</button>';
+    if(dynasty)return '<button type="button" class="league-edge-cell missing" disabled title="'+evidenceLabel+' evidence is '+laEsc(roomStatus)+'">—</button>';
     const slot=laCurrentSlotDefinition(position);return '<button type="button" class="league-edge-cell missing" disabled title="'+laEsc(slot?.reason||'Governed Current slot evidence is unavailable')+'">—</button>'
   }
   if(dynasty){
-    if(!row.evidence_complete||typeof row.league_rank!=='number')return '<button type="button" class="league-edge-cell missing" disabled title="Holistic career-forward evidence is incomplete for this league position room">—</button>';
+    if(!row.evidence_complete||typeof row.league_rank!=='number')return '<button type="button" class="league-edge-cell missing" disabled title="'+evidenceLabel+' evidence is incomplete for this league position room">—</button>';
     const mode=fsfflLeagueStructureState.positionLensMode||'rank',value=mode==='strength'?row.strength_index:row.league_rank,display=mode==='strength'?(typeof value==='number'?laNum(value,0):'—'):'#'+row.league_rank,label=mode==='strength'?(typeof value==='number'?'strength index '+laNum(value,0):'league-average index unavailable'):'rank #'+row.league_rank+' of '+row.team_count;
     const peerRooms=((fsfflLeagueStructureState.positionLens==='three-year'?fsfflLeagueStructureState.threeYearRooms:fsfflLeagueStructureState.dynastyRooms)?.rooms||[]).filter(item=>item.position===position),higher=peerRooms.filter(item=>typeof item.room_raw==='number'&&item.room_raw>row.room_raw).length,tied=peerRooms.filter(item=>item.room_raw===row.room_raw).length,meanRank=higher+(tied+1)/2,share=(meanRank-1)/Math.max(1,row.team_count-1),band=share<=.2?'elite':share<=.42?'strong':share<=.7?'neutral':'weak';
     return '<button type="button" class="league-edge-cell '+band+'" data-room-team="'+laEsc(view.team_id)+'" data-room-position="'+laEsc(position)+'" aria-label="'+laEsc(view.display_name)+' '+laEsc(position)+' '+laEsc(label)+'; open team-position detail" title="'+laEsc(label)+'"><b>'+display+'</b></button>';

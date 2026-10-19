@@ -257,7 +257,8 @@ def test_three_year_route_reads_completed_owner_only_and_fences_publication():
     record = SimpleNamespace(status=IntrinsicBuildStatus.COMPLETED, contract=contract,
         league_state_id=state.state_id, intrinsic_input_fingerprint='owned-current')
     class ReadOnlyOwner:
-        def current(self, context): return record
+        def completed_for_state(self, context): return record
+        def current(self, context): raise AssertionError("GET must not resolve fingerprints")
         def request(self, *a): raise AssertionError('GET must not start work')
     context = SimpleNamespace(league_state=state, publication_generation_id='published')
     app = FastAPI()
@@ -273,3 +274,39 @@ def test_three_year_route_reads_completed_owner_only_and_fences_publication():
     assert endpoint(state.state_id, 'older-generation', 'user')['status'] == 'superseded'
     record = None
     assert endpoint(state.state_id, 'published', 'user')['status'] == 'unavailable'
+
+
+def test_three_year_completed_state_lookup_cannot_touch_loader_or_fingerprints():
+    from types import SimpleNamespace
+    from fsffl.product.intrinsic_background import (
+        ShapleyIntrinsicBackgroundCoordinator, IntrinsicBuildStatus,
+    )
+    state = _state()
+    context = SimpleNamespace(user_id='owner', league_state=state,
+        publication_generation_id='published')
+    def forbidden(*args):
+        raise AssertionError('read must never load, restore or fingerprint forecasts')
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        forbidden, intrinsic_input_fingerprint_resolver=forbidden,
+        forecast_coordinate_resolver=forbidden,
+    )
+    record = SimpleNamespace(league_state_id=state.state_id,
+        status=IntrinsicBuildStatus.COMPLETED, contract=object())
+    key = ('owner', state.league.league_id, 'published-source')
+    try:
+        assert coordinator.completed_for_state(context) is None
+        coordinator._records[key] = record
+        assert coordinator.completed_for_state(context) is record
+        assert coordinator.completed_for_state(SimpleNamespace(
+            user_id='other-user', league_state=state, publication_generation_id='published')) is None
+        context.publication_generation_id = None
+        assert coordinator.completed_for_state(context) is None
+        context.publication_generation_id = 'published'
+        coordinator._records[('owner', state.league.league_id, 'other-source')] = record
+        assert coordinator.completed_for_state(context) is None  # never guess source identity
+        coordinator._records.pop(('owner', state.league.league_id, 'other-source'))
+        coordinator._records[key] = SimpleNamespace(league_state_id='older-state',
+            status=IntrinsicBuildStatus.COMPLETED, contract=object())
+        assert coordinator.completed_for_state(context) is None
+    finally:
+        coordinator._executor.shutdown(wait=False)

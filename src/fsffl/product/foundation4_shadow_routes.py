@@ -280,7 +280,7 @@ def install_career_intrinsic_routes(
             return {"status": "superseded", "superseding_state_id": state.state_id,
                     "superseding_publication_generation_id": context.publication_generation_id}
         # Read the completed owner only. This GET never starts fitting or provider work.
-        record = (current_intrinsic_coordinator.current(context)
+        record = (current_intrinsic_coordinator.completed_for_state(context)
                   if current_intrinsic_coordinator is not None else None)
         base = {"league_state_id": state_id,
                 "publication_generation_id": publication_generation_id,
