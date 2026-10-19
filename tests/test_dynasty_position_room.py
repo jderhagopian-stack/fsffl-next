@@ -516,7 +516,7 @@ def test_three_year_route_extends_only_from_matching_completed_career_record():
     assert current_owner.calls == career_owner.calls == 1
 
 
-def test_three_year_route_can_use_completed_career_current_components_without_standalone_owner():
+def test_three_year_route_requires_completed_standalone_owner_before_extension():
     from types import SimpleNamespace
     from fastapi import FastAPI
     from fsffl.product.foundation4_shadow_routes import install_career_intrinsic_routes
@@ -546,16 +546,8 @@ def test_three_year_route_can_use_completed_career_current_components_without_st
     endpoint = next(route.endpoint for route in app.routes
         if route.path == '/api/league/three-year-position-rooms')
     result = endpoint(state.state_id, 'published', 'user')
-    assert result['status'] == 'ready'
-    assert result['input_fingerprint'] == 'career-fp'
-    assert result['source_input_fingerprints'] == {
-        'standalone_three_year': None,
-        'career_current_components': 'career-fp',
-    }
-    assert result['dynasty_rank_readiness']['status'] == 'ready'
-    assert {row['source'] for row in result['players']} == {
-        'career_current_y1_y3_discounted_extension',
-    }
+    assert result['status'] == 'unavailable'
+    assert 'No completed 3-Year' in result['reason']
 
 
 def test_three_year_completed_state_lookup_cannot_touch_loader_or_fingerprints():

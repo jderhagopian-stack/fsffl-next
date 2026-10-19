@@ -169,7 +169,8 @@ def build_three_year_intrinsic_player_values(
         )
 
     career_valid = (
-        (intrinsic is None or (standalone_valid and not standalone_ambiguous))
+        standalone_valid
+        and not standalone_ambiguous
         and career_forward is not None
         and career_forward.status == "shadow_ready"
         and career_forward.evaluation_season == league_state.league.season
