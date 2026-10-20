@@ -431,6 +431,23 @@ def test_appending_role_receipts_preserves_published_state_reuse_identity(monkey
     assert all(row.captured_at == state.as_of for row in current.values())
 
 
+def test_oct20_official_role_recapture_is_exactly_the_approved_ytd_scope():
+    from fsffl.providers.nfl_status_evidence import NFL_ROLE_RECEIPTS
+    captured_at = datetime(2026, 10, 20, 19, 55, 28, tzinfo=UTC)
+    latest = {row.player_id: row for row in NFL_ROLE_RECEIPTS
+              if row.captured_at == captured_at}
+    assert {player_id: row.status for player_id, row in latest.items()} == {
+        "sleeper:player:3321": "unsigned",
+        "sleeper:player:6803": "reserve_left_squad",
+        "sleeper:player:13268": "developmental_depth",
+    }
+    assert {row.source_url for row in latest.values()} == {
+        "https://www.nfl.com/players/tyreek-hill/",
+        "https://www.nfl.com/teams/san-francisco-49ers/roster",
+        "https://www.baltimoreravens.com/team/depth-chart",
+    }
+
+
 def test_currently_reverified_roles_refresh_only_the_approved_ytd_identities():
     from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
     from fsffl.product.p0_live_candidate_runtime import recorded_ytd_only_year_one_evidence
