@@ -918,6 +918,41 @@ def test_runtime_appends_only_complete_expanded_candidates_from_exact_roster(mat
     assert result.current_intrinsic_replaced is False
 
 
+def test_full_current_contract_is_released_before_dynamic_career_expansion(materialized):
+    import gc
+    from weakref import ref
+
+    _persistence, _calls, _base_loader, context, _frozen = materialized
+    current_ref = None
+
+    def load_current(_context):
+        nonlocal current_ref
+        current = _current_intrinsic()
+        current_ref = ref(current)
+        return current
+
+    def expand(_context, _frozen_reference):
+        gc.collect()
+        assert current_ref is not None and current_ref() is None
+        return ExpandedCareerContractResult(
+            contract=None,
+            failures={},
+            source_manifest=_fixture_source_manifest(context),
+        )
+
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=load_current,
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        expanded_career_contract_loader=expand,
+        expanded_career_contract_fingerprint_resolver=lambda _context: "dynamic-fp-v1",
+    )
+
+    result = loader(context)
+
+    assert result.player_count == FOUNDATION4_CURRENT_COHORT_SIZE
+    assert current_ref is not None and current_ref() is None
+
+
 def test_runtime_rejects_expanded_candidates_outside_exact_roster(materialized) -> None:
     _persistence, _calls, _base_loader, context, frozen = materialized
     candidate_id = "sleeper:player:outside-unrostered-fixture"

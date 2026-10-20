@@ -839,6 +839,10 @@ class CareerIntrinsicLoader:
                 ),
             }
         )
+        # The Career contract now owns the completed Y1–Y3 and Y4+ results.
+        # Keeping the full Current Shapley contract alive through dynamic
+        # roster expansion needlessly overlaps two large player matrices.
+        del current
         # Reference aggregation is complete. The expanded phase reuses the
         # typed contract/component, not these transient forecast/tail inputs.
         del long_forecast, terminal_features, tails
@@ -863,6 +867,10 @@ class CareerIntrinsicLoader:
             source_manifest,
             retryable_batch_incomplete,
         ) = self._append_expanded_rostered_contract(context, frozen_contract)
+        # Expansion returns a new Career contract (or the same base when there
+        # are no candidates); the pre-expansion alias is no longer required for
+        # validation or persistence.
+        del frozen_contract
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
