@@ -1017,6 +1017,8 @@ def build_live_p0_rostered_candidate_forecasts(
         period_end=period_end,
         clock=lambda: cutoff,
         source_revisions=saved_ros_revisions,
+        supplement_missing_sources=projection_history_reader is not None,
+        allow_undercovered_sources=True,
     )
     source_captures = (
         ("REST-of-season projections", ros_runtime.evaluation_as_of),
@@ -1387,7 +1389,17 @@ def build_live_p0_rostered_candidate_forecasts(
         "completed_week_stats": _input_digest({str(week): _rows_digest(rows)
                                                for week, rows in sorted(weekly.items())}),
         "prior_season_stats": _rows_digest(prior_lines),
-        "ros": _rows_digest(available_ros_rows),
+        "ros": _input_digest({
+            "observations": _rows_digest(available_ros_rows),
+            "ensemble_ready": getattr(ros_runtime, "ensemble_ready", True),
+            "unavailability_reason": getattr(ros_runtime, "ensemble_unavailability_reason", None),
+            "successful_sources": ros_runtime.successful_source_ids,
+            "failed_sources": getattr(ros_runtime, "failed_sources", ()),
+            "minimum_sources": getattr(
+                getattr(ros_runtime, "coverage", None),
+                "minimum_independent_sources", 2,
+            ),
+        }),
         "fumbles_supplement": _rows_digest(ros_fumbles_lost),
         "status_receipts": _input_digest({
             **{pid: asdict(row) for pid, row in sorted(fallback_status_evidence.items())},

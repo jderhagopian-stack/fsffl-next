@@ -21,7 +21,11 @@ from .league_scoring import (
     ScoringCoverageStatus,
     derive_league_scoring_result,
 )
-from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_authoritative_live_ensemble
+from .live_ensemble import (
+    LiveEnsembleCoverage,
+    LiveForecastSourceBatch,
+    build_authoritative_live_ensemble,
+)
 from .models import ForecastDistribution, ForecastHorizon, ForecastObservation
 from .projection_history import ProjectionRevision, revision_from_forecast_observations
 from .projection_history import ProjectionSelector
@@ -68,6 +72,8 @@ class InSeasonForecastRuntimeResult(FrozenModel):
     evaluation_as_of: datetime
     uncertainty_authority: str = "not_promoted_for_in_season_simulation"
     simulation_ready: bool = False
+    ensemble_ready: bool = True
+    ensemble_unavailability_reason: str | None = None
     model_version: str = "next2-in-season-runtime-v1"
 
 
@@ -155,6 +161,8 @@ def build_in_season_forecasts(
     clock: Clock | None = None,
     history_writer: ProjectionHistoryWriter | None = None,
     minimum_independent_sources: int = 2,
+    supplement_missing_sources: bool = False,
+    allow_undercovered_sources: bool = False,
 ) -> InSeasonForecastRuntimeResult:
     """Build governed ROS or week forecasts from independent provider evidence.
 
@@ -193,6 +201,21 @@ def build_in_season_forecasts(
         providers = [item.snapshot.provider for item in source_revisions]
         if len(providers) != len(set(providers)):
             raise ValueError("saved in-season revisions must contain one latest row per provider")
+        # An explicit empty history result means no canonical revisions were
+        # retained for this State/period. During an owned build, fill only the
+        # missing approved provider slots; never relabel a different period or
+        # discard a saved provider revision.
+        active_fetchers = ()
+        if supplement_missing_sources:
+            approved_fetchers = fetchers or default_in_season_projection_fetchers(horizon=horizon)
+            active_fetchers = tuple(item for item in approved_fetchers if item.source_id not in providers)
+            if len({item.source_id for item in approved_fetchers}) != len(approved_fetchers):
+                raise ValueError("in-season projection fetcher ids must be unique")
+        snapshots, failed = _fetch_snapshots(
+            active_fetchers,
+            season=league_state.league.season,
+            week=week,
+        )
     cutoff = (clock or (lambda: datetime.now(UTC)))()
     if cutoff.tzinfo is None:
         raise ValueError("in-season forecast runtime clock must be timezone-aware")
@@ -303,10 +326,37 @@ def build_in_season_forecasts(
 
     if len(batches) < minimum_independent_sources:
         detail = "; ".join(sorted(failed)) if failed else "no provider-specific failure details"
-        raise ValueError(
+        reason = (
             "authoritative in-season ensemble requires at least "
             f"{minimum_independent_sources} independent sources; found {len(batches)}; "
             f"successful={sorted(successful)}; failures={detail}"
+        )
+        if not allow_undercovered_sources:
+            raise ValueError(reason)
+        coverage = LiveEnsembleCoverage(
+            independent_source_ids=tuple(sorted(successful)),
+            excluded_aggregate_source_ids=(),
+            active_source_ids=tuple(sorted(successful)),
+            observation_count=len(source_observations),
+            minimum_independent_sources=minimum_independent_sources,
+            excluded_undercovered_groups=len(source_observations),
+        )
+        return InSeasonForecastRuntimeResult(
+            horizon=horizon,
+            week=week,
+            source_observations=tuple(sorted(
+                source_observations,
+                key=lambda item: (item.source, item.player_id, item.metric.value),
+            )),
+            raw_ensemble=(),
+            fantasy_point_forecasts=(),
+            coverage=coverage,
+            successful_source_ids=tuple(sorted(successful)),
+            failed_sources=tuple(sorted(failed)),
+            persistence_failures=tuple(sorted(persistence_failures)),
+            evaluation_as_of=evaluation_as_of,
+            ensemble_ready=False,
+            ensemble_unavailability_reason=reason,
         )
 
     raw_ensemble, coverage = build_authoritative_live_ensemble(

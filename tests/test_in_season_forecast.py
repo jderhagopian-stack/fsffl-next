@@ -240,6 +240,87 @@ def test_saved_ros_revisions_preserve_canonical_ids_without_provider_name_rematc
     assert rush.distribution.mean == pytest.approx(800.0)
 
 
+def _saved_revision(provider: str, *, mean: float = 700.0) -> ProjectionRevision:
+    effective = NOW - timedelta(hours=2)
+    metrics = (
+        ForecastMetric.RUSH_YARDS, ForecastMetric.RUSH_TD,
+        ForecastMetric.RECEPTIONS, ForecastMetric.REC_YARDS,
+        ForecastMetric.REC_TD,
+    )
+    return ProjectionRevision(
+        snapshot=ProjectionSnapshotRecord(
+            provider=provider, season=2026, horizon=ForecastHorizon.REST_OF_SEASON,
+            week=None, period_start=PERIOD_START, period_end=PERIOD_END,
+            effective_at=effective, retrieved_at=effective,
+            source_version=f"{provider}-saved-v1", usage_class="test",
+            content_fingerprint=f"{provider}-fingerprint", snapshot_id=None,
+        ),
+        observations=tuple(ProjectionObservationRecord(
+            player_id="p1", external_id=f"{provider}:p1", position=Position.RB,
+            metric=metric, mean=mean,
+        ) for metric in metrics),
+    )
+
+
+def test_owned_build_supplements_empty_projection_history_from_approved_sources():
+    fetchers = tuple(NamedInSeasonProjectionFetcher(
+        source_id=source,
+        fetch=lambda season, week, source=source: _snapshot(source, rush_yards=800.0),
+    ) for source in ("cbs", "razzball"))
+    result = build_in_season_forecasts(
+        _state(), horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        source_revisions=(), fetchers=fetchers, clock=lambda: NOW,
+        supplement_missing_sources=True,
+    )
+    assert result.ensemble_ready
+    assert result.successful_source_ids == ("cbs", "razzball")
+
+
+def test_owned_build_fetches_only_missing_provider_when_history_is_partial():
+    fetched = []
+    fetcher = NamedInSeasonProjectionFetcher(
+        source_id="razzball",
+        fetch=lambda season, week: fetched.append("razzball") or _snapshot("razzball", rush_yards=900.0),
+    )
+    result = build_in_season_forecasts(
+        _state(), horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        source_revisions=(_saved_revision("cbs"),), fetchers=(fetcher,),
+        clock=lambda: NOW, supplement_missing_sources=True,
+    )
+    assert fetched == ["razzball"]
+    assert result.successful_source_ids == ("cbs", "razzball")
+
+
+def test_owned_p0_can_continue_without_ensemble_but_result_is_explicitly_unavailable():
+    result = build_in_season_forecasts(
+        _state(), horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        source_revisions=(), fetchers=(), clock=lambda: NOW,
+        allow_undercovered_sources=True,
+    )
+    assert not result.ensemble_ready
+    assert result.raw_ensemble == ()
+    assert result.fantasy_point_forecasts == ()
+    assert result.coverage.minimum_independent_sources == 2
+    assert "found 0" in result.ensemble_unavailability_reason
+
+
+def test_saved_evidence_can_remain_one_source_without_claiming_authority():
+    result = build_in_season_forecasts(
+        _state(), horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        source_revisions=(_saved_revision("cbs"),), fetchers=(), clock=lambda: NOW,
+        allow_undercovered_sources=True,
+    )
+    assert result.successful_source_ids == ("cbs",)
+    assert len(result.source_observations) == 5
+    assert result.raw_ensemble == ()
+    assert not result.ensemble_ready
+    assert result.coverage.minimum_independent_sources == 2
+
+
 def test_saved_ros_revision_from_earlier_period_is_rejected_not_relabeled():
     captured_at = NOW - timedelta(hours=2)
     stale = ProjectionRevision(

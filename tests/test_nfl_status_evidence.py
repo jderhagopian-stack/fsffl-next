@@ -374,13 +374,24 @@ def test_default_live_producer_applies_approved_ytd_only_after_provider_path(mon
     source_rows = raw[:1] if provider_available == 'partial' else ()
     if provider_available == 'partial':
         raw = ()
-    ros = SimpleNamespace(evaluation_as_of=capture,source_observations=source_rows,raw_ensemble=raw,
-        successful_source_ids=('cbs','razzball'),model_copy=lambda **_:SimpleNamespace())
-    monkeypatch.setattr(runtime,'build_in_season_forecasts',lambda *_,**__:ros)
+    history_reader = None
+    if provider_available is False:
+        # Exercise the real ROS runtime and P0 handoff: an empty retained
+        # history plus failed source acquisition must still reach the
+        # already-approved identity-specific fallback rules.
+        from fsffl.forecast import in_season_runtime as ros_runtime_module
+        monkeypatch.setattr(ros_runtime_module, 'default_in_season_projection_fetchers',
+                            lambda **_: ())
+        history_reader = SimpleNamespace(latest_revisions=lambda _selector: ())
+    else:
+        ros = SimpleNamespace(evaluation_as_of=capture,source_observations=source_rows,raw_ensemble=raw,
+            successful_source_ids=('cbs','razzball'),model_copy=lambda **_:SimpleNamespace())
+        monkeypatch.setattr(runtime,'build_in_season_forecasts',lambda *_,**__:ros)
     monkeypatch.setattr('fsffl.forecast.in_season_orchestration.build_current_ros_fumbles_lost_supplement_observations',lambda *_,**__:())
     result = runtime.build_live_p0_rostered_candidate_forecasts(state,stats_source=stats,
         sleeper_source=SimpleNamespace(fetch_latest=lambda **_:snapshot),
-        evaluation_as_of=capture,projection_history_as_of=capture)
+        evaluation_as_of=capture,projection_history_as_of=capture,
+        projection_history_reader=history_reader)
     if provider_available == 'partial':
         assert set(result.failures) == {evidence.player_id}
         assert len(result.future.contract.forecasts) == 4
@@ -388,6 +399,10 @@ def test_default_live_producer_applies_approved_ytd_only_after_provider_path(mon
         return
     assert not result.failures
     assert len(result.future.contract.forecasts) == 6
+    if provider_available is False:
+        assert result.ros_runtime.ensemble_ready is False
+        assert result.ros_runtime.successful_source_ids == ()
+        assert result.ros_runtime.coverage.minimum_independent_sources == 2
     assert runtime.valid_live_source_manifest(result.source_manifest)
     for pid, row in result.year_one_standard.items():
         if provider_available and pid == evidence.player_id:
@@ -414,3 +429,20 @@ def test_appending_role_receipts_preserves_published_state_reuse_identity(monkey
     current = provider.recorded_nfl_role_receipts(state,as_of=state.as_of)
     assert set(current) == {row.player_id for row in state.players}
     assert all(row.captured_at == state.as_of for row in current.values())
+
+
+def test_currently_reverified_roles_refresh_only_the_approved_ytd_identities():
+    from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
+    from fsffl.product.p0_live_candidate_runtime import recorded_ytd_only_year_one_evidence
+    state = _approved_ytd_state()
+    capture = datetime(2026, 10, 20, 13, 29, 37, tzinfo=UTC)
+    assert recorded_ytd_only_year_one_evidence(
+        state, as_of=capture - timedelta(microseconds=1),
+    ) == {}
+    admitted = recorded_ytd_only_year_one_evidence(state, as_of=capture)
+    expected = {"sleeper:player:3321", "sleeper:player:6803", "sleeper:player:13268"}
+    assert set(admitted) == expected
+    assert set(recorded_nfl_role_receipts(state, as_of=capture)) == expected
+    assert recorded_ytd_only_year_one_evidence(
+        state, as_of=capture + timedelta(hours=6),
+    ) == {}
