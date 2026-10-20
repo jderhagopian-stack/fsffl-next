@@ -1256,6 +1256,10 @@ def test_undercovered_ros_batch_remains_retryable_with_player_fallbacks(material
     assert record.payload['_career_expansion_complete'] is False
     assert record.payload['_career_retryable_batch_incomplete'] is True
     assert loader.restore_compatible(context) is None
+    from fsffl.product.foundation4_career_forward_runtime import RetryableCareerExpansionIncomplete
+    with pytest.raises(RetryableCareerExpansionIncomplete, match='checkpointed for an explicit retry'):
+        loader(context)
+    assert loader._cached_contract is None
 
 
 def test_refresh_checkpoint_and_batch_failure_preserve_same_key_last_good(materialized, monkeypatch):
