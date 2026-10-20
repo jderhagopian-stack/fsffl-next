@@ -1,4 +1,431 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×N6õ:-jZ.¶›­–)Þ³R""$W†V7WFR†÷7FVBÆ–fV7–6ÆRgVæ7F–öç2v—F‚&÷VæFVBÂ7–çF†WF–2FWVæFVæ6–W2â"" ¦–×÷'B7@¦g&öÒ6öçFW‡FÆ–"–×÷'B6öçFW‡FÖævW"ÂçVÆÆ6öçFW‡@¦g&öÒF†Æ–"–×÷'BF€¦g&öÒF‡&VF–ær–×÷'BWfVçBÂF‡&V@¦g&öÒG—W2–×÷'B6–×ÆTæÖW76R2å0 ¦–×÷'B—FW7@  ¦FVbgVæ7F–öâ‡F‚ÂæÖRÂæÖW76R“ ¢G&VRÒ7Bç'6R…F‚‡F‚’ç&VE÷FW‡B‚’¢æöFRÒæW‡B†âf÷"â–â7BçvÆ²‡G&VR’–b—6–ç7Fæ6R†âÂ7BägVæ7F–öäFVb’æBâææÖRÓÒæÖR¢æöFRç&WGW&ç2ÒæöæP¢W†V2†6ö×–ÆR†7BäÖöGVÆR†&öG“Õ¶æöFUÒÂG—Uö–væ÷&W3ÕµÒ’ÂF‚ÂvW†V2r’ÂæÖW76R¢&WGW&âæÖW76U¶æÖUÐ  ¤—FW7BæÖ&²ç&ÖWG&—¦R‚v6&VW%÷V&Æ—6†VBrÂµG'VRÂfÇ6UÒ¤—FW7BæÖ&²ç&ÖWG&—¦R‚w6æ6†÷EöW†—7G2rÂµG'VRÂfÇ6UÒ¤—FW7BæÖ&²ç&ÖWG&—¦R‚v7W'&VçE÷&VG’rÂµG'VRÂfÇ6UÒ¦FVbFW7E÷7F'GW÷&W7F÷&W5÷v—F†÷WE÷66†VGVÆ–æuö6&VW"‡6æ6†÷EöW†—7G2Â7W'&VçE÷&VG’Â6&VW%÷V&Æ—6†VB“ ¢6öçFW‡BÒå2†ÆVwVU÷7FFSÔå2‡7FFUö–CÒvf—‡GW&R×7FFRrÂÆVwVSÔå2†ÆVwVUö–CÒvf—‡GW&RÖÆVwVRr’’À¢6VÆV7FVE÷FVÕö–CÒvf—‡GW&R×FVÒrÂV&Æ–6F–öåövVæW&F–öåö–CÒvf—‡GW&RÖvVæW&F–öârÀ¢f÷&V67EöWf–FVæ6SÖö&¦V7B‚’ÂfÇVUöWf–FVæ6SÖö&¦V7B‚’Â6–×VÆF–öåöæÇ—F–73Öö&¦V7B‚’¢6ÆÇ2ÒµÐ¢FVbf÷&&–FFVâ‚¦&w2“ ¢&—6R76W'F–öäW'&÷"‚w7F'GW×W7Bæ÷B7V—&R÷"f—B6&VW"r¢ÆövvW"Òå2†–æfóÖÆÖ&F¦&w3¢æöæRÂv&æ–æsÖÆÖ&F¦&w3¢æöæR¢ç2ÒF–7B…÷7F'GW÷&W7F÷&U÷7FFS×·ÒÂö&WF÷&W7F÷&U÷W6W#Òvf—‡GW&R×W6W"rÀ¢ö¦÷W&æW•÷FVÆVÖWG'“Ôå2‡6WE÷&W7F÷&Uö–CÖÆÖ&F¢„æöæRÂvf—‡GW&R×&W7F÷&Rr’Â&W6WE÷&W7F÷&Uö–CÖÆÖ&FFö¶Vã¤æöæR’À¢÷'VçF–ÖU÷7F÷&SÔå2‡&W7F÷&U÷W6W#ÖÆÖ&FW6W#¦6öçFW‡BÂvWCÖÆÖ&FW6W#¦6öçFW‡BÀ¢&–æE÷V&Æ–6F–öåövVæW&F–öåö–CÖÆÖ&F¦&w3¦6ÆÇ2æVæB‚v&–æBr’’À¢÷6†ÆW•ö–çG&–ç6–5ö6ö÷&F–æF÷#Ôå2‡&W7F÷&Uö6ö×F–&ÆU÷7FvVCÖÆÖ&F7Gƒ¤æöæRÀ¢7W'&VçCÖÆÖ&F7Gƒ¤å2‡7FGW3Òv6ö×ÆWFVBrÆ6öçG&7CÖö&¦V7B‚’’–b7W'&VçE÷&VG’VÇ6RæöæR’À¢–çG&–ç6–4'V–ÆE7FGW3Ôå2„4ôÕÄUDTCÒv6ö×ÆWFVBr’À¢ö6&VW%ö–çG&–ç6–5ö6ö÷&F–æF÷#Ôå2‡&W7F÷&Uö6ö×F–&ÆU÷7FvVCÖÆÖ&F7Gƒ¤æöæRÀ¢7W'&VçCÖÆÖ&F7Gƒ¤å2‡7FGW3Ò&6ö×ÆWFVB"Æ6öçG&7CÖö&¦V7B‚’’Ç&WVW7CÖf÷&&–FFVâ’À¢÷&W6VçFF–öåö6öçF–çV—G“Ôå2††5÷6æ6†÷CÖÆÖ&F¢¦·v&w3§6æ6†÷EöW†—7G2À¢6&VW%÷V&Æ–6F–öåöÖF6†W3ÖÆÖ&F¦&w3¦6&VW%÷V&Æ—6†VB’À¢÷&W&U÷&W6VçFF–öåöf÷%÷W6W#Öf÷&&–FFVâÀ¢÷&öÖ÷FU÷&W6VçFF–öåöf÷%÷W6W#ÖÆÖ&F¦&w3¢†6ÆÇ2æVæB‚w&öÖ÷FRr’÷"å2‡V&Æ–6F–öåövVæW&F–öåö–CÒvæWrÖvVæW&F–öâr’’À¢÷7F'GW÷&W7F÷&Uö6ö×ÆWFSÔWfVçB‚’ÂöÆöu÷7F'GW÷'VçF–ÖU÷&VF–æW73ÖÆÖ&F¤æöæRÂöÆövvW#ÖÆövvW"¢'VâÒgVæ7F–öâ‚w7&2ög6ffÂ÷&öGV7B÷W'6—7FVçE÷vV&ç’rÂu÷'VåöÆ–v‡GvV–v‡E÷7F'GW÷&W7F÷&RrÆç2¢'Vâ‚¢76W'Bç5²u÷7F'GW÷&W7F÷&U÷7FFRuÕ²w7FGW2uÒÓÒv6ö×ÆWFRp¢2F†RÆ—fR2Õ–V"ÆVç2æ÷r6öÖW2g&öÒ6&VW"7W'&VçB“Õ“26ö×öæVçG2Â6ð¢2&W6VçFF–öâ&W—"FWVæG2öâF†R6&VW"Ö&6¶VBV&Æ–6F–öâÂæ÷Böâ¢26W&FVÇ’7FvVB6†ÆW’'F–f7Bà¢76W'B6ÆÇ2ÓÒ…²w&öÖ÷FRuÒ–bæ÷B‡6æ6†÷EöW†—7G2æB6&VW%÷V&Æ—6†VB’VÇ6RµÒ  ¦FVbFW7E÷&W6VçFF–öåöÆÆö6F–öç5÷v—Eöf÷%öW†—7F–æuö†Vg•÷v÷&²‚“ ¢g&öÒg6ffÂç&öGV7Bç&W6÷W&6Uö6ö÷&F–æF÷"–×÷'B†Vg•v÷&´6ö÷&F–æF÷ ¢6ö÷&F–æF÷"Ò†Vg•v÷&´6ö÷&F–æF÷"‚¢VçFW&VBÂ&WVW7FVBÂ6WVVæ6UöVçFW&VBÒWfVçB‚’ÂWfVçB‚’ÂWfVçB‚¢6öçFW‡BÒå2†ÆVwVU÷7FFSÔå2‡7FFUö–CÒvf—‡GW&R×7FFRr’Â6VÆV7FVE÷FVÕö–CÒvf—‡GW&R×FVÒrÇV&Æ–6F–öåövVæW&F–öåö–CÒvf—‡GW&RÖvVæW&F–öâr¢&W7VÇEöö&¦V7BÒå2‡V&Æ–6F–öåövVæW&F–öåö–CÒwV&Æ—6†VBr¢&÷VæBÒµÐ¢6öçFW‡FÖævW ¢FVb6WVVæ6R‡W6W"“ ¢6WVVæ6UöVçFW&VBç6WB‚¢––VÆ@¢ç2ÒF–7B…÷&W6VçFF–öåö6öçF–çV—G“Ôå2†Væ&ÆVCÕG'VR’Åö†Vg•÷v÷&µö6ö÷&F–æF÷#Ö6ö÷&F–æF÷"À¢ö6ö×÷6U÷&W6VçFF–öåöf÷%÷W6W#ÖÆÖ&F¦&w3¢†VçFW&VBç6WB‚’÷"&W7VÇEöö&¦V7B’À¢÷'VçF–ÖU÷7F÷&SÔå2‡V&Æ–6F–öå÷6WVVæ6S×6WVVæ6RÆvWCÖÆÖ&FW6W#¦6öçFW‡BÀ¢&–æE÷V&Æ–6F–öåövVæW&F–öåö–CÖÆÖ&F¦&w3¦&÷VæBæVæB†&w2’’¢&öÖ÷FRÒgVæ7F–öâ‚w7&2ög6ffÂ÷&öGV7B÷W'6—7FVçE÷vV&ç’rÂu÷&öÖ÷FU÷&W6VçFF–öåöf÷%÷W6W"rÆç2¢&W7VÇBÒµÐ¢FVbv÷&¶W"‚“ ¢&WVW7FVBç6WB‚¢&W7VÇBæVæB‡&öÖ÷FR‚vf—‡GW&R×W6W"rÆ6öçFW‡B’¢v—F‚6ö÷&F–æF÷"æ6Æ–Ò†¶–æCÒv–çG&–ç6–2rÆ¶W“Òvf—‡GW&RÖ'V–ÆBr“ ¢F‡&VBÒF‡&VB‡F&vWC×v÷&¶W"¢F‡&VBç7F'B‚¢76W'B&WVW7FVBçv—Bƒ¢76W'Bæ÷BVçFW&VBçv—B‚ãR¢76W'Bæ÷B6WVVæ6UöVçFW&VBæ—5÷6WB‚¢F‡&VBæ¦ö–âƒ"¢76W'Bæ÷BF‡&VBæ—5öÆ—fR‚¢76W'B&W7VÇBÓÒ·&W7VÇEöö&¦V7EÐ¢76W'B&÷VæBÓÒ²‚vf—‡GW&R×W6W"rÂwV&Æ—6†VBr•Ð  ¤—FW7BæÖ&²ç&ÖWG&—¦R‚v6†ævVBrÂ²w7FFRrÂwFVÒrÂvvVæW&F–öâuÒ¦FVbFW7E÷7F'GW÷&öÖ÷F–öå÷&WfÆ–FFW5ö–FVçF—G•ögFW%÷v—F–æuöf÷%öÖVÖ÷'’†6†ævVB“ ¢g&öÒg6ffÂç&öGV7Bç&W6÷W&6Uö6ö÷&F–æF÷"–×÷'B†Vg•v÷&´6ö÷&F–æF÷ ¢6ö÷&F–æF÷"Ò†Vg•v÷&´6ö÷&F–æF÷"‚¢÷&–v–æÂÒå2†ÆVwVU÷7FFSÔå2‡7FFUö–CÒvf—‡GW&R×7FFRr’Â6VÆV7FVE÷FVÕö–CÒvf—‡GW&R×FVÒrÀ¢V&Æ–6F–öåövVæW&F–öåö–CÒvf—‡GW&RÖvVæW&F–öâr¢7F—fRÒ¶÷&–v–æÅÐ¢&WVW7FVBÂ6WVVæ6UöVçFW&VBÒWfVçB‚’ÂWfVçB‚¢6öçFW‡FÖævW ¢FVb6WVVæ6R‡W6W"“ ¢6WVVæ6UöVçFW&VBç6WB‚¢––VÆ@¢FVbf÷&&–FFVâ‚¦&w2“ ¢&—6R76W'F–öäW'&÷"‚vö'6öÆWFR7F'GW6ææ÷B6ö×÷6R÷"&–æBr¢ç2ÒF–7B…÷&W6VçFF–öåö6öçF–çV—G“Ôå2†Væ&ÆVCÕG'VR’Åö†Vg•÷v÷&µö6ö÷&F–æF÷#Ö6ö÷&F–æF÷"À¢ö6ö×÷6U÷&W6VçFF–öåöf÷%÷W6W#Öf÷&&–FFVâÀ¢÷'VçF–ÖU÷7F÷&SÔå2‡V&Æ–6F–öå÷6WVVæ6S×6WVVæ6RÆvWCÖÆÖ&FW6W#¦7F—fU³ÒÀ¢&–æE÷V&Æ–6F–öåövVæW&F–öåö–CÖf÷&&–FFVâ’¢&öÖ÷FRÒgVæ7F–öâ‚w7&2ög6ffÂ÷&öGV7B÷W'6—7FVçE÷vV&ç’rÂu÷&öÖ÷FU÷&W6VçFF–öåöf÷%÷W6W"rÆç2¢&W7VÇBÒµÐ¢FVbv÷&¶W"‚“ ¢&WVW7FVBç6WB‚¢&W7VÇBæVæB‡&öÖ÷FR‚vf—‡GW&R×W6W"rÆ÷&–v–æÂ’¢v—F‚6ö÷&F–æF÷"æ6Æ–Ò†¶–æCÒv–çG&–ç6–2rÆ¶W“Òvf—‡GW&RÖ'V–ÆBr“ ¢F‡&VBÒF‡&VB‡F&vWC×v÷&¶W"¢F‡&VBç7F'B‚¢76W'B&WVW7FVBçv—Bƒ¢76W'Bæ÷B6WVVæ6UöVçFW&VBçv—B‚ãR¢f–VÆG2ÒF–7B†ÆVwVU÷7FFSÖ÷&–v–æÂæÆVwVU÷7FFRÇ6VÆV7FVE÷FVÕö–CÖ÷&–v–æÂç6VÆV7FVE÷FVÕö–BÀ¢V&Æ–6F–öåövVæW&F–öåö–CÖ÷&–v–æÂçV&Æ–6F–öåövVæW&F–öåö–B¢f–VÆG5·²w7FFRs¢vÆVwVU÷7FFRrÂwFVÒs¢w6VÆV7FVE÷FVÕö–BrÂvvVæW&F–öâs¢wV&Æ–6F–öåövVæW&F–öåö–BwÕ¶6†ævVEÕÒÒ€¢å2‡7FFUö–CÒvæWr×7FFRr’–b6†ævVBÓÒw7FFRrVÇ6RvæWrÖ–FVçF—G’r¢7F—fU³ÒÒå2‚¢¦f–VÆG2¢F‡&VBæ¦ö–âƒ"¢76W'Bæ÷BF‡&VBæ—5öÆ—fR‚¢76W'B&W7VÇBÓÒ´æöæUÐ  ¤—FW7BæÖ&²ç&ÖWG&—¦R‚w&W&F–öåöf–Ç2rÂ´fÇ6RÂG'VUÒ¦FVbFW7Eö÷F–öæÅö6&VW%ö—5÷&WVW7FVEööæÇ•ögFW%öGW&&ÆUö6÷&U÷V&Æ–6F–öâ‡&W&F–öåöf–Ç2“ ¢g&öÒg6ffÂç&öGV7Bç&W6÷W&6Uö6ö÷&F–æF÷"–×÷'B†Vg•v÷&´6ö÷&F–æF÷ ¢6ö÷&F–æF÷"Ò†Vg•v÷&´6ö÷&F–æF÷"‚¢&WVW7FVBÂ6WVVæ6UöVçFW&VBÒWfVçB‚’ÂWfVçB‚¢6ÆÇ2ÒµÐ¢Æö6¶VBÒfÇ6P¢6öçFW‡BÒå2†ÆVwVU÷7FFSÔå2‡7FFUö–CÒvf—‡GW&R×7FFRrÆÆVwVSÔå2†ÆVwVUö–CÒvf—‡GW&RÖÆVwVRr’’¢6öçFW‡FÖævW ¢FVb6WVVæ6R‡W6W"“ ¢æöæÆö6ÂÆö6¶V@¢Æö6¶VBÒG'VP¢6WVVæ6UöVçFW&VBç6WB‚¢G'“§––VÆ@¢f–æÆÇ“¦Æö6¶VBÒfÇ6P¢6öçFW‡FÖævW ¢FVb&VB‡W6W"Æ7G‚“ ¢––VÆ@¢FVbV&Æ—6‚‚¦&w2Â¢¦·v&w2“ ¢6ÆÇ2æVæB‚wV&Æ—6‚r¢&WGW&â6öçFW‡@¢FVb&W&R‡W6W"Æ7G‚“ ¢76W'Bæ÷BÆö6¶V@¢76W'B6ÆÇ2ÓÒ²v6†V6·ö–çBrÂv6ö×÷6RrÂwV&Æ—6‚rÂvGW&&ÆRuÐ¢6ÆÇ2æVæB‚v6&VW"r¢–b&W&F–öåöf–Ç3§&—6R'VçF–ÖTW'&÷"‚v÷F–öæÂf–ÇW&Rr¢7F÷&RÒå2‡V&Æ–6F–öå÷6WVVæ6S×6WVVæ6RÆvWCÖÆÖ.xÛÛh‘éì¶»§q«^uncomplete', [('failed',False),('completed',True),('completed',False),('running',True)])
+"""Execute hosted lifecycle functions with bounded, synthetic dependencies."""
+import ast
+from contextlib import contextmanager, nullcontext
+from pathlib import Path
+from threading import Event, Thread
+from types import SimpleNamespace as NS
+
+import pytest
+
+
+def function(path, name, namespace):
+    tree = ast.parse(Path(path).read_text())
+    node = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == name)
+    node.returns = None
+    exec(compile(ast.Module(body=[node], type_ignores=[]), path, 'exec'), namespace)
+    return namespace[name]
+
+
+@pytest.mark.parametrize('career_published', [True, False])
+@pytest.mark.parametrize('snapshot_exists', [True, False])
+@pytest.mark.parametrize('current_ready', [True, False])
+def test_startup_restores_without_scheduling_career(snapshot_exists, current_ready, career_published):
+    context = NS(league_state=NS(state_id='fixture-state', league=NS(league_id='fixture-league')),
+                 selected_team_id='fixture-team', publication_generation_id='fixture-generation',
+                 forecast_evidence=object(), value_evidence=object(), simulation_analytics=object())
+    calls = []
+    def forbidden(*args):
+        raise AssertionError('startup must not acquire or fit Career')
+    logger = NS(info=lambda *args: None, warning=lambda *args: None)
+    ns = dict(_startup_restore_state={}, _beta_restore_user='fixture-user',
+        _journey_telemetry=NS(set_restore_id=lambda:(None,'fixture-restore'), reset_restore_id=lambda token:None),
+        _runtime_store=NS(restore_user=lambda user:context, get=lambda user:context,
+                         bind_publication_generation_id=lambda *args:calls.append('bind')),
+        _shapley_intrinsic_coordinator=NS(restore_compatible_staged=lambda ctx:None,
+            current=lambda ctx:NS(status='completed',contract=object()) if current_ready else None),
+        IntrinsicBuildStatus=NS(COMPLETED='completed'),
+        _career_intrinsic_coordinator=NS(restore_compatible_staged=lambda ctx:None,
+            current=lambda ctx:NS(status="completed",contract=object()),request=forbidden),
+        _presentation_continuity=NS(has_snapshot=lambda **kwargs:snapshot_exists,
+            career_publication_matches=lambda *args:career_published),
+        _prepare_presentation_for_user=forbidden,
+        _promote_presentation_for_user=lambda *args:(calls.append('promote') or NS(publication_generation_id='new-generation')),
+        _startup_restore_complete=Event(), _log_startup_runtime_readiness=lambda:None, _logger=logger)
+    run = function('src/fsffl/product/persistent_webapp.py','_run_lightweight_startup_restore',ns)
+    run()
+    assert ns['_startup_restore_state']['status'] == 'complete'
+    # The live 3-Year lens now comes from Career Current Y1-Y3 components, so
+    # presentation repair depends on the Career-backed publication, not on a
+    # separately staged Shapley artifact.
+    assert calls == (['promote'] if not (snapshot_exists and career_published) else [])
+
+
+def test_presentation_allocations_wait_for_existing_heavy_work():
+    from fsffl.product.resource_coordinator import HeavyWorkCoordinator
+    coordinator = HeavyWorkCoordinator()
+    entered, requested, sequence_entered = Event(), Event(), Event()
+    context = NS(league_state=NS(state_id='fixture-state'), selected_team_id='fixture-team',publication_generation_id='fixture-generation')
+    result_object = NS(publication_generation_id='published')
+    bound = []
+    @contextmanager
+    def sequence(user):
+        sequence_entered.set()
+        yield
+    ns = dict(_presentation_continuity=NS(enabled=True),_heavy_work_coordinator=coordinator,
+              _compose_presentation_for_user=lambda *args:(entered.set() or result_object),
+              _runtime_store=NS(publication_sequence=sequence,get=lambda user:context,
+                                bind_publication_generation_id=lambda *args:bound.append(args)))
+    promote = function('src/fsffl/product/persistent_webapp.py','_promote_presentation_for_user',ns)
+    result = []
+    def worker():
+        requested.set()
+        result.append(promote('fixture-user',context))
+    with coordinator.claim(kind='intrinsic',key='fixture-build'):
+        thread = Thread(target=worker)
+        thread.start()
+        assert requested.wait(1)
+        assert not entered.wait(.05)
+        assert not sequence_entered.is_set()
+    thread.join(2)
+    assert not thread.is_alive()
+    assert result == [result_object]
+    assert bound == [('fixture-user','published')]
+
+
+@pytest.mark.parametrize('changed', ['state', 'team', 'generation'])
+def test_startup_promotion_revalidates_identity_after_waiting_for_memory(changed):
+    from fsffl.product.resource_coordinator import HeavyWorkCoordinator
+    coordinator = HeavyWorkCoordinator()
+    original = NS(league_state=NS(state_id='fixture-state'), selected_team_id='fixture-team',
+                  publication_generation_id='fixture-generation')
+    active = [original]
+    requested, sequence_entered = Event(), Event()
+    @contextmanager
+    def sequence(user):
+        sequence_entered.set()
+        yield
+    def forbidden(*args):
+        raise AssertionError('obsolete startup cannot compose or bind')
+    ns = dict(_presentation_continuity=NS(enabled=True),_heavy_work_coordinator=coordinator,
+              _compose_presentation_for_user=forbidden,
+              _runtime_store=NS(publication_sequence=sequence,get=lambda user:active[0],
+                                bind_publication_generation_id=forbidden))
+    promote = function('src/fsffl/product/persistent_webapp.py','_promote_presentation_for_user',ns)
+    result = []
+    def worker():
+        requested.set()
+        result.append(promote('fixture-user',original))
+    with coordinator.claim(kind='intrinsic',key='fixture-build'):
+        thread = Thread(target=worker)
+        thread.start()
+        assert requested.wait(1)
+        assert not sequence_entered.wait(.05)
+        fields = dict(league_state=original.league_state,selected_team_id=original.selected_team_id,
+                      publication_generation_id=original.publication_generation_id)
+        fields[{'state':'league_state','team':'selected_team_id','generation':'publication_generation_id'}[changed]] = (
+            NS(state_id='new-state') if changed == 'state' else 'new-identity')
+        active[0] = NS(**fields)
+    thread.join(2)
+    assert not thread.is_alive()
+    assert result == [None]
+
+
+@pytest.mark.parametrize('preparation_fails', [False, True])
+def test_optional_career_is_requested_only_after_durable_core_publication(preparation_fails):
+    from fsffl.product.resource_coordinator import HeavyWorkCoordinator
+    coordinator = HeavyWorkCoordinator()
+    requested, sequence_entered = Event(), Event()
+    calls = []
+    locked = False
+    context = NS(league_state=NS(state_id='fixture-state',league=NS(league_id='fixture-league')))
+    @contextmanager
+    def sequence(user):
+        nonlocal locked
+        locked = True
+        sequence_entered.set()
+        try:yield
+        finally:locked = False
+    @contextmanager
+    def read(user,ctx):
+        yield
+    def publish(*args,**kwargs):
+        calls.append('publish')
+        return context
+    def prepare(user,ctx):
+        assert not locked
+        assert calls == ['checkpoint','compose','publish','durable']
+        calls.append('career')
+        if preparation_fails:raise RuntimeError('optional failure')
+    store = NS(publication_sequence=sequence,get=lambda user:context,working_context=lambda user:context,
+        checkpoint_working_generation=lambda user:(calls.append('checkpoint') or True),
+        read_context=read,publish_working_generation=publish,
+        wait_for_checkpoint=lambda *args,**kwargs:(calls.append('durable') or True))
+    promoter = lambda *args:(calls.append('compose') or NS(publication_generation_id='fixture-generation'))
+    def claim(**kwargs):
+        requested.set()
+        return coordinator.claim(**kwargs)
+    ns = dict(store=store,heavy_claim=claim,application=NS(state=NS(presentation_preparer=prepare,presentation_promoter=promoter)),
+              _logger=NS(exception=lambda *args:calls.append('optional-error')))
+    run = function('src/fsffl/product/webapp.py','publish_working_generation',ns)
+    results = []
+    with coordinator.claim(kind='intrinsic',key='fixture-build'):
+        thread = Thread(target=lambda:results.append(run('fixture-user')))
+        thread.start()
+        assert requested.wait(1)
+        assert not sequence_entered.wait(.05)
+    thread.join(2)
+    assert not thread.is_alive()
+    assert results == [context]
+    assert calls == ['checkpoint','compose','publish','durable','career'] + (['optional-error'] if preparation_fails else [])
+
+
+def test_hosted_wrapper_forwards_approved_reference_coordinates():
+    standard = (object(),)
+    league = (object(),)
+    seen = {}
+    def builder(state, **kwargs):
+        seen.update(kwargs)
+        return 'candidate-result'
+    reader = object()
+    ns = dict(build_live_p0_rostered_candidate_forecasts=builder,_projection_history_store=reader)
+    run = function('src/fsffl/product/persistent_webapp.py','_hosted_career_candidate_builder',ns)
+    assert "candidate_builder=_hosted_career_candidate_builder" in Path('src/fsffl/product/persistent_webapp.py').read_text()
+    assert run(object(),projection_history_as_of='cutoff',
+               reference_standard_year_one=standard,reference_league_year_one=league) == 'candidate-result'
+    assert seen == dict(projection_history_as_of='cutoff',projection_history_reader=reader,
+                        reference_standard_year_one=standard,reference_league_year_one=league)
+
+
+def test_all_live_source_corrections_change_manifest_binding():
+    from datetime import UTC, datetime
+    from fsffl.product.p0_live_candidate_runtime import (
+        LIVE_INPUT_SOURCE_NAMES, live_source_manifest, valid_live_source_manifest,
+    )
+    from fsffl.persistence.contracts import canonical_fingerprint
+    fingerprints = {name:'a'*64 for name in LIVE_INPUT_SOURCE_NAMES}
+    original = live_source_manifest(captured_at=datetime(2026,10,16,tzinfo=UTC),fingerprints=fingerprints)
+    assert valid_live_source_manifest(original)
+    bound = canonical_fingerprint('career-complete-live-inputs-v1','publication',original['digest'])
+    for name in LIVE_INPUT_SOURCE_NAMES:
+        revised = live_source_manifest(captured_at=datetime(2026,10,16,tzinfo=UTC),
+            fingerprints={**fingerprints,name:'b'*64})
+        assert valid_live_source_manifest(revised)
+        assert canonical_fingerprint('career-complete-live-inputs-v1','publication',revised['digest']) != bound
+    assert not valid_live_source_manifest({**original,'fingerprints':{}})
+
+
+def test_typed_weekly_prior_and_catalog_corrections_change_source_digests():
+    from dataclasses import replace
+    from datetime import UTC, datetime
+    from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatLine, SleeperSeasonStatLine
+    from fsffl.product.p0_live_candidate_runtime import _rows_digest, _input_digest
+    captured = datetime(2026,10,16,tzinfo=UTC)
+    weekly = SleeperWeeklyStatLine('fixture-player',2026,5,{'rush_yd':10.},captured)
+    prior = SleeperSeasonStatLine('fixture-player',2025,{'rush_yd':100.},captured)
+    assert _rows_digest((weekly,)) != _rows_digest((replace(weekly,stats={'rush_yd':11.}),))
+    assert _rows_digest((prior,)) != _rows_digest((replace(prior,stats={'rush_yd':101.}),))
+    assert _input_digest({'fixture-player':{'years_exp':1}}) != _input_digest({'fixture-player':{'years_exp':2}})
+
+
+def test_completed_career_waits_for_visible_presentation_before_serializing(monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.responses import JSONResponse
+    import fsffl.product.foundation4_shadow_routes as routes
+    from datetime import UTC, datetime
+    state = NS(state_id='fixture-state')
+    context = NS(league_state=state, publication_generation_id='old-generation')
+    serialized = []
+    contract = NS(model_dump=lambda **kwargs:(serialized.append(True) or {'estimates':[]}))
+    record = NS(status=routes.IntrinsicBuildStatus.COMPLETED, contract=contract,
+                league_state_id=state.state_id, intrinsic_input_fingerprint='career-dependency')
+    visible = [False]
+    monkeypatch.setattr(routes, '_career_position_depth_rows', lambda *args: [])
+    monkeypatch.setattr(routes, 'career_lens_for_publication', lambda *args, **kwargs: ({}, {}))
+    monkeypatch.setattr(routes, 'build_dynasty_position_rooms', lambda *args, **kwargs: [])
+    app = FastAPI()
+    routes.install_career_intrinsic_routes(app,
+        runtime_store=NS(get=lambda user:context),
+        loader=NS(pin_build_context=lambda ctx:NS(career_fingerprint_evaluation_as_of=datetime.now(UTC))),
+        coordinator=NS(current=lambda ctx:record),
+        career_publication_validator=lambda ctx, rec:visible[0])
+    career = next(r.endpoint for r in app.routes if r.path == routes.CAREER_INTRINSIC_ENDPOINT)
+    dynasty = next(r.endpoint for r in app.routes if r.path == '/api/league/dynasty-position-rooms')
+    request = NS(url=NS(path=routes.CAREER_INTRINSIC_ENDPOINT))
+    pending = career(request, state_id=state.state_id,
+                     publication_generation_id='old-generation', user_id='fixture-user')
+    assert isinstance(pending, JSONResponse) and pending.status_code == 202
+    assert b'publication_pending' in pending.body
+    assert serialized == []  # No large contract allocation while promotion is pending.
+    assert dynasty(state.state_id, 'old-generation', 'fixture-user')['status'] == 'preparing'
+    context.publication_generation_id = 'new-generation'
+    visible[0] = True
+    obsolete = career(request, state_id=state.state_id,
+                      publication_generation_id='old-generation', user_id='fixture-user')
+    assert obsolete.status_code == 409 and serialized == []
+    ready = career(request, state_id=state.state_id,
+                   publication_generation_id='new-generation', user_id='fixture-user')
+    assert ready['status'] == 'ready'
+    assert ready['publication_generation_id'] == 'new-generation'
+    assert serialized == [True]
+    assert dynasty(state.state_id, 'new-generation', 'fixture-user')['status'] == 'ready'
+
+
+@pytest.mark.parametrize('published', [True, False])
+def test_value_lens_overlay_waits_for_its_published_career_dependency(published):
+    context = NS(league_state=NS(state_id='fixture-state'), publication_generation_id='generation',
+                 forecast_evidence=object())
+    record = object()
+    consumed = []
+    def attach(payload, **kwargs):
+        consumed.append(kwargs['record'])
+        return dict(payload)
+    ns = dict(career_record_loader=lambda ctx:record,
+              career_publication_validator=lambda ctx, rec:published,
+              background_coordinator=None,attach_career_player_lenses=attach)
+    overlay = function('src/fsffl/product/league_value_lens_routes.py','with_career',ns)
+    overlay({'league_state_id':'fixture-state','publication_generation_id':'generation'},context,persisted=True)
+    assert consumed == [record if published else None]
+
+
+def test_player_intelligence_withholds_unpublished_career_without_changing_current():
+    from fastapi import FastAPI
+    from fsffl.product.intrinsic_background import IntrinsicBuildStatus
+    from fsffl.product.career_presentation import career_lens_for_publication
+    from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
+    current = NS(status=NS(value='ready'), estimates=(object(),), status_reason=None)
+    career = NS(status=IntrinsicBuildStatus.COMPLETED, league_state_id='fixture-state',
+        intrinsic_input_fingerprint='career-fp',contract=NS(estimates=(
+            NS(player_id='fixture-a',raw_career_forward_reference=10.),
+            NS(player_id='fixture-b',raw_career_forward_reference=20.))))
+    runtime = NS(league_state=NS(state_id='fixture-state'), publication_generation_id='old')
+    checks = []
+    def validate(context, record):
+        checks.append((context.publication_generation_id, record))
+        return context.publication_generation_id == 'new'
+    ns = dict(app=FastAPI(), Depends=lambda fn:None, require_user=lambda:None,
+        _validated_player_id=lambda pid:pid, runtime_store=NS(get=lambda user:runtime),
+        intrinsic_coordinator=NS(request=lambda ctx:NS(status=IntrinsicBuildStatus.COMPLETED,contract=current)),
+        build_player_intelligence_overview=lambda *args,**kwargs:{'value':{'raw_shapley_marginal_points':7.5}},
+        future_forecasts=object(), career_record_loader=lambda ctx:career,
+        career_publication_validator=validate, career_lens_for_publication=career_lens_for_publication,
+        career_reference_ids_from_current=lambda rec:frozenset({'fixture-a','fixture-b'}),
+        IntrinsicBuildStatus=IntrinsicBuildStatus,ShapleyIntrinsicAvailability=ShapleyIntrinsicAvailability,
+        _logger=NS(info=lambda *args:None))
+    endpoint = function('src/fsffl/product/player_intelligence_routes.py','player_intelligence',ns)
+    pending = endpoint('fixture-a','fixture-user')
+    assert pending['publication_generation_id'] == 'old'
+    assert pending['value']['career_status'] == 'unavailable'
+    assert pending['value']['raw_career_forward_reference'] is None
+    assert pending['value']['raw_shapley_marginal_points'] == 7.5
+    runtime.publication_generation_id = 'new'
+    ready = endpoint('fixture-a','fixture-user')
+    assert ready['publication_generation_id'] == 'new'
+    assert ready['value']['raw_career_forward_reference'] == 10.
+    assert ready['value']['career_intrinsic_index'] == 0.
+    assert ready['value']['raw_shapley_marginal_points'] == 7.5
+    assert checks == [('old',career),('new',career)]
+    source = Path('src/fsffl/product/persistent_webapp.py').read_text().split('install_player_intelligence_routes(',1)[1].split('install_provisional_k_dst_routes(',1)[0]
+    assert 'career_publication_validator=_presentation_continuity.career_publication_matches' in source
+
+
+def test_heavy_admission_refuses_over_hard_cap_and_releases_ownership(monkeypatch):
+    import fsffl.product.resource_coordinator as resource
+    resident = 513 * 1024 * 1024
+    monkeypatch.setattr(resource, 'current_rss_bytes', lambda: resident)
+    monkeypatch.setattr(resource, 'process_peak_rss_bytes', lambda: resident)
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kwargs: {})
+    coordinator = resource.HeavyWorkCoordinator(memory_limit_bytes=512 * 1024 * 1024)
+    with pytest.raises(MemoryError, match='before heavy-work admission'):
+        with coordinator.claim(kind='intrinsic',key='fixture'):
+            raise AssertionError('over-limit model work must not start')
+    assert coordinator.snapshot().active_kind is None
+    assert coordinator.snapshot().waiting_count == 0
+
+
+def test_heavy_admission_reclaims_before_work_and_preserves_career_target_exception(monkeypatch):
+    import fsffl.product.resource_coordinator as resource
+    resident = [513 * 1024 * 1024]
+    monkeypatch.setattr(resource, 'current_rss_bytes', lambda: resident[0])
+    monkeypatch.setattr(resource, 'process_peak_rss_bytes', lambda: resident[0])
+    def reclaim(**kwargs):
+        resident[0] = 455 * 1024 * 1024
+        return {}
+    monkeypatch.setattr(resource, 'release_unused_process_memory', reclaim)
+    coordinator = resource.HeavyWorkCoordinator(memory_limit_bytes=512 * 1024 * 1024)
+    with coordinator.claim(kind='intrinsic',key='fixture'):
+        assert resident[0] > coordinator.memory_budget_bytes
+        assert resident[0] < 512 * 1024 * 1024
+    assert coordinator.snapshot().active_kind is None
+
+
+def test_shapley_integer_memoization_is_bounded_and_eviction_preserves_exact_results():
+    import fsffl.value.shapley_intrinsic as shapley
+    caps = (((0,),12),((1,),24),((2,),36),((3,),12),((0,1,2,3),96))
+    valid, options = shapley._valid_counts_cached, shapley._replacement_options_cached
+    valid.cache_clear(); options.cache_clear()
+    try:
+        for n in range(shapley.SHAPLEY_FEASIBILITY_CACHE_MAXSIZE + 257):
+            counts = (n%48,(n//48)%48,(n//2304)%24,0)
+            incoming = n%4
+            assert options(caps,counts,incoming) == options.__wrapped__(caps,counts,incoming)
+        for cache in (valid,options):
+            info = cache.cache_info()
+            assert info.maxsize == shapley.SHAPLEY_FEASIBILITY_CACHE_MAXSIZE == 32768
+            assert info.currsize <= info.maxsize
+        # Earlier keys may have been evicted; recomputation is still identical.
+        for incoming in range(4):
+            assert options(caps,(0,0,0,0),incoming) == options.__wrapped__(caps,(0,0,0,0),incoming)
+    finally:
+        valid.cache_clear(); options.cache_clear()
+
+
+def test_shapley_stage_cleanup_preserves_integer_results():
+    import fsffl.value.shapley_intrinsic as shapley
+    caps = (((0,), 12), ((0, 1, 2, 3), 96))
+    counts = (12, 24, 36, 12)
+    shapley.clear_shapley_execution_caches()
+    expected = tuple(shapley._replacement_options_cached(caps, counts, i) for i in range(4))
+    assert shapley.clear_shapley_execution_caches() > 0
+    assert shapley._valid_counts_cached.cache_info().currsize == 0
+    assert shapley._replacement_options_cached.cache_info().currsize == 0
+    assert tuple(shapley._replacement_options_cached(caps, counts, i) for i in range(4)) == expected
+    shapley.clear_shapley_execution_caches()
+
+
+@pytest.mark.parametrize('after_reclaim,blocked', [(455, False), (513, True)])
+def test_career_stage_reclaims_before_checking_unchanged_hard_limit(monkeypatch, after_reclaim, blocked):
+    from fsffl.product import dynamic_career_composition as bridge
+    from fsffl.product import resource_coordinator as resource
+    calls = []
+    monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
+    monkeypatch.setattr(bridge, 'clear_shapley_execution_caches', lambda: calls.append('clear'))
+    monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: calls.append(kw['label']))
+    def rss():
+        calls.append('rss')
+        return after_reclaim * 1024 * 1024
+    monkeypatch.setattr(resource, 'current_rss_bytes', rss)
+    if blocked:
+        with pytest.raises(MemoryError, match='hard memory limit reached before fixture-stage'):
+            bridge._reclaim_career_stage('fixture-stage')
+    else:
+        bridge._reclaim_career_stage('fixture-stage')
+    assert calls == ['clear', 'fixture-stage', 'rss']
+
+
+@pytest.mark.parametrize('retry_after_reuse', [False, True])
+@pytest.mark.parametrize('preparation_fails', [False, True])
+def test_explicit_core_reuse_retries_optional_career_without_rebuilding(retry_after_reuse, preparation_fails):
+    calls = []
+    context = NS(league_state=NS(state_id='fixture-state'))
+    def prepare(user, runtime):
+        assert user == 'fixture-user' and runtime is context
+        calls.append('prepare')
+        if preparation_fails:
+            raise RuntimeError('optional failure')
+    ns = dict(reconcile=lambda progress:'core reused',
+        retry_optional_after_reuse=retry_after_reuse,
+        require_active_league_identity=lambda:calls.append('identity'),
+        store=NS(get=lambda user:context,working_generation_active=lambda user:False),
+        application=NS(state=NS(presentation_preparer=prepare)),
+        user_id='fixture-user',_logger=NS(exception=lambda *args:calls.append('optional-error')))
+    run = function('src/fsffl/product/webapp.py','work',ns)
+    assert run(lambda *args:None) == 'core reused'
+    assert calls == (['identity','prepare'] + (['optional-error'] if preparation_fails else [])
+                     if retry_after_reuse else [])
+
+
+@pytest.mark.parametrize('retry', [False, True])
+@pytest.mark.parametrize('status,incomplete', [('failed',False),('completed',True),('completed',False),('running',True)])
 def test_explicit_retry_discards_only_failed_or_base_only_terminal_career(retry,status,incomplete):
     from threading import RLock
     calls = []
