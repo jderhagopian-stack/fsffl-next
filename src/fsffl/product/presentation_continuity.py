@@ -135,7 +135,7 @@ class PresentationContinuityStore:
         self._validation_lock = RLock()
         self._known_snapshot_manifests: dict[
             tuple[str, str, str, str | None],
-            tuple[str, str | None, str | None, str | None],
+            tuple[str, str | None, str | None],
         ] = {}
 
     @property
@@ -167,7 +167,6 @@ class PresentationContinuityStore:
         total_bytes = 0
         surface_hashes: list[tuple[str, str, int]] = []
         career_input_fingerprint = None
-        current_intrinsic_input_fingerprint = None
         self._local.promoting = True
         try:
             for surface, builder in builders:
@@ -177,9 +176,6 @@ class PresentationContinuityStore:
                         and raw.get("league_state_id") == state.state_id
                         and raw.get("dynasty_evidence_status") != "last_good"):
                     career_input_fingerprint = raw.get("input_fingerprint")
-                    current_intrinsic_input_fingerprint = raw.get(
-                        "current_intrinsic_input_fingerprint"
-                    )
                 payload = _json_round_trip(raw)
                 del raw  # The isolated JSON copy owns this surface from here.
                 payload["publication_generation_id"] = promotion_id
@@ -238,7 +234,6 @@ class PresentationContinuityStore:
             ],
             "total_payload_bytes": total_bytes,
             "career_input_fingerprint": career_input_fingerprint,
-            "current_intrinsic_input_fingerprint": current_intrinsic_input_fingerprint,
         }
         self._persistence.put_artifact(
             ReusableArtifactRecord(
@@ -303,6 +298,34 @@ class PresentationContinuityStore:
             and payload.get("career_input_fingerprint") == record.intrinsic_input_fingerprint
         )
 
+    def career_generation_hint_matches(
+        self, runtime: UserRuntimeContext, record
+    ) -> bool:
+        """Memory-only source/generation fence for Career-derived 3-Year reads."""
+        state = runtime.league_state
+        if (
+            state is None
+            or not runtime.publication_generation_id
+            or record is None
+            or record.league_state_id != state.state_id
+        ):
+            return False
+        key = self._snapshot_key(
+            runtime.user_id,
+            state.league.league_id,
+            state.state_id,
+            runtime.selected_team_id,
+        )
+        with self._validation_lock:
+            metadata = self._known_snapshot_manifests.get(key)
+        if metadata is None:
+            return False
+        _, promotion_id, career_fingerprint = metadata
+        return bool(
+            promotion_id == runtime.publication_generation_id
+            and career_fingerprint == record.intrinsic_input_fingerprint
+        )
+
     def clear_user_validation_hints(self, user_id: str) -> int:
         """Drop process-local validation hints; durable presentation stays intact."""
 
@@ -341,42 +364,7 @@ class PresentationContinuityStore:
                 canonical_fingerprint(manifest_payload),
                 str(manifest_payload.get("promotion_id") or "") or None,
                 str(manifest_payload.get("career_input_fingerprint") or "") or None,
-                str(manifest_payload.get("current_intrinsic_input_fingerprint") or "") or None,
             )
-
-    def three_year_publication_matches(
-        self,
-        runtime: UserRuntimeContext,
-        intrinsic_record,
-        career_record,
-    ) -> bool:
-        """Memory-only bind of both completed value sources to one manifest."""
-        state = runtime.league_state
-        if (
-            state is None
-            or not runtime.publication_generation_id
-            or intrinsic_record is None
-            or career_record is None
-            or intrinsic_record.league_state_id != state.state_id
-            or career_record.league_state_id != state.state_id
-        ):
-            return False
-        key = self._snapshot_key(
-            runtime.user_id,
-            state.league.league_id,
-            state.state_id,
-            runtime.selected_team_id,
-        )
-        with self._validation_lock:
-            metadata = self._known_snapshot_manifests.get(key)
-        if metadata is None:
-            return False
-        _, promotion_id, career_fingerprint, current_fingerprint = metadata
-        return bool(
-            promotion_id == runtime.publication_generation_id
-            and career_fingerprint == career_record.intrinsic_input_fingerprint
-            and current_fingerprint == intrinsic_record.intrinsic_input_fingerprint
-        )
 
     def known_snapshot_available(
         self,

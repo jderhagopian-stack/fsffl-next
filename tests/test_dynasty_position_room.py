@@ -203,22 +203,6 @@ def test_dynasty_room_requires_actual_position_match() -> None:
     assert alpha.rostered_player_count == 4
 
 
-def _three_year(state, values):
-    from fsffl.value.shapley_intrinsic_contract import (
-        ShapleyIntrinsicContract, ShapleyIntrinsicPlayerEstimate,
-        ShapleyIntrinsicAvailability, ShapleyIntrinsicCoverage,
-        SHAPLEY_INTRINSIC_MODEL_VERSION,
-    )
-    return ShapleyIntrinsicContract.model_construct(
-        status=ShapleyIntrinsicAvailability.READY, evaluation_season=state.league.season,
-        intrinsic_model_version=SHAPLEY_INTRINSIC_MODEL_VERSION,
-        target_years=tuple(state.league.season + offset for offset in range(3)),
-        coverage=ShapleyIntrinsicCoverage.model_construct(player_count=len(values)),
-        estimates=tuple(ShapleyIntrinsicPlayerEstimate.model_construct(
-            player_id=pid, raw_intrinsic_value=value) for pid, value in values.items()),
-    )
-
-
 def _career_current_components(state, components, positions=None):
     from fsffl.value.career_forward_intrinsic import (
         CAREER_FORWARD_AGGREGATION,
@@ -270,362 +254,242 @@ def _career_current_components(state, components, positions=None):
     )
 
 
-def test_three_year_room_uses_existing_shapley_not_career_or_display_values():
-    from fsffl.analytics.dynasty_position_room import build_three_year_position_rooms
-    state = _state()
-    values = {'a1': 2., 'a2': 3., 'a3': 4., 'a4': -1., 'b1': 16.}
-    contract = _three_year(state, values)
-    rows = build_three_year_position_rooms(state, intrinsic=contract,
-        evidence_state_id=state.state_id, positions=(Position.RB,))
-    alpha, beta = rows
-    assert alpha.room_raw == 8 and beta.room_raw == 16
-    assert (alpha.league_rank, beta.league_rank) == (2, 1)
-    assert alpha.strength_index == 100 * 8 / 12
-    assert alpha.model_version == 'analytics-position-room-three-year-intrinsic-v2:career-current-annual-extension'
-    assert contract.estimates[0].raw_intrinsic_value == 2
 
-
-def test_three_year_room_preserves_ties_missing_coverage_and_state_fences():
-    from fsffl.analytics.dynasty_position_room import build_three_year_position_rooms
-    state = _state()
-    contract = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'a4': -1., 'b1': 8.})
-    def rooms(c=contract, state_id=state.state_id):
-        return build_three_year_position_rooms(state, intrinsic=c,
-            evidence_state_id=state_id, positions=(Position.RB,))
-    assert [row.league_rank for row in rooms()] == [1, 1]
-    missing = contract.model_copy(update={'estimates': contract.estimates[1:]})
-    incomplete = rooms(missing)
-    assert incomplete[0].room_raw is None and incomplete[1].room_raw == 8
-    assert all(row.league_rank is None for row in incomplete)
-    for bad in (None, contract.model_copy(update={'display_scaling_applied': True}),
-                contract.model_copy(update={'quantity_semantics': 'market'}),
-                contract.model_copy(update={'evaluation_season': 2025})):
-        assert all(row.room_raw is None for row in rooms(bad))
-    assert all(row.room_raw is None for row in rooms(state_id='older-state'))
-
-
-def test_three_year_extension_uses_only_missing_rostered_career_annual_components():
+def test_three_year_values_all_come_from_career_current_annual_components():
     from fsffl.analytics.dynasty_position_room import (
         build_three_year_intrinsic_player_values,
         build_three_year_position_rooms,
     )
     state = _state()
-    standalone = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'b1': 16.})
-    # a1 and b1 deliberately disagree with their retained Career components.
-    # Their stand-alone 3-Year values must remain authoritative and unchanged.
-    career = _career_current_components(state, {
-        'a1': (100., 100., 100.),
-        'a4': (10., 20., 40.),
-        'b1': (200., 200., 200.),
-        'unrostered': (1., 2., 3.),
-    })
+    components = {
+        "a1": (1., 2., 3.),
+        "a2": (2., 3., 4.),
+        "a3": (3., 4., 5.),
+        "a4": (4., 5., 6.),
+        "b1": (5., 6., 7.),
+        "unrostered": (8., 9., 10.),
+    }
+    career = _career_current_components(state, components)
     career = career.model_copy(update={
-        'player_input_assumptions': {'a4': 'Approved YTD-only Current input'},
+        "player_input_assumptions": {"a4": "Approved YTD-only Current input"},
     })
+
     values = build_three_year_intrinsic_player_values(
-        state, intrinsic=standalone, evidence_state_id=state.state_id,
-        career_forward=career, career_evidence_state_id=state.state_id,
+        state, career_forward=career, career_evidence_state_id=state.state_id,
     )
     by_id = {row.player_id: row for row in values}
-    assert by_id['a1'].raw_intrinsic_value == 2.
-    assert by_id['a1'].source == 'standalone_three_year_shapley'
-    assert by_id['b1'].raw_intrinsic_value == 16.
-    assert by_id['a4'].raw_intrinsic_value == pytest.approx(10 + .85 * 20 + .85**2 * 40)
-    assert by_id['a4'].raw_intrinsic_value != career.estimates[1].raw_career_forward_reference
-    assert by_id['a4'].source == 'career_current_y1_y3_discounted_extension'
-    assert by_id['a4'].input_assumption == 'Approved YTD-only Current input'
-    assert by_id['a1'].input_assumption is None
-    assert 'unrostered' not in by_id
-
-    stale_career_version = career.model_copy(update={
-        'contract_version': 'unrecognized-career-contract',
-    })
-    version_fenced = build_three_year_intrinsic_player_values(
-        state, intrinsic=standalone, evidence_state_id=state.state_id,
-        career_forward=stale_career_version, career_evidence_state_id=state.state_id,
-    )
-    assert {row.player_id for row in version_fenced} == {'a1', 'a2', 'a3', 'b1'}
+    assert set(by_id) == {"a1", "a2", "a3", "a4", "b1"}
+    for player_id, annual in components.items():
+        if player_id == "unrostered":
+            continue
+        assert by_id[player_id].raw_intrinsic_value == pytest.approx(
+            annual[0] + .85 * annual[1] + .85**2 * annual[2]
+        )
+        assert by_id[player_id].source == "career_current_y1_y3_components"
+    assert by_id["a4"].input_assumption == "Approved YTD-only Current input"
+    assert by_id["a1"].raw_intrinsic_value != career.estimates[0].raw_career_forward_reference
 
     rooms = build_three_year_position_rooms(
-        state, intrinsic=standalone, evidence_state_id=state.state_id,
-        career_forward=career, career_evidence_state_id=state.state_id,
+        state, career_forward=career, career_evidence_state_id=state.state_id,
         positions=(Position.RB,),
     )
     alpha, beta = rooms
-    assert alpha.room_raw == pytest.approx(2 + 3 + 4 + 10 + .85 * 20 + .85**2 * 40)
-    assert beta.room_raw == 16.
-    assert alpha.league_rank is not None and beta.league_rank is not None
+    assert alpha.room_raw == pytest.approx(sum(
+        by_id[player_id].raw_intrinsic_value for player_id in ("a1", "a2", "a3", "a4")
+    ))
+    assert beta.room_raw == by_id["b1"].raw_intrinsic_value
+    assert all(row.league_rank is not None for row in rooms)
     assert all(row.coverage_count == row.team_count == 2 for row in rooms)
+    assert rooms[0].model_version == (
+        "analytics-position-room-three-year-intrinsic-v3:career-current-y1-y3-source"
+    )
 
 
-def test_three_year_extension_fails_closed_on_state_position_horizon_or_numeric_mismatch():
+def test_three_year_rankings_fail_closed_without_complete_exact_career_components():
+    from fsffl.analytics.dynasty_position_room import build_three_year_position_rooms
+    state = _state()
+    complete = _career_current_components(state, {
+        "a1": (1., 0., 0.), "a2": (1., 0., 0.), "a3": (1., 0., 0.),
+        "a4": (1., 0., 0.), "b1": (4., 0., 0.),
+    })
+
+    def rooms(contract=complete, state_id=state.state_id):
+        return build_three_year_position_rooms(
+            state, career_forward=contract, career_evidence_state_id=state_id,
+            positions=(Position.RB,),
+        )
+
+    tied = rooms()
+    assert [row.league_rank for row in tied] == [1, 1]
+    missing = complete.model_copy(update={
+        "estimates": complete.estimates[1:], "player_count": len(complete.estimates) - 1,
+    })
+    incomplete = rooms(missing)
+    assert incomplete[0].room_raw is None and incomplete[1].room_raw is not None
+    assert all(row.league_rank is None for row in incomplete)
+    for bad in (
+        None,
+        complete.model_copy(update={"display_scaling_applied": True}),
+        complete.model_copy(update={"market_inputs_used": True}),
+        complete.model_copy(update={"evaluation_season": 2025}),
+        complete.model_copy(update={"status": "unavailable"}),
+    ):
+        assert all(row.room_raw is None for row in rooms(bad))
+    assert all(row.room_raw is None for row in rooms(state_id="older-state"))
+
+
+def test_three_year_rejects_malformed_career_rows_without_using_later_horizons():
     from fsffl.analytics.dynasty_position_room import build_three_year_intrinsic_player_values
     state = _state()
-    standalone = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'b1': 8.})
-    career = _career_current_components(
-        state, {'a4': (10., 20., 30.)}, positions={'a4': Position.WR},
-    )
-    wrong_state = build_three_year_intrinsic_player_values(
-        state, intrinsic=standalone, evidence_state_id=state.state_id,
-        career_forward=career, career_evidence_state_id='older-state',
-    )
-    assert {row.player_id for row in wrong_state} == {'a1', 'a2', 'a3', 'b1'}
-
-    degraded = standalone.model_copy(update={'status': 'degraded'})
-    complete_career = _career_current_components(state, {
-        'a1': (1., 2., 3.), 'a2': (1., 2., 3.), 'a3': (1., 2., 3.),
-        'a4': (1., 2., 3.), 'b1': (1., 2., 3.),
+    complete = _career_current_components(state, {
+        "a1": (1., 2., 3.), "a2": (2., 3., 4.), "a3": (3., 4., 5.),
+        "a4": (4., 5., 6.), "b1": (5., 6., 7.),
     })
-    degraded_values = build_three_year_intrinsic_player_values(
-        state, intrinsic=degraded, evidence_state_id=state.state_id,
-        career_forward=complete_career, career_evidence_state_id=state.state_id,
-    )
-    assert degraded_values == ()
+    assert len(build_three_year_intrinsic_player_values(
+        state, career_forward=complete, career_evidence_state_id=state.state_id,
+    )) == 5
 
-    wrong_standalone_years = standalone.model_copy(update={
-        'target_years': (2025, 2026, 2027),
-    })
-    mismatched_year_values = build_three_year_intrinsic_player_values(
-        state, intrinsic=wrong_standalone_years, evidence_state_id=state.state_id,
-        career_forward=complete_career, career_evidence_state_id=state.state_id,
-    )
-    assert mismatched_year_values == ()
-
-    wrong_position = build_three_year_intrinsic_player_values(
-        state, intrinsic=standalone, evidence_state_id=state.state_id,
-        career_forward=career, career_evidence_state_id=state.state_id,
-    )
-    assert {row.player_id for row in wrong_position} == {'a1', 'a2', 'a3', 'b1'}
-
-    wrong_season_row = career.estimates[0].model_copy(update={
-        'uncertainty': career.estimates[0].uncertainty.model_copy(update={
-            'current_y1_y3': tuple(
-                item.model_copy(update={'target_season': 2027}) if item.year_index == 2 else item
-                for item in career.estimates[0].uncertainty.current_y1_y3
+    for player_id, row_update in (
+        ("a1", {"position": Position.WR}),
+        ("a2", {"discounting_applied": True}),
+    ):
+        malformed = complete.model_copy(update={
+            "estimates": tuple(
+                row.model_copy(update=row_update) if row.player_id == player_id else row
+                for row in complete.estimates
             ),
-        }),
-    })
-    wrong_season = career.model_copy(update={'estimates': (wrong_season_row,)})
-    missing_horizon = build_three_year_intrinsic_player_values(
-        state, intrinsic=standalone, evidence_state_id=state.state_id,
-        career_forward=wrong_season, career_evidence_state_id=state.state_id,
-    )
-    assert {row.player_id for row in missing_horizon} == {'a1', 'a2', 'a3', 'b1'}
+        })
+        values = build_three_year_intrinsic_player_values(
+            state, career_forward=malformed, career_evidence_state_id=state.state_id,
+        )
+        assert player_id not in {row.player_id for row in values}
 
-    nonfinite_row = career.estimates[0].model_copy(update={
-        'uncertainty': career.estimates[0].uncertainty.model_copy(update={
-            'current_y1_y3': tuple(
-                item.model_copy(update={'raw_shapley_contribution': float('nan')})
+    original = complete.estimates[0]
+    bad_horizon = original.model_copy(update={
+        "uncertainty": original.uncertainty.model_copy(update={
+            "current_y1_y3": tuple(
+                    item.model_copy(update={"target_season": 2028})
                 if item.year_index == 2 else item
-                for item in career.estimates[0].uncertainty.current_y1_y3
+                for item in original.uncertainty.current_y1_y3
             ),
         }),
     })
-    nonfinite = career.model_copy(update={'estimates': (nonfinite_row,)})
-    missing_numeric = build_three_year_intrinsic_player_values(
-        state, intrinsic=standalone, evidence_state_id=state.state_id,
-        career_forward=nonfinite, career_evidence_state_id=state.state_id,
-    )
-    assert {row.player_id for row in missing_numeric} == {'a1', 'a2', 'a3', 'b1'}
-
-    duplicate = standalone.model_copy(update={
-        'estimates': (*standalone.estimates, standalone.estimates[0]),
+    bad_numeric = original.model_copy(update={
+        "uncertainty": original.uncertainty.model_copy(update={
+            "current_y1_y3": tuple(
+                item.model_copy(update={"raw_shapley_contribution": float("nan")})
+                if item.year_index == 2 else item
+                for item in original.uncertainty.current_y1_y3
+            ),
+        }),
     })
-    ambiguous = build_three_year_intrinsic_player_values(
-        state, intrinsic=duplicate, evidence_state_id=state.state_id,
-        career_forward=career, career_evidence_state_id=state.state_id,
-    )
-    assert ambiguous == ()
+    for row in (bad_horizon, bad_numeric):
+        malformed = complete.model_copy(update={
+            "estimates": (row, *complete.estimates[1:]),
+        })
+        values = build_three_year_intrinsic_player_values(
+            state, career_forward=malformed, career_evidence_state_id=state.state_id,
+        )
+        assert "a1" not in {item.player_id for item in values}
 
-    malformed_estimate = standalone.estimates[0].model_copy(update={
-        'raw_intrinsic_value': float('nan'),
+    duplicate = complete.model_copy(update={
+        "estimates": (*complete.estimates, complete.estimates[0]),
+        "player_count": len(complete.estimates) + 1,
     })
-    malformed_contract = standalone.model_copy(update={
-        'estimates': (malformed_estimate, *standalone.estimates[1:]),
-    })
-    career_with_same_player = _career_current_components(
-        state, {'a1': (100., 100., 100.), 'a4': (1., 2., 3.)},
-    )
-    malformed_values = build_three_year_intrinsic_player_values(
-        state, intrinsic=malformed_contract, evidence_state_id=state.state_id,
-        career_forward=career_with_same_player, career_evidence_state_id=state.state_id,
-    )
-    malformed_by_id = {row.player_id: row for row in malformed_values}
-    assert 'a1' not in malformed_by_id
-    assert 'a4' in malformed_by_id
+    assert build_three_year_intrinsic_player_values(
+        state, career_forward=duplicate, career_evidence_state_id=state.state_id,
+    ) == ()
 
 
-def test_three_year_route_reads_completed_owner_only_and_fences_publication():
+def test_three_year_route_uses_only_published_completed_career_owner():
     from types import SimpleNamespace
     from fastapi import FastAPI
     from fsffl.product.foundation4_shadow_routes import install_career_intrinsic_routes
     from fsffl.product.intrinsic_background import IntrinsicBuildStatus
     state = _state()
-    contract = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'a4': -1., 'b1': 8.})
-    record = SimpleNamespace(status=IntrinsicBuildStatus.COMPLETED, contract=contract,
-        league_state_id=state.state_id, intrinsic_input_fingerprint='owned-current')
-    career_contract = _career_current_components(state, {
-        'a1': (1., 2., 3.), 'a2': (2., 3., 4.), 'a3': (3., 4., 5.),
-        'a4': (4., 5., 6.), 'b1': (5., 6., 7.),
+    career = _career_current_components(state, {
+        "a1": (1., 2., 3.), "a2": (2., 3., 4.), "a3": (3., 4., 5.),
+        "a4": (10., 20., 30.), "b1": (5., 6., 7.),
+    }).model_copy(update={
+        "player_input_assumptions": {"a4": "Approved YTD-only Current input"},
     })
-    career_record = SimpleNamespace(status=IntrinsicBuildStatus.COMPLETED,
-        contract=career_contract, league_state_id=state.state_id,
-        intrinsic_input_fingerprint='owned-career')
-    class ReadOnlyOwner:
-        def completed_for_state(self, context): return record
-        def current(self, context): raise AssertionError("GET must not resolve fingerprints")
-        def request(self, *a): raise AssertionError('GET must not start work')
-    context = SimpleNamespace(league_state=state, publication_generation_id='published')
-    app = FastAPI()
-    install_career_intrinsic_routes(app, runtime_store=SimpleNamespace(get=lambda _: context),
-        loader=None, coordinator=SimpleNamespace(completed_for_state=lambda _: career_record),
-        current_intrinsic_coordinator=ReadOnlyOwner(),
-        three_year_publication_validator=lambda *_: True)
-    endpoint = next(route.endpoint for route in app.routes
-        if route.path == '/api/league/three-year-position-rooms')
-    result = endpoint(state.state_id, 'published', 'user')
-    assert result['status'] == 'ready'
-    assert result['publication_generation_id'] == 'published'
-    assert result['dynasty_rank_readiness']['status'] == 'ready'
-    assert result['input_fingerprint'] == 'owned-current'
-    assert endpoint(state.state_id, 'older-generation', 'user')['status'] == 'superseded'
-    # A later completed owner cannot be presented under an older publication.
-    app2 = FastAPI()
-    install_career_intrinsic_routes(app2,
-        runtime_store=SimpleNamespace(get=lambda _: context), loader=None,
-        coordinator=SimpleNamespace(completed_for_state=lambda _: career_record),
-        current_intrinsic_coordinator=ReadOnlyOwner(),
-        three_year_publication_validator=lambda *_: False)
-    endpoint2 = next(route.endpoint for route in app2.routes
-        if route.path == '/api/league/three-year-position-rooms')
-    assert endpoint2(state.state_id, 'published', 'user')['status'] == 'unavailable'
-    record = None
-    assert endpoint(state.state_id, 'published', 'user')['status'] == 'unavailable'
-
-
-def test_three_year_route_extends_only_from_matching_completed_career_record():
-    from types import SimpleNamespace
-    from fastapi import FastAPI
-    from fsffl.product.foundation4_shadow_routes import install_career_intrinsic_routes
-    from fsffl.product.intrinsic_background import IntrinsicBuildStatus
-    state = _state()
-    standalone = _three_year(state, {'a1': 2., 'a2': 3., 'a3': 4., 'b1': 8.})
-    career = _career_current_components(state, {'a4': (10., 20., 30.)})
-    career = career.model_copy(update={
-        'player_input_assumptions': {'a4': 'Approved YTD-only Current input'},
-    })
-    current_record = SimpleNamespace(
-        status=IntrinsicBuildStatus.COMPLETED, contract=standalone,
-        league_state_id=state.state_id, intrinsic_input_fingerprint='three-year-fp',
-    )
     career_record = SimpleNamespace(
         status=IntrinsicBuildStatus.COMPLETED, contract=career,
-        league_state_id=state.state_id, intrinsic_input_fingerprint='career-fp',
+        league_state_id=state.state_id, intrinsic_input_fingerprint="career-fp",
     )
 
-    class ReadOnlyOwner:
-        def __init__(self, record):
-            self.record = record
-            self.calls = 0
+    class CareerOwner:
+        calls = 0
         def completed_for_state(self, context):
             self.calls += 1
-            return self.record
+            return career_record
         def current(self, *args):
-            raise AssertionError('GET must not resolve fingerprints')
+            raise AssertionError("GET must not resolve fingerprints")
         def request(self, *args):
-            raise AssertionError('GET must not start work')
+            raise AssertionError("GET must not start work")
 
-    current_owner = ReadOnlyOwner(current_record)
-    career_owner = ReadOnlyOwner(career_record)
+    class ForbiddenStandaloneOwner:
+        def completed_for_state(self, context):
+            raise AssertionError("3-Year GET must not read a second value owner")
+
+    owner = CareerOwner()
     context = SimpleNamespace(
-        league_state=state, publication_generation_id='published', user_id='user',
+        league_state=state, publication_generation_id="published", user_id="user",
     )
+    validator_calls = []
     app = FastAPI()
     install_career_intrinsic_routes(
         app, runtime_store=SimpleNamespace(get=lambda _: context),
-        loader=None, coordinator=career_owner,
-        current_intrinsic_coordinator=current_owner,
-        three_year_publication_validator=lambda *_: True,
+        loader=None, coordinator=owner,
+        current_intrinsic_coordinator=ForbiddenStandaloneOwner(),
+        career_generation_validator=lambda runtime, record: (
+            validator_calls.append((runtime, record)) or True
+        ),
     )
     endpoint = next(route.endpoint for route in app.routes
-        if route.path == '/api/league/three-year-position-rooms')
-    result = endpoint(state.state_id, 'published', 'user')
-    assert result['status'] == 'ready'
-    assert result['input_fingerprint'] == 'three-year-fp'
-    assert result['source_input_fingerprints'] == {
-        'standalone_three_year': 'three-year-fp',
-        'career_current_components': 'career-fp',
+        if route.path == "/api/league/three-year-position-rooms")
+    result = endpoint(state.state_id, "published", "user")
+    assert result["status"] == "ready"
+    assert result["input_fingerprint"] == "career-fp"
+    assert result["source_input_fingerprints"] == {
+        "career_current_components": "career-fp",
     }
-    assert result['coverage']['RB'] == {
-        'rostered': 5, 'covered': 5, 'extended_from_career_current_components': 1,
+    assert result["coverage"]["RB"] == {
+        "rostered": 5, "covered": 5, "career_current_components": 5,
     }
-    assert result['dynasty_rank_readiness']['status'] == 'ready'
-    player = next(row for row in result['players'] if row['player_id'] == 'a4')
-    assert player['source'] == 'career_current_y1_y3_discounted_extension'
-    assert player['input_assumption'] == 'Approved YTD-only Current input'
-    assert player['raw_intrinsic_value'] == pytest.approx(10 + .85 * 20 + .85**2 * 30)
-    assert current_owner.calls == career_owner.calls == 1
+    assert result["dynasty_rank_readiness"]["status"] == "ready"
+    player = next(row for row in result["players"] if row["player_id"] == "a4")
+    assert player["source"] == "career_current_y1_y3_components"
+    assert player["input_assumption"] == "Approved YTD-only Current input"
+    assert player["raw_intrinsic_value"] == pytest.approx(10 + .85 * 20 + .85**2 * 30)
+    assert owner.calls == 1 and validator_calls == [(context, career_record)]
     context.publication_generation_id = None
-    assert endpoint(state.state_id, 'published', 'user')['status'] == 'superseded'
+    assert endpoint(state.state_id, "published", "user")["status"] == "superseded"
 
 
-def test_three_year_publication_source_reconciliation_checks_shared_values():
-    from fsffl.analytics.dynasty_position_room import (
-        three_year_source_reconciles_career_components,
-    )
-
-    state = _state()
-    contributions = (10., 20., 30.)
-    expected = 10. + .85 * 20. + .85**2 * 30.
-    standalone = _three_year(state, {'a1': expected, 'a2': 4.})
-    career = _career_current_components(state, {
-        'a1': contributions,
-        # A row outside the overlapping cohort is not a contradiction.
-        'b1': (4., 0., 0.),
-    })
-    assert three_year_source_reconciles_career_components(
-        state, intrinsic=standalone, evidence_state_id=state.state_id,
-        career_forward=career, career_evidence_state_id=state.state_id,
-    )
-    mismatched = _three_year(state, {'a1': expected + .01, 'a2': 4.})
-    assert not three_year_source_reconciles_career_components(
-        state, intrinsic=mismatched, evidence_state_id=state.state_id,
-        career_forward=career, career_evidence_state_id=state.state_id,
-    )
-
-
-def test_three_year_route_requires_completed_standalone_owner_before_extension():
+def test_three_year_route_fails_closed_without_published_career_source():
     from types import SimpleNamespace
     from fastapi import FastAPI
     from fsffl.product.foundation4_shadow_routes import install_career_intrinsic_routes
     from fsffl.product.intrinsic_background import IntrinsicBuildStatus
     state = _state()
-    career = _career_current_components(state, {
-        'a1': (1., 2., 3.), 'a2': (2., 3., 4.), 'a3': (3., 4., 5.),
-        'a4': (4., 5., 6.), 'b1': (5., 6., 7.),
-    })
-    career_record = SimpleNamespace(
+    career = _career_current_components(state, {"a1": (1., 2., 3.)})
+    record = SimpleNamespace(
         status=IntrinsicBuildStatus.COMPLETED, contract=career,
-        league_state_id=state.state_id, intrinsic_input_fingerprint='career-fp',
+        league_state_id=state.state_id, intrinsic_input_fingerprint="career-fp",
     )
-    class ReadOnlyOwner:
-        def completed_for_state(self, context): return career_record
-        def current(self, *args): raise AssertionError('GET must not resolve fingerprints')
-        def request(self, *args): raise AssertionError('GET must not start work')
-
     context = SimpleNamespace(
-        league_state=state, publication_generation_id='published', user_id='user',
+        league_state=state, publication_generation_id="published", user_id="user",
     )
     app = FastAPI()
     install_career_intrinsic_routes(
         app, runtime_store=SimpleNamespace(get=lambda _: context),
-        loader=None, coordinator=ReadOnlyOwner(),
+        loader=None, coordinator=SimpleNamespace(completed_for_state=lambda _: record),
+        career_generation_validator=lambda *_: False,
     )
     endpoint = next(route.endpoint for route in app.routes
-        if route.path == '/api/league/three-year-position-rooms')
-    result = endpoint(state.state_id, 'published', 'user')
-    assert result['status'] == 'unavailable'
-    assert 'not bound to the active publication generation' in result['reason']
+        if route.path == "/api/league/three-year-position-rooms")
+    assert endpoint(state.state_id, "published", "user")["status"] == "unavailable"
 
 
 def test_three_year_completed_state_lookup_cannot_touch_loader_or_fingerprints():
