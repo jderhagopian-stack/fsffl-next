@@ -403,7 +403,7 @@ class PrivateBetaShapleyContractLoader:
         self,
         *,
         league_state: LeagueState,
-        evidence: LiveForecastEvidence,
+        raw_forecasts: tuple[ForecastObservation, ...],
         year_one: tuple[ForecastObservation, ...],
     ) -> FutureForecastContract:
         """Materialize Future Forecast once per provider-owned semantic identity."""
@@ -417,7 +417,7 @@ class PrivateBetaShapleyContractLoader:
             cache_key = str(
                 resolver(
                     league_state=league_state,
-                    raw_forecasts=evidence.raw_forecasts,
+                    raw_forecasts=raw_forecasts,
                     league_year_one=year_one,
                 )
             ).strip()
@@ -443,7 +443,7 @@ class PrivateBetaShapleyContractLoader:
 
             contract = self._future_forecast_builder(
                 league_state=league_state,
-                raw_forecasts=evidence.raw_forecasts,
+                raw_forecasts=raw_forecasts,
                 league_year_one=year_one,
             )
             if not isinstance(contract, FutureForecastContract):
@@ -504,7 +504,7 @@ class PrivateBetaShapleyContractLoader:
             source_ids = _preseason_source_ids(evidence)
             future_contract = self._resolve_future_contract(
                 league_state=league_state,
-                evidence=evidence,
+                raw_forecasts=evidence.raw_forecasts,
                 year_one=year_one,
             )
             h3_player_ids = set(future_contract.player_ids)
@@ -659,7 +659,7 @@ class PrivateBetaShapleyContractLoader:
         try:
             future_contract = self._resolve_future_contract(
                 league_state=league_state,
-                evidence=evidence,
+                raw_forecasts=evidence.raw_forecasts,
                 year_one=year_one,
             )
         except ValueError as exc:

@@ -280,6 +280,44 @@ def test_hosted_career_does_not_allocate_next_stage_above_hard_limit(monkeypatch
     assert 'MemoryError: hard memory limit reached before' in result.failures[year_one.player_id]
 
 
+def test_hosted_career_releases_preseason_evidence_before_live_p0(monkeypatch):
+    from weakref import ref
+
+    state, year_one = _fixture()
+    class Evidence:
+        pass
+
+    evidence = Evidence()
+    evidence.__dict__.update(vars(_authority_evidence(year_one)))
+    evidence_ref = ref(evidence)
+    retained = [evidence]
+    del evidence
+
+    def load(_state):
+        return retained.pop()
+
+    def candidate_builder(_state, *, projection_history_as_of=None, **kwargs):
+        assert evidence_ref() is None, (
+            "full preseason evidence must not overlap live P0 allocations"
+        )
+        return SimpleNamespace(
+            failures={}, future=None, year_one_evidence_modes={},
+            source_manifest={}, ros_runtime=SimpleNamespace(),
+        )
+
+    result = bridge.build_dynamic_rostered_career_contract(
+        UserRuntimeContext(user_id="fixture", league_state=state),
+        SimpleNamespace(estimates=()),
+        current_intrinsic_loader=SimpleNamespace(
+            _year_one_loader=load,
+        ),
+        candidate_builder=candidate_builder,
+    )
+
+    assert result.contract is None
+    assert evidence_ref() is None
+
+
 def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     monkeypatch,
 ) -> None:
@@ -433,6 +471,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: None)
     calls = []
     def base_future(**kwargs):
+        assert tuple(kwargs["raw_forecasts"]) == tuple(evidence.raw_forecasts)
         calls.append('future')
         return SimpleNamespace(player_ids=(base_year_one.player_id,))
     def merge(**kwargs):
