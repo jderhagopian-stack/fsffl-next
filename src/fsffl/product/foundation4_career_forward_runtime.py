@@ -85,6 +85,10 @@ class ExpandedCareerContractResult:
     retryable_batch_incomplete: bool = False
 
 
+class RetryableCareerExpansionIncomplete(RuntimeError):
+    """Career expansion was saved as a checkpoint and should be retried explicitly."""
+
+
 ExpandedCareerContractLoader = Callable[
     [UserRuntimeContext, CareerForwardIntrinsicShadowContract],
     ExpandedCareerContractResult | CareerForwardIntrinsicShadowContract | None,
@@ -770,6 +774,12 @@ class CareerIntrinsicLoader:
                 source_manifest=source_manifest,
                 retryable_batch_incomplete=retryable_batch_incomplete,
             )
+            if retryable_batch_incomplete:
+                self.clear_user_cache(context.user_id)
+                raise RetryableCareerExpansionIncomplete(
+                    "Career ROS source coverage remains under the independent-source minimum; "
+                    "the incomplete expansion was checkpointed for an explicit retry"
+                )
             with self._lock:
                 self._cached_user_id = context.user_id
                 self._cached_fingerprint = dependency_fingerprint
@@ -861,6 +871,12 @@ class CareerIntrinsicLoader:
             source_manifest=source_manifest,
             retryable_batch_incomplete=retryable_batch_incomplete,
         )
+        if retryable_batch_incomplete:
+            self.clear_user_cache(context.user_id)
+            raise RetryableCareerExpansionIncomplete(
+                "Career ROS source coverage remains under the independent-source minimum; "
+                "the incomplete expansion was checkpointed for an explicit retry"
+            )
         with self._lock:
             self._cached_user_id = context.user_id
             self._cached_fingerprint = dependency_fingerprint
