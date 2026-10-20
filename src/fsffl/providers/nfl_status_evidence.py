@@ -92,6 +92,18 @@ NFL_ROLE_RECEIPTS = (
     NflRoleReceipt("sleeper:player:13268", "WR", 2026, "developmental_depth",
         "https://www.baltimoreravens.com/team/depth-chart",
         datetime(2026, 10, 20, 13, 29, 37, tzinfo=UTC)),
+    # Rechecked against official pages on 2026-10-20 at 15:55 ET. The prior
+    # six-hour receipt expired shortly before the owned Career build began.
+    # Append to preserve every previously published State's input identity.
+    NflRoleReceipt("sleeper:player:3321", "WR", 2026, "unsigned",
+        "https://www.nfl.com/players/tyreek-hill/",
+        datetime(2026, 10, 20, 19, 55, 28, tzinfo=UTC)),
+    NflRoleReceipt("sleeper:player:6803", "WR", 2026, "reserve_left_squad",
+        "https://www.nfl.com/teams/san-francisco-49ers/roster",
+        datetime(2026, 10, 20, 19, 55, 28, tzinfo=UTC)),
+    NflRoleReceipt("sleeper:player:13268", "WR", 2026, "developmental_depth",
+        "https://www.baltimoreravens.com/team/depth-chart",
+        datetime(2026, 10, 20, 19, 55, 28, tzinfo=UTC)),
 )
 
 # Management explicitly approved this input assumption in the Career #405
