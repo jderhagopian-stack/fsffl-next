@@ -1,4 +1,14 @@
-## 2026-10-20 — Reopened valuation coverage; owned-build handoff correction in progress
+## 2026-10-20 — Career/3-Year coverage fix deployed; refreshed-value acceptance remains open
+
+PR [#471](https://github.com/jderhagopian-stack/fsffl-next/pull/471) was squash-merged as `d4edfee6b72cb34b0e598b7f863beb25f53a672a` after exact-head CI, focused hosted checks, Stable full suite and final Codex review passed. The automated review's two retryability findings were fixed and resolved before merge. The existing Render service `srv-dae6k7vqj5pc73af7bt0` was manually deployed as `dep-dbbnnnss728c7392fi4g`; Render reports the exact merge SHA live and deployment/build succeeded. The new code preserves the accepted projection-source minimum and player-specific fallback rules, and keeps an under-covered Career build retryable through persistence, loader cache and background completion state.
+
+Deployment/startup evidence: app startup completed; durable user/league context and Forecast, Simulation and Value restored for the exact current State `cdb13c295785eacc1116a94947847540c62c9753f7e57e27d2d342810332f157`. Startup logged misses for both canonical and legacy Career artifact keys, so it did not restore a Career expansion or recalculate one. Startup RSS was 336,752,640 bytes (peak 346,800,128) against the existing 429,496,720-byte budget. The hosted health request succeeded and the unauthenticated root returned the expected Basic Auth 401.
+
+**The screenshots' blank Career/3-Year ranks are not yet accepted as corrected.** No new Career valuation or provider acquisition was triggered: PR #405's full live Career memory acceptance remains open. After that separate resource gate is cleared, an explicitly owned Career refresh must run under the existing controls; then an authenticated session must verify the exact active State's values, complete rooms, and dependent ranks in both Career and 3-Year. A page GET must remain read-only. Until those checks pass, the current exact-State coverage remains unverified after deployment.
+
+The source investigation and implementation history below is retained as the pre-release record. The workstream's release checkpoint has the exact test, review, deploy and remaining acceptance evidence.
+
+## 2026-10-20 — Pre-release current-State diagnosis (historical)
 
 User screenshots of the deployed League Map contradict the earlier release-stage coverage claim: Career shows only 7/12 QB, 8/12 RB, 4/12 WR and 10/12 TE complete team rooms, while the 3-Year lens shows no ranked rooms. The latest reconciled State is `cdb13c295785eacc1116a94947847540c62c9753f7e57e27d2d342810332f157` (2026-10-20 12:32:54Z), with 253 rostered QB/RB/WR/TE players (QB52, RB77, WR96, TE28). Its Career checkpoint has numerical estimates for 226 (QB45, RB70, WR85, TE26); the exact 27 roster gaps match the failure ledger (QB7, RB7, WR11, TE2). Preserve the prior State's 255-player results as historical evidence; current roster identity differs.
 
