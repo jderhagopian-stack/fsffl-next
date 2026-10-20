@@ -363,9 +363,10 @@ class CareerIntrinsicLoader:
         payload = dict(record.payload)
         dependency = payload.pop("_foundation4_dependency_fingerprint", None)
         expansion_complete = payload.pop("_career_expansion_complete", False) is True
+        retryable_batch_incomplete = payload.pop("_career_retryable_batch_incomplete", False) is True
         source_manifest = payload.pop("_career_source_manifest", {})
         complete_fingerprint = payload.pop("_career_complete_input_fingerprint", None)
-        retryable_batch_incomplete = payload.pop("_career_retryable_batch_incomplete", False) is True
+        expansion_complete = expansion_complete and not retryable_batch_incomplete
         if self._expanded_career_contract_loader is not None:
             from .p0_live_candidate_runtime import valid_live_source_manifest
             expansion_complete = (
