@@ -1228,6 +1228,36 @@ def test_reference_checkpoint_resumes_interrupted_expansion_without_refitting(ma
     assert sum(r.key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND for r in store.artifacts) == 1
 
 
+def test_undercovered_ros_batch_remains_retryable_with_player_fallbacks(materialized):
+    from fsffl.product.foundation4_career_forward_runtime import ExpandedCareerContractResult
+    store, _calls, _base_loader, context, base = materialized
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _ctx: None,
+        current_intrinsic_fingerprint_resolver=lambda _ctx: 'current-fp-v1',
+        persistence_store=store,
+        expanded_career_contract_loader=lambda ctx, _frozen: ExpandedCareerContractResult(
+            contract=None, failures={}, source_manifest=_fixture_source_manifest(ctx),
+            retryable_batch_incomplete=True,
+        ),
+        expanded_career_contract_fingerprint_resolver=lambda _ctx: 'dynamic-fp-v1',
+    )
+    expanded, manifest, retryable = loader._append_expanded_rostered_contract(context, base)
+    assert retryable
+    assert manifest == _fixture_source_manifest(context)
+    assert not loader.retryable_incomplete_contract(expanded)
+    loader._persist(
+        context, dependency_fingerprint=loader.intrinsic_input_fingerprint(context),
+        component=None, contract=expanded, source_manifest=manifest,
+        retryable_batch_incomplete=retryable,
+    )
+    record = store.get_reusable_artifact(loader._reference_checkpoint_key(
+        context, loader.intrinsic_input_fingerprint(context)))
+    assert record is not None
+    assert record.payload['_career_expansion_complete'] is False
+    assert record.payload['_career_retryable_batch_incomplete'] is True
+    assert loader.restore_compatible(context) is None
+
+
 def test_refresh_checkpoint_and_batch_failure_preserve_same_key_last_good(materialized, monkeypatch):
     from datetime import timedelta
     _store, _calls, _loader, context, accepted = materialized
