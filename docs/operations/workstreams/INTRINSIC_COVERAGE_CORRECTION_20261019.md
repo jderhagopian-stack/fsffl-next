@@ -14,6 +14,14 @@ Render service `srv-dae6k7vqj5pc73af7bt0` (workspace `tea-dae6if9t0dsc73918us0`,
 
 ---
 
+## 2026-10-20 — Owned production refresh interrupted during Career expansion
+
+The explicitly authorized refresh completed core State/Forecast/Simulation/Value publication but did **not** complete Career. Exact served State is `546f2adc627910715f62bd7ee38df8ea49e4d90bb9f3337c22ccb221e516993a`, publication generation `1bb7b3da1dac776c2a7eca6f8e1855ccaae42c5b8a3b9fcdf2fcd57e09bef8ec`. Render logs show that the Career worker wrote only a non-authoritative `shadow_ready` reference checkpoint, then began `career.foundation4_materialization` with RSS `510275584` bytes; the instance restarted roughly six seconds later at `2026-10-20T22:11:13Z`. The preceding Career phase sampled a peak of `569618432` bytes, above the fixed `536870900`-byte hard limit. Render's minute metrics show `491692030` bytes at 22:11 followed by `292904960` at 22:12, consistent with a transient peak and restart. The user independently received a Render memory-limit email at 6:11.
+
+Startup restored the exact State and core evidence but missed `career_intrinsic_v1`; subsequent authenticated Career reads returned HTTP 503. The screenshots therefore show unavailable Career and Career-backed 3-Year rooms because there is no completed Career authority for this State. The core intelligence job's “completed” label is not Career completion: Career fitting runs as optional post-publication background work. The 3-Year route still derives values from exact-State Career Current Y1–Y3; it must not synthesize a separate fallback.
+
+This run is the failed monitored PR #405 memory acceptance, not a failed source-policy test and not acceptance of any missing-player population. Preserve the State, last-good authorities, reference checkpoint and all earlier numerical work. No additional production refresh or GET-triggered retry is authorized by this result. Next: isolate the retained-memory baseline and Foundation 4 allocation, prepare a focused correction with bounded representative measurements under the existing `429496720`-byte working target and unchanged `536870900`-byte hard cap, then follow exact-head CI, Stable, review and deployment governance before the next owned live acceptance. Until then, Career/3-Year numerical coverage and position ranks remain unaccepted.
+
 ## Historical prior 3-Year release checkpoint
 
 ## 2026-10-20 — Release record: merged and deployed; protected endpoint acceptance awaits authentication
