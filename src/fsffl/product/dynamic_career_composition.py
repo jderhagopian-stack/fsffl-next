@@ -392,6 +392,9 @@ def build_dynamic_rostered_career_contract(
         return ExpandedCareerContractResult(
             contract=contract, failures=failures or {},
             source_manifest=dict(getattr(live, "source_manifest", {})),
+            retryable_batch_incomplete=(
+                getattr(getattr(live, "ros_runtime", None), "ensemble_ready", True) is False
+            ),
         )
     future = live.future
     if future is None:

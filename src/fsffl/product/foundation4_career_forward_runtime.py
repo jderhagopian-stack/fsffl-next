@@ -82,6 +82,11 @@ class ExpandedCareerContractResult:
     contract: CareerForwardIntrinsicShadowContract | None
     failures: Mapping[str, str] = field(default_factory=dict)
     source_manifest: Mapping[str, object] = field(default_factory=dict)
+    retryable_batch_incomplete: bool = False
+
+
+class RetryableCareerExpansionIncomplete(RuntimeError):
+    """Career expansion was saved as a checkpoint and should be retried explicitly."""
 
 
 ExpandedCareerContractLoader = Callable[
@@ -362,8 +367,10 @@ class CareerIntrinsicLoader:
         payload = dict(record.payload)
         dependency = payload.pop("_foundation4_dependency_fingerprint", None)
         expansion_complete = payload.pop("_career_expansion_complete", False) is True
+        retryable_batch_incomplete = payload.pop("_career_retryable_batch_incomplete", False) is True
         source_manifest = payload.pop("_career_source_manifest", {})
         complete_fingerprint = payload.pop("_career_complete_input_fingerprint", None)
+        expansion_complete = expansion_complete and not retryable_batch_incomplete
         if self._expanded_career_contract_loader is not None:
             from .p0_live_candidate_runtime import valid_live_source_manifest
             expansion_complete = (
@@ -382,8 +389,8 @@ class CareerIntrinsicLoader:
             contract = CareerForwardIntrinsicShadowContract.model_validate(payload)
         except (TypeError, ValueError):
             return None
-        if self.retryable_incomplete_contract(contract):
-            # A bound input manifest does not supersede an explicit batch error.
+        if retryable_batch_incomplete or self.retryable_incomplete_contract(contract):
+            # A bound input manifest does not supersede a retryable batch gap.
             # Keep this frozen base reusable by an explicit retry, not ready.
             expansion_complete = False
             if require_complete:
@@ -413,6 +420,7 @@ class CareerIntrinsicLoader:
             migrated_payload = contract.model_dump(mode="json")
             migrated_payload["_foundation4_dependency_fingerprint"] = fingerprint
             migrated_payload["_career_expansion_complete"] = expansion_complete
+            migrated_payload["_career_retryable_batch_incomplete"] = retryable_batch_incomplete
             if expansion_complete and source_manifest:
                 migrated_payload["_career_source_manifest"] = source_manifest
                 migrated_payload["_career_complete_input_fingerprint"] = complete_fingerprint
@@ -551,6 +559,7 @@ class CareerIntrinsicLoader:
         component: LongTermIntrinsicShadowContract | None,
         contract: CareerForwardIntrinsicShadowContract,
         source_manifest: Mapping[str, object] | None = None,
+        retryable_batch_incomplete: bool = False,
     ) -> None:
         if self._persistence_store is None:
             return
@@ -570,9 +579,13 @@ class CareerIntrinsicLoader:
         payload["_foundation4_dependency_fingerprint"] = dependency_fingerprint
         from .p0_live_candidate_runtime import valid_live_source_manifest
         source_complete = valid_live_source_manifest(source_manifest)
+        retryable_batch_incomplete = (
+            retryable_batch_incomplete or self.retryable_incomplete_contract(contract)
+        )
         complete = (self._expanded_career_contract_loader is None
-                    or (source_complete and not self.retryable_incomplete_contract(contract)))
+                    or (source_complete and not retryable_batch_incomplete))
         payload["_career_expansion_complete"] = complete
+        payload["_career_retryable_batch_incomplete"] = retryable_batch_incomplete
         if source_complete:
             payload["_career_source_manifest"] = dict(source_manifest)
             payload["_career_complete_input_fingerprint"] = canonical_fingerprint(
@@ -621,14 +634,18 @@ class CareerIntrinsicLoader:
         self,
         context: UserRuntimeContext,
         frozen_reference: CareerForwardIntrinsicShadowContract,
-    ) -> tuple[CareerForwardIntrinsicShadowContract, Mapping[str, object]]:
+    ) -> tuple[CareerForwardIntrinsicShadowContract, Mapping[str, object], bool]:
         loader = self._expanded_career_contract_loader
         if loader is None:
-            return frozen_reference, {}
+            return frozen_reference, {}, False
         if context.league_state is None:
             raise ValueError("dynamic Career append requires canonical league State")
         loaded = loader(context, frozen_reference)
         source_manifest = dict(loaded.source_manifest) if isinstance(loaded, ExpandedCareerContractResult) else {}
+        retryable_batch_incomplete = bool(
+            isinstance(loaded, ExpandedCareerContractResult)
+            and loaded.retryable_batch_incomplete
+        )
         if isinstance(loaded, ExpandedCareerContractResult):
             expanded = loaded.contract
             failures = dict(loaded.failures)
@@ -667,12 +684,12 @@ class CareerIntrinsicLoader:
                 frozen_reference = frozen_reference.model_copy(update={
                     "player_coverage_failures": {**frozen_reference.player_coverage_failures, **failures},
                 })
-            return frozen_reference, source_manifest
+            return frozen_reference, source_manifest, retryable_batch_incomplete
         frozen_ids = {row.player_id for row in frozen_reference.estimates}
         expanded_ids = {row.player_id for row in expanded.estimates}
         candidate_ids = expanded_ids - frozen_ids
         if not candidate_ids:
-            return frozen_reference
+            return frozen_reference, source_manifest, retryable_batch_incomplete
 
         expanded_by_id = {row.player_id: row for row in expanded.estimates}
         if set(failures) & candidate_ids:
@@ -707,7 +724,7 @@ class CareerIntrinsicLoader:
                 }
             }
         )
-        return contract, source_manifest
+        return contract, source_manifest, retryable_batch_incomplete
 
     def __call__(
         self,
@@ -742,9 +759,11 @@ class CareerIntrinsicLoader:
         restored = self._restore_frozen_compatible(context, canonical_record=canonical_record)
         canonical_record = None  # Typed frozen contract owns the resumed inputs now.
         if restored is not None:
-            expanded_restored, source_manifest = self._append_expanded_rostered_contract(
-                context, restored
-            )
+            (
+                expanded_restored,
+                source_manifest,
+                retryable_batch_incomplete,
+            ) = self._append_expanded_rostered_contract(context, restored)
             # Also persist a completed expansion with explicit failures or no
             # new candidates. Otherwise a restart repeats that acquisition too.
             self._persist(
@@ -753,7 +772,14 @@ class CareerIntrinsicLoader:
                 component=None,
                 contract=expanded_restored,
                 source_manifest=source_manifest,
+                retryable_batch_incomplete=retryable_batch_incomplete,
             )
+            if retryable_batch_incomplete:
+                self.clear_user_cache(context.user_id)
+                raise RetryableCareerExpansionIncomplete(
+                    "Career ROS source coverage remains under the independent-source minimum; "
+                    "the incomplete expansion was checkpointed for an explicit retry"
+                )
             with self._lock:
                 self._cached_user_id = context.user_id
                 self._cached_fingerprint = dependency_fingerprint
@@ -832,14 +858,25 @@ class CareerIntrinsicLoader:
             # Explicit Y4-Y7 readers restore the persisted component on demand.
             # Do not hold its full matrix during candidate acquisition/fitting.
             component = None
-        contract, source_manifest = self._append_expanded_rostered_contract(context, frozen_contract)
+        (
+            contract,
+            source_manifest,
+            retryable_batch_incomplete,
+        ) = self._append_expanded_rostered_contract(context, frozen_contract)
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
             component=component,
             contract=contract,
             source_manifest=source_manifest,
+            retryable_batch_incomplete=retryable_batch_incomplete,
         )
+        if retryable_batch_incomplete:
+            self.clear_user_cache(context.user_id)
+            raise RetryableCareerExpansionIncomplete(
+                "Career ROS source coverage remains under the independent-source minimum; "
+                "the incomplete expansion was checkpointed for an explicit retry"
+            )
         with self._lock:
             self._cached_user_id = context.user_id
             self._cached_fingerprint = dependency_fingerprint
