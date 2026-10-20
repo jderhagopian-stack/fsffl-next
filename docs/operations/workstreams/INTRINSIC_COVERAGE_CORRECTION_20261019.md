@@ -1,3 +1,21 @@
+## 2026-10-20 release record — code deployed; live Career/3-Year result acceptance still open
+
+PR [#471](https://github.com/jderhagopian-stack/fsffl-next/pull/471) merged as `d4edfee6b72cb34b0e598b7f863beb25f53a672a`. Exact-head hosted CI passed (run `39438840009`), Stable full suite passed (run `39438839938`, with exact pre/post SHA checks), PR164 focused corrective regression passed (`39438839906`), League Atlas North Star passed (`39438839895`), and Live Forecast corrective trace passed (`39438839770`). The latest automated review on head `097deab7144d9c935f038a33e5c67ddf78cf4c15` completed with no findings. Two earlier P1 retryability findings were fixed, covered by the persistence/lifecycle regression, and resolved.
+
+The implementation now supplements empty/partial exact-period ROS history only during an owned Career build, without changing the two-independent-provider authority threshold or read-only GET behavior. Existing accepted player-specific fallback rules can run on explicitly non-authoritative under-covered evidence. The retryable condition is checkpointed, rejects restoration as a completed artifact, clears the loader's cached result, and raises through the existing background lifecycle as a failed attempt; the explicit retry hook can then reacquire missing sources. No valuation formula, accepted fallback identity or policy scope was widened.
+
+Focused forecast/status/P0 tests passed **88**; the retryability checkpoint/background-lifecycle regression passed independently; the broader affected valuation/ranking selection passed **191** before the two review-driven regressions. `git diff --check` passed. Hosted CI run `39438840009` included the Career persistence/provider regressions. Stable run `39438839938` verified PR head `097deab7144d9c935f038a33e5c67ddf78cf4c15` before and after its full suite.
+
+Render service `srv-dae6k7vqj5pc73af7bt0` (workspace `tea-dae6if9t0dsc73918us0`, auto-deploy off) was manually deployed as `dep-dbbnnnss728c7392fi4g`, which is `live` on exact merge SHA `d4edfee6b72cb34b0e598b7f863beb25f53a672a`. Build and deployment events succeeded. Startup completed and restored durable context, Forecast, Simulation and Value for State `cdb13c295785eacc1116a94947847540c62c9753f7e57e27d2d342810332f157`. It did not restore a completed Career expansion or trigger a calculation. Startup RSS was `336752640` bytes and peak RSS `346800128`, below `429496720` bytes. The external unauthenticated root request returned HTTP 401 as expected.
+
+**Live valuation coverage and chart acceptance remain unresolved.** User screenshots show Career complete rooms QB 7/12, RB 8/12, WR 4/12, TE 10/12, and no ranked rooms in the 3-Year lens; the last exact-State data snapshot was 253 rostered players with a Career checkpoint of 226 values and 27 exact matching gaps. These are pre-deployment facts, not post-deployment coverage evidence. The user has now authorized applying the accepted fallback rules to the current coverage repair and completing it end to end. Therefore the next single, explicitly owned Career refresh is also the monitored PR #405 full-workload memory acceptance run; the unmeasured memory gate must not be treated as a prerequisite to its own measurement. Use the existing stage admission checks, 429,496,720-byte working target, and unchanged 536,870,900-byte hard cap. If an admission guard refuses work or the process fails, retain last-good data, record the measurement/failure, and do not auto-retry or weaken safeguards. After a completed build, use an authenticated read-only session to verify the exact active State's Career values, derived 3-Year values, complete rooms, and dependent ranks in both lenses. Accept only measured coverage and complete position rankings; do not infer repair from deployment, restart, value charts or the 3-Year derivation alone. No GET triggers this work.
+
+
+
+---
+
+## Historical prior 3-Year release checkpoint
+
 ## 2026-10-20 — Release record: merged and deployed; protected endpoint acceptance awaits authentication
 
 The accepted 3-Year implementation now uses one live value owner: exact-State completed Career Current annual Shapley components for Years 1–3, discounted with the canonical 1, 0.85, 0.85² schedule. It derives all 3-Year player values from those retained raw annual components. Career lifetime totals, Y4+, terminal value, market/display values and synthetic estimates are excluded; Career calculations/economics and the complete-position ranking formula are unchanged. The earlier standalone-only coverage of 226/255 was not the Career coverage: exact-State evidence showed 255/255 Career component rows, with zero mismatches across the 335 shared values and complete Career components for all 29 standalone roster gaps.
@@ -6,7 +24,7 @@ PR #469 final candidate `b55b63b395e5b08d899f89eb2c72c5f99d3c69b8` passed focuse
 
 The existing Render service `srv-dae6k7vqj5pc73af7bt0` in workspace `tea-dae6if9t0dsc73918us0` has auto-deploy disabled. Manual deployment `dep-dbbbrke7bikc73fvsjlg` became live at 2026-10-20T01:04:33Z on the exact merge SHA. Startup restored Career as a persistence HIT (3,390,795 bytes), restored the presentation manifest and exact State `d8a818a89f2304cee126fbfda3ae482c3b41e67b3bc4dbf61c5d0b18ebcbec0c`, and reported Forecast/Simulation/Value and product readiness full. Startup RSS was 340,385,792 bytes; process peak 353,378,304 bytes under the unchanged 429,496,720-byte cap. No error-level application logs appeared during deploy/startup.
 
-## Reopened by user screenshots — current-State Career/3-Year coverage correction
+## Pre-release current-State investigation (historical)
 
 The screenshots show the shipped League Map at a later State with incomplete Career rooms and no available 3-Year ranks. This reopens the actual coverage gate; the earlier 255/255 Career checkpoint belonged to a different State and is retained as historical evidence, not applied to the current roster.
 
@@ -14,7 +32,7 @@ Current evidence is State `cdb13c295785eacc1116a94947847540c62c9753f7e57e27d2d34
 
 Root cause: an empty result from `projection_history_reader.latest_revisions(...)` is an explicit empty tuple. `build_in_season_forecasts` interprets any non-`None` revision tuple as “use retained history only,” so no approved live provider fetch happens; with zero exact-period provider batches, the two-source guard throws before per-player status/active-backup/YTD fallbacks are evaluated. Therefore both screenshots are consistent with one under-covered Career calculation; position ranking itself remains correctly fail-closed. Because 3-Year consumes Career Y1–Y3 annual Current Shapley components, the same upstream Career gaps prevent complete 3-Year team rooms. A blank cell does not prove that the 3-Year endpoint returned no raw player values; route-payload acceptance remains a separate gate.
 
-### Durable correction under implementation
+### Pre-release implementation checkpoint (superseded by release record above)
 
 On clean branch `management/valuation-coverage-forward-20261020` from `main` `b9be3c0b46aa2c92223f59eafa7589d75d578466`, the owned Career build now has opt-in missing-provider supplementation for exact-period history and an opt-in undercovered result specifically for the P0 fallback consumer. Existing minimum-two-source authority is unchanged: undercovered returns preserve raw provider observations/failures but expose no ensemble or scored forecasts, and all default consumers still raise. P0 then continues through the already-accepted per-player rules; unsupported identities remain failures. No fallback is allowed to obscure a partial/malformed player provider row, and no source acquisition occurs on the 3-Year/Career read-only route. The ROS lineage digest now includes ready/unavailable state, provider IDs and failures so a changed acquisition outcome cannot reuse an incompatible input fingerprint.
 
@@ -22,11 +40,10 @@ Current official role evidence was refreshed on 2026-10-20 and appended (old rec
 
 Local regression additions cover empty history fetching both approved providers, fetching only a missing provider for partial saved history, preservation of a one-source observation set without ensemble authority, precise distinct-group counts, default failure behavior, fresh role receipt expiry, and a real P0 integration path where an empty failed acquisition still reaches the approved YTD fallbacks. Focused forecast/status/P0 tests pass **88**; the broader affected valuation/ranking selection passes **191** on 2026-10-20. Draft PR [#471](https://github.com/jderhagopian-stack/fsffl-next/pull/471) is open from base `b9be3c0b46aa2c92223f59eafa7589d75d578466` at exact head `8842cf82f5e40fe0e300233416103ea283791c13`; prior exact-head CI was superseded by the count correction, and CI is rerunning on the latest head. Stable is skipped while draft. Final review, Stable full suite, merge, Render deployment and authenticated physical surface acceptance remain pending. The original interrupted dirty checkout remains preserved. No live coverage restoration is claimed.
 
-### Remaining acceptance gate: authenticated live 3-Year response
+### Pre-release acceptance gate (superseded by release record above)
 
 The production service returns HTTP 401 with a Basic Authentication challenge when unauthenticated. The app is deployed and restored, but this does not prove the new endpoint's 255/255 coverage or dependent rankings. The remaining task is to use an approved authenticated browser session to request `/api/league/three-year-position-rooms` with the active exact State/publication generation, then record actual QB/RB/WR/TE coverage, complete 12/12 rankings and finite Strength Index values. No production coverage or rank acceptance is claimed yet. Do not use service secrets or trigger fitting/provider work to bypass this read-only acceptance. PR #405's independent full-calculation memory gate remains open.
 
-### Historical implementation-stage authority and corrections (superseded by release record above)
 ## Authority and scope
 
 Management continuation under the current user directive and `OPERATING_PROTOCOL.md`. Continue the existing 3-Year Position & Depth implementation on PR [#469](https://github.com/jderhagopian-stack/fsffl-next/pull/469); do not open a parallel workstream. This checkpoint supersedes PR #469's earlier pending decision about how to address its incomplete 3-Year roster coverage.
