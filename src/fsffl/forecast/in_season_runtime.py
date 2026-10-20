@@ -333,13 +333,25 @@ def build_in_season_forecasts(
         )
         if not allow_undercovered_sources:
             raise ValueError(reason)
+        undercovered_groups = {
+            (
+                item.player_id,
+                item.position,
+                item.horizon,
+                item.metric,
+                item.period_start,
+                item.period_end,
+                item.as_of,
+            )
+            for item in source_observations
+        }
         coverage = LiveEnsembleCoverage(
             independent_source_ids=tuple(sorted(successful)),
             excluded_aggregate_source_ids=(),
             active_source_ids=tuple(sorted(successful)),
             observation_count=len(source_observations),
             minimum_independent_sources=minimum_independent_sources,
-            excluded_undercovered_groups=len(source_observations),
+            excluded_undercovered_groups=len(undercovered_groups),
         )
         return InSeasonForecastRuntimeResult(
             horizon=horizon,

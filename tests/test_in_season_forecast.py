@@ -319,6 +319,7 @@ def test_saved_evidence_can_remain_one_source_without_claiming_authority():
     assert result.raw_ensemble == ()
     assert not result.ensemble_ready
     assert result.coverage.minimum_independent_sources == 2
+    assert result.coverage.excluded_undercovered_groups == 5
 
 
 def test_saved_ros_revision_from_earlier_period_is_rejected_not_relabeled():
