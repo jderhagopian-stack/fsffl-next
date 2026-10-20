@@ -286,6 +286,7 @@ def _hosted_career_candidate_builder(
         projection_history_reader=_projection_history_store,
         reference_standard_year_one=reference_standard_year_one,
         reference_league_year_one=reference_league_year_one,
+        retain_ros_runtime_details=False,
     )
 
 

@@ -183,7 +183,8 @@ def test_hosted_wrapper_forwards_approved_reference_coordinates():
     assert run(object(),projection_history_as_of='cutoff',
                reference_standard_year_one=standard,reference_league_year_one=league) == 'candidate-result'
     assert seen == dict(projection_history_as_of='cutoff',projection_history_reader=reader,
-                        reference_standard_year_one=standard,reference_league_year_one=league)
+                        reference_standard_year_one=standard,reference_league_year_one=league,
+                        retain_ros_runtime_details=False)
 
 
 def test_all_live_source_corrections_change_manifest_binding():

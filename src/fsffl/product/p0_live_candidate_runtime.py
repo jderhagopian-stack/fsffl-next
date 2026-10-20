@@ -119,6 +119,17 @@ class P0LiveCandidateResult:
     source_manifest: Mapping[str, object] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class P0RosRuntimeSummary:
+    """Small ROS readiness receipt retained after hosted Career acquisition."""
+
+    ensemble_ready: bool
+    ensemble_unavailability_reason: str | None
+    successful_source_ids: tuple[str, ...]
+    failed_sources: tuple[str, ...]
+    coverage: Any
+
+
 LIVE_INPUT_MANIFEST_VERSION = "career-live-input-manifest-v1"
 LIVE_INPUT_SOURCE_NAMES = frozenset({
     "canonical_state", "nfl_state", "current_catalog", "completed_week_stats",
@@ -913,6 +924,7 @@ def build_live_p0_rostered_candidate_forecasts(
     fallback_ros_observations: tuple[ForecastObservation, ...] = (),
     reference_standard_year_one: tuple[ForecastObservation, ...] = (),
     reference_league_year_one: tuple[ForecastObservation, ...] = (),
+    retain_ros_runtime_details: bool = True,
 ) -> P0LiveCandidateResult:
     """Acquire current inputs once and score rostered non-reference subjects.
 
@@ -1409,6 +1421,19 @@ def build_live_p0_rostered_candidate_forecasts(
         "reference_scoring": _rows_digest((*source_reference_standard, *source_reference_league)),
         "candidate_facts": _input_digest({pid: fact.facts_digest for pid, fact in sorted(facts.items())}),
     })
+    ros_runtime_result = ros_runtime
+    if not retain_ros_runtime_details:
+        # The hosted Career caller needs only readiness and source-coverage
+        # metadata after acquisition. Do not carry the full projection/ensemble
+        # row payload alongside the subsequent candidate future-model workspace.
+        ros_runtime_result = P0RosRuntimeSummary(
+            ensemble_ready=ros_runtime.ensemble_ready,
+            ensemble_unavailability_reason=ros_runtime.ensemble_unavailability_reason,
+            successful_source_ids=tuple(ros_runtime.successful_source_ids),
+            failed_sources=tuple(ros_runtime.failed_sources),
+            coverage=ros_runtime.coverage,
+        )
+        del ros_runtime, ros_for_fumbles, available_ros_rows, one_source_rows
     del catalog, current_state, current_by_id, governed_by_id
     del weekly, cached_stats, prior, prior_lines, source_captures, completed_raw
     release_unused_process_memory(label="career-p0-acquisition-inputs-released")
@@ -1476,7 +1501,7 @@ def build_live_p0_rostered_candidate_forecasts(
         year_one_league=y1_league,
         future=future,
         failures=failures,
-        ros_runtime=ros_runtime,
+        ros_runtime=ros_runtime_result,
         year_one_evidence_modes=evidence_modes,
         ros_fumbles_lost=ros_fumbles_lost,
         fumbles_eligible_player_ids=tuple(sorted(fumbles_eligible_player_ids)),

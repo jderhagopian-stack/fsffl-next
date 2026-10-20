@@ -337,7 +337,9 @@ def build_dynamic_rostered_career_contract(
         if year_one_evidence.evidence_basis != "preseason_baseline":
             raise ValueError("dynamic Career bridge requires accepted preseason base cohort")
         base_year_one = _year_one_forecasts(year_one_evidence)
+        base_year_one_raw = tuple(year_one_evidence.raw_forecasts)
         reference_kwargs = {}
+        supplement = None
         from .i1_player_scoring import APPROVED_UNDEFINED_WR_PLAYER_ID
         if any(entry.player_id == APPROVED_UNDEFINED_WR_PLAYER_ID
                for team in state.team_states for entry in team.roster):
@@ -352,6 +354,11 @@ def build_dynamic_rostered_career_contract(
             ).authoritative_forecasts
             reference_kwargs = dict(reference_standard_year_one=reference_standard,
                                     reference_league_year_one=base_year_one)
+        # The live P0 builder below reacquires current-season inputs. Keep only
+        # the compact accepted Year-1 rows and optional scoring reference across
+        # that allocation; the full preseason evidence also owns raw forecasts
+        # and runtime diagnostics that are no longer consumed here.
+        del year_one_evidence, supplement
         _reclaim_career_stage("career-before-current-inputs-and-p0")
         with sample_rss_phase("career.current_inputs_and_p0"):
             live = candidate_builder(
@@ -477,7 +484,7 @@ def build_dynamic_rostered_career_contract(
     _reclaim_career_stage("career-foundation4-complete")
     base_future = current_intrinsic_loader._resolve_future_contract(
         league_state=state,
-        evidence=year_one_evidence,
+        raw_forecasts=base_year_one_raw,
         year_one=base_year_one,
     )
     if set(base_future.player_ids) & set(live.candidate_source_rows):

@@ -160,15 +160,21 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     monkeypatch.setattr(runtime.SleeperSnapshotNormalizer,'normalize_snapshot',lambda *_,**__:state)
     raw = ()
     ros = SimpleNamespace(evaluation_as_of=capture,source_observations=(),raw_ensemble=raw,
-        successful_source_ids=('cbs','razzball'),model_copy=lambda **_:SimpleNamespace())
+        successful_source_ids=('cbs','razzball'),failed_sources=(),
+        coverage=SimpleNamespace(minimum_independent_sources=2),ensemble_ready=True,
+        ensemble_unavailability_reason=None)
+    ros.model_copy = lambda *, update: SimpleNamespace(**(vars(ros) | update))
     monkeypatch.setattr(runtime,'build_in_season_forecasts',lambda *_,**__:ros)
     monkeypatch.setattr('fsffl.forecast.in_season_orchestration.build_current_ros_fumbles_lost_supplement_observations',lambda *_,**__:())
     result = runtime.build_live_p0_rostered_candidate_forecasts(
         state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=live_cutoff,
-        projection_history_as_of=capture)
+        projection_history_as_of=capture,retain_ros_runtime_details=False)
     assert not result.failures
     assert result.future is not None
     assert len(result.future.contract.forecasts) == 6
+    assert not hasattr(result.ros_runtime, 'raw_ensemble')
+    assert not hasattr(result.ros_runtime, 'source_observations')
+    assert result.ros_runtime.successful_source_ids == ('cbs','razzball')
     assert set(result.year_one_league) == {row.player_id for row in SEASON_UNAVAILABILITY_RECEIPTS}
     assert all(row.distribution.mean == 0 for row in result.year_one_league.values())
     assert all(mode.startswith('status_based_zero_ros:out_for_season:official-season-unavailability-v1:')
@@ -196,11 +202,12 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     ros.raw_ensemble = raw
     result = runtime.build_live_p0_rostered_candidate_forecasts(
         state,stats_source=stats,sleeper_source=sleeper,evaluation_as_of=live_cutoff,
-        projection_history_as_of=capture)
+        projection_history_as_of=capture,retain_ros_runtime_details=False)
     assert result.year_one_evidence_modes[evidence.player_id] == 'two_source'
     assert 'nonzero league points but zero frozen standard' in result.failures[evidence.player_id]
     assert result.future is not None
     assert len(result.future.contract.forecasts) == 4
+    assert not hasattr(result.ros_runtime, 'raw_ensemble')
     assert {row.player_id for row in result.future.contract.forecasts} == set(
         result.year_one_league)-{evidence.player_id}
 
