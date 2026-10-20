@@ -1,5 +1,22 @@
 # Intrinsic Coverage Correction — 2026-10-19
 
+# Intrinsic Coverage Correction — 2026-10-19
+
+## Latest Management direction — 2026-10-20: one live 3-Year source
+
+This section supersedes the earlier gap-only extension decision and any older checkpoint below that says the stand-alone 3-Year artifact is required to identify omissions or that only its missing roster identities may use Career values.
+
+Management accepted the unified live source after the exact-State comparison confirmed:
+- Career Intrinsic retains the raw Current annual Shapley components for all 255 rostered players.
+- The discounted Career Current Y1–Y3 components match all 335 standalone 3-Year estimates on the shared cohort with zero mismatches at 1e-9 tolerance; maximum absolute delta is 1.13686837721616e-13.
+- The 29 players missing from the standalone cohort are present in Career with finite annual components for all three target seasons.
+
+Therefore the live 3-Year lens will derive every rostered player's value from that same-State Career Current Y1–Y3 evidence using the existing canonical discount schedule (1, 0.85, 0.85²). The standalone Shapley artifact remains an upstream/research artifact but is no longer an independent source or cohort gate for the live 3-Year view. Career lifetime totals, Y4+ contributions, terminal value, display indexes, market values, and synthetic estimates are excluded. Preserve the exact Career input assumption beside each Career-sourced result. Existing complete-position ranking formulas and Career economics remain unchanged.
+
+This is a read-only reuse of already-completed Career components: no new fitting, forecast construction, provider acquisition, persistence read/write, or valuation publication is authorized from the 3-Year GET. Require one unambiguous completed Career owner for the exact user, league, State and active publication generation; invalid/missing annual components fail closed. Bind the route to that Career owner fingerprint only. A valid 255-player Career cohort should yield 255/255 3-Year roster values and complete 12/12 rooms with numerical ranks and finite Strength Index values for QB/RB/WR/TE.
+
+Implementation continues only on PR #469. The PR was returned to draft at prior head `910143c9814b61f89c01eda5e171ac40055f4029` before changing this source contract. Prior focused CI and Stable run `39339118362` passed that earlier head and do not validate the unified-source change. Rerun focused local tests/CI, Stable full suite and final review on the revised exact head. No merge, deploy or live endpoint acceptance has occurred. After all gates pass, merge the reviewed head, deploy the exact merge SHA, exercise the live endpoint and record the actual coverage/rank evidence. Keep #405's separate memory acceptance open; no heavy fit is authorized here.
+
 ## Authority and scope
 
 Management continuation under the current user directive and `OPERATING_PROTOCOL.md`. Continue the existing 3-Year Position & Depth implementation on PR [#469](https://github.com/jderhagopian-stack/fsffl-next/pull/469); do not open a parallel workstream. This checkpoint supersedes PR #469's earlier pending decision about how to address its incomplete 3-Year roster coverage.
