@@ -90,7 +90,8 @@ def test_position_map_keeps_current_rank_and_uses_governed_dynasty_room_authorit
 def test_dynasty_room_metric_is_owned_by_analytics_and_exact_state_route() -> None:
     analytics = Path("src/fsffl/analytics/dynasty_position_room.py").read_text(encoding="utf-8")
     routes = Path("src/fsffl/product/foundation4_shadow_routes.py").read_text(encoding="utf-8")
-    assert "estimate.raw_career_forward_reference" in analytics
+    assert "row.raw_career_forward_reference" in analytics
+    assert "total += estimate[1]" in analytics
     assert "career_forward=record.contract" in routes
     assert "evidence_state_id=record.league_state_id" in routes
     assert 'payload["league_state_id"] = record.league_state_id' in routes
@@ -590,3 +591,95 @@ def test_position_grid_superflex_abbreviation_is_visual_only() -> None:
     assert "aria-label=\"'+laEsc(position)+'\"" in matrix
     assert "data-room-position=\"'+laEsc(position)+'\"" in cell
     assert "laCurrentStrength(view.team_id,position)" in cell
+
+
+def test_three_year_lens_has_independent_cache_and_bounded_state_safe_reads():
+    import subprocess
+    script = r"""
+    const fs=require('fs'),vm=require('vm'),assert=require('assert');
+    const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+    const loader=source.slice(source.indexOf('let fsfflThreeYearRequestId=0;'),source.indexOf('function laThreeYearRoomDrawer('));
+    async function check(kind){
+      const state={atlas:{league_state_id:'state',publication_generation_id:'generation'},threeYearStatus:'idle',threeYearRooms:null,dynastyRooms:{sentinel:'career'},positionLens:'three-year'};
+      let calls=0,waits=0;
+      const sandbox={fsfflLeagueStructureState:state,URLSearchParams,TypeError,
+        renderLeagueComparison:()=>{},setTimeout:fn=>{waits++;fn()},
+        laAtlasEvidenceRequestMatches:(a,b,c,d,e,f)=>a===b&&c===d&&e===f,
+        api:async path=>{
+          assert(path.startsWith('/api/league/three-year-position-rooms?'));
+          calls++;
+          if(kind==='network'&&calls===1)throw new TypeError('Load failed');
+          if(kind==='offline')throw new TypeError('Load failed');
+          if(kind==='superseded'){state.atlas.publication_generation_id='new';return {status:'ready'}};
+          return {status:'ready',league_state_id:'state',publication_generation_id:kind==='mismatch'?'other':'generation',rooms:[{position:'WR',league_rank:1}],players:[],dynasty_rank_readiness:{status:kind==='incomplete'?'incomplete':'ready'}};
+        }};
+      vm.runInNewContext(loader+'\nthis.load=laLoadThreeYearRooms;',sandbox);
+      await sandbox.load();
+      assert.strictEqual(state.dynastyRooms.sentinel,'career');
+      if(kind==='offline'){assert.strictEqual(calls,3);assert.strictEqual(waits,2);assert.strictEqual(state.threeYearStatus,'unavailable')}
+      else if(kind==='mismatch'){assert.strictEqual(calls,1);assert.strictEqual(state.threeYearRooms,null)}
+      else if(kind==='superseded'){assert.strictEqual(state.threeYearRooms,null)}
+      else{assert.strictEqual(state.threeYearStatus,kind==='incomplete'?'incomplete':'ready');const previous=calls;await sandbox.load();assert.strictEqual(calls,previous);if(kind==='network')assert.strictEqual(calls,2)}
+    }
+    (async()=>{for(const kind of ['ready','network','offline','mismatch','superseded','incomplete'])await check(kind)})().catch(e=>{console.error(e);process.exitCode=1});
+    """
+    result = subprocess.run(['node', '-e', script], capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr
+
+
+def test_three_year_and_career_cells_keep_distinct_raw_rooms_and_no_counts():
+    import subprocess
+    script = r"""
+    const fs=require('fs'),vm=require('vm'),assert=require('assert');
+    const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+    const room=source.slice(source.indexOf('function laDynastyRoom('),source.indexOf('function laDynastyCoverageSummary('));
+    const cell=source.slice(source.indexOf('function laPositionCell('),source.indexOf('function laPositionMatrix('));
+    const state={positionLens:'three-year',positionLensMode:'rank',threeYearRooms:{rooms:[{team_id:'a',position:'WR',evidence_complete:true,league_rank:2,room_raw:20,strength_index:80,team_count:12}]},dynastyRooms:{rooms:[{team_id:'a',position:'WR',evidence_complete:true,league_rank:5,room_raw:200,strength_index:60,team_count:12}]}};
+    const sandbox={fsfflLeagueStructureState:state,laEsc:String,laNum:(n,d)=>n.toFixed(d)};
+    vm.runInNewContext(room+cell+'\nthis.cell=laPositionCell;',sandbox);
+    const view={team_id:'a',display_name:'Alpha'};
+    assert(sandbox.cell(view,'WR').includes('<b>#2</b>'));
+    state.positionLensMode='strength';assert(sandbox.cell(view,'WR').includes('<b>80</b>'));
+    state.positionLens='dynasty';state.positionLensMode='rank';const html=sandbox.cell(view,'WR');assert(html.includes('<b>#5</b>'));assert(!/rostered|<small>/.test(html));
+    """
+    result = subprocess.run(['node', '-e', script], capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr
+
+
+def test_three_year_player_drawer_preserves_and_escapes_input_assumptions():
+    import subprocess
+    script = r"""
+    const fs=require('fs'),vm=require('vm'),assert=require('assert');
+    const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+    const drawer=source.slice(source.indexOf('function laThreeYearRoomDrawer('),source.indexOf('async function laLoadDynastyRooms('));
+    const state={views:[{team_id:'a',display_name:'Alpha',players:[{player_id:'a4',full_name:'Player Four',position:'RB'}]}],threeYearRooms:{players:[{player_id:'a4',raw_intrinsic_value:12.5,input_assumption:'Approved <YTD-only> Current input'}]}};
+    const esc=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+    const sandbox={fsfflLeagueStructureState:state,laDynastyRoom:()=>({room_raw:12.5,league_rank:1}),laEsc:esc,laNum:(value,digits)=>Number.isFinite(value)?value.toFixed(digits):'—'};
+    vm.runInNewContext(drawer+'\nthis.drawer=laThreeYearRoomDrawer;',sandbox);
+    const html=sandbox.drawer({teamId:'a',position:'RB'});
+    assert(html.includes('Input assumption · Approved &lt;YTD-only&gt; Current input'));
+    assert(html.includes('<b>12.50</b>'));
+    """
+    result = subprocess.run(['node', '-e', script], capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr
+
+
+def test_three_year_missing_cells_report_own_status_and_evidence_horizon():
+    import subprocess
+    script = r"""
+    const fs=require('fs'),vm=require('vm'),assert=require('assert');
+    const source=fs.readFileSync('src/fsffl/product/static/league_comparison.js','utf8');
+    const cell=source.slice(source.indexOf('function laPositionCell('),source.indexOf('function laPositionMatrix('));
+    let row=null;
+    const state={positionLens:'three-year',threeYearStatus:'loading',dynastyRoomStatus:'ready'};
+    const sandbox={fsfflLeagueStructureState:state,laDynastyRoom:()=>row,laEsc:String};
+    vm.runInNewContext(cell+'\nthis.cell=laPositionCell;',sandbox);
+    for(const status of ['loading','unavailable','incomplete']){
+      state.threeYearStatus=status;const html=sandbox.cell({team_id:'a'},'WR');
+      assert(html.includes('3-Year Intrinsic evidence is '+status));
+      assert(!html.includes('career-forward'));
+    }
+    row={evidence_complete:false};assert(sandbox.cell({team_id:'a'},'WR').includes('3-Year Intrinsic evidence is incomplete'));
+    """
+    result = subprocess.run(['node', '-e', script], capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr

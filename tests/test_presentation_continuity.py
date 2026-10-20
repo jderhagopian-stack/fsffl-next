@@ -887,7 +887,8 @@ def test_dynasty_preparation_is_decoupled_from_core_publication() -> None:
     startup = source.split("def _run_lightweight_startup_restore", 1)[1].split("def _start_lightweight_startup_restore", 1)[0]
     assert "_prepare_presentation_for_user(" not in startup
     assert "_presentation_continuity.has_snapshot(" in startup
-    assert "if not has_presentation:" in startup
+    assert "if career_ready and not has_presentation:" in startup
+    assert "_shapley_intrinsic_coordinator.current(context)" not in startup
     assert "expected_generation_id=context.publication_generation_id" in startup
 
 
@@ -1052,6 +1053,57 @@ def test_career_dependency_is_bound_by_compact_manifest_across_restart():
     raw['dynasty_evidence_status'] = 'last_good'
     assert not continuity.career_publication_matches(promote(), record)
     assert PresentationContinuityStore(None).career_publication_matches(runtime, record)
+
+
+def test_three_year_uses_the_same_published_career_owner():
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    state = _state(datetime(2026, 10, 16, tzinfo=UTC))
+    runtime = _runtime(state)
+    dynasty = {
+        'status': 'ready',
+        'league_state_id': state.state_id,
+        'dynasty_evidence_status': 'current',
+        'input_fingerprint': 'career-fp',
+    }
+    result = continuity.promote(
+        user_id=runtime.user_id,
+        runtime=runtime,
+        builders=((LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE, lambda: dynasty),),
+    )
+    assert result is not None
+    published = replace(runtime, publication_generation_id=result.publication_generation_id)
+    career = SimpleNamespace(
+        league_state_id=state.state_id, intrinsic_input_fingerprint='career-fp',
+    )
+    before = persistence.read_count
+    assert continuity.career_generation_hint_matches(published, career)
+    assert persistence.read_count == before  # GET validation stays process-memory only.
+    assert not continuity.career_generation_hint_matches(
+        replace(published, publication_generation_id='older-generation'), career,
+    )
+    assert not continuity.career_generation_hint_matches(
+        published, SimpleNamespace(
+            league_state_id=state.state_id,
+            intrinsic_input_fingerprint='newer-career-fp',
+        ),
+    )
+
+    # A restarted process must validate the durable manifest before it can use
+    # the process-local binding hint.
+    restarted = PresentationContinuityStore(persistence)
+    assert not restarted.career_generation_hint_matches(published, career)
+    assert restarted.has_snapshot(
+        user_id=runtime.user_id,
+        league_id=state.league.league_id,
+        league_state_id=state.state_id,
+        required_surfaces=(LEAGUE_DYNASTY_POSITION_ROOMS_SURFACE,),
+        selected_team_id=runtime.selected_team_id,
+        expected_generation_id=result.publication_generation_id,
+    )
+    assert restarted.career_generation_hint_matches(published, career)
+    manifest = persistence.artifacts[-1].payload
+    assert 'current_intrinsic_input_fingerprint' not in manifest
 
 
 def test_promotion_releases_previous_raw_graph_before_composing_next_surface():

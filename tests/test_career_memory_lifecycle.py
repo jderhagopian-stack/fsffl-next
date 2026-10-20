@@ -44,7 +44,10 @@ def test_startup_restores_without_scheduling_career(snapshot_exists, current_rea
     run = function('src/fsffl/product/persistent_webapp.py','_run_lightweight_startup_restore',ns)
     run()
     assert ns['_startup_restore_state']['status'] == 'complete'
-    assert calls == (['promote'] if not (snapshot_exists and career_published) and current_ready else [])
+    # The live 3-Year lens now comes from Career Current Y1-Y3 components, so
+    # presentation repair depends on the Career-backed publication, not on a
+    # separately staged Shapley artifact.
+    assert calls == (['promote'] if not (snapshot_exists and career_published) else [])
 
 
 def test_presentation_allocations_wait_for_existing_heavy_work():

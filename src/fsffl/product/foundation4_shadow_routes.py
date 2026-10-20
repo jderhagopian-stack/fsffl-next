@@ -5,7 +5,11 @@ from datetime import UTC, datetime
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from fsffl.analytics.dynasty_position_room import build_dynasty_position_rooms
+from fsffl.analytics.dynasty_position_room import (
+    build_dynasty_position_rooms,
+    build_three_year_position_rooms,
+    build_three_year_intrinsic_player_values,
+)
 from .foundation4_career_forward_runtime import CareerIntrinsicLoader
 from .career_presentation import career_lens_for_publication, career_reference_ids_from_current
 from .career_coverage import (
@@ -160,6 +164,7 @@ def install_career_intrinsic_routes(
     coordinator: ShapleyIntrinsicBackgroundCoordinator,
     presentation_payload_loader=None,
     career_publication_validator=None,
+    career_generation_validator=None,
     current_intrinsic_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
 ) -> None:
     def _record(user_id: str):
@@ -263,6 +268,87 @@ def install_career_intrinsic_routes(
             # Foundation 4 contract's historical shadow lifecycle label.
             payload["status"] = "ready"
         return payload
+
+    @app.get("/api/league/three-year-position-rooms")
+    def three_year_position_rooms(
+        state_id: str, publication_generation_id: str,
+        user_id: str = Depends(require_beta_user),
+    ):
+        context = runtime_store.get(user_id)
+        state = context.league_state
+        if state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if state_id != state.state_id or publication_generation_id != context.publication_generation_id:
+            return {"status": "superseded", "superseding_state_id": state.state_id,
+                    "superseding_publication_generation_id": context.publication_generation_id}
+        # Derive the 3-Year view from Career's retained Current Y1-Y3 values.
+        # This bounded owner lookup is memory-only and never starts a build.
+        career_record = (
+            coordinator.completed_for_state(context)
+            if coordinator is not None else None
+        )
+        if career_record is not None and career_record.league_state_id != state_id:
+            career_record = None
+        base = {"league_state_id": state_id,
+                "publication_generation_id": publication_generation_id,
+                "capability": "three_year_intrinsic"}
+        career_forward = career_record.contract if career_record is not None else None
+        if (
+            career_record is None
+            or career_generation_validator is None
+            or not career_generation_validator(context, career_record)
+        ):
+            return {**base, "status": "unavailable",
+                    "reason": (
+                        "Career Current evidence is not bound to the "
+                        "active publication generation."
+                    )}
+        player_values = build_three_year_intrinsic_player_values(
+            state,
+            career_forward=career_forward,
+            career_evidence_state_id=(
+                career_record.league_state_id if career_record is not None else None
+            ),
+        )
+        if not player_values:
+            return {**base, "status": "unavailable",
+                    "reason": "No completed Career Current Y1-Y3 evidence matches this State."}
+        rooms = build_three_year_position_rooms(
+            state,
+            career_forward=career_forward,
+            career_evidence_state_id=(
+                career_record.league_state_id if career_record is not None else None
+            ),
+        )
+        rows = [row.model_dump(mode="json") for row in rooms]
+        players = [row.model_dump(mode="json") for row in player_values]
+        state_players = {item.player_id: item for item in state.players}
+        rostered = {
+            (entry.player_id, state_players[entry.player_id].position)
+            for team_state in state.team_states
+            for entry in team_state.roster
+            if entry.player_id in state_players
+        }
+        coverage = {}
+        values_by_id = {row.player_id: row for row in player_values}
+        for position in ("QB", "RB", "WR", "TE"):
+            members = {player_id for player_id, actual in rostered if actual.value == position}
+            covered = members & set(values_by_id)
+            coverage[position] = {
+                "rostered": len(members),
+                "covered": len(covered),
+                "career_current_components": len(covered),
+            }
+        return {**base, "status": "ready",
+                "input_fingerprint": career_record.intrinsic_input_fingerprint,
+                "source_input_fingerprints": {
+                    "career_current_components": (
+                        career_record.intrinsic_input_fingerprint
+                    ),
+                },
+                "model_version": rooms[0].model_version if rooms else None,
+                "rooms": rows, "dynasty_rank_readiness": _dynasty_rank_readiness(rows),
+                "coverage": coverage, "players": players}
 
     @app.get("/api/league/dynasty-position-rooms")
     def dynasty_position_rooms(

@@ -134,7 +134,8 @@ class PresentationContinuityStore:
         self._local = local()
         self._validation_lock = RLock()
         self._known_snapshot_manifests: dict[
-            tuple[str, str, str, str | None], str
+            tuple[str, str, str, str | None],
+            tuple[str, str | None, str | None],
         ] = {}
 
     @property
@@ -297,6 +298,34 @@ class PresentationContinuityStore:
             and payload.get("career_input_fingerprint") == record.intrinsic_input_fingerprint
         )
 
+    def career_generation_hint_matches(
+        self, runtime: UserRuntimeContext, record
+    ) -> bool:
+        """Memory-only source/generation fence for Career-derived 3-Year reads."""
+        state = runtime.league_state
+        if (
+            state is None
+            or not runtime.publication_generation_id
+            or record is None
+            or record.league_state_id != state.state_id
+        ):
+            return False
+        key = self._snapshot_key(
+            runtime.user_id,
+            state.league.league_id,
+            state.state_id,
+            runtime.selected_team_id,
+        )
+        with self._validation_lock:
+            metadata = self._known_snapshot_manifests.get(key)
+        if metadata is None:
+            return False
+        _, promotion_id, career_fingerprint = metadata
+        return bool(
+            promotion_id == runtime.publication_generation_id
+            and career_fingerprint == record.intrinsic_input_fingerprint
+        )
+
     def clear_user_validation_hints(self, user_id: str) -> int:
         """Drop process-local validation hints; durable presentation stays intact."""
 
@@ -331,7 +360,11 @@ class PresentationContinuityStore:
             selected_team_id,
         )
         with self._validation_lock:
-            self._known_snapshot_manifests[key] = canonical_fingerprint(manifest_payload)
+            self._known_snapshot_manifests[key] = (
+                canonical_fingerprint(manifest_payload),
+                str(manifest_payload.get("promotion_id") or "") or None,
+                str(manifest_payload.get("career_input_fingerprint") or "") or None,
+            )
 
     def known_snapshot_available(
         self,
@@ -472,6 +505,12 @@ class PresentationContinuityStore:
             manifest is None
             or manifest.key != manifest_key
             or not manifest.reusable
+        ):
+            return False
+        if (
+            manifest.payload.get("contract") != PRESENTATION_MODEL_VERSION
+            or manifest.payload.get("league_id") != league_id
+            or manifest.payload.get("league_state_id") != league_state_id
         ):
             return False
         available = set(manifest.payload.get("surfaces") or ())

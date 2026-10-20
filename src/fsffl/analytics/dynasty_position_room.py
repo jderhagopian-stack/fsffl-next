@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import math
+from typing import Literal
 
+from fsffl.value.shapley_intrinsic_contract import (
+    SHAPLEY_INTRINSIC_CONTRACT_VERSION,
+    discounted_three_year_shapley_value,
+)
 from fsffl.state.models import FrozenModel, LeagueState, Position
 from fsffl.value.career_forward_intrinsic import (
     CAREER_FORWARD_AGGREGATION,
+    CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION,
+    CAREER_FORWARD_INTRINSIC_MODEL_VERSION,
     CAREER_FORWARD_RAW_QUANTITY,
     CareerForwardIntrinsicShadowContract,
 )
@@ -12,6 +19,19 @@ from fsffl.value.career_forward_intrinsic import (
 
 DYNASTY_POSITION_ROOM_MODEL_VERSION = "analytics-dynasty-position-room-career-forward-v1"
 DYNASTY_ROOM_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
+THREE_YEAR_POSITION_ROOM_MODEL_VERSION = (
+    "analytics-position-room-three-year-intrinsic-v3:career-current-y1-y3-source"
+)
+
+
+class ThreeYearIntrinsicPlayerValue(FrozenModel):
+    """One raw, exact-State 3-Year value and its accepted component source."""
+
+    player_id: str
+    position: Position
+    raw_intrinsic_value: float
+    input_assumption: str | None = None
+    source: Literal["career_current_y1_y3_components"]
 
 
 class DynastyPositionRoom(FrozenModel):
@@ -45,9 +65,6 @@ def build_dynasty_position_rooms(
     are emitted only when every team's room for that position is complete.
     """
 
-    teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
-    states = {item.team_id: item for item in league_state.team_states}
-    players = {item.player_id: item for item in league_state.players}
     contract_valid = (
         career_forward is not None
         and career_forward.evaluation_season == league_state.league.season
@@ -58,11 +75,136 @@ def build_dynasty_position_rooms(
         and evidence_state_id == league_state.state_id
         and bool(evidence_state_id)
     )
-    estimates = (
-        {row.player_id: row for row in career_forward.estimates}
-        if contract_valid and career_forward is not None
-        else {}
+    values = (
+        {row.player_id: (row.position, row.raw_career_forward_reference)
+         for row in career_forward.estimates}
+        if contract_valid and career_forward is not None else {}
     )
+    return _position_rooms(
+        league_state, values=values,
+        contract_valid=contract_valid, evidence_state_id=evidence_state_id,
+        positions=positions, model_version=DYNASTY_POSITION_ROOM_MODEL_VERSION,
+    )
+
+
+def build_three_year_position_rooms(
+    league_state: LeagueState, *,
+    career_forward: CareerForwardIntrinsicShadowContract | None,
+    career_evidence_state_id: str | None,
+    positions: tuple[Position, ...] = DYNASTY_ROOM_POSITIONS,
+) -> tuple[DynastyPositionRoom, ...]:
+    """Allocate raw 3-Year values from Career's exact-State Current components."""
+    player_values = build_three_year_intrinsic_player_values(
+        league_state,
+        career_forward=career_forward,
+        career_evidence_state_id=career_evidence_state_id,
+    )
+    values = {
+        row.player_id: (row.position, row.raw_intrinsic_value)
+        for row in player_values
+    }
+    evidence_valid = bool(player_values)
+    return _position_rooms(
+        league_state, values=values, contract_valid=evidence_valid,
+        evidence_state_id=(league_state.state_id if evidence_valid else None),
+        positions=positions,
+        model_version=THREE_YEAR_POSITION_ROOM_MODEL_VERSION,
+    )
+
+
+def build_three_year_intrinsic_player_values(
+    league_state: LeagueState, *,
+    career_forward: CareerForwardIntrinsicShadowContract | None,
+    career_evidence_state_id: str | None,
+) -> tuple[ThreeYearIntrinsicPlayerValue, ...]:
+    """Derive all 3-Year values from Career's retained Current Y1-Y3 rows.
+
+    The Career lifetime estimate is not used. Only raw, undiscounted annual
+    Current contributions enter the canonical Value-owned 3-Year discount.
+    """
+    if (
+        career_forward is None
+        or career_forward.status != "shadow_ready"
+        or career_forward.contract_version != CAREER_FORWARD_INTRINSIC_CONTRACT_VERSION
+        or career_forward.model_version != CAREER_FORWARD_INTRINSIC_MODEL_VERSION
+        or career_forward.evaluation_season != league_state.league.season
+        or career_forward.current_intrinsic_contract_version
+            != SHAPLEY_INTRINSIC_CONTRACT_VERSION
+        or career_forward.raw_quantity != CAREER_FORWARD_RAW_QUANTITY
+        or career_forward.aggregation != CAREER_FORWARD_AGGREGATION
+        or career_forward.display_scaling_applied
+        or career_forward.market_inputs_used
+        or career_forward.authoritative_for_current_intrinsic
+        or career_forward.current_intrinsic_replaced
+        or not career_evidence_state_id
+        or career_evidence_state_id != league_state.state_id
+    ):
+        return ()
+
+    players = {row.player_id: row for row in league_state.players}
+    career_rows = {row.player_id: row for row in career_forward.estimates}
+    if (
+        len(career_rows) != len(career_forward.estimates)
+        or career_forward.player_count != len(career_forward.estimates)
+    ):
+        return ()
+
+    output: dict[str, ThreeYearIntrinsicPlayerValue] = {}
+    for player_id, estimate in career_rows.items():
+        player = players.get(player_id)
+        if (
+            player is None
+            or player.position not in DYNASTY_ROOM_POSITIONS
+            or estimate.position != player.position
+            or estimate.raw_quantity != CAREER_FORWARD_RAW_QUANTITY
+            or estimate.aggregation != CAREER_FORWARD_AGGREGATION
+            or estimate.discounting_applied
+            or estimate.display_index_arithmetic_used
+            or estimate.market_inputs_used
+            or estimate.current_intrinsic_replaced
+        ):
+            continue
+        annual = estimate.uncertainty.current_y1_y3
+        if tuple(item.year_index for item in annual) != (1, 2, 3):
+            continue
+        if tuple(item.target_season for item in annual) != tuple(
+            league_state.league.season + offset for offset in range(3)
+        ):
+            continue
+        contributions = tuple(float(item.raw_shapley_contribution) for item in annual)
+        if not all(math.isfinite(value) for value in contributions):
+            continue
+        current_total = sum(contributions)
+        if (
+            not math.isfinite(estimate.current_intrinsic_raw_y1_y3)
+            or not math.isclose(
+                current_total, estimate.current_intrinsic_raw_y1_y3,
+                rel_tol=0.0, abs_tol=1e-9,
+            )
+        ):
+            continue
+        try:
+            raw_three_year = discounted_three_year_shapley_value(contributions)
+        except ValueError:
+            continue
+        output[player_id] = ThreeYearIntrinsicPlayerValue(
+            player_id=player_id,
+            position=player.position,
+            raw_intrinsic_value=raw_three_year,
+            input_assumption=career_forward.player_input_assumptions.get(player_id),
+            source="career_current_y1_y3_components",
+        )
+    return tuple(output[key] for key in sorted(output))
+
+
+def _position_rooms(
+    league_state: LeagueState, *, values: dict[str, tuple[Position, float]],
+    contract_valid: bool, evidence_state_id: str | None,
+    positions: tuple[Position, ...], model_version: str,
+) -> tuple[DynastyPositionRoom, ...]:
+    teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
+    states = {item.team_id: item for item in league_state.team_states}
+    players = {item.player_id: item for item in league_state.players}
     team_rosters: dict[str, tuple[tuple[str, Position], ...] | None] = {}
     for team in teams:
         team_state = states.get(team.team_id)
@@ -92,15 +234,15 @@ def build_dynasty_position_rooms(
             total = 0.0
             complete = contract_valid
             for player_id, actual_position in members:
-                estimate = estimates.get(player_id)
+                estimate = values.get(player_id)
                 if (
                     estimate is None
-                    or estimate.position != actual_position
-                    or not math.isfinite(estimate.raw_career_forward_reference)
+                    or estimate[0] != actual_position
+                    or not math.isfinite(estimate[1])
                 ):
                     complete = False
                     break
-                total += estimate.raw_career_forward_reference
+                total += estimate[1]
             partial[team.team_id] = (len(members), total if complete else None)
 
         complete_totals = {
@@ -144,6 +286,7 @@ def build_dynasty_position_rooms(
                     coverage_count=len(complete_totals),
                     evidence_complete=room is not None and room_raw is not None,
                     league_state_id=(evidence_state_id if room_raw is not None else None),
+                    model_version=model_version,
                 )
             )
     return tuple(output)
