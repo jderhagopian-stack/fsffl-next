@@ -1,7 +1,5 @@
 # Intrinsic Coverage Correction — 2026-10-19
 
-# Intrinsic Coverage Correction — 2026-10-19
-
 ## Latest Management direction — 2026-10-20: one live 3-Year source
 
 This section supersedes the earlier gap-only extension decision and any older checkpoint below that says the stand-alone 3-Year artifact is required to identify omissions or that only its missing roster identities may use Career values.
