@@ -454,3 +454,8 @@ First headc6d1c8b6 passed CI39172119400 and Stable39172127140, but review correc
 The P2 cell copy now reads the 3-Year request status and names 3-Year evidence for loading/unavailable/incomplete cells, independently from Career readiness. Node regression executes production cell rendering for each case. No model inputs, Career values, provider acquisition or memory safeguards changed. Exact-head CI/Stable and final review must rerun on the corrected candidate; the earlier passing head is superseded.
 
 Corrected local focused selection:62 passed2.52s; JavaScript syntax and diff whitespace checks pass.
+
+
+## 2026-10-20 — Approved WR receipt renewal deployed
+
+The previously approved Year-1 exception rules remained correct for the three WR cases. Their six-hour official-role receipts had expired before the most recent Career calculation, so the calculation failed closed and the WR room stayed incomplete. PR #473 refreshed only those exact official-source receipts and added regression coverage; no model assumptions or ranking gates changed. Focused CI passed, Stable full suite run 39489697163 passed on exact head f72e5a83e12a1658b1f7dbfe1133dd314843ac66, and automated review reported no findings. Squash merge 972ee41b8cd14742e157587988212e71023428cb was deployed live to existing service srv-dae6k7vqj5pc73af7bt0 as deploy dep-dbbsqqnavr4c73dgco10 at 2026-10-20 20:23:38 UTC. Startup restored the existing Career artifact. Live coverage remains unaccepted pending one fresh, explicitly initiated calculation and authenticated verification of Career, dependent 3-Year values, and complete WR ranks. See [WR role-evidence receipt renewal](workstreams/WR_ROLE_RECEIPT_REFRESH_20261020.md).
