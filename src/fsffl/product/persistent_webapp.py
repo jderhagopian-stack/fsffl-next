@@ -292,9 +292,16 @@ def _hosted_career_candidate_builder(
 
 def _release_current_contract_for_career(context, contract) -> bool:
     """Release both runtime owners after Career has copied Current Y1–Y3."""
-    if not _shapley_intrinsic_coordinator.release_completed_contract(
-        context, contract,
-    ):
+    if contract is None:
+        released = _shapley_intrinsic_coordinator.release_completed_contract_for_fingerprint(
+            context,
+            _shapley_intrinsic_loader.intrinsic_input_fingerprint(context),
+        )
+    else:
+        released = _shapley_intrinsic_coordinator.release_completed_contract(
+            context, contract,
+        )
+    if not released:
         return False
     _shapley_intrinsic_loader.clear_user_cache(context.user_id)
     return True
