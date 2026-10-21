@@ -196,14 +196,17 @@ def test_reduced_future_evidence_path_is_provenance_not_availability_gate() -> N
 
 def test_released_current_owner_restores_only_the_durable_contract():
     from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
+    from fsffl.product.resource_coordinator import HeavyWorkCoordinator
 
     class Loader:
         forecast_model_version = "fixture-forecast-v1"
 
         def __init__(self):
             self.cached = None
+            self.restore_calls = 0
 
         def restore_compatible(self, _context):
+            self.restore_calls += 1
             if self.cached is None:
                 self.cached = build_shapley_intrinsic_contract(_result())
             return self.cached
@@ -219,10 +222,12 @@ def test_released_current_owner_restores_only_the_durable_contract():
         ),
     )
     loader = Loader()
+    heavy_work = HeavyWorkCoordinator()
     coordinator = ShapleyIntrinsicBackgroundCoordinator(
         loader,
         intrinsic_input_fingerprint_resolver=lambda _context: "current-fp",
         forecast_coordinate_resolver=lambda _context: "fixture-forecast-v1",
+        heavy_work_coordinator=heavy_work,
     )
     try:
         owned = coordinator.restore_compatible(context)
@@ -232,17 +237,46 @@ def test_released_current_owner_restores_only_the_durable_contract():
 
         assert coordinator.release_completed_contract(context, current)
         loader.clear_user_cache(context.user_id)
-        released_record = coordinator.current(context)
-        assert released_record is not None and released_record.contract is current
+        with heavy_work.claim(kind="career", key="career-build"):
+            released_record = coordinator.current(context)
+            assert released_record is not None and released_record.contract is None
         del released_record, current, owned
         gc.collect()
         assert current_ref() is None
 
-        restored = coordinator.current(context)
+        # Direct request() callers must also restore released completed
+        # contracts; several product routes do not use current().
+        with heavy_work.claim(kind="career", key="career-build"):
+            waiting = coordinator.request(context)
+            assert waiting.status.value == "completed"
+            assert waiting.contract is None
+            assert loader.restore_calls == 1
+
+            class RuntimeStore:
+                def get(self, _user_id):
+                    return context
+
+            app = FastAPI()
+            install_shapley_intrinsic_routes(
+                app,
+                runtime_store=cast(PrivateBetaRuntimeStore, RuntimeStore()),
+                contract_loader=lambda _context: None,
+                background_coordinator=coordinator,
+            )
+            route = next(
+                route for route in app.routes
+                if getattr(route, "path", None) == "/api/value/intrinsic-shapley-v1"
+            )
+            response = route.endpoint(user_id="test-user")
+            assert response.status_code == 202
+
+        restored = coordinator.request(context)
         assert restored is not None and restored.status.value == "completed"
         assert restored.contract is not None
         assert restored.contract.estimates[0].raw_intrinsic_value == pytest.approx(
             10.0 + 0.85 * 8.0 + (0.85**2) * 6.0
         )
+        assert coordinator.request(context).contract is restored.contract
+        assert loader.restore_calls == 2
     finally:
         coordinator._executor.shutdown(wait=True)
