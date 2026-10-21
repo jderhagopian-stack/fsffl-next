@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import gc
 from types import SimpleNamespace
 from typing import cast
+from weakref import ref
 
 import pytest
 from fastapi import FastAPI
@@ -190,3 +192,57 @@ def test_reduced_future_evidence_path_is_provenance_not_availability_gate() -> N
         contract.completed_source_provenance.fact_family_coverage["injury_practice"]
         is False
     )
+
+
+def test_released_current_owner_restores_only_the_durable_contract():
+    from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
+
+    class Loader:
+        forecast_model_version = "fixture-forecast-v1"
+
+        def __init__(self):
+            self.cached = None
+
+        def restore_compatible(self, _context):
+            if self.cached is None:
+                self.cached = build_shapley_intrinsic_contract(_result())
+            return self.cached
+
+        def clear_user_cache(self, _user_id):
+            self.cached = None
+
+    context = SimpleNamespace(
+        user_id="test-user",
+        league_state=SimpleNamespace(
+            state_id="state-1",
+            league=SimpleNamespace(league_id="league-1", season=2026),
+        ),
+    )
+    loader = Loader()
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        loader,
+        intrinsic_input_fingerprint_resolver=lambda _context: "current-fp",
+        forecast_coordinate_resolver=lambda _context: "fixture-forecast-v1",
+    )
+    try:
+        owned = coordinator.restore_compatible(context)
+        assert owned is not None and owned.contract is not None
+        current = owned.contract
+        current_ref = ref(current)
+
+        assert coordinator.release_completed_contract(context, current)
+        loader.clear_user_cache(context.user_id)
+        released_record = coordinator.current(context)
+        assert released_record is not None and released_record.contract is current
+        del released_record, current, owned
+        gc.collect()
+        assert current_ref() is None
+
+        restored = coordinator.current(context)
+        assert restored is not None and restored.status.value == "completed"
+        assert restored.contract is not None
+        assert restored.contract.estimates[0].raw_intrinsic_value == pytest.approx(
+            10.0 + 0.85 * 8.0 + (0.85**2) * 6.0
+        )
+    finally:
+        coordinator._executor.shutdown(wait=True)

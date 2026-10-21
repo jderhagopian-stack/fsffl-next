@@ -918,22 +918,64 @@ def test_runtime_appends_only_complete_expanded_candidates_from_exact_roster(mat
     assert result.current_intrinsic_replaced is False
 
 
-def test_full_current_contract_is_released_before_dynamic_career_expansion(materialized):
+def test_current_contract_is_released_after_expansion_before_final_career_save(materialized):
     import gc
     from weakref import ref
+    from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
 
     _persistence, _calls, _base_loader, context, _frozen = materialized
     current_ref = None
+    persistence = MemoryPersistence()
+    original_put = persistence.put_artifact
+
+    def put_artifact(record):
+        if record.key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND:
+            gc.collect()
+            assert current_ref is not None and current_ref() is None
+        original_put(record)
+
+    persistence.put_artifact = put_artifact
+
+    class CurrentOwner:
+        forecast_model_version = "fixture-current-v1"
+
+        def __init__(self):
+            self.contract = None
+            self.restore_calls = 0
+
+        def restore_compatible(self, _context):
+            self.restore_calls += 1
+            if self.contract is None:
+                self.contract = _current_intrinsic()
+            return self.contract
+
+        def clear_user_cache(self, _user_id):
+            self.contract = None
+
+    current_owner = CurrentOwner()
+    current_coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        current_owner,
+        intrinsic_input_fingerprint_resolver=lambda _context: "current-fp-v1",
+        forecast_coordinate_resolver=lambda _context: "fixture-current-v1",
+    )
+    original_current_record = current_coordinator.restore_compatible(context)
+    assert original_current_record is not None and original_current_record.contract is not None
+    current_ref = ref(original_current_record.contract)
+    del original_current_record
 
     def load_current(_context):
-        nonlocal current_ref
-        current = _current_intrinsic()
-        current_ref = ref(current)
-        return current
+        assert current_owner.contract is not None
+        return current_owner.contract
+
+    def release_current(_context, current):
+        released = current_coordinator.release_completed_contract(context, current)
+        if released:
+            current_owner.clear_user_cache(context.user_id)
+        return released
 
     def expand(_context, _frozen_reference):
         gc.collect()
-        assert current_ref is not None and current_ref() is None
+        assert current_ref is not None and current_ref() is not None
         return ExpandedCareerContractResult(
             contract=None,
             failures={},
@@ -943,14 +985,23 @@ def test_full_current_contract_is_released_before_dynamic_career_expansion(mater
     loader = CareerIntrinsicLoader(
         current_intrinsic_loader=load_current,
         current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        persistence_store=persistence,
         expanded_career_contract_loader=expand,
         expanded_career_contract_fingerprint_resolver=lambda _context: "dynamic-fp-v1",
+        current_intrinsic_release_callback=release_current,
     )
 
-    result = loader(context)
-
-    assert result.player_count == FOUNDATION4_CURRENT_COHORT_SIZE
-    assert current_ref is not None and current_ref() is None
+    try:
+        result = loader(context)
+        assert result.player_count == FOUNDATION4_CURRENT_COHORT_SIZE
+        assert current_ref is not None and current_ref() is None
+        restored_current = current_coordinator.current(context)
+        assert restored_current is not None and restored_current.contract is not None
+        assert restored_current.contract.estimates[0].raw_intrinsic_value == pytest.approx(6.0)
+        assert current_coordinator.current(context).contract is restored_current.contract
+        assert current_owner.restore_calls == 2
+    finally:
+        current_coordinator._executor.shutdown(wait=True)
 
 
 def test_runtime_rejects_expanded_candidates_outside_exact_roster(materialized) -> None:

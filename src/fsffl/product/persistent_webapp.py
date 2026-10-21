@@ -290,6 +290,16 @@ def _hosted_career_candidate_builder(
     )
 
 
+def _release_current_contract_for_career(context, contract) -> bool:
+    """Release both runtime owners after Career has copied Current Y1–Y3."""
+    if not _shapley_intrinsic_coordinator.release_completed_contract(
+        context, contract,
+    ):
+        return False
+    _shapley_intrinsic_loader.clear_user_cache(context.user_id)
+    return True
+
+
 _career_intrinsic_loader = CareerIntrinsicLoader(
     current_intrinsic_loader=_shapley_intrinsic_loader,
     heavy_work_coordinator=_heavy_work_coordinator,
@@ -297,6 +307,7 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
         _shapley_intrinsic_loader.intrinsic_input_fingerprint
     ),
     persistence_store=_persistence_store,
+    current_intrinsic_release_callback=_release_current_contract_for_career,
     expanded_career_contract_loader=lambda context, frozen: (
         build_dynamic_rostered_career_contract(
             context,
@@ -419,10 +430,9 @@ def _hosted_capability_readiness(
     payload = dict(_webapp._runtime_capability_readiness(context))
     record = None
     if context.league_state is not None:
-        # Foreground readiness is memory-only. Durable Intrinsic reuse is staged by
-        # startup/background reconciliation through the process heavy-work lane so
-        # first-load reads cannot overlap contract deserialization with fresh core
-        # enrichment. A completed in-process record remains immediately visible.
+        # A weakly released Current contract may be restored from its completed
+        # durable artifact only when the shared heavy-work lane is idle. This is
+        # read-only reuse; it never starts source acquisition or valuation work.
         record = _shapley_intrinsic_coordinator.current(context)
     intrinsic = _intrinsic_readiness_from_record(record)
     payload["intrinsic"] = intrinsic

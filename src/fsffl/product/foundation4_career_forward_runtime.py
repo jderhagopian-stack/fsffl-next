@@ -95,6 +95,9 @@ ExpandedCareerContractLoader = Callable[
 ]
 ExpandedCareerContractFingerprintResolver = Callable[[UserRuntimeContext], str]
 CareerArtifactKeyFingerprintResolver = Callable[[UserRuntimeContext], str]
+CurrentIntrinsicReleaseCallback = Callable[
+    [UserRuntimeContext, ShapleyIntrinsicContract], bool
+]
 
 
 def validate_foundation4_expanded_acceptance_cohort(
@@ -163,6 +166,7 @@ class CareerIntrinsicLoader:
         career_artifact_key_fingerprint_resolver: (
             CareerArtifactKeyFingerprintResolver | None
         ) = None,
+        current_intrinsic_release_callback: CurrentIntrinsicReleaseCallback | None = None,
     ) -> None:
         if (expanded_career_contract_loader is None) != (
             expanded_career_contract_fingerprint_resolver is None
@@ -179,6 +183,7 @@ class CareerIntrinsicLoader:
         self._career_artifact_key_fingerprint_resolver = (
             career_artifact_key_fingerprint_resolver
         )
+        self._current_intrinsic_release_callback = current_intrinsic_release_callback
         self._current_intrinsic_loader = current_intrinsic_loader
         self._current_intrinsic_fingerprint_resolver = (
             current_intrinsic_fingerprint_resolver
@@ -839,10 +844,6 @@ class CareerIntrinsicLoader:
                 ),
             }
         )
-        # The Career contract now owns the completed Y1–Y3 and Y4+ results.
-        # Keeping the full Current Shapley contract alive through dynamic
-        # roster expansion needlessly overlaps two large player matrices.
-        del current
         # Reference aggregation is complete. The expanded phase reuses the
         # typed contract/component, not these transient forecast/tail inputs.
         del long_forecast, terminal_features, tails
@@ -871,6 +872,14 @@ class CareerIntrinsicLoader:
         # are no candidates); the pre-expansion alias is no longer required for
         # validation or persistence.
         del frozen_contract
+        if self._current_intrinsic_release_callback is not None:
+            if not self._current_intrinsic_release_callback(context, current):
+                raise RuntimeError(
+                    "Career could not release the completed Current contract owners"
+                )
+            # Current Y1–Y3 have already been copied into the Career authority.
+            # Drop this final strong reference before the guarded final save.
+            del current
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
