@@ -465,6 +465,36 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     assert result.contract is None
     assert result.failures[candidate_id] == "no F4 components"
 
+    from weakref import ref as weakref_ref
+
+    unrelated_future_rows = []
+
+    def temporary_future_builder(_state, *, projection_history_as_of=None):
+        # Give the call a private full-cohort graph so this test can prove
+        # non-rostered rows are collectible before Foundation 4 starts.
+        rows = tuple(row.model_copy() for row in candidate.future.contract.forecasts)
+        unrelated_future_rows.append(
+            weakref_ref(next(row for row in rows if row.player_id == "sleeper:player:unrelated"))
+        )
+        isolated_contract = candidate.future.contract.model_copy(
+            update={"forecasts": rows}
+        )
+        return replace(
+            candidate,
+            future=replace(candidate.future, contract=isolated_contract),
+        )
+
+    def compacted_before_fit(_context, retained, ids):
+        assert unrelated_future_rows[0]() is None
+        return no_components(_context, retained, ids)
+
+    reclaimed_full_graph = bridge.build_dynamic_rostered_career_contract(
+        context, SimpleNamespace(), current_intrinsic_loader=base_loader,
+        candidate_builder=temporary_future_builder,
+        materializer=compacted_before_fit,
+    )
+    assert reclaimed_full_graph.failures[candidate_id] == "no F4 components"
+
     from weakref import ref
     unneeded = []
     class UnusedObservation:
