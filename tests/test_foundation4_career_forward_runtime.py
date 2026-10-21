@@ -1004,7 +1004,10 @@ def test_current_contract_is_released_after_expansion_before_final_career_save(m
         current_coordinator._executor.shutdown(wait=True)
 
 
-def test_resumed_career_checkpoint_releases_current_owners_before_final_save():
+@pytest.mark.parametrize("coordinator_record_survives", (True, False))
+def test_resumed_career_checkpoint_releases_current_owners_before_final_save(
+    coordinator_record_survives,
+):
     import gc
     from weakref import ref
 
@@ -1077,6 +1080,8 @@ def test_resumed_career_checkpoint_releases_current_owners_before_final_save():
         assert current_ref() is current_owner.contract
 
         fail_final_save = False
+        if not coordinator_record_survives:
+            current_coordinator.clear_user(context.user_id)
 
         def release_current(resume_context, contract):
             if contract is None:
