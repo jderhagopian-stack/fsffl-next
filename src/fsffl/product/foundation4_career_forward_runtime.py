@@ -96,7 +96,7 @@ ExpandedCareerContractLoader = Callable[
 ExpandedCareerContractFingerprintResolver = Callable[[UserRuntimeContext], str]
 CareerArtifactKeyFingerprintResolver = Callable[[UserRuntimeContext], str]
 CurrentIntrinsicReleaseCallback = Callable[
-    [UserRuntimeContext, ShapleyIntrinsicContract], bool
+    [UserRuntimeContext, ShapleyIntrinsicContract | None], bool
 ]
 
 
@@ -769,6 +769,16 @@ class CareerIntrinsicLoader:
                 source_manifest,
                 retryable_batch_incomplete,
             ) = self._append_expanded_rostered_contract(context, restored)
+            # A checkpoint can be resumed after a prior process reached this
+            # path while retaining Current in the coordinator and loader cache.
+            # The checkpoint was accepted only against this exact Current input
+            # fingerprint, so release those owners before final serialization
+            # without reloading the full Current contract.
+            if self._current_intrinsic_release_callback is not None:
+                if not self._current_intrinsic_release_callback(context, None):
+                    raise RuntimeError(
+                        "Career could not release the completed Current contract owners"
+                    )
             # Also persist a completed expansion with explicit failures or no
             # new candidates. Otherwise a restart repeats that acquisition too.
             self._persist(
