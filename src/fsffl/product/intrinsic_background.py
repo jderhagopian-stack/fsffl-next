@@ -657,6 +657,34 @@ class ShapleyIntrinsicBackgroundCoordinator:
             )
             return True
 
+    def release_completed_contract_for_fingerprint(
+        self,
+        context: UserRuntimeContext,
+        expected_fingerprint: str,
+    ) -> bool:
+        """Release the completed strong owner after a compatible Career resume.
+
+        The persisted Career checkpoint has already validated this exact input
+        fingerprint. This path avoids restoring or passing the full Current
+        contract back through the memory-critical retry.
+        """
+        context = self._pin_build_context(context)
+        key = self._key(context)
+        with self._lock:
+            record = self._records.get(key)
+            if (record is None
+                    or record.status != IntrinsicBuildStatus.COMPLETED
+                    or record.intrinsic_input_fingerprint != expected_fingerprint):
+                return False
+            if record.contract is None:
+                return record.contract_ref is not None
+            self._records[key] = replace(
+                record,
+                contract=None,
+                contract_ref=ref(record.contract),
+            )
+            return True
+
     def add_terminal_callback(
         self,
         context: UserRuntimeContext,
