@@ -1,3 +1,11 @@
+## 2026-10-21 hosted release checkpoint — post-deploy refresh remains
+
+The PR #476 memory-lifecycle correction is merged as `27d16df6f4eff543755e02f03d36b2fad4d4ed95` from tested head `be13f14e6a3656874354ead44a95fb3eea7b963d`. Stable full suite run `39527891051` passed on that exact head with pre/post-head verification; exact-head CI and dependent checks passed, fresh review had no findings, and all three inline threads were resolved. Render service `srv-dae6k7vqj5pc73af7bt0` deployed the exact merge SHA as `dep-dbc2i11srm7s739e78a0`; build and deploy succeeded at 2026-10-21T02:53:35Z and 02:54:07Z. The 512 MiB service plan and 536,870,900-byte application hard cap are unchanged.
+
+This removes the overlapping strong references from the Career final-save path after Y1–Y3 are copied and expansion completes, covering cold builds, checkpoint resumes, restarted workers, and direct Current contract requests with guarded restoration. Valuation method and source/exception policy remain unchanged.
+
+The required hosted acceptance run has **not** happened after deployment. The prior attempt remains OOM evidence, and there is not yet a new Career artifact, 3-Year derived artifact, or post-run room/rank evidence. The app is Basic Auth protected; this cloud browser cannot authenticate (`ERR_INVALID_AUTH_CREDENTIALS`) and policy blocks controlling its error page. Next authorized action: in an already-authenticated app session, trigger exactly one Career/Intelligence refresh, then capture Render memory/run outcome and inspect exact-State persisted Career, 3-Year and QB/RB/WR/TE rank coverage. Accept only a successful below-cap Career save, 12/12 complete team rooms at all four positions, and finite Strength Indexes. Do not automatically retry or weaken a guard. Do not share credentials in chat.
+
 ## 2026-10-20 memory incident follow-up — deployed correction hit final-save guard
 
 ### Follow-up review correction — checkpoint resume must release Current too
