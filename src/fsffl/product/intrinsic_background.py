@@ -672,8 +672,12 @@ class ShapleyIntrinsicBackgroundCoordinator:
         key = self._key(context)
         with self._lock:
             record = self._records.get(key)
-            if (record is None
-                    or record.status != IntrinsicBuildStatus.COMPLETED
+            if record is None:
+                # A worker restart drops all coordinator ownership. The
+                # checkpoint has already validated the exact Current
+                # fingerprint, so there is no coordinator owner to release.
+                return True
+            if (record.status != IntrinsicBuildStatus.COMPLETED
                     or record.intrinsic_input_fingerprint != expected_fingerprint):
                 return False
             if record.contract is None:
