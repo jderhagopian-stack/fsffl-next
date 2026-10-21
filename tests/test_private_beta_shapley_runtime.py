@@ -376,6 +376,21 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         league_year_one=(candidate_y1,),
         candidate_source_rows={candidate_id: dynamic_row},
     )
+    # Model the common hosted shape: the P0 future contract contains many
+    # league-wide scenario rows, but only one rostered candidate is eligible
+    # for this Foundation 4 batch.
+    unrelated_rows = tuple(
+        row.model_copy(update={"player_id": "sleeper:player:unrelated"})
+        for row in dynamic_future.contract.forecasts
+    )
+    dynamic_future = replace(
+        dynamic_future,
+        contract=dynamic_future.contract.model_copy(
+            update={
+                "forecasts": dynamic_future.contract.forecasts + unrelated_rows
+            }
+        ),
+    )
     candidate = P0LiveCandidateResult(
         evaluation_as_of=candidate_as_of,
         completed_through_week=4,
@@ -421,7 +436,13 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
 
     def no_components(_context, retained, ids):
         assert retained.ros_runtime is None
-        assert retained.future is candidate.future
+        assert retained.future is not candidate.future
+        assert set(retained.future.contract.player_ids) == {candidate_id}
+        assert set(retained.future.scoring_multipliers) == {candidate_id}
+        assert len(retained.future.contract.forecasts) == 2
+        assert set(candidate.future.contract.player_ids) == {
+            candidate_id, "sleeper:player:unrelated"
+        }  # caller-owned evidence was not mutated
         assert retained.candidate_source_rows == candidate.candidate_source_rows
         assert retained.year_one_league == {candidate_id: candidate_y1}
         assert retained.year_one_standard == {candidate_id: candidate_y1}
