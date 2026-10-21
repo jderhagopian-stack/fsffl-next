@@ -8,6 +8,7 @@ from enum import StrEnum
 from threading import RLock
 from time import monotonic, sleep
 from typing import Callable
+from weakref import ReferenceType, ref
 
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
 
@@ -50,6 +51,7 @@ class IntrinsicBuildRecord:
     updated_at: datetime
     response_budget_exceeded: bool = False
     contract: ShapleyIntrinsicContract | None = None
+    contract_ref: ReferenceType[ShapleyIntrinsicContract] | None = None
     error: str | None = None
 
 
@@ -246,6 +248,8 @@ class ShapleyIntrinsicBackgroundCoordinator:
     def restore_compatible_staged(
         self,
         context: UserRuntimeContext,
+        *,
+        timeout_seconds: float | None = None,
     ) -> IntrinsicBuildRecord | None:
         """Restore durable Intrinsic only inside the process heavy-work lane.
 
@@ -262,6 +266,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         with self._heavy_work_coordinator.claim(
             kind="intrinsic_restore",
             key=f"{context.user_id}:{context.league_state.state_id}",
+            timeout_seconds=timeout_seconds,
         ):
             return self.restore_compatible(context)
 
@@ -286,6 +291,25 @@ class ShapleyIntrinsicBackgroundCoordinator:
                 else expected_epoch
             )
         key = self._key(context)
+        # Completed Current contracts are deliberately weakly retained while
+        # Career serializes its larger contract. Resolve that durable completion
+        # for direct request() callers too, using the same short heavy-work
+        # admission window as current().
+        released_record = None
+        with self._lock:
+            current_epoch = self._user_epochs.get(context.user_id, 0)
+            if current_epoch != request_epoch:
+                raise IntrinsicBuildSuperseded(
+                    "Intrinsic lifecycle was superseded by a State transition"
+                )
+            existing = self._records.get(key)
+            if (existing is not None
+                    and existing.status == IntrinsicBuildStatus.COMPLETED
+                    and existing.contract is None
+                    and existing.contract_ref is not None):
+                released_record = existing
+        if released_record is not None:
+            return self._resolve_released_contract(context, released_record)
         now = datetime.now(UTC)
         with self._lock:
             current_epoch = self._user_epochs.get(context.user_id, 0)
@@ -602,7 +626,94 @@ class ShapleyIntrinsicBackgroundCoordinator:
         context = self._pin_build_context(context)
         key = self._key(context)
         with self._lock:
-            return self._records.get(key)
+            record = self._records.get(key)
+            if record is None or record.contract is not None or record.contract_ref is None:
+                return record
+        return self._resolve_released_contract(context, record)
+
+    def _resolve_released_contract(
+        self,
+        context: UserRuntimeContext,
+        record: IntrinsicBuildRecord,
+    ) -> IntrinsicBuildRecord:
+        """Use an in-memory weak handle or restore the completed durable row."""
+        # Do not hold up a product request or restore another large contract
+        # during active Career/Current work. A later request retries after the
+        # shared lane is free.
+        if (self._heavy_work_coordinator is not None
+                and self._heavy_work_coordinator.snapshot().active_kind is not None):
+            return record
+        contract = record.contract_ref() if record.contract_ref is not None else None
+        if contract is not None:
+            # Return the same object to this caller without reinstalling another
+            # long-lived strong cache owner.
+            return replace(record, contract=contract)
+        # The weak reference expired after Career finished. Restore only the
+        # completed durable artifact; never run a Current calculation from a GET.
+        try:
+            restored = self.restore_compatible_staged(context, timeout_seconds=0.05)
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL released Current Intrinsic restore unavailable state=%s error=%s",
+                getattr(context.league_state, "state_id", "unknown"), exc,
+            )
+            return record
+        return restored if restored is not None else record
+
+    def release_completed_contract(
+        self,
+        context: UserRuntimeContext,
+        contract: ShapleyIntrinsicContract,
+    ) -> bool:
+        """Drop the coordinator's strong owner while preserving exact identity.
+
+        Career already copied the governed Y1–Y3 values it needs. A weak handle
+        lets in-flight readers keep using that same object, then completed
+        Current reads restore the durable contract on demand.
+        """
+        context = self._pin_build_context(context)
+        key = self._key(context)
+        with self._lock:
+            record = self._records.get(key)
+            if (record is None or record.status != IntrinsicBuildStatus.COMPLETED
+                    or record.contract is not contract):
+                return False
+            self._records[key] = replace(
+                record, contract=None, contract_ref=ref(contract),
+            )
+            return True
+
+    def release_completed_contract_for_fingerprint(
+        self,
+        context: UserRuntimeContext,
+        expected_fingerprint: str,
+    ) -> bool:
+        """Release the completed strong owner after a compatible Career resume.
+
+        The persisted Career checkpoint has already validated this exact input
+        fingerprint. This path avoids restoring or passing the full Current
+        contract back through the memory-critical retry.
+        """
+        context = self._pin_build_context(context)
+        key = self._key(context)
+        with self._lock:
+            record = self._records.get(key)
+            if record is None:
+                # A worker restart drops all coordinator ownership. The
+                # checkpoint has already validated the exact Current
+                # fingerprint, so there is no coordinator owner to release.
+                return True
+            if (record.status != IntrinsicBuildStatus.COMPLETED
+                    or record.intrinsic_input_fingerprint != expected_fingerprint):
+                return False
+            if record.contract is None:
+                return record.contract_ref is not None
+            self._records[key] = replace(
+                record,
+                contract=None,
+                contract_ref=ref(record.contract),
+            )
+            return True
 
     def add_terminal_callback(
         self,
