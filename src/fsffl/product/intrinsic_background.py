@@ -291,6 +291,25 @@ class ShapleyIntrinsicBackgroundCoordinator:
                 else expected_epoch
             )
         key = self._key(context)
+        # Completed Current contracts are deliberately weakly retained while
+        # Career serializes its larger contract. Resolve that durable completion
+        # for direct request() callers too, using the same short heavy-work
+        # admission window as current().
+        released_record = None
+        with self._lock:
+            current_epoch = self._user_epochs.get(context.user_id, 0)
+            if current_epoch != request_epoch:
+                raise IntrinsicBuildSuperseded(
+                    "Intrinsic lifecycle was superseded by a State transition"
+                )
+            existing = self._records.get(key)
+            if (existing is not None
+                    and existing.status == IntrinsicBuildStatus.COMPLETED
+                    and existing.contract is None
+                    and existing.contract_ref is not None):
+                released_record = existing
+        if released_record is not None:
+            return self._resolve_released_contract(context, released_record)
         now = datetime.now(UTC)
         with self._lock:
             current_epoch = self._user_epochs.get(context.user_id, 0)
@@ -610,18 +629,25 @@ class ShapleyIntrinsicBackgroundCoordinator:
             record = self._records.get(key)
             if record is None or record.contract is not None or record.contract_ref is None:
                 return record
-            contract = record.contract_ref()
-            if contract is not None:
-                # A memory-released Current contract may still be held by the
-                # active Career builder. Hand that exact object to read callers
-                # without reinstalling another long-lived strong cache owner.
-                return replace(record, contract=contract)
-            # Do not queue behind active model work from a request handler. The
-            # exact Current contract is restored on a later read after the
-            # memory-critical Career phase leaves the shared lane.
-            if (self._heavy_work_coordinator is not None
-                    and self._heavy_work_coordinator.snapshot().active_kind is not None):
-                return record
+        return self._resolve_released_contract(context, record)
+
+    def _resolve_released_contract(
+        self,
+        context: UserRuntimeContext,
+        record: IntrinsicBuildRecord,
+    ) -> IntrinsicBuildRecord:
+        """Use an in-memory weak handle or restore the completed durable row."""
+        # Do not hold up a product request or restore another large contract
+        # during active Career/Current work. A later request retries after the
+        # shared lane is free.
+        if (self._heavy_work_coordinator is not None
+                and self._heavy_work_coordinator.snapshot().active_kind is not None):
+            return record
+        contract = record.contract_ref() if record.contract_ref is not None else None
+        if contract is not None:
+            # Return the same object to this caller without reinstalling another
+            # long-lived strong cache owner.
+            return replace(record, contract=contract)
         # The weak reference expired after Career finished. Restore only the
         # completed durable artifact; never run a Current calculation from a GET.
         try:
