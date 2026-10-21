@@ -1004,6 +1004,110 @@ def test_current_contract_is_released_after_expansion_before_final_career_save(m
         current_coordinator._executor.shutdown(wait=True)
 
 
+def test_resumed_career_checkpoint_releases_current_owners_before_final_save():
+    import gc
+    from weakref import ref
+
+    persistence = MemoryPersistence()
+    context = _context()
+    current = _current_intrinsic()
+    current_ref = ref(current)
+
+    class CurrentOwner:
+        forecast_model_version = "fixture-current-v1"
+
+        def __init__(self, contract):
+            self.contract = contract
+
+        def restore_compatible(self, _context):
+            return self.contract
+
+        def clear_user_cache(self, _user_id):
+            self.contract = None
+
+    current_owner = CurrentOwner(current)
+    current_coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        current_owner,
+        intrinsic_input_fingerprint_resolver=lambda _context: "current-fp-v1",
+        forecast_coordinate_resolver=lambda _context: "fixture-current-v1",
+    )
+    original_record = current_coordinator.restore_compatible(context)
+    assert original_record is not None and original_record.contract is current
+    del original_record
+    del current
+
+    def load_current(_context):
+        assert current_owner.contract is not None
+        return current_owner.contract
+
+    def expand(_context, _frozen_reference):
+        return ExpandedCareerContractResult(
+            contract=None,
+            failures={},
+            source_manifest=_fixture_source_manifest(context),
+        )
+
+    fail_final_save = True
+    original_put = persistence.put_artifact
+
+    def put_artifact(record):
+        nonlocal fail_final_save
+        if record.key.artifact_kind == CAREER_INTRINSIC_ARTIFACT_KIND:
+            if fail_final_save:
+                raise MemoryError("simulated final Career serialization guard")
+            gc.collect()
+            assert current_ref() is None
+        original_put(record)
+
+    persistence.put_artifact = put_artifact
+    first_loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=load_current,
+        current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+        persistence_store=persistence,
+        expanded_career_contract_loader=expand,
+        expanded_career_contract_fingerprint_resolver=lambda _context: "dynamic-fp-v1",
+    )
+    try:
+        with pytest.raises(MemoryError, match="simulated final Career"):
+            first_loader(context)
+        assert any(
+            record.key.artifact_kind == CAREER_REFERENCE_CHECKPOINT_ARTIFACT_KIND
+            for record in persistence.artifacts
+        )
+        assert current_ref() is current_owner.contract
+
+        fail_final_save = False
+
+        def release_current(resume_context, contract):
+            if contract is None:
+                released = current_coordinator.release_completed_contract_for_fingerprint(
+                    resume_context, "current-fp-v1",
+                )
+            else:
+                released = current_coordinator.release_completed_contract(
+                    resume_context, contract,
+                )
+            if released:
+                current_owner.clear_user_cache(resume_context.user_id)
+            return released
+
+        resumed_loader = CareerIntrinsicLoader(
+            current_intrinsic_loader=load_current,
+            current_intrinsic_fingerprint_resolver=lambda _context: "current-fp-v1",
+            persistence_store=persistence,
+            expanded_career_contract_loader=expand,
+            expanded_career_contract_fingerprint_resolver=lambda _context: "dynamic-fp-v1",
+            current_intrinsic_release_callback=release_current,
+        )
+        result = resumed_loader(context)
+
+        assert result.player_count == FOUNDATION4_CURRENT_COHORT_SIZE
+        assert current_ref() is None
+        assert current_owner.contract is None
+    finally:
+        current_coordinator._executor.shutdown(wait=True)
+
+
 def test_runtime_rejects_expanded_candidates_outside_exact_roster(materialized) -> None:
     _persistence, _calls, _base_loader, context, frozen = materialized
     candidate_id = "sleeper:player:outside-unrostered-fixture"
