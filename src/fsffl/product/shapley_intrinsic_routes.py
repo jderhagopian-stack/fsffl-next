@@ -65,6 +65,15 @@ def install_shapley_intrinsic_routes(
                     status_code=503,
                     content=intrinsic_failure_payload(record),
                 )
+            if record.contract is None and record.contract_ref is not None:
+                # A completed contract may have been weakly released while
+                # Career uses the shared heavy-work lane. Keep this read
+                # retryable instead of presenting temporary memory pressure as
+                # permanent evidence unavailability.
+                return JSONResponse(
+                    status_code=202,
+                    content=intrinsic_loading_payload(record),
+                )
             contract = record.contract
         else:
             try:
