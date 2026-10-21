@@ -450,11 +450,6 @@ def build_dynamic_rostered_career_contract(
                 )
             }
         ),
-        scoring_multipliers={
-            player_id: multiplier
-            for player_id, multiplier in future.scoring_multipliers.items()
-            if player_id in eligible
-        },
     )
     # ROS acquisition/scoring is complete. Career does not consume the
     # whole-league ROS intermediate. Release it and the aliases used to find
@@ -473,7 +468,7 @@ def build_dynamic_rostered_career_contract(
         year_one_league={pid: live.year_one_league[pid] for pid in sorted(eligible)},
         # These already-digested acquisition coordinates are not inputs to
         # Foundation 4 or subsequent candidate composition. Keep the source
-        # manifest and accepted candidate observations/future contracts intact.
+        # manifest and eligible candidate observations/future rows intact.
         ros_fumbles_lost=(), fumbles_eligible_player_ids=(),
     )
     del future, future_rows, eligible_future

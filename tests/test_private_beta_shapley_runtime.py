@@ -438,7 +438,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         assert retained.ros_runtime is None
         assert retained.future is not candidate.future
         assert set(retained.future.contract.player_ids) == {candidate_id}
-        assert set(retained.future.scoring_multipliers) == {candidate_id}
+        assert retained.future.scoring_multipliers is candidate.future.scoring_multipliers
         assert len(retained.future.contract.forecasts) == 2
         assert set(candidate.future.contract.player_ids) == {
             candidate_id, "sleeper:player:unrelated"
