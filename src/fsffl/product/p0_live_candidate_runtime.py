@@ -253,12 +253,13 @@ class YtdOnlyYearOneEvidence:
 
 def recorded_ytd_only_year_one_evidence(
     league_state: LeagueState, *, as_of: datetime,
+    verified_roles: Mapping[str, object] | None = None,
 ) -> dict[str, YtdOnlyYearOneEvidence]:
     from fsffl.providers.nfl_status_evidence import (
         recorded_nfl_role_receipts, YTD_ONLY_APPROVED_ROLES,
         YTD_ONLY_POLICY_VERSION, YTD_ONLY_POLICY_APPROVED_AT,
     )
-    roles = recorded_nfl_role_receipts(league_state, as_of=as_of)
+    roles = verified_roles if verified_roles is not None else recorded_nfl_role_receipts(league_state, as_of=as_of)
     if as_of < YTD_ONLY_POLICY_APPROVED_AT:
         return {}
     return {pid: YtdOnlyYearOneEvidence(
@@ -990,6 +991,13 @@ def build_live_p0_rostered_candidate_forecasts(
     # acquiring stats/projections. The raw NFL catalog is much larger than the
     # bounded roster and otherwise overlaps every later acquisition workspace.
     catalog_fingerprint = _input_digest(catalog)
+    # Corroborate previous verified roles with a fresh independently acquired
+    # player catalog. No time extension is possible without new source evidence.
+    from fsffl.providers.nfl_status_evidence import corroborated_current_role_receipts
+    corroborated_roles = corroborated_current_role_receipts(
+        league_state, as_of=cutoff, captured_at=latest_snapshot.captured_at,
+        catalog=catalog,
+    )
     roster_external_ids = {
         entry.player_id.rsplit(":", 1)[-1]
         for team_state in league_state.team_states
@@ -1159,11 +1167,15 @@ def build_live_p0_rostered_candidate_forecasts(
         role_evidence_as_of=min(cutoff, ros_revision_cutoff),
     )
     from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
-    role_receipts = recorded_nfl_role_receipts(
-        league_state, as_of=min(cutoff, ros_revision_cutoff),
-    )
+    role_cutoff = min(cutoff, ros_revision_cutoff)
+    role_receipts = recorded_nfl_role_receipts(league_state, as_of=role_cutoff)
+    # A capture cannot be used to alter an older pinned projection revision.
+    role_receipts.update({
+        pid: row for pid, row in corroborated_roles.items()
+        if row.captured_at <= role_cutoff
+    })
     ytd_only_receipts = recorded_ytd_only_year_one_evidence(
-        league_state, as_of=min(cutoff, ros_revision_cutoff),
+        league_state, as_of=role_cutoff, verified_roles=role_receipts,
     )
     def admit_ytd_only(player_id):
         evidence = ytd_only_receipts.get(player_id)
