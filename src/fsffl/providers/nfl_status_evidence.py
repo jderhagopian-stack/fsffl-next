@@ -261,7 +261,7 @@ def acquire_official_reserve_role_receipts(
                 player = players[row.player_id]
                 matched = [
                     line for line in parser.rows
-                    if re.search(r"\\b" + re.escape(player.full_name) + r"\\b", line, flags=re.I)
+                    if re.search(r"\b" + re.escape(player.full_name) + r"\b", line, flags=re.I)
                 ]
                 if len(matched) != 1:
                     continue
