@@ -13,7 +13,7 @@ def state_for_receipts():
     ids = ("sleeper:player:3321", "sleeper:player:6803", "sleeper:player:13268")
     return LeagueState(
         league=League(league_id="fixture", name="Fixture", season=2026,
-                      rules=LeagueRules(team_count=1, roster_size=3, lineup=(), scoring=())),
+                      rules=LeagueRules(team_count=2, roster_size=3, lineup=(), scoring=())),
         as_of=datetime(2026, 10, 21, tzinfo=UTC),
         teams=(Team(team_id="a", league_id="fixture", display_name="A"),),
         team_states=(TeamState(team_id="a", roster=tuple(RosterEntry(player_id=i, slot="BENCH") for i in ids)),),
