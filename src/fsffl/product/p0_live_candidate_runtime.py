@@ -998,6 +998,13 @@ def build_live_p0_rostered_candidate_forecasts(
         league_state, as_of=cutoff, captured_at=latest_snapshot.captured_at,
         catalog=catalog,
     )
+    from fsffl.providers.nfl_status_evidence import acquire_official_reserve_role_receipts
+    official_roles = acquire_official_reserve_role_receipts(
+        league_state, evaluation_cutoff=cutoff,
+        allow_current_capture=evaluation_as_of is None,
+    )
+    if official_roles and evaluation_as_of is None:
+        cutoff = max(cutoff, *(receipt.captured_at for receipt in official_roles.values()))
     roster_external_ids = {
         entry.player_id.rsplit(":", 1)[-1]
         for team_state in league_state.team_states
@@ -1172,6 +1179,10 @@ def build_live_p0_rostered_candidate_forecasts(
     # A capture cannot be used to alter an older pinned projection revision.
     role_receipts.update({
         pid: row for pid, row in corroborated_roles.items()
+        if row.captured_at <= cutoff
+    })
+    role_receipts.update({
+        pid: row for pid, row in official_roles.items()
         if row.captured_at <= cutoff
     })
     ytd_only_receipts = recorded_ytd_only_year_one_evidence(
