@@ -265,7 +265,7 @@ def acquire_official_reserve_role_receipts(
                 ]
                 if len(matched) != 1:
                     continue
-                if not re.search(r"\\bRLS\\b", matched[0], flags=re.I):
+                if not re.search(r"\bRLS\b", matched[0], flags=re.I):
                     continue
                 output[row.player_id] = NflRoleReceipt(
                     row.player_id, row.position, row.season, row.status, url, captured,
