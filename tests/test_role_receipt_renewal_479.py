@@ -1,12 +1,11 @@
 """Regression checks for producer-owned role corroboration (Issue #479)."""
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 
 from fsffl.providers.nfl_status_evidence import (
     NFL_ROLE_RECEIPTS, corroborated_current_role_receipts,
 )
 from fsffl.product.p0_live_candidate_runtime import recorded_ytd_only_year_one_evidence
-from fsffl.state.models import League, LeagueRules, LeagueState, Player, Position, RosterEntry, Team, TeamState
+from fsffl.state.models import League, LeagueRules, LeagueState, Player, PlayerState, Position, Provenance, RosterEntry, Team, TeamState
 
 
 def state_for_receipts():
@@ -15,14 +14,20 @@ def state_for_receipts():
         league=League(league_id="fixture", name="Fixture", season=2026,
                       rules=LeagueRules(team_count=2, roster_size=3, lineup=(), scoring=())),
         as_of=datetime(2026, 10, 21, tzinfo=UTC),
-        teams=(Team(team_id="a", league_id="fixture", display_name="A"),),
-        team_states=(TeamState(team_id="a", roster=tuple(RosterEntry(player_id=i, slot="BENCH") for i in ids)),),
+        teams=(Team(team_id="a", league_id="fixture", display_name="A"),
+               Team(team_id="b", league_id="fixture", display_name="B")),
+        team_states=(TeamState(team_id="a", roster=tuple(RosterEntry(player_id=i, slot="BENCH") for i in ids)),
+                     TeamState(team_id="b", roster=())),
         players=tuple(Player(player_id=i, full_name=i, position=Position.WR) for i in ids),
-        player_states=(),
+        player_states=tuple(PlayerState(
+            player_id=i, as_of=datetime(2026, 10, 21, tzinfo=UTC),
+            provenance=Provenance(source="fixture", retrieved_at=datetime(2026, 10, 21, tzinfo=UTC),
+                                  effective_at=datetime(2026, 10, 21, tzinfo=UTC)),
+        ) for i in ids),
     )
 
 
-def test_expired_static_roles_require_fresh_corroborration():
+def test_expired_static_roles_require_fresh_corroboration():
     state = state_for_receipts()
     captured = datetime(2026, 10, 21, 12, tzinfo=UTC)
     catalog = {
