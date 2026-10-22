@@ -191,7 +191,7 @@ def corroborated_current_role_receipts(
 
 def acquire_official_reserve_role_receipts(
     league_state, *, evaluation_cutoff: datetime,
-    fetcher=None,
+    fetcher=None, allow_current_capture: bool = False,
 ) -> dict[str, NflRoleReceipt]:
     """Bounded live verification of the NFL's reserve/left-squad roster status.
 
@@ -250,7 +250,10 @@ def acquire_official_reserve_role_receipts(
     for url, rows in list(candidates.items())[:4]:
         try:
             html, captured = fetcher(url)
-            if captured.tzinfo is None or captured > evaluation_cutoff or evaluation_cutoff >= captured + timedelta(hours=6):
+            if captured.tzinfo is None:
+                continue
+            effective_cutoff = max(evaluation_cutoff, captured) if allow_current_capture else evaluation_cutoff
+            if captured > effective_cutoff or effective_cutoff >= captured + timedelta(hours=6):
                 continue
             parser = RosterRows()
             parser.feed(html)
