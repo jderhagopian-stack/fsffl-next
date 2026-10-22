@@ -1172,7 +1172,7 @@ def build_live_p0_rostered_candidate_forecasts(
     # A capture cannot be used to alter an older pinned projection revision.
     role_receipts.update({
         pid: row for pid, row in corroborated_roles.items()
-        if row.captured_at <= role_cutoff
+        if row.captured_at <= cutoff
     })
     ytd_only_receipts = recorded_ytd_only_year_one_evidence(
         league_state, as_of=role_cutoff, verified_roles=role_receipts,
