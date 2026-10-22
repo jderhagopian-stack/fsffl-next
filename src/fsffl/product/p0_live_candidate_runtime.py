@@ -259,7 +259,11 @@ def recorded_ytd_only_year_one_evidence(
         recorded_nfl_role_receipts, YTD_ONLY_APPROVED_ROLES,
         YTD_ONLY_POLICY_VERSION, YTD_ONLY_POLICY_APPROVED_AT,
     )
-    roles = verified_roles if verified_roles is not None else recorded_nfl_role_receipts(league_state, as_of=as_of)
+    # Preserve the pinned historical receipt read for deterministic replay and
+    # dependency accounting; fresh acquired receipts are an additive override.
+    roles = dict(recorded_nfl_role_receipts(league_state, as_of=as_of))
+    if verified_roles is not None:
+        roles.update(verified_roles)
     if as_of < YTD_ONLY_POLICY_APPROVED_AT:
         return {}
     return {pid: YtdOnlyYearOneEvidence(
