@@ -999,9 +999,14 @@ def build_live_p0_rostered_candidate_forecasts(
         catalog=catalog,
     )
     from fsffl.providers.nfl_status_evidence import acquire_official_reserve_role_receipts
-    official_roles = acquire_official_reserve_role_receipts(
-        league_state, evaluation_cutoff=cutoff,
-        allow_current_capture=evaluation_as_of is None,
+    # Only the real producer-owned acquisition fetches remote NFL roster
+    # evidence. Fixture callers with injected transports stay deterministic.
+    # Historical/pinned evaluations never fetch current future evidence.
+    official_roles = (
+        acquire_official_reserve_role_receipts(
+            league_state, evaluation_cutoff=cutoff, allow_current_capture=True,
+        ) if stats_source is None and sleeper_source is None
+        and evaluation_as_of is None else {}
     )
     if official_roles and evaluation_as_of is None:
         cutoff = max(cutoff, *(receipt.captured_at for receipt in official_roles.values()))
