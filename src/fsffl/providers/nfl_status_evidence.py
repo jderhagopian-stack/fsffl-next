@@ -135,3 +135,55 @@ def recorded_nfl_role_receipts(league_state, *, as_of: datetime) -> dict[str, Nf
             and players[row.player_id].position.value == row.position
             and league_state.league.season == row.season
             and row.captured_at <= as_of < row.captured_at + timedelta(hours=6)}
+
+
+def corroborated_current_role_receipts(
+    league_state, *, as_of: datetime, captured_at: datetime,
+    catalog: dict | object,
+) -> dict[str, NflRoleReceipt]:
+    """Renew *verified* roles only when a fresh independent player feed agrees.
+
+    A historical official receipt is not made fresh by fiat: this emits a
+    separately sourced, timestamped corroboration from the current Sleeper
+    player universe. Ambiguous and changed statuses fail closed. The caller
+    must be a producer-owned acquisition, never a GET/chart reader.
+    """
+    from collections.abc import Mapping
+    if as_of.tzinfo is None or captured_at.tzinfo is None:
+        raise ValueError("current role times must be timezone-aware")
+    if captured_at > as_of or as_of >= captured_at + timedelta(hours=6):
+        return {}
+    if not isinstance(catalog, Mapping):
+        return {}
+    rostered = {e.player_id for t in league_state.team_states for e in t.roster}
+    players = {p.player_id: p for p in league_state.players}
+    latest_verified: dict[str, NflRoleReceipt] = {}
+    for row in sorted(NFL_ROLE_RECEIPTS, key=lambda item: item.captured_at):
+        if row.captured_at <= as_of:
+            latest_verified[row.player_id] = row
+    renewed = {}
+    for player_id in rostered & latest_verified.keys():
+        old = latest_verified[player_id]
+        player = players.get(player_id)
+        if player is None or player.position.value != old.position or league_state.league.season != old.season:
+            continue
+        item = catalog.get(player_id.rsplit(":", 1)[-1])
+        if not isinstance(item, Mapping):
+            continue
+        status = str(item.get("status") or "").strip().lower().replace("-", "_").replace(" ", "_")
+        team = str(item.get("team") or "").strip()
+        try:
+            depth = int(item.get("depth_chart_order"))
+        except (ValueError, TypeError):
+            depth = None
+        corroborated = (
+            (old.status == "unsigned" and not team and status not in {"active", "practice_squad"})
+            or (old.status == "reserve_left_squad" and status in {"rls", "reserve_left_squad", "reserve/left_squad"})
+            or (old.status == "developmental_depth" and bool(team) and depth is not None and depth >= 3)
+        )
+        if corroborated:
+            renewed[player_id] = NflRoleReceipt(
+                player_id, old.position, old.season, old.status,
+                "https://api.sleeper.app/v1/players/nfl", captured_at,
+            )
+    return renewed
