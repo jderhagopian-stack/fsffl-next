@@ -18,7 +18,7 @@ def state_for_receipts():
                Team(team_id="b", league_id="fixture", display_name="B")),
         team_states=(TeamState(team_id="a", roster=tuple(RosterEntry(player_id=i, slot="BENCH") for i in ids)),
                      TeamState(team_id="b", roster=())),
-        players=tuple(Player(player_id=i, full_name=i, position=Position.WR) for i in ids),
+        players=tuple(Player(player_id=i, full_name={"sleeper:player:3321":"Tyreek Hill", "sleeper:player:6803":"Brandon Aiyuk", "sleeper:player:13268":"Elijah Sarratt"}[i], position=Position.WR) for i in ids),
         player_states=tuple(PlayerState(
             player_id=i, as_of=datetime(2026, 10, 21, tzinfo=UTC),
             provenance=Provenance(source="fixture", retrieved_at=datetime(2026, 10, 21, tzinfo=UTC),
