@@ -2,7 +2,7 @@
 from datetime import UTC, datetime, timedelta
 
 from fsffl.providers.nfl_status_evidence import (
-    NFL_ROLE_RECEIPTS, corroborated_current_role_receipts,
+    NFL_ROLE_RECEIPTS, corroborated_current_role_receipts, acquire_official_reserve_role_receipts,
 )
 from fsffl.product.p0_live_candidate_runtime import recorded_ytd_only_year_one_evidence
 from fsffl.state.models import League, LeagueRules, LeagueState, Player, PlayerState, Position, Provenance, RosterEntry, Team, TeamState
@@ -68,4 +68,28 @@ def test_stale_or_contradictory_catalog_never_renews_role():
     assert not corroborated_current_role_receipts(
         state.model_copy(update={"league": state.league.model_copy(update={"season": 2027})}),
         as_of=captured, captured_at=captured, catalog=correct,
+    )
+
+
+def test_official_roster_rls_exact_row_required():
+    state = state_for_receipts()
+    cutoff = datetime(2026, 10, 21, 12, tzinfo=UTC)
+    html = "<table><tr><th>Player</th><th>No</th><th>Pos</th><th>Status</th></tr>" \
+           "<tr><td>Brandon Aiyuk</td><td>11</td><td>WR</td><td>RLS</td></tr>" \
+           "<tr><td>Other Player</td><td>20</td><td>WR</td><td>ACT</td></tr></table>"
+    fresh = acquire_official_reserve_role_receipts(
+        state, evaluation_cutoff=cutoff, fetcher=lambda url: (html, cutoff),
+    )
+    assert set(fresh) == {"sleeper:player:6803"}
+    assert fresh["sleeper:player:6803"].source_url == "https://www.nfl.com/teams/san-francisco-49ers/roster"
+    changed = html.replace("<td>RLS</td>", "<td>ACT</td>")
+    assert not acquire_official_reserve_role_receipts(
+        state, evaluation_cutoff=cutoff, fetcher=lambda url: (changed, cutoff),
+    )
+    assert not acquire_official_reserve_role_receipts(
+        state, evaluation_cutoff=cutoff, fetcher=lambda url: (html, cutoff + timedelta(minutes=1)),
+    )
+    assert acquire_official_reserve_role_receipts(
+        state, evaluation_cutoff=cutoff, allow_current_capture=True,
+        fetcher=lambda url: (html, cutoff + timedelta(minutes=1)),
     )
