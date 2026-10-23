@@ -3906,3 +3906,58 @@ def test_genuinely_stale_same_state_job_still_fails_atomic_identity_guard() -> N
 
     current = runtime.get(user_id)
     assert current.publication_generation_id == "generation-b"
+
+
+def test_history_discovery_skips_later_incompatible_raw_forecast_payloads(monkeypatch) -> None:
+    """Do not deserialize old large payloads after the fallback and compatible scan are covered."""
+    base_time = datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    compatible = _league_state(as_of=base_time)
+    target = compatible.model_copy(update={"as_of": base_time + timedelta(minutes=10)})
+    extra_player = Player(
+        player_id="extra-player",
+        full_name="Extra Player",
+        position=Position.QB,
+        nfl_team="NE",
+    )
+    newest_incompatible = compatible.model_copy(update={
+        "players": (extra_player,),
+        "as_of": base_time + timedelta(minutes=9),
+    })
+    middle_incompatible = compatible.model_copy(update={
+        "players": (replace(extra_player, player_id="other-player"),),
+        "as_of": base_time + timedelta(minutes=8),
+    })
+
+    class OrderedHistory:
+        def iter_recent_at_or_before(self, league_id, as_of, *, limit):
+            assert league_id == target.league.league_id
+            assert as_of == target.as_of
+            return iter((newest_incompatible, middle_incompatible, compatible))
+
+    runtime = PersistentPrivateBetaRuntimeStore(
+        persistence_store=MemoryPersistence(),
+        state_snapshot_store=OrderedHistory(),
+    )
+    raw_reads = []
+
+    def restore_raw(_store, *, league_state):
+        raw_reads.append(league_state.state_id)
+        return None if league_state.state_id == target.state_id else object()
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.restore_state_bound_raw_forecast_evidence",
+        restore_raw,
+    )
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.restore_last_good_state_identity",
+        lambda *args, **kwargs: None,
+    )
+
+    prior_state, prior_raw, source, _rejections = runtime._discover_prior_raw_forecast(
+        "jimmy", target_state=target,
+    )
+
+    assert prior_state.state_id == compatible.state_id
+    assert prior_raw is not None
+    assert source == "state_history"
+    assert raw_reads == [target.state_id, newest_incompatible.state_id, compatible.state_id]
