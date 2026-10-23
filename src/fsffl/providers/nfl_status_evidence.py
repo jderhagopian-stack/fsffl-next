@@ -135,3 +135,141 @@ def recorded_nfl_role_receipts(league_state, *, as_of: datetime) -> dict[str, Nf
             and players[row.player_id].position.value == row.position
             and league_state.league.season == row.season
             and row.captured_at <= as_of < row.captured_at + timedelta(hours=6)}
+
+
+def corroborated_current_role_receipts(
+    league_state, *, as_of: datetime, captured_at: datetime,
+    catalog: dict | object,
+) -> dict[str, NflRoleReceipt]:
+    """Renew *verified* roles only when a fresh independent player feed agrees.
+
+    A historical official receipt is not made fresh by fiat: this emits a
+    separately sourced, timestamped corroboration from the current Sleeper
+    player universe. Ambiguous and changed statuses fail closed. The caller
+    must be a producer-owned acquisition, never a GET/chart reader.
+    """
+    from collections.abc import Mapping
+    if as_of.tzinfo is None or captured_at.tzinfo is None:
+        raise ValueError("current role times must be timezone-aware")
+    if captured_at > as_of or as_of >= captured_at + timedelta(hours=6):
+        return {}
+    if not isinstance(catalog, Mapping):
+        return {}
+    rostered = {e.player_id for t in league_state.team_states for e in t.roster}
+    players = {p.player_id: p for p in league_state.players}
+    latest_verified: dict[str, NflRoleReceipt] = {}
+    for row in sorted(NFL_ROLE_RECEIPTS, key=lambda item: item.captured_at):
+        if row.captured_at <= as_of:
+            latest_verified[row.player_id] = row
+    renewed = {}
+    for player_id in rostered & latest_verified.keys():
+        old = latest_verified[player_id]
+        player = players.get(player_id)
+        if player is None or player.position.value != old.position or league_state.league.season != old.season:
+            continue
+        item = catalog.get(player_id.rsplit(":", 1)[-1])
+        if not isinstance(item, Mapping):
+            continue
+        status = str(item.get("status") or "").strip().lower().replace("-", "_").replace(" ", "_")
+        team = str(item.get("team") or "").strip()
+        try:
+            depth = int(item.get("depth_chart_order"))
+        except (ValueError, TypeError):
+            depth = None
+        corroborated = (
+            (old.status == "unsigned" and not team and status not in {"active", "practice_squad"})
+            or (old.status == "reserve_left_squad" and status in {"rls", "reserve_left_squad", "reserve/left_squad"})
+            or (old.status == "developmental_depth" and bool(team) and depth is not None and depth >= 3)
+        )
+        if corroborated:
+            renewed[player_id] = NflRoleReceipt(
+                player_id, old.position, old.season, old.status,
+                "https://api.sleeper.app/v1/players/nfl", captured_at,
+            )
+    return renewed
+
+
+def acquire_official_reserve_role_receipts(
+    league_state, *, evaluation_cutoff: datetime,
+    fetcher=None, allow_current_capture: bool = False,
+) -> dict[str, NflRoleReceipt]:
+    """Bounded live verification of the NFL's reserve/left-squad roster status.
+
+    Called only by producer-owned acquisition. Unlike the Sleeper player feed,
+    the official roster distinguishes RLS from an ordinary active registration.
+    A failed/ambiguous parse produces no receipt, never a fabricated fact.
+    A supplied fetcher is for deterministic tests and must return
+    (html, actual_capture_time). The default fetcher cannot backdate time.
+    """
+    import re
+    from html.parser import HTMLParser
+    from urllib.request import Request, urlopen
+
+    class RosterRows(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.rows = []
+            self.current = None
+        def handle_starttag(self, tag, attrs):
+            if tag == "tr":
+                self.current = []
+        def handle_data(self, data):
+            if self.current is not None:
+                self.current.append(data)
+        def handle_endtag(self, tag):
+            if tag == "tr" and self.current is not None:
+                self.rows.append(" ".join(self.current))
+                self.current = None
+
+    def fetch(url):
+        request = Request(url, headers={"User-Agent": "FSFFL-NEXT/1.0"})
+        with urlopen(request, timeout=5) as response:
+            html = response.read(1_500_000).decode("utf-8", errors="replace")
+        return html, datetime.now(UTC)
+
+    fetcher = fetcher or fetch
+    rostered = {e.player_id for t in league_state.team_states for e in t.roster}
+    players = {p.player_id: p for p in league_state.players}
+    verified = {}
+    for row in sorted(NFL_ROLE_RECEIPTS, key=lambda r: r.captured_at):
+        if row.captured_at <= evaluation_cutoff:
+            verified[row.player_id] = row
+    candidates = {
+        row.source_url: [] for pid, row in verified.items()
+        if pid in rostered and row.status == "reserve_left_squad"
+        and league_state.league.season == row.season
+        and players.get(pid) is not None
+        and players[pid].position.value == row.position
+        and row.source_url.startswith("https://www.nfl.com/teams/")
+        and row.source_url.endswith("/roster")
+    }
+    for pid, row in verified.items():
+        if row.source_url in candidates and pid in rostered and row.status == "reserve_left_squad":
+            candidates[row.source_url].append(row)
+    output = {}
+    for url, rows in list(candidates.items())[:4]:
+        try:
+            html, captured = fetcher(url)
+            if captured.tzinfo is None:
+                continue
+            effective_cutoff = max(evaluation_cutoff, captured) if allow_current_capture else evaluation_cutoff
+            if captured > effective_cutoff or effective_cutoff >= captured + timedelta(hours=6):
+                continue
+            parser = RosterRows()
+            parser.feed(html)
+            for row in rows:
+                player = players[row.player_id]
+                matched = [
+                    line for line in parser.rows
+                    if re.search(r"\b" + re.escape(player.full_name) + r"\b", line, flags=re.I)
+                ]
+                if len(matched) != 1:
+                    continue
+                if not re.search(r"\bRLS\b", matched[0], flags=re.I):
+                    continue
+                output[row.player_id] = NflRoleReceipt(
+                    row.player_id, row.position, row.season, row.status, url, captured,
+                )
+        except (OSError, ValueError, UnicodeError):
+            continue
+    return output
