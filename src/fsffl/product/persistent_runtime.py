@@ -1128,6 +1128,24 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     del candidate
                     continue
                 seen_state_ids.add(candidate.state_id)
+
+                # State compatibility is cheap to check and does not require
+                # deserializing the large raw Forecast artifact. Keep only the
+                # first available incompatible artifact as the existing replay
+                # fallback; later incompatible States cannot improve that
+                # fallback and are never candidates for exact-compatible reuse.
+                candidate_reasons = raw_forecast_compatibility_reasons(
+                    candidate, target_state
+                )
+                candidate_fingerprint = raw_forecast_input_fingerprint(candidate)
+                candidate_compatible = (
+                    not candidate_reasons
+                    and candidate_fingerprint == target_raw_fingerprint
+                )
+                if not candidate_compatible and first_incompatible is not None:
+                    del candidate
+                    continue
+
                 candidate_raw = restore_state_bound_raw_forecast_evidence(
                     self._persistence,
                     league_state=candidate,
