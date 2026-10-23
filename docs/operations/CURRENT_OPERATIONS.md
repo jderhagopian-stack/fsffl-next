@@ -1,3 +1,11 @@
+## 2026-10-21 — Career refresh failed; full future scenario graph overlapped Foundation 4
+
+The latest exact-State Career refresh after PR #476 deployment did **not** complete. Render logs for State `fc56e560a4109dbf71bed3e9f9bfa94fb43a835893a1d98392d4e7ecc5a6ecb6` show Foundation 4 materialization sampled a peak RSS of `551501824` bytes; final Career serialization then failed the unchanged hard guard (`536870900` bytes). No completed Career artifact was written. Subsequent Career reads for this State returned `503 Service Unavailable`, leaving Career and its dependent 3-Year/position-room charts unavailable. An earlier `409` request referenced a different State and is not evidence of current-State coverage.
+
+The failure is narrower than the already-corrected Current-owner and Career persistence lifetimes: `build_dynamic_rostered_career_contract` retained the full P0 future scenario contract and aliases to its rows while Foundation 4 fit workspaces were active. The next correction compacts that contract to only candidates with complete Y1/Y2/Y3 inputs before Foundation 4, preserves their exact scenario rows, scoring multipliers and provenance, and drops the full-contract aliases before the existing memory admission boundary. No fallback identities, valuation inputs, formulas, accepted methodology, working target (`429496720` bytes), hard limit, or last-good artifact policy change.
+
+Implementation is in progress on branch `work/career-memory-admission-fix-20261021` based on authoritative main `27d16df6f4eff543755e02f03d36b2fad4d4ed95`. A focused regression passes (**1 passed**) proving Foundation 4 receives only eligible player future rows while caller-owned evidence remains unchanged. The three affected suites are running; full release gates and another hosted refresh remain pending. Do not claim availability until the exact-State Career artifact persists and the Career, 3-Year, room coverage and dependent rankings are verified. Do not start another refresh before this correction passes release gates.
+
 ## 2026-10-20 — Career/3-Year coverage fix deployed; refreshed-value acceptance remains open
 
 ### Latest hosted result — deployed correction still over memory limit
