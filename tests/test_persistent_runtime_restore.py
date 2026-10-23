@@ -3909,7 +3909,7 @@ def test_genuinely_stale_same_state_job_still_fails_atomic_identity_guard() -> N
 
 
 def test_history_discovery_skips_later_incompatible_raw_forecast_payloads(monkeypatch) -> None:
-    """Do not deserialize old large payloads after the fallback and compatible scan are covered."""
+    """Skip old large payloads after the fallback and compatible scan are covered."""
     base_time = datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
     compatible = _league_state(as_of=base_time)
     target = compatible.model_copy(update={"as_of": base_time + timedelta(minutes=10)})
@@ -3924,7 +3924,7 @@ def test_history_discovery_skips_later_incompatible_raw_forecast_payloads(monkey
         "as_of": base_time + timedelta(minutes=9),
     })
     middle_incompatible = compatible.model_copy(update={
-        "players": (replace(extra_player, player_id="other-player"),),
+        "players": (extra_player.model_copy(update={"player_id": "other-player"}),),
         "as_of": base_time + timedelta(minutes=8),
     })
 
