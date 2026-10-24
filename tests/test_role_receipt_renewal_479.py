@@ -1,10 +1,14 @@
 """Regression checks for producer-owned role corroboration (Issue #479)."""
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 from fsffl.providers.nfl_status_evidence import (
-    NFL_ROLE_RECEIPTS, corroborated_current_role_receipts, acquire_official_reserve_role_receipts,
+    NFL_ROLE_RECEIPTS, corroborated_current_role_receipts, current_catalog_role_receipts,
+    acquire_official_reserve_role_receipts,
 )
-from fsffl.product.p0_live_candidate_runtime import recorded_ytd_only_year_one_evidence
+from fsffl.product.p0_live_candidate_runtime import (
+    recorded_ir_no_projection_year_one_evidence, recorded_ytd_only_year_one_evidence,
+)
 from fsffl.state.models import League, LeagueRules, LeagueState, Player, PlayerState, Position, Provenance, RosterEntry, Team, TeamState
 
 
@@ -25,6 +29,43 @@ def state_for_receipts():
                                   effective_at=datetime(2026, 10, 21, tzinfo=UTC)),
         ) for i in ids),
     )
+
+
+def test_catalog_team_field_governs_unsigned_for_every_rostered_player():
+    state = state_for_receipts()
+    captured = datetime(2026, 10, 24, 12, tzinfo=UTC)
+    roles = current_catalog_role_receipts(
+        state, as_of=captured, captured_at=captured,
+        catalog={"3321": {"team": None}, "6803": {"team": "SF"}, "13268": {}},
+    )
+    assert roles["sleeper:player:3321"].status == "unsigned"
+    assert roles["sleeper:player:6803"].status == "signed"
+    assert "sleeper:player:13268" not in roles
+    accepted = recorded_ytd_only_year_one_evidence(
+        state, as_of=captured, verified_roles=roles,
+    )
+    assert accepted["sleeper:player:3321"].source_version.startswith("career-ytd-only")
+
+
+def test_ir_without_projection_gets_provenanced_zero_ros_assumption():
+    state = state_for_receipts()
+    teams = list(state.team_states)
+    first = teams[0]
+    teams[0] = first.model_copy(update={"roster": (
+        first.roster[0].model_copy(update={"slot": "IR"}), *first.roster[1:]
+    )})
+    state = state.model_copy(update={"team_states": tuple(teams)})
+    evidence = recorded_ir_no_projection_year_one_evidence(
+        state, player_id="sleeper:player:3321", as_of=state.as_of,
+        available_projection_rows=(),
+    )
+    assert evidence is not None
+    assert evidence.source == "fsffl:exact-state-ir-no-projection"
+    assert evidence.status == "low_confidence_ytd_only_no_additional_production_assumed"
+    assert recorded_ir_no_projection_year_one_evidence(
+        state, player_id="sleeper:player:3321", as_of=state.as_of,
+        available_projection_rows=(SimpleNamespace(player_id="sleeper:player:3321"),),
+    ) is None
 
 
 def test_expired_static_roles_require_fresh_corroboration():
