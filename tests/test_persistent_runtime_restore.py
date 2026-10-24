@@ -3971,8 +3971,11 @@ def test_runtime_checkpoint_reuses_only_same_state_weakly_owned_artifacts(monkey
     )
 
     state = _league_state()
-    forecast = SimpleNamespace()
-    simulation = SimpleNamespace()
+    class WeakPayload:
+        pass
+
+    forecast = WeakPayload()
+    simulation = WeakPayload()
     context = UserRuntimeContext(
         user_id="jimmy",
         league_state=state,
