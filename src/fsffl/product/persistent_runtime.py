@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
 from datetime import timedelta
 from dataclasses import replace
 from time import monotonic
@@ -43,6 +44,7 @@ from .runtime import (
 )
 
 _logger = logging.getLogger("fsffl.product.persistence")
+MAX_CHECKPOINTED_ARTIFACT_KEY_USERS = 128
 
 
 class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
@@ -89,10 +91,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         self._forecast_replay_decisions: dict[str, dict[str, object]] = {}
         # Weak source references let same-State checkpoint stages reuse already
         # persisted immutable Forecast/Simulation keys without retaining payloads.
-        self._checkpointed_artifact_keys: dict[
+        self._checkpointed_artifact_keys: OrderedDict[
             str,
             tuple[str, dict[str, tuple[ReferenceType[object], object]]],
-        ] = {}
+        ] = OrderedDict()
 
     def _record_forecast_replay_decision(
         self,
@@ -251,6 +253,8 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 }
                 with self._lock:
                     cached = self._checkpointed_artifact_keys.get(user_id)
+                    if cached is not None:
+                        self._checkpointed_artifact_keys.move_to_end(user_id)
                 if cached is not None and cached[0] == context.league_state.state_id:
                     for kind, source in sources.items():
                         entry = cached[1].get(kind)
@@ -283,6 +287,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         context.league_state.state_id,
                         next_entries,
                     )
+                    self._checkpointed_artifact_keys.move_to_end(user_id)
+                    while len(self._checkpointed_artifact_keys) > MAX_CHECKPOINTED_ARTIFACT_KEY_USERS:
+                        self._checkpointed_artifact_keys.popitem(last=False)
             except Exception as exc:  # persistence must not break authoritative runtime
                 durable = False
                 _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
