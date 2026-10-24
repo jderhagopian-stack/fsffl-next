@@ -4014,6 +4014,56 @@ def test_runtime_checkpoint_reuses_only_same_state_weakly_owned_artifacts(monkey
     assert calls[-1] == {}
 
 
+def test_checkpoint_artifact_key_cache_is_bounded_by_recent_users(monkeypatch) -> None:
+    from fsffl.persistence.runtime_cache import (
+        FORECAST_ARTIFACT_KIND,
+        SIMULATION_ARTIFACT_KIND,
+    )
+    from fsffl.product.persistent_runtime import MAX_CHECKPOINTED_ARTIFACT_KEY_USERS
+
+    class WeakPayload:
+        pass
+
+    keys = {
+        FORECAST_ARTIFACT_KIND: object(),
+        SIMULATION_ARTIFACT_KIND: object(),
+    }
+    calls = []
+
+    def persist_snapshot(_store, *, reusable_artifact_keys, user_id, **_kwargs):
+        calls.append((user_id, dict(reusable_artifact_keys)))
+        return keys
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.persist_runtime_snapshot",
+        persist_snapshot,
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=MemoryPersistence())
+    state = _league_state()
+
+    for index in range(MAX_CHECKPOINTED_ARTIFACT_KEY_USERS + 1):
+        user_id = f"user-{index}"
+        context = UserRuntimeContext(
+            user_id=user_id,
+            league_state=state,
+            forecast_evidence=WeakPayload(),
+            simulation_analytics=WeakPayload(),
+        )
+        assert runtime._persist_context(user_id, context)
+
+    assert len(runtime._checkpointed_artifact_keys) == MAX_CHECKPOINTED_ARTIFACT_KEY_USERS
+    assert "user-0" not in runtime._checkpointed_artifact_keys
+
+    retry = UserRuntimeContext(
+        user_id="user-0",
+        league_state=state,
+        forecast_evidence=WeakPayload(),
+        simulation_analytics=WeakPayload(),
+    )
+    assert runtime._persist_context("user-0", retry)
+    assert calls[-1] == ("user-0", {})
+
+
 def test_persist_runtime_snapshot_reuses_exact_forecast_key_without_reencoding(monkeypatch) -> None:
     state = _league_state()
     forecast = _stale_forecast_without_first_party_fumbles_lost(state)
