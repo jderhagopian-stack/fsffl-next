@@ -507,10 +507,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
                 context, SimpleNamespace(), current_intrinsic_loader=base_loader,
                 candidate_builder=fresh_candidate, materializer=complete_components,
             )
-        if index == 4:
-            assert future_owner_refs[-1]() is not None
-        else:
-            assert future_owner_refs[-1]() is None
+        assert future_owner_refs[-1]() is None
         assert calls == expected
 
 
