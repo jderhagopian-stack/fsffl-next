@@ -1,3 +1,19 @@
+## 2026-10-24 — Production refresh restores Career but still exceeds the memory guard; bounded fix in progress
+
+Issue [#481](https://github.com/jderhagopian-stack/fsffl-next/issues/481) was incorrectly closed before hosted acceptance and has been reopened. Related issues #405 and #479 remain open. The user initiated one refresh on deployed `main` `5f2a29aead8ac166289fb9b95d75852c7007e63b` / Render deployment `dep-dbea3q29lscs73af0abg`; no second refresh or infrastructure change was started.
+
+The exact State `67da5a7de4a49b5db2d48f04768b4731ac0311171f957a916bf3c8e2a8b58b7d` core publication completed at 15:19 UTC. Career saved a complete exact-scope `career_intrinsic_v1` artifact at 15:33:51 UTC: 358 estimates, `_career_expansion_complete=true`, `_career_retryable_batch_incomplete=false`. The exact-State presentation surfaces were written at 15:34:02 UTC and generation `03d201cd65d85aebdf5a186e6bb0d8a38302793611cd15bd4ac1ef0c6849fcb6` was published at 15:34:59 UTC. The Career count differs from the prior State's 359; State membership changed. No 3-Year endpoint request was observed after the completed Career publication, so its user-facing values/ranks remain unverified.
+
+The refresh did not restart the one-instance 0.5 CPU / 512 MiB Render service. Render sampled memory peaked at 526,946,300 bytes. Application process RSS peaked at 546,521,088 bytes in `career.foundation4_materialization` and the heavy-work snapshot reached 546,050,048 bytes, exceeding the unchanged 536,870,900-byte process guard by about 9.6 MB. RSS settled near 503,947,260 bytes after publication. The successful artifact is evidence of computation and publication, not memory acceptance or an end-to-end recovery pass.
+
+### Bounded code candidate — no model or infrastructure changes
+
+On branch `codex/career-foundation4-peak-memory-20261024` from the exact deployed main, Foundation4 now stages wide history-feature columns before expanding horizon metadata, explicitly releases the wide base frame, then expands. `BoundedHorizonHistory` drops unselected metadata columns after expansion. This removes a known avoidable overlap; it does not yet prove the hosted peak is below target. The saved features retain pandas pickle dtypes and the accepted `build_long` path, preserving row/feature inputs and model calculations.
+
+Focused local checks pass: 30 history/matrix/materializer tests; 7 hosted Career bridge regressions; frozen Shapley/Career parity (maximum Career delta 0); and the 335-player Career composition benchmark at 190.2 MiB. A broader combined local runtime selection was interrupted after a CPU-bound test exceeded five minutes and is **not counted**. Frozen reference fixture parity must run in CI, where the workflow restores its fixture. No stable full suite, merge, deploy, hosted candidate build, numerical change or paid infrastructure change is claimed yet.
+
+**Next:** publish a draft PR; pass focused CI, exact-head review, frozen 335 parity and stable full suite; then merge/deploy only the accepted head. After deploy, run one user-owned monitored refresh and verify Career, derived 3-Year, complete room/rank coverage, last-good behavior, process peak RSS and ordinary request health under the unchanged budgets. Do not retry automatically or claim #481/#405/#479 acceptance from the current run.
+
 ## 2026-10-20 — Career/3-Year coverage fix deployed; refreshed-value acceptance remains open
 
 ### Latest hosted result — deployed correction still over memory limit

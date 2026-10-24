@@ -559,14 +559,19 @@ def main():
     history_base = history_base.loc[:, [column for column in history_base.columns if column in base_columns]]
     history_base = compact_history_categories(history_base, dev, copy=False)
     release_unused_process_memory(label="foundation4-before-horizon-expansion")
+    staged_history_base = BoundedHorizonHistory.stage_base(
+        history_base, out.parent / 'accepted_feature_columns'
+    )
+    del history_base
+    release_unused_process_memory(label="foundation4-base-features-staged")
     # Preserve the existing runtime projection exactly: generated horizon_sq
     # was not part of that projection unless explicitly owned by a feature set.
     # Exposing it now would change global-continuous model inputs.
-    long = BoundedHorizonHistory(
-        dev, history_base, history_raw, out.parent / 'accepted_feature_columns',
+    long = BoundedHorizonHistory.from_staged(
+        dev, staged_history_base, history_raw,
         columns=model_features | {'position', 'horizon', 'target_season', 'actual'},
     )
-    del history_base, history_raw
+    del staged_history_base, history_raw
     release_unused_process_memory(label="foundation4-history-base-released")
     release_unused_process_memory(label="foundation4-before-policy-materialization")
     # This admitted materializer already owns the heavy phase. Bound native
