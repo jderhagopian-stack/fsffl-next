@@ -33,7 +33,7 @@ def state_for_receipts():
 
 def test_catalog_team_field_governs_unsigned_for_every_rostered_player():
     state = state_for_receipts()
-    captured = datetime(2026, 10, 24, 12, tzinfo=UTC)
+    captured = datetime(2026, 10, 24, 21, tzinfo=UTC)
     roles = current_catalog_role_receipts(
         state, as_of=captured, captured_at=captured,
         catalog={"3321": {"team": None}, "13268": {}},
@@ -61,14 +61,14 @@ def test_ir_without_projection_gets_provenanced_zero_ros_assumption():
     )})
     state = state.model_copy(update={"team_states": tuple(teams)})
     evidence = recorded_ir_no_projection_year_one_evidence(
-        state, player_id="sleeper:player:3321", as_of=state.as_of,
+        state, player_id="sleeper:player:3321", as_of=datetime(2026, 10, 24, 21, tzinfo=UTC),
         available_projection_rows=(),
     )
     assert evidence is not None
     assert evidence.source == "fsffl:exact-state-ir-no-projection"
     assert evidence.status == "low_confidence_ytd_only_no_additional_production_assumed"
     assert recorded_ir_no_projection_year_one_evidence(
-        state, player_id="sleeper:player:3321", as_of=state.as_of,
+        state, player_id="sleeper:player:3321", as_of=datetime(2026, 10, 24, 21, tzinfo=UTC),
         available_projection_rows=(SimpleNamespace(player_id="sleeper:player:3321"),),
     ) is None
 
