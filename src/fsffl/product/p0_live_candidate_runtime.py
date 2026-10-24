@@ -200,6 +200,10 @@ class StatusBasedZeroRosEvidence:
 
 
 STATUS_BASED_YEAR_ONE_SCORING_VERSION = "status-y1-v2:verified-whole-season-no-residual"
+UNSIGNED_YTD_POLICY_VERSION = "career-ytd-only-v2:universal-catalog-team-null-20261024"
+UNSIGNED_YTD_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=UTC)
+IR_NO_PROJECTION_POLICY_VERSION = "career-ytd-only-v2:exact-state-ir-no-projection-20261024"
+IR_NO_PROJECTION_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=UTC)
 
 
 def recorded_status_based_zero_ros_evidence(
@@ -266,11 +270,48 @@ def recorded_ytd_only_year_one_evidence(
         roles.update(verified_roles)
     if as_of < YTD_ONLY_POLICY_APPROVED_AT:
         return {}
-    return {pid: YtdOnlyYearOneEvidence(
-        player_id=pid, season=row.season, source=row.source_url,
-        source_version=f"{YTD_ONLY_POLICY_VERSION}:{row.fingerprint}",
-        observed_at=max(row.captured_at, YTD_ONLY_POLICY_APPROVED_AT),
-    ) for pid, row in roles.items() if YTD_ONLY_APPROVED_ROLES.get(pid) == row.status}
+    result = {}
+    for pid, row in roles.items():
+        if row.status == "unsigned" and YTD_ONLY_APPROVED_ROLES.get(pid) == row.status:
+            version, approved_at = YTD_ONLY_POLICY_VERSION, YTD_ONLY_POLICY_APPROVED_AT
+        elif row.status == "unsigned":
+            if as_of < UNSIGNED_YTD_POLICY_APPROVED_AT:
+                continue
+            version, approved_at = UNSIGNED_YTD_POLICY_VERSION, UNSIGNED_YTD_POLICY_APPROVED_AT
+        elif YTD_ONLY_APPROVED_ROLES.get(pid) == row.status:
+            version, approved_at = YTD_ONLY_POLICY_VERSION, YTD_ONLY_POLICY_APPROVED_AT
+        else:
+            continue
+        result[pid] = YtdOnlyYearOneEvidence(
+            player_id=pid, season=row.season, source=row.source_url,
+            source_version=f"{version}:{row.fingerprint}",
+            observed_at=max(row.captured_at, approved_at),
+        )
+    return result
+
+
+def recorded_ir_no_projection_year_one_evidence(
+    league_state: LeagueState, *, player_id: str, as_of: datetime,
+    available_projection_rows: tuple[object, ...],
+) -> YtdOnlyYearOneEvidence | None:
+    """Use the exact-State IR slot as low-confidence zero-ROS evidence only when no projection exists."""
+    if as_of.tzinfo is None or as_of < IR_NO_PROJECTION_POLICY_APPROVED_AT:
+        return None
+    if any(row.player_id == player_id for row in available_projection_rows):
+        return None
+    on_ir = any(
+        entry.player_id == player_id
+        and getattr(entry.slot, "value", entry.slot) == "IR"
+        for team in league_state.team_states for entry in team.roster
+    )
+    if not on_ir or player_id not in {player.player_id for player in league_state.players}:
+        return None
+    return YtdOnlyYearOneEvidence(
+        player_id=player_id, season=league_state.league.season,
+        source="fsffl:exact-state-ir-no-projection",
+        source_version=f"{IR_NO_PROJECTION_POLICY_VERSION}:{league_state.as_of.isoformat()}",
+        observed_at=as_of,
+    )
 
 
 def _metrics_for_zero_ros(league_state: LeagueState) -> tuple[ForecastMetric, ...]:
@@ -997,11 +1038,18 @@ def build_live_p0_rostered_candidate_forecasts(
     catalog_fingerprint = _input_digest(catalog)
     # Corroborate previous verified roles with a fresh independently acquired
     # player catalog. No time extension is possible without new source evidence.
-    from fsffl.providers.nfl_status_evidence import corroborated_current_role_receipts
+    from fsffl.providers.nfl_status_evidence import (
+        corroborated_current_role_receipts, current_catalog_role_receipts,
+    )
     corroborated_roles = corroborated_current_role_receipts(
         league_state, as_of=cutoff, captured_at=latest_snapshot.captured_at,
         catalog=catalog,
     )
+    catalog_roles = current_catalog_role_receipts(
+        league_state, as_of=cutoff, captured_at=latest_snapshot.captured_at,
+        catalog=catalog,
+    )
+    corroborated_roles.update(catalog_roles)
     from fsffl.providers.nfl_status_evidence import acquire_official_reserve_role_receipts
     # Only the real producer-owned acquisition fetches remote NFL roster
     # evidence. Fixture callers with injected transports stay deterministic.
@@ -1199,12 +1247,17 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     def admit_ytd_only(player_id):
         evidence = ytd_only_receipts.get(player_id)
-        if evidence is None:
-            return None
         # This approval covers projectionless cases, not replacing partial or
         # malformed provider evidence with a more convenient assumption.
         if any(row.player_id == player_id for row in available_ros_rows):
             return None
+        if evidence is None:
+            evidence = recorded_ir_no_projection_year_one_evidence(
+                league_state, player_id=player_id, as_of=cutoff,
+                available_projection_rows=available_ros_rows,
+            )
+            if evidence is None:
+                return None
         try:
             return _score_ytd_only_year_one(
                 league_state=league_state, evidence=evidence, completed_actuals=completed_raw,
