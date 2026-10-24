@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Mapping
 
 from fsffl.forecast.fumbles_lost_first_party import (
     FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
@@ -48,6 +48,7 @@ from .runtime_cache import (
     simulation_artifact,
     simulation_matches_configured_rng,
     value_artifact,
+    simulation_artifact_model_version,
 )
 
 if TYPE_CHECKING:
@@ -93,9 +94,9 @@ def _published_generation_record(
     league_state: LeagueState,
     selected_team_id: str | None,
     publication_generation_id: str,
-    forecast_record: ReusableArtifactRecord,
-    simulation_record: ReusableArtifactRecord | None,
-    value_record: ReusableArtifactRecord,
+    forecast_key: ArtifactKey,
+    simulation_key: ArtifactKey | None,
+    value_key: ArtifactKey,
     computed_at: datetime,
 ) -> ReusableArtifactRecord:
     payload = {
@@ -103,18 +104,18 @@ def _published_generation_record(
         "league_id": league_state.league.league_id,
         "league_state_id": league_state.state_id,
         "selected_team_id": selected_team_id,
-        "forecast_input_fingerprint": forecast_record.key.input_fingerprint,
+        "forecast_input_fingerprint": forecast_key.input_fingerprint,
         "simulation_input_fingerprint": (
-            simulation_record.key.input_fingerprint
-            if simulation_record is not None
+            simulation_key.input_fingerprint
+            if simulation_key is not None
             else None
         ),
         "simulation_model_version": (
-            simulation_record.key.model_version
-            if simulation_record is not None
+            simulation_key.model_version
+            if simulation_key is not None
             else None
         ),
-        "value_input_fingerprint": value_record.key.input_fingerprint,
+        "value_input_fingerprint": value_key.input_fingerprint,
     }
     return ReusableArtifactRecord(
         key=ArtifactKey(
@@ -358,12 +359,17 @@ def persist_runtime_snapshot(
     value_evidence: CurrentMarketValueRuntimeResult | None = None,
     publish_context: bool = True,
     publication_generation_id: str | None = None,
-) -> None:
+    reusable_artifact_keys: Mapping[str, ArtifactKey] | None = None,
+) -> dict[str, ArtifactKey]:
     """Checkpoint authoritative runtime outputs without changing their ownership.
 
     ``publish_context=False`` persists State-bound working artifacts without moving
     the durable user-runtime pointer or last-good publication identity. This lets a
     replacement generation become durable before its manifest-last atomic publish.
+
+    A caller may supply keys for immutable exact-State Forecast or Simulation
+    objects it has already persisted successfully. In that case, this method can
+    reuse the key without encoding and writing the same large payload again.
     """
 
     with sample_rss_phase("persistence.state_and_team_snapshots"):
@@ -419,8 +425,10 @@ def persist_runtime_snapshot(
             )
         )
 
-    forecast_record = None
-    simulation_record = None
+    reusable = dict(reusable_artifact_keys or {})
+    persisted_keys: dict[str, ArtifactKey] = {}
+    forecast_key = None
+    simulation_key = None
     value_record = None
     with sample_rss_phase("persistence.derived_artifact_encode_and_write"):
       if forecast_evidence is not None:
@@ -437,18 +445,47 @@ def persist_runtime_snapshot(
             store.put_artifact(
                 first_party_fumbles_lost_supplement_artifact(supplement)
             )
-        forecast_record = forecast_artifact(
-            league_state_id=league_state.state_id,
-            evidence=forecast_evidence,
-        )
-        store.put_artifact(forecast_record)
-      if simulation_analytics is not None and forecast_record is not None:
-        simulation_record = simulation_artifact(
-            league_state_id=league_state.state_id,
-            forecast_fingerprint=forecast_record.key.input_fingerprint,
-            result=simulation_analytics,
-        )
-        store.put_artifact(simulation_record)
+        forecast_key = reusable.get(FORECAST_ARTIFACT_KIND)
+        if forecast_key is not None and (
+            forecast_key.artifact_kind != FORECAST_ARTIFACT_KIND
+            or forecast_key.scope_kind != LEAGUE_SCOPE_KIND
+            or forecast_key.scope_id != league_state.state_id
+            or forecast_key.model_version != FORECAST_MODEL_VERSION
+        ):
+            forecast_key = None
+        if forecast_key is None:
+            forecast_record = forecast_artifact(
+                league_state_id=league_state.state_id,
+                evidence=forecast_evidence,
+            )
+            store.put_artifact(forecast_record)
+            forecast_key = forecast_record.key
+        persisted_keys[FORECAST_ARTIFACT_KIND] = forecast_key
+      if simulation_analytics is not None and forecast_key is not None:
+        simulation_key = reusable.get(SIMULATION_ARTIFACT_KIND)
+        if simulation_key is not None and (
+            simulation_key.artifact_kind != SIMULATION_ARTIFACT_KIND
+            or simulation_key.scope_kind != LEAGUE_SCOPE_KIND
+            or simulation_key.scope_id != league_state.state_id
+            or simulation_key.input_fingerprint
+            != canonical_fingerprint(
+                league_state.state_id, forecast_key.input_fingerprint
+            )
+            or simulation_key.model_version
+            != simulation_artifact_model_version(
+                simulation_analytics.simulation_result
+            )
+        ):
+            simulation_key = None
+        if simulation_key is None:
+            simulation_record = simulation_artifact(
+                league_state_id=league_state.state_id,
+                forecast_fingerprint=forecast_key.input_fingerprint,
+                result=simulation_analytics,
+            )
+            store.put_artifact(simulation_record)
+            simulation_key = simulation_record.key
+        persisted_keys[SIMULATION_ARTIFACT_KIND] = simulation_key
         if publish_context:
             # Automatic annual League Atlas baseline capture is a publication
             # side-effect only; unpublished working Simulation never advances it.
@@ -468,6 +505,9 @@ def persist_runtime_snapshot(
             result=value_evidence,
         )
         store.put_artifact(value_record)
+        value_key = getattr(value_record, "key", None)
+        if value_key is not None:
+            persisted_keys[VALUE_ARTIFACT_KIND] = value_key
         if publish_context:
             # Preserve the exact legacy estimate identity, lineage, timestamp,
             # ordering and publish-context gate. The hosted adapter batches;
@@ -511,17 +551,13 @@ def persist_runtime_snapshot(
     # last-good presentation snapshot.
     with sample_rss_phase("persistence.atomic_manifest_and_pointer"):
       if publish_context and terminal_bundle:
-        if forecast_record is None or value_record is None:
+        if forecast_key is None or value_record is None:
             raise ValueError("terminal publication requires Forecast and Value artifacts")
         generation_id = str(publication_generation_id or "").strip() or canonical_fingerprint(
             league_state.state_id,
             selected_team_id,
-            forecast_record.key.input_fingerprint,
-            (
-                simulation_record.key.input_fingerprint
-                if simulation_record is not None
-                else None
-            ),
+            forecast_key.input_fingerprint,
+            simulation_key.input_fingerprint if simulation_key is not None else None,
             value_record.key.input_fingerprint,
         )
 
@@ -540,9 +576,9 @@ def persist_runtime_snapshot(
                 league_state=league_state,
                 selected_team_id=selected_team_id,
                 publication_generation_id=generation_id,
-                forecast_record=forecast_record,
-                simulation_record=simulation_record,
-                value_record=value_record,
+                forecast_key=forecast_key,
+                simulation_key=simulation_key,
+                value_key=value_record.key,
                 computed_at=now,
             )
         )
@@ -584,6 +620,7 @@ def persist_runtime_snapshot(
             league_state=league_state,
             selected_team_id=selected_team_id,
         )
+    return persisted_keys
 
 
 def restore_state_bound_raw_forecast_evidence(
