@@ -36,15 +36,20 @@ def test_catalog_team_field_governs_unsigned_for_every_rostered_player():
     captured = datetime(2026, 10, 24, 12, tzinfo=UTC)
     roles = current_catalog_role_receipts(
         state, as_of=captured, captured_at=captured,
-        catalog={"3321": {"team": None}, "6803": {"team": "SF"}, "13268": {}},
+        catalog={"3321": {"team": None}, "13268": {}},
     )
     assert roles["sleeper:player:3321"].status == "unsigned"
-    assert roles["sleeper:player:6803"].status == "signed"
     assert "sleeper:player:13268" not in roles
     accepted = recorded_ytd_only_year_one_evidence(
         state, as_of=captured, verified_roles=roles,
     )
     assert accepted["sleeper:player:3321"].source_version.startswith("career-ytd-only")
+    signed = current_catalog_role_receipts(
+        state, as_of=captured, captured_at=captured,
+        catalog={"3321": {"team": "MIA"}, "6803": {"team": "SF"}},
+    )
+    assert signed["sleeper:player:3321"].status == "signed"
+    assert "sleeper:player:6803" not in signed
 
 
 def test_ir_without_projection_gets_provenanced_zero_ros_assumption():
