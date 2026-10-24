@@ -4,6 +4,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from time import monotonic, sleep
 from threading import Event, RLock, Thread
+from types import SimpleNamespace
 
 from fsffl.forecast.current_runtime import (
     LiveForecastRuntimeResult,
@@ -3961,3 +3962,82 @@ def test_history_discovery_skips_later_incompatible_raw_forecast_payloads(monkey
     assert prior_raw is not None
     assert source == "state_history"
     assert raw_reads == [target.state_id, newest_incompatible.state_id, compatible.state_id]
+
+
+def test_runtime_checkpoint_reuses_only_same_state_weakly_owned_artifacts(monkeypatch) -> None:
+    from fsffl.persistence.runtime_cache import (
+        FORECAST_ARTIFACT_KIND,
+        SIMULATION_ARTIFACT_KIND,
+    )
+
+    state = _league_state()
+    forecast = SimpleNamespace()
+    simulation = SimpleNamespace()
+    context = UserRuntimeContext(
+        user_id="jimmy",
+        league_state=state,
+        forecast_evidence=forecast,
+        simulation_analytics=simulation,
+    )
+    keys = {
+        FORECAST_ARTIFACT_KIND: object(),
+        SIMULATION_ARTIFACT_KIND: object(),
+    }
+    calls = []
+
+    def persist_snapshot(*, reusable_artifact_keys, **_kwargs):
+        calls.append(dict(reusable_artifact_keys))
+        return keys
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.persist_runtime_snapshot",
+        persist_snapshot,
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=MemoryPersistence())
+
+    assert runtime._persist_context("jimmy", context)
+    assert runtime._persist_context("jimmy", context)
+    assert calls == [{}, keys]
+
+    changed_simulation = replace(context, simulation_analytics=SimpleNamespace())
+    assert runtime._persist_context("jimmy", changed_simulation)
+    assert calls[-1] == {FORECAST_ARTIFACT_KIND: keys[FORECAST_ARTIFACT_KIND]}
+
+    changed_state = replace(
+        changed_simulation,
+        league_state=_league_state(as_of=state.as_of + timedelta(minutes=1)),
+    )
+    assert runtime._persist_context("jimmy", changed_state)
+    assert calls[-1] == {}
+
+
+def test_persist_runtime_snapshot_reuses_exact_forecast_key_without_reencoding(monkeypatch) -> None:
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    persistence = MemoryPersistence()
+
+    first_keys = persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=state,
+        selected_team_id=None,
+        forecast_evidence=forecast,
+    )
+    forecast_key = first_keys[persistence_runtime_cache.FORECAST_ARTIFACT_KIND]
+    before = len(persistence.artifacts)
+
+    def unexpected_reencode(**_kwargs):
+        raise AssertionError("an exact previously persisted Forecast was re-encoded")
+
+    monkeypatch.setattr(session_module, "forecast_artifact", unexpected_reencode)
+    reused_keys = persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=state,
+        selected_team_id=None,
+        forecast_evidence=forecast,
+        reusable_artifact_keys=first_keys,
+    )
+
+    assert reused_keys[persistence_runtime_cache.FORECAST_ARTIFACT_KIND] == forecast_key
+    assert len(persistence.artifacts) == before

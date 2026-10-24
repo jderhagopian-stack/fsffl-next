@@ -6,6 +6,7 @@ from dataclasses import replace
 from time import monotonic
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from threading import RLock
+from weakref import ReferenceType, ref
 
 from fsffl.journey_telemetry import trace_restore_stage
 
@@ -26,6 +27,10 @@ from fsffl.persistence.session import (
     restore_state_bound_raw_forecast_evidence,
 )
 from fsffl.memory_attribution import log_object_graph, sample_rss_phase
+from fsffl.persistence.runtime_cache import (
+    FORECAST_ARTIFACT_KIND,
+    SIMULATION_ARTIFACT_KIND,
+)
 from fsffl.state.history import StateSnapshotStore
 
 from .runtime import (
@@ -82,6 +87,12 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         ] = {}
         self._last_good_guard_users: set[str] = set()
         self._forecast_replay_decisions: dict[str, dict[str, object]] = {}
+        # Weak source references let same-State checkpoint stages reuse already
+        # persisted immutable Forecast/Simulation keys without retaining payloads.
+        self._checkpointed_artifact_keys: dict[
+            str,
+            tuple[str, dict[str, tuple[ReferenceType[object], object]]],
+        ] = {}
 
     def _record_forecast_replay_decision(
         self,
@@ -233,7 +244,19 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         durable = True
         if self._persistence is not None:
             try:
-                persist_runtime_snapshot(
+                reusable_keys: dict[str, object] = {}
+                sources = {
+                    FORECAST_ARTIFACT_KIND: context.forecast_evidence,
+                    SIMULATION_ARTIFACT_KIND: context.simulation_analytics,
+                }
+                with self._lock:
+                    cached = self._checkpointed_artifact_keys.get(user_id)
+                if cached is not None and cached[0] == context.league_state.state_id:
+                    for kind, source in sources.items():
+                        entry = cached[1].get(kind)
+                        if source is not None and entry is not None and entry[0]() is source:
+                            reusable_keys[kind] = entry[1]
+                persisted_keys = persist_runtime_snapshot(
                     self._persistence,
                     user_id=user_id,
                     league_state=context.league_state,
@@ -242,7 +265,24 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     simulation_analytics=context.simulation_analytics,
                     value_evidence=context.value_evidence,
                     publication_generation_id=context.publication_generation_id,
+                    reusable_artifact_keys=reusable_keys,
                 )
+                next_entries: dict[str, tuple[ReferenceType[object], object]] = {}
+                for kind, source in sources.items():
+                    key = persisted_keys.get(kind)
+                    if source is None or key is None:
+                        continue
+                    try:
+                        next_entries[kind] = (ref(source), key)
+                    except TypeError:
+                        # Non-weak-referenceable payloads remain correct; they
+                        # simply do not participate in this optimization.
+                        continue
+                with self._lock:
+                    self._checkpointed_artifact_keys[user_id] = (
+                        context.league_state.state_id,
+                        next_entries,
+                    )
             except Exception as exc:  # persistence must not break authoritative runtime
                 durable = False
                 _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
