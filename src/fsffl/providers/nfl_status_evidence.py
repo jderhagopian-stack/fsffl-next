@@ -206,6 +206,10 @@ def current_catalog_role_receipts(
     if not isinstance(catalog, Mapping):
         return {}
     players = {p.player_id: p for p in league_state.players}
+    latest_status = {}
+    for prior in sorted(NFL_ROLE_RECEIPTS, key=lambda row: row.captured_at):
+        if prior.captured_at <= as_of:
+            latest_status[prior.player_id] = prior.status
     result = {}
     for team_state in league_state.team_states:
         for entry in team_state.roster:
@@ -218,7 +222,12 @@ def current_catalog_role_receipts(
             if not isinstance(item, Mapping) or "team" not in item:
                 continue
             team = item.get("team")
-            status = "unsigned" if team is None or not str(team).strip() else "signed"
+            if team is None or not str(team).strip():
+                status = "unsigned"
+            elif latest_status.get(pid) == "unsigned":
+                status = "signed"
+            else:
+                continue
             result[pid] = NflRoleReceipt(
                 pid, player.position.value, league_state.league.season, status,
                 "https://api.sleeper.app/v1/players/nfl", captured_at,
