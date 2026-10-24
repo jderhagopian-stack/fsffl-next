@@ -189,6 +189,43 @@ def corroborated_current_role_receipts(
     return renewed
 
 
+def current_catalog_role_receipts(
+    league_state, *, as_of: datetime, captured_at: datetime,
+    catalog: dict | object,
+) -> dict[str, NflRoleReceipt]:
+    """Treat an explicit empty team in a successful current catalog as unsigned.
+
+    A missing catalog row/field is unknown, not unsigned. The catalog is only
+    admitted from producer-owned refresh and the exact State roster identity.
+    """
+    from collections.abc import Mapping
+    if as_of.tzinfo is None or captured_at.tzinfo is None:
+        raise ValueError("current role times must be timezone-aware")
+    if captured_at > as_of or as_of >= captured_at + timedelta(hours=6):
+        return {}
+    if not isinstance(catalog, Mapping):
+        return {}
+    players = {p.player_id: p for p in league_state.players}
+    result = {}
+    for team_state in league_state.team_states:
+        for entry in team_state.roster:
+            pid = entry.player_id
+            player = players.get(pid)
+            if player is None or player.position.value not in {"QB", "RB", "WR", "TE"}:
+                continue
+            external_id = pid.rsplit(":", 1)[-1]
+            item = catalog.get(external_id)
+            if not isinstance(item, Mapping) or "team" not in item:
+                continue
+            team = item.get("team")
+            status = "unsigned" if team is None or not str(team).strip() else "signed"
+            result[pid] = NflRoleReceipt(
+                pid, player.position.value, league_state.league.season, status,
+                "https://api.sleeper.app/v1/players/nfl", captured_at,
+            )
+    return result
+
+
 def acquire_official_reserve_role_receipts(
     league_state, *, evaluation_cutoff: datetime,
     fetcher=None, allow_current_capture: bool = False,
