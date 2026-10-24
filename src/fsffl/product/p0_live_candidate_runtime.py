@@ -200,6 +200,10 @@ class StatusBasedZeroRosEvidence:
 
 
 STATUS_BASED_YEAR_ONE_SCORING_VERSION = "status-y1-v2:verified-whole-season-no-residual"
+UNSIGNED_YTD_POLICY_VERSION = "career-ytd-only-v2:universal-catalog-team-null-20261024"
+UNSIGNED_YTD_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=UTC)
+IR_NO_PROJECTION_POLICY_VERSION = "career-ytd-only-v2:exact-state-ir-no-projection-20261024"
+IR_NO_PROJECTION_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=UTC)
 
 
 def recorded_status_based_zero_ros_evidence(
@@ -266,12 +270,24 @@ def recorded_ytd_only_year_one_evidence(
         roles.update(verified_roles)
     if as_of < YTD_ONLY_POLICY_APPROVED_AT:
         return {}
-    return {pid: YtdOnlyYearOneEvidence(
-        player_id=pid, season=row.season, source=row.source_url,
-        source_version=f"{YTD_ONLY_POLICY_VERSION}:{row.fingerprint}",
-        observed_at=max(row.captured_at, YTD_ONLY_POLICY_APPROVED_AT),
-    ) for pid, row in roles.items()
-        if row.status == "unsigned" or YTD_ONLY_APPROVED_ROLES.get(pid) == row.status}
+    result = {}
+    for pid, row in roles.items():
+        if row.status == "unsigned" and YTD_ONLY_APPROVED_ROLES.get(pid) == row.status:
+            version, approved_at = YTD_ONLY_POLICY_VERSION, YTD_ONLY_POLICY_APPROVED_AT
+        elif row.status == "unsigned":
+            if as_of < UNSIGNED_YTD_POLICY_APPROVED_AT:
+                continue
+            version, approved_at = UNSIGNED_YTD_POLICY_VERSION, UNSIGNED_YTD_POLICY_APPROVED_AT
+        elif YTD_ONLY_APPROVED_ROLES.get(pid) == row.status:
+            version, approved_at = YTD_ONLY_POLICY_VERSION, YTD_ONLY_POLICY_APPROVED_AT
+        else:
+            continue
+        result[pid] = YtdOnlyYearOneEvidence(
+            player_id=pid, season=row.season, source=row.source_url,
+            source_version=f"{version}:{row.fingerprint}",
+            observed_at=max(row.captured_at, approved_at),
+        )
+    return result
 
 
 def recorded_ir_no_projection_year_one_evidence(
@@ -279,7 +295,7 @@ def recorded_ir_no_projection_year_one_evidence(
     available_projection_rows: tuple[object, ...],
 ) -> YtdOnlyYearOneEvidence | None:
     """Use the exact-State IR slot as low-confidence zero-ROS evidence only when no projection exists."""
-    if as_of.tzinfo is None:
+    if as_of.tzinfo is None or as_of < IR_NO_PROJECTION_POLICY_APPROVED_AT:
         return None
     if any(row.player_id == player_id for row in available_projection_rows):
         return None
@@ -293,7 +309,7 @@ def recorded_ir_no_projection_year_one_evidence(
     return YtdOnlyYearOneEvidence(
         player_id=player_id, season=league_state.league.season,
         source="fsffl:exact-state-ir-no-projection",
-        source_version=f"ir-zero-ros-v1:{league_state.as_of.isoformat()}",
+        source_version=f"{IR_NO_PROJECTION_POLICY_VERSION}:{league_state.as_of.isoformat()}",
         observed_at=as_of,
     )
 
