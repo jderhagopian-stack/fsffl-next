@@ -470,8 +470,12 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
     monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: None)
     calls = []
+    future_owner_refs = []
     def base_future(**kwargs):
         assert tuple(kwargs["raw_forecasts"]) == tuple(evidence.raw_forecasts)
+        assert future_owner_refs[-1]() is None, (
+            "full dynamic future contract still retained while building base future"
+        )
         calls.append('future')
         return SimpleNamespace(player_ids=(base_year_one.player_id,))
     def merge(**kwargs):
@@ -483,6 +487,13 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         'over-limit final composition must not start'))
     def complete_components(*args):
         return bridge.DynamicCareerComponents({candidate_id: ()}, {candidate_id: object()}, {})
+    def fresh_candidate(*args, **kwargs):
+        fresh_future = build_p0_future_forecast_contract(
+            league_state=state, raw_forecasts=raw, league_year_one=(candidate_y1,),
+            candidate_source_rows={candidate_id: dynamic_row},
+        )
+        future_owner_refs.append(ref(fresh_future))
+        return replace(candidate, future=fresh_future)
     for index, label, expected in (
         (4, 'career-foundation4-complete', []),
         (5, 'career-before-expanded-shapley', ['future']),
@@ -494,8 +505,9 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         with pytest.raises(MemoryError, match=f'hard memory limit reached before {label}'):
             bridge.build_dynamic_rostered_career_contract(
                 context, SimpleNamespace(), current_intrinsic_loader=base_loader,
-                candidate_builder=lambda *a, **kw: candidate, materializer=complete_components,
+                candidate_builder=fresh_candidate, materializer=complete_components,
             )
+        assert future_owner_refs[-1]() is None
         assert calls == expected
 
 
