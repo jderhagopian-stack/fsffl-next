@@ -1,6 +1,8 @@
-from types import SimpleNamespace
-from pathlib import Path
+import gc
 import runpy
+import weakref
+from pathlib import Path
+from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 import pytest
@@ -64,3 +66,34 @@ def test_lazy_horizon_history_preserves_rows_dtypes_missing_values_and_matrix(tm
     wanted=bounded_feature_matrix(oracle['matrix'],oracle['CATEGORICAL'],expected.loc[predicate,expected.columns.intersection(list(columns))],evaluation,features,architecture)
     result=bounded_feature_matrix(oracle['matrix'],oracle['CATEGORICAL'],projected.loc[predicate,projected.columns],evaluation,features,architecture)
     np.testing.assert_array_equal(result[0],wanted[0]);np.testing.assert_array_equal(result[1],wanted[1])
+
+
+def test_staged_history_expands_after_wide_base_is_released(tmp_path):
+    base = pd.DataFrame({
+        'player_id': ['p1', 'p2'],
+        'base_season': pd.array([2023, 2024], dtype='Int64'),
+        'position': pd.Categorical(['QB', 'RB']),
+        'feature': [1.25, 2.5],
+    })
+    raw = pd.DataFrame({
+        'player_id': ['p1', 'p2'],
+        'season': [2025, 2025],
+        'fantasy_target': [100.0, 80.0],
+    })
+    expected = accepted_long(base, raw)
+    base_ref = weakref.ref(base)
+    staged = BoundedHorizonHistory.stage_base(base, tmp_path)
+    del base
+    gc.collect()
+
+    class Dev:
+        def build_long(self, keys, history):
+            assert base_ref() is None
+            return accepted_long(keys, history)
+
+    panel = BoundedHorizonHistory.from_staged(
+        Dev(), staged, raw,
+        columns={'player_id', 'base_season', 'position', 'feature', 'horizon', 'target_season', 'actual'},
+    )
+    projected = expected.loc[:, panel.columns]
+    pd.testing.assert_frame_equal(panel.loc[:, panel.columns].materialize(), projected)
