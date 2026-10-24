@@ -479,8 +479,24 @@ def build_dynamic_rostered_career_contract(
     if not complete:
         return result(contract=None, failures=failures)
 
-    # The large future scenario graph is needed only for downstream Shapley.
-    # Do not keep it resident alongside Foundation 4's fit workspaces.
+    # The candidate future scenario graph is needed only for downstream
+    # Shapley. Retain rows only for candidates with complete Foundation 4
+    # components, then drop references to the full graph before constructing
+    # the separate baseline future contract. This preserves every accepted
+    # candidate input while preventing two full future contracts from
+    # overlapping during expanded-cohort composition.
+    candidate_future = future.contract.model_copy(
+        update={
+            "forecasts": tuple(
+                row for row in future.contract.forecasts if row.player_id in complete
+            )
+        }
+    )
+    future = replace(future, contract=candidate_future)
+    live = replace(live, future=future)
+    del future_rows
+
+    # Build the baseline only after releasing incomplete candidate horizons.
     _reclaim_career_stage("career-foundation4-complete")
     base_future = current_intrinsic_loader._resolve_future_contract(
         league_state=state,
@@ -494,13 +510,6 @@ def build_dynamic_rostered_career_contract(
     # Shapley cohort. This keeps the wide materializer's RSS bounded and means
     # candidates missing later Career inputs never perturb another player's
     # full-cohort Shapley calculation.
-    candidate_future = future.contract.model_copy(
-        update={
-            "forecasts": tuple(
-                row for row in future.contract.forecasts if row.player_id in complete
-            )
-        }
-    )
     composition_candidate = replace(
         live,
         candidate_ids=tuple(sorted(complete)),
