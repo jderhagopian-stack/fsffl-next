@@ -505,7 +505,9 @@ def persist_runtime_snapshot(
             result=value_evidence,
         )
         store.put_artifact(value_record)
-        persisted_keys[VALUE_ARTIFACT_KIND] = value_record.key
+        value_key = getattr(value_record, "key", None)
+        if value_key is not None:
+            persisted_keys[VALUE_ARTIFACT_KIND] = value_key
         if publish_context:
             # Preserve the exact legacy estimate identity, lineage, timestamp,
             # ordering and publish-context gate. The hosted adapter batches;
