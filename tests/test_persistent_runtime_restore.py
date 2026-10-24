@@ -3985,7 +3985,7 @@ def test_runtime_checkpoint_reuses_only_same_state_weakly_owned_artifacts(monkey
     }
     calls = []
 
-    def persist_snapshot(*, reusable_artifact_keys, **_kwargs):
+    def persist_snapshot(_store, *, reusable_artifact_keys, **_kwargs):
         calls.append(dict(reusable_artifact_keys))
         return keys
 
