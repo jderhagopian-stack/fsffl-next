@@ -140,9 +140,18 @@ def attach_career_player_lenses(payload: dict, *, record, current_state_id: str,
         current_generation_id if served_generation is None else served_generation
     )
     result = {**payload, "career_intrinsic": summary}
-    three_year_ready = bool(
-        summary.get("status") == "ready" and three_year_rows
+    # 3-Year readiness comes from validated Y1-Y3 evidence for this exact
+    # Career artifact/publication. Career's display ruler is an independent
+    # presentation coordinate; an unavailable ruler must not hide valid
+    # 3-Year scores.
+    three_year_authority_matches = bool(
+        record is not None
+        and getattr(record.status, "value", None) == "completed"
+        and record.contract is not None
+        and record.league_state_id == served
+        and generation_matches
     )
+    three_year_ready = bool(three_year_authority_matches and three_year_rows)
     three_year_rows = three_year_rows or {}
     if "fsffl_intrinsic" in result:
         intrinsic = dict(result["fsffl_intrinsic"])
@@ -152,7 +161,10 @@ def attach_career_player_lenses(payload: dict, *, record, current_state_id: str,
             "source": "career_current_y1_y3_components" if three_year_ready else None,
             "player_count": len(three_year_rows) if three_year_ready else 0,
             "source_state_id": served if three_year_ready else None,
-            "source_input_fingerprint": summary.get("dependency_fingerprint") if three_year_ready else None,
+            "source_input_fingerprint": (
+                getattr(record, "intrinsic_input_fingerprint", None)
+                if three_year_ready else None
+            ),
             "publication_generation_id": (
                 current_generation_id if served_generation is None else served_generation
             ) if three_year_ready else None,
