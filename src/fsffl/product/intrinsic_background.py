@@ -20,6 +20,16 @@ IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContrac
 ForecastCoordinateResolver = Callable[[UserRuntimeContext], str]
 IntrinsicInputFingerprintResolver = Callable[[UserRuntimeContext], str]
 IntrinsicOwnershipValidator = Callable[[UserRuntimeContext], bool]
+
+
+def _contract_player_ids(contract: ShapleyIntrinsicContract) -> frozenset[str]:
+    """Retain only the small player-identity summary needed by presentation reads."""
+    return frozenset(
+        player_id
+        for estimate in contract.estimates
+        if isinstance((player_id := getattr(estimate, "player_id", None)), str)
+        and player_id
+    )
 DEFAULT_INTRINSIC_RESPONSE_BUDGET_SECONDS = 30.0
 # The hard watchdog is deliberately a distinct operational guard, not a browser
 # response timeout.  Ten minutes is 20x the response budget and comfortably above
@@ -53,6 +63,7 @@ class IntrinsicBuildRecord:
     contract: ShapleyIntrinsicContract | None = None
     contract_ref: ReferenceType[ShapleyIntrinsicContract] | None = None
     error: str | None = None
+    active_player_ids: frozenset[str] | None = None
 
 
 class ShapleyIntrinsicBackgroundCoordinator:
@@ -207,6 +218,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
             created_at=now,
             updated_at=now,
             contract=contract,
+            active_player_ids=_contract_player_ids(contract),
         )
         with self._lock:
             if self._user_epochs.get(context.user_id, 0) != expected_epoch:
@@ -449,6 +461,11 @@ class ShapleyIntrinsicBackgroundCoordinator:
                 contract=contract,
                 error=error,
                 updated_at=datetime.now(UTC),
+                active_player_ids=(
+                    _contract_player_ids(contract)
+                    if status == IntrinsicBuildStatus.COMPLETED and contract is not None
+                    else current.active_player_ids
+                ),
             )
             self._records[key] = updated
             return updated
@@ -621,6 +638,32 @@ class ShapleyIntrinsicBackgroundCoordinator:
             record = matches[0]
             return (record if record.status == IntrinsicBuildStatus.COMPLETED
                     and record.contract is not None else None)
+
+    def completed_player_ids_for_state(
+        self, context: UserRuntimeContext
+    ) -> frozenset[str] | None:
+        """Read a bounded Current cohort summary without restoring its contract.
+
+        The summary is captured when a completed contract is built or restored,
+        then retained under the same bounded lifecycle record limit after the
+        full contract owner is released. This never invokes the loader or
+        deserializes the Current artifact.
+        """
+        if context.league_state is None:
+            return None
+        state_id = context.league_state.state_id
+        league_id = context.league_state.league.league_id
+        with self._lock:
+            matches = [record for key, record in self._records.items()
+                       if key[0] == context.user_id and key[1] == league_id
+                       and record.league_state_id == state_id]
+            if len(matches) != 1:
+                return None
+            record = matches[0]
+            if (record.status != IntrinsicBuildStatus.COMPLETED
+                    or record.active_player_ids is None):
+                return None
+            return record.active_player_ids
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
         context = self._pin_build_context(context)
