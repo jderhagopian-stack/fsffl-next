@@ -177,7 +177,7 @@ def attach_career_player_lenses(payload: dict, *, record, current_state_id: str,
     attached = []
     for row in payload.get("players", ()):
         player_id = row["player_id"]
-        three_year = three_year_rows.get(player_id)
+        three_year = three_year_rows.get(player_id) if three_year_ready else None
         # A Current-only Shapley score must never be presented under the
         # 3-Year label when Career's exact-publication components are missing.
         updated = {
