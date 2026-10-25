@@ -22,10 +22,12 @@ The Franchise `/api/league/value-lenses` response labeled the Current Shapley pe
 
 Local focused validation passed:
 
-- Career presentation, league value lens, and Dynasty 3-Year ranking tests.
+- Career presentation, league value lens, and Dynasty 3-Year ranking tests (104 affected route, presentation, continuity, lifecycle, and lens regressions passed together).
 - Route-level regression verifies the Franchise route calls the canonical 3-Year builder and publishes its exact source fingerprint.
 - Product-consumer regressions for player intelligence, Franchise, League comparison, Trade Center, market, and Career presentation.
 - `git diff --check`.
+
+The draft PR's first exact-head CI run was canceled at its 20-minute job limit while running a 430-test broad regression bundle; the log showed no test failure before cancellation. The PR-head CI now runs the changed Franchise/Career presentation, route, publication continuity, and relevant Career lifecycle suites. The repository's exact-head Stable full suite remains the complete regression and merge gate.
 
 The full stable suite, exact-head review, merge, and deployment evidence belong in this checkpoint before production acceptance is claimed. No hosted refresh, database change, Render configuration change, or paid infrastructure change is part of this correction.
 
