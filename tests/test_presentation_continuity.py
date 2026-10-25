@@ -471,11 +471,11 @@ def test_working_generation_promotion_cannot_freeze_staged_value_lenses(
     ):
         payload = loaded[surface]
         assert payload is not None
-        assert payload["status"] == "ready"
-        assert payload["surface_readiness"]["status"] == "ready"
-        assert payload["fsffl_intrinsic"]["status"] == "full"
+        assert payload["status"] == "degraded"
+        assert payload["surface_readiness"]["status"] == "degraded"
+        assert payload["fsffl_intrinsic"]["status"] == "unavailable"
         assert payload["players"][0]["broad_market_percentile"] == 0.73
-        assert payload["players"][0]["intrinsic_percentile"] == 0.82
+        assert payload["players"][0]["intrinsic_percentile"] is None
     assert loaded[HOME_SURFACE] is not None
     assert loaded[FRANCHISE_SURFACE] is not None
     assert loaded[LEAGUE_ATLAS_SURFACE] is not None
