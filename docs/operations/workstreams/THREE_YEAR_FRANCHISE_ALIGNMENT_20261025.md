@@ -12,6 +12,7 @@ The Franchise `/api/league/value-lenses` response labeled the Current Shapley pe
 
 - The Franchise value-lens route now uses the same `build_three_year_intrinsic_player_values` builder as the 3-Year rankings.
 - The route no longer asks the separate Current Shapley coordinator to build or restore a Current-only score for this 3-Year view. Other Current Shapley consumers keep their existing owner.
+- The first-load response remains staged with its existing empty player list and readiness metadata; it still performs no Current or Career build from the page read.
 - It ranks that builder's exact candidate set with the existing percentile-rank rule and maps percentiles through the existing native-market display coordinate.
 - Each 3-Year response carries source, exact State, Career input fingerprint, and publication-generation identity.
 - If the completed Career artifact is missing, stale, generation-mismatched, or does not satisfy the accepted Y1–Y3 coverage contract, Franchise clears the 3-Year score fields and reports the lens unavailable. A Current-only score is never shown under the 3-Year label.
