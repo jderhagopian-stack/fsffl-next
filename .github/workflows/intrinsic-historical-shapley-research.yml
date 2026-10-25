@@ -1,0 +1,60 @@
+name: Intrinsic Historical Shapley Research (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_artifact_run_id:
+        description: "Existing GitHub Actions run ID containing authorized historical CSV artifact"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: intrinsic-historical-replay-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    if: github.repository == 'jderhagopian-stack/fsffl-next' && github.ref == 'refs/heads/research/unified-intrinsic-magnitude-shadow-20261017'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Retrieve explicitly approved historical input artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.input_artifact_run_id }}
+        run: |
+          test "$SOURCE_RUN" != ""
+          mkdir -p input evidence
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --name intrinsic-historical-panel-authorized --dir input
+          test -s input/player_season_panel.csv
+      - name: Run production engine, two league formats
+        run: |
+          python scripts/replay_historical_production_shapley.py input/player_season_panel.csv evidence/superflex.json --permutations 2048
+          python scripts/replay_historical_production_shapley.py input/player_season_panel.csv evidence/single_qb.json --permutations 2048 --single-qb
+      - name: Save provenance
+        run: |
+          sha256sum input/player_season_panel.csv > evidence/input_sha256.txt
+          printf '%s\n' "$GITHUB_SHA" > evidence/repository_commit.txt
+      - name: Publish evidence artifact (no deployment)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intrinsic-historical-production-replay-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30
