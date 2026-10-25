@@ -2081,6 +2081,10 @@ def test_restart_coordinator_restores_persisted_semantic_intrinsic_without_shapl
     assert restored.contract == built
     assert restored.league_state_id == advanced.state_id
     assert coordinator.current(advanced_context) == restored
+    active_player_ids = frozenset(row.player_id for row in built.estimates)
+    assert coordinator.completed_player_ids_for_state(advanced_context) == active_player_ids
+    assert coordinator.release_completed_contract(advanced_context, restored.contract)
+    assert coordinator.completed_player_ids_for_state(advanced_context) == active_player_ids
     assert len(store.records) == 1
     # The future contract is resolved to prove semantic compatibility, but the
     # persisted Shapley artifact is reused instead of another 2,048-permutation build.
