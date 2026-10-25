@@ -194,9 +194,20 @@ def test_value_lens_route_uses_canonical_three_year_builder(monkeypatch):
             return percentile * 10000
     monkeypatch.setattr(routes, 'build_value_presentation_coordinate', lambda *_: Coordinate())
     app = FastAPI()
+    coordinator = SimpleNamespace(
+        current=lambda *_: (_ for _ in ()).throw(
+            AssertionError('3-Year value-lens reads must not query Current Shapley')
+        ),
+        request=lambda *_: (_ for _ in ()).throw(
+            AssertionError('3-Year value-lens reads must not start Current Shapley')
+        ),
+    )
     routes.install_league_value_lens_routes(
         app, runtime_store=SimpleNamespace(get=lambda _: runtime),
-        contract_loader=lambda _: object(), require_user=lambda: 'fixture',
+        contract_loader=lambda _: (_ for _ in ()).throw(
+            AssertionError('3-Year value-lens reads must not load Current Shapley')
+        ), require_user=lambda: 'fixture',
+        background_coordinator=coordinator,
         career_record_loader=lambda _: record,
         career_publication_validator=lambda *_: True,
     )
@@ -207,3 +218,4 @@ def test_value_lens_route_uses_canonical_three_year_builder(monkeypatch):
     assert [row['intrinsic_value_index'] for row in result['players']] == [2500., 7500.]
     assert [row['three_year_raw_intrinsic_value'] for row in result['players']] == [5., 15.]
     assert result['fsffl_intrinsic']['source_input_fingerprint'] == 'career-fp'
+    assert result['intrinsic_execution']['status'] == 'career_artifact_read'

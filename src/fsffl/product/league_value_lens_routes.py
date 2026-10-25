@@ -8,12 +8,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fsffl.analytics.dynasty_position_room import build_three_year_intrinsic_player_values
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
 
-from .intrinsic_background import (
-    IntrinsicBuildStatus,
-    ShapleyIntrinsicBackgroundCoordinator,
-    intrinsic_failure_payload,
-    intrinsic_loading_payload,
-)
+from .intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
 from .league_value_lenses import (
     BROAD_MARKET_SCALE_ID,
     INTRINSIC_PRESENTATION_COORDINATE,
@@ -21,7 +16,7 @@ from .league_value_lenses import (
     build_league_value_lenses,
 )
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
-from .career_presentation import attach_career_player_lenses, career_reference_ids_from_current
+from .career_presentation import attach_career_player_lenses
 from .value_lens_evidence import percentile_ranks
 from .value_presentation import build_value_presentation_coordinate
 
@@ -53,8 +48,6 @@ def install_league_value_lens_routes(
                     and runtime.publication_generation_id is not None
                     and runtime.forecast_evidence is not None
                     and served == runtime.league_state.state_id)
-        reference_ids = (career_reference_ids_from_current(background_coordinator.current(runtime))
-                         if can_read and background_coordinator is not None else None)
         career_record = career_record_loader(runtime) if can_read else None
         if (career_record is not None and career_publication_validator is not None
                 and not career_publication_validator(runtime, career_record)):
@@ -121,7 +114,7 @@ def install_league_value_lens_routes(
             record=career_record,
             current_state_id=runtime.league_state.state_id,
             current_generation_id=runtime.publication_generation_id,
-            reference_ids=reference_ids,
+            reference_ids=None,
             three_year_rows=three_year_rows,
             three_year_reason=three_year_reason,
         )
@@ -132,9 +125,28 @@ def install_league_value_lens_routes(
             if not three_year_rows:
                 missing.insert(0, "fsffl_intrinsic_all_player")
             readiness["missing_optional"] = missing
-            if readiness.get("status") == "ready" and missing:
-                readiness["status"] = "degraded"
+            if readiness.get("status") in {"ready", "degraded"}:
+                readiness["status"] = "ready" if not missing else "degraded"
             result["surface_readiness"] = readiness
+        if result.get("broad_market", {}).get("status") == "ready":
+            coordinate_ready = result.get("value_presentation", {}).get("status") == "ready"
+            result["status"] = "ready" if three_year_rows and coordinate_ready else "degraded"
+        execution = result.get("intrinsic_execution")
+        if isinstance(execution, dict) and execution.get("status") != "staged":
+            execution.update({
+                "status": "career_artifact_read" if three_year_rows else "career_unavailable",
+                "league_state_id": runtime.league_state.state_id,
+                "forecast_coordinate": None,
+                "response_budget_exceeded": False,
+                "started_at": None,
+                "updated_at": None,
+                "error": None if three_year_rows else three_year_reason,
+                "source_input_fingerprint": (
+                    career_record.intrinsic_input_fingerprint
+                    if three_year_rows and career_record is not None else None
+                ),
+            })
+            result["intrinsic_execution"] = execution
         if served == runtime.league_state.state_id and generation is None and not persisted:
             result["publication_generation_id"] = runtime.publication_generation_id
         return result
@@ -165,224 +177,55 @@ def install_league_value_lens_routes(
             if stale is not None:
                 return with_career(stale, runtime, persisted=True)
 
-        intrinsic = None
-        intrinsic_error = None
-        intrinsic_record = None
-        if background_coordinator is not None:
-            # Decide staging entirely from cheap runtime identity before touching the
-            # Intrinsic coordinator. current(runtime) resolves the production input
-            # fingerprint and may materialize future-Forecast inputs, so even a
-            # nominal lookup belongs after the first-load gate.
-            first_load_staging = bool(
-                runtime.publication_generation_id is None
-                and (
-                    runtime.selected_team_id is None
-                    or runtime.forecast_evidence is None
-                )
-            )
-            if first_load_staging:
-                state = runtime.league_state
-                player_universe = "all_players" if universe == "all" else "rostered_players"
-                payload = {
-                    "status": "loading",
-                    "contract_version": LEAGUE_VALUE_LENS_CONTRACT_VERSION,
-                    "league_state_id": state.state_id,
-                    "broad_market": {
-                        "status": "building",
-                        "scale_id": BROAD_MARKET_SCALE_ID,
-                        "player_count": 0,
-                        "universe": player_universe,
-                        "team_total_authority": False,
-                        "reason": (
-                            "First-load value-lens materialization is staged until "
-                            "the current core intelligence generation publishes."
-                        ),
-                    },
-                    "fsffl_intrinsic": {
-                        "authority_family": "canonical_shapley_intrinsic",
-                        "status": "building",
-                        "contract_version": None,
-                        "quantity_semantics": None,
-                        "display_coordinate": INTRINSIC_PRESENTATION_COORDINATE,
-                        "player_count": 0,
-                        "team_total_authority": False,
-                        "reason": (
-                            "Governed FSFFL Intrinsic is staged behind current core "
-                            "intelligence enrichment."
-                        ),
-                        "retry_after_ms": 1500,
-                        "build_status": "staged",
-                    },
-                    "value_presentation": {
-                        "status": "building",
-                        "reason": "Value presentation is staged behind current core enrichment.",
-                        "presentation_only": True,
-                    },
-                    "players": [],
-                    "all_player_forecast": {
-                        "status": "building",
-                        "horizon": "season",
-                        "metric": "fantasy_points",
-                        "covered_players": 0,
-                        "requested_players": 0,
-                        "evidence_basis": None,
-                        "reason": "Current governed Forecast enrichment is still running.",
-                    },
-                    "player_universe": player_universe,
-                    "teams": [
-                        {
-                            "team_id": team.team_id,
-                            "team_name": team.display_name,
-                            "rostered_player_count": 0,
-                            "broad_market_covered_players": 0,
-                            "intrinsic_covered_players": 0,
-                            "comparable_players": 0,
-                            "player_ids": [],
-                        }
-                        for team in sorted(state.teams, key=lambda item: item.team_id)
-                    ],
-                    "authority": {
-                        "canonical_fsffl_intrinsic_authority": "shapley_intrinsic",
-                        "broad_market_and_intrinsic_are_distinct_lenses": True,
-                        "comparison_coordinate": INTRINSIC_PRESENTATION_COORDINATE,
-                        "shared_value_index_presentation_only": False,
-                        "raw_value_subtraction_used": False,
-                        "display_value_index_subtraction_allowed": False,
-                        "team_value_total_created": False,
-                        "team_value_rank_created": False,
-                        "league_market_value_available": False,
-                        "team_utility_included": False,
-                        "fsffl_cardinal_value_included": False,
-                        "recommendation_authority": False,
-                        "acceptance_probability": None,
-                    },
-                    "surface_readiness": {
-                        "surface": "player_board",
-                        "status": "building_optional",
-                        "required_dependencies": ["canonical_state", "broad_market_value"],
-                        "optional_dependencies": [
-                            "fsffl_intrinsic_all_player",
-                            "all_player_season_forecast",
-                        ],
-                        "blockers": [],
-                        "missing_optional": [
-                            "fsffl_intrinsic_all_player",
-                            "all_player_season_forecast_partial",
-                        ],
-                        "league_state_id": state.state_id,
-                        "retry_after_ms": 1500,
-                    },
-                    "intrinsic_execution": {
-                        "status": "staged",
-                        "league_state_id": state.state_id,
-                        "forecast_coordinate": None,
-                        "response_budget_exceeded": False,
-                        "started_at": None,
-                        "updated_at": None,
-                        "error": None,
-                    },
-                }
-                _logger.info(
-                    "FSFFL Market value lenses staged first-load materialization universe=%s state=%s",
-                    universe,
-                    state.state_id,
-                )
-                return with_career(payload, runtime)
-            record = background_coordinator.current(runtime)
-            if record is None:
-                record = background_coordinator.request(runtime)
-            intrinsic_record = record
-            if record.status in {
-                IntrinsicBuildStatus.QUEUED,
-                IntrinsicBuildStatus.RUNNING,
-            }:
-                loading = intrinsic_loading_payload(record)
-                payload = build_league_value_lenses(
-                    runtime,
-                    None,
-                    intrinsic_error=(
-                        "Governed FSFFL Intrinsic is preparing server-side. "
-                        "Broad Market remains independently usable."
-                    ),
-                    include_unrostered=universe == "all",
-                )
-                payload["status"] = (
-                    "degraded"
-                    if payload.get("broad_market", {}).get("status") == "ready"
-                    else "building"
-                )
-                payload["fsffl_intrinsic"] = {
-                    **dict(payload.get("fsffl_intrinsic") or {}),
-                    "status": "building",
-                    "reason": loading["message"],
-                    "retry_after_ms": loading.get("retry_after_ms"),
-                    "build_status": loading.get("build_status"),
-                }
-                forecast_status = str(
-                    (payload.get("all_player_forecast") or {}).get("status")
-                    or "unavailable"
-                )
-                payload["surface_readiness"] = {
-                    "surface": "player_board",
-                    "status": "building_optional",
+        first_load_staging = bool(
+            runtime.publication_generation_id is None
+            and (runtime.selected_team_id is None or runtime.forecast_evidence is None)
+        )
+        if first_load_staging:
+            state = runtime.league_state
+            player_universe = "all_players" if universe == "all" else "rostered_players"
+            payload = {
+                "status": "loading",
+                "contract_version": LEAGUE_VALUE_LENS_CONTRACT_VERSION,
+                "league_state_id": state.state_id,
+                "broad_market": {
+                    "status": "building", "scale_id": BROAD_MARKET_SCALE_ID,
+                    "player_count": 0, "universe": player_universe,
+                    "team_total_authority": False,
+                },
+                "fsffl_intrinsic": {
+                    "authority_family": "canonical_shapley_intrinsic",
+                    "status": "building", "display_coordinate": INTRINSIC_PRESENTATION_COORDINATE,
+                    "player_count": 0, "team_total_authority": False,
+                    "retry_after_ms": 1500, "build_status": "staged",
+                },
+                "players": [], "player_universe": player_universe,
+                "surface_readiness": {
+                    "surface": "player_board", "status": "building_optional",
                     "required_dependencies": ["canonical_state", "broad_market_value"],
                     "optional_dependencies": [
-                        "fsffl_intrinsic_all_player",
-                        "all_player_season_forecast",
+                        "fsffl_intrinsic_all_player", "all_player_season_forecast",
                     ],
                     "blockers": [],
                     "missing_optional": [
-                        "fsffl_intrinsic_all_player",
-                        *(
-                            []
-                            if forecast_status == "ready"
-                            else ["all_player_season_forecast_partial"]
-                        ),
+                        "fsffl_intrinsic_all_player", "all_player_season_forecast_partial",
                     ],
-                    "league_state_id": runtime.league_state.state_id,
-                    "retry_after_ms": loading.get("retry_after_ms"),
-                }
-                payload["intrinsic_execution"] = {
-                    "status": record.status.value,
-                    "league_state_id": record.league_state_id,
-                    "forecast_coordinate": record.forecast_coordinate,
-                    "response_budget_exceeded": record.response_budget_exceeded,
-                    "started_at": record.created_at.isoformat(),
-                    "updated_at": record.updated_at.isoformat(),
-                    "error": record.error,
-                }
-                _logger.info(
-                    "FSFFL Market value lenses universe=%s state=%s forecast_status=%s "
-                    "forecast_covered=%s/%s intrinsic_status=%s intrinsic_build=%s coordinate=%s",
-                    universe,
-                    runtime.league_state.state_id,
-                    forecast_status,
-                    (payload.get("all_player_forecast") or {}).get("covered_players"),
-                    (payload.get("all_player_forecast") or {}).get("requested_players"),
-                    (payload.get("fsffl_intrinsic") or {}).get("status"),
-                    record.status.value,
-                    record.forecast_coordinate,
-                )
-                return with_career(payload, runtime)
-            if record.status == IntrinsicBuildStatus.FAILED:
-                intrinsic_error = str(intrinsic_failure_payload(record)["message"])
-            else:
-                intrinsic = record.contract
-        else:
-            try:
-                intrinsic = contract_loader(runtime)
-            except Exception as exc:
-                # Broad Market remains independently usable. A failure in the Intrinsic
-                # coordinate must not silently replace it or suppress the Market lens.
-                intrinsic_error = (
-                    "Governed FSFFL Intrinsic unavailable: "
-                    f"{type(exc).__name__}: {exc}"
-                )
+                    "league_state_id": state.state_id, "retry_after_ms": 1500,
+                },
+                "intrinsic_execution": {
+                    "status": "staged", "league_state_id": state.state_id,
+                    "forecast_coordinate": None, "response_budget_exceeded": False,
+                    "started_at": None, "updated_at": None, "error": None,
+                },
+            }
+            return with_career(payload, runtime)
 
+        # This endpoint presents 3-Year Intrinsic. Career's published artifact
+        # already owns its Current Y1-Y3 inputs, so reading the lens must not
+        # start a competing Current Shapley build or contract restore.
         payload = build_league_value_lenses(
             runtime,
-            intrinsic,
-            intrinsic_error=intrinsic_error,
+            None,
             include_unrostered=universe == "all",
         )
         broad_ready = payload.get("broad_market", {}).get("status") == "ready"
@@ -417,27 +260,15 @@ def install_league_value_lens_routes(
             "league_state_id": runtime.league_state.state_id,
             "retry_after_ms": None,
         }
-        payload["intrinsic_execution"] = (
-            {
-                "status": intrinsic_record.status.value,
-                "league_state_id": intrinsic_record.league_state_id,
-                "forecast_coordinate": intrinsic_record.forecast_coordinate,
-                "response_budget_exceeded": intrinsic_record.response_budget_exceeded,
-                "started_at": intrinsic_record.created_at.isoformat(),
-                "updated_at": intrinsic_record.updated_at.isoformat(),
-                "error": intrinsic_record.error,
-            }
-            if intrinsic_record is not None
-            else {
-                "status": "synchronous",
-                "league_state_id": runtime.league_state.state_id,
-                "forecast_coordinate": getattr(intrinsic, "forecast_model_version", None),
-                "response_budget_exceeded": False,
-                "started_at": None,
-                "updated_at": None,
-                "error": intrinsic_error,
-            }
-        )
+        payload["intrinsic_execution"] = {
+            "status": "career_artifact_read",
+            "league_state_id": runtime.league_state.state_id,
+            "forecast_coordinate": None,
+            "response_budget_exceeded": False,
+            "started_at": None,
+            "updated_at": None,
+            "error": None,
+        }
         _logger.info(
             "FSFFL Market value lenses universe=%s state=%s forecast_status=%s "
             "forecast_covered=%s/%s intrinsic_status=%s intrinsic_build=%s coordinate=%s reason=%s",
