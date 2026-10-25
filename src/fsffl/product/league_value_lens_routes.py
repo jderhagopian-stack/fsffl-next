@@ -54,11 +54,13 @@ def install_league_value_lens_routes(
             career_record = None
         three_year_rows = {}
         three_year_reason = None
-        if career_record is not None and career_record.league_state_id == served:
+        career_state_id = getattr(career_record, "league_state_id", None)
+        career_contract = getattr(career_record, "contract", None)
+        if career_record is not None and career_state_id == served and career_contract is not None:
             player_values = build_three_year_intrinsic_player_values(
                 runtime.league_state,
-                career_forward=career_record.contract,
-                career_evidence_state_id=career_record.league_state_id,
+                career_forward=career_contract,
+                career_evidence_state_id=career_state_id,
             )
             if player_values:
                 ranks = percentile_ranks(
