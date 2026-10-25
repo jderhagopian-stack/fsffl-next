@@ -226,3 +226,51 @@ def test_value_lens_route_uses_canonical_three_year_builder(monkeypatch):
     assert cohort_reads == ['read']
     assert result['career_intrinsic']['presentation']['reference_player_ids'] == ['a', 'b']
     assert 'sleeper:player:11199' not in result['career_intrinsic']['presentation']['reference_player_ids']
+
+def test_three_year_readiness_survives_missing_career_display_ruler(monkeypatch):
+    from types import SimpleNamespace
+    from fsffl.product.career_presentation import attach_career_player_lenses
+
+    record = SimpleNamespace(
+        status=SimpleNamespace(value="completed"),
+        league_state_id="S",
+        intrinsic_input_fingerprint="career-publication-fp",
+        contract=SimpleNamespace(estimates=(
+            SimpleNamespace(player_id="a", raw_career_forward_reference=100.),
+            SimpleNamespace(player_id="b", raw_career_forward_reference=200.),
+        )),
+    )
+    payload = {
+        "league_state_id": "S",
+        "publication_generation_id": "G",
+        "fsffl_intrinsic": {"status": "ready"},
+        "players": [{"player_id": "a"}, {"player_id": "b"}],
+    }
+    rows = {
+        "a": {"raw_intrinsic_value": 10., "intrinsic_percentile": .25,
+              "intrinsic_value_index": 2500., "comparison_available": True},
+        "b": {"raw_intrinsic_value": 20., "intrinsic_percentile": .75,
+              "intrinsic_value_index": 7500., "comparison_available": True},
+    }
+
+    result = attach_career_player_lenses(
+        payload, record=record, current_state_id="S", current_generation_id="G",
+        reference_ids=frozenset(), three_year_rows=rows,
+    )
+
+    assert result["career_intrinsic"]["status"] == "unavailable"
+    assert result["fsffl_intrinsic"]["status"] == "ready"
+    assert result["fsffl_intrinsic"]["source"] == "career_current_y1_y3_components"
+    assert result["fsffl_intrinsic"]["source_input_fingerprint"] == "career-publication-fp"
+    assert [row["intrinsic_value_index"] for row in result["players"]] == [2500., 7500.]
+    assert all(row["intrinsic_status"] == "ready" for row in result["players"])
+    assert all(row["career_status"] == "unavailable" for row in result["players"])
+
+    mismatched_generation = attach_career_player_lenses(
+        {**payload, "publication_generation_id": "old"},
+        record=record, current_state_id="S", current_generation_id="G",
+        reference_ids=frozenset(), three_year_rows=rows,
+    )
+    assert mismatched_generation["fsffl_intrinsic"]["status"] == "unavailable"
+    assert all(row["intrinsic_value_index"] is None
+               for row in mismatched_generation["players"])
