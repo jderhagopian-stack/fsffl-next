@@ -1,0 +1,34 @@
+name: QB Career State Current Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/multiyear-intrinsic-value-study]
+    paths:
+      - 'scripts/build_qb_career_state_current_evidence.py'
+      - '.github/workflows/qb-career-state-current-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build 2026 QB career-state evidence
+        run: |
+          python scripts/build_qb_career_state_current_evidence.py \
+            --evaluation-season 2026 \
+            --output artifacts/qb-career-state-current/qb_career_state_evidence_2026.json \
+            --cache artifacts/qb-career-state-current/cache
+      - name: Upload current QB evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: qb-career-state-current-evidence-2026
+          path: artifacts/qb-career-state-current/qb_career_state_evidence_2026.json
+          retention-days: 14
