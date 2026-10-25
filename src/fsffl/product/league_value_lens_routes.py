@@ -16,7 +16,7 @@ from .league_value_lenses import (
     build_league_value_lenses,
 )
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
-from .career_presentation import attach_career_player_lenses
+from .career_presentation import attach_career_player_lenses, career_reference_player_ids
 from .value_lens_evidence import percentile_ranks
 from .value_presentation import build_value_presentation_coordinate
 
@@ -48,6 +48,17 @@ def install_league_value_lens_routes(
                     and runtime.publication_generation_id is not None
                     and runtime.forecast_evidence is not None
                     and served == runtime.league_state.state_id)
+        # Read the Current-owned active cohort from the coordinator's small,
+        # bounded identity summary. Do not restore or rebuild the Current contract
+        # just to recover its reference IDs. Missing cohort evidence fails closed.
+        current_player_ids = (
+            background_coordinator.completed_player_ids_for_state(runtime)
+            if can_read and background_coordinator is not None else None
+        )
+        reference_ids = (
+            career_reference_player_ids() & current_player_ids
+            if current_player_ids is not None else frozenset()
+        )
         career_record = career_record_loader(runtime) if can_read else None
         if (career_record is not None and career_publication_validator is not None
                 and not career_publication_validator(runtime, career_record)):
@@ -116,7 +127,7 @@ def install_league_value_lens_routes(
             record=career_record,
             current_state_id=runtime.league_state.state_id,
             current_generation_id=runtime.publication_generation_id,
-            reference_ids=None,
+            reference_ids=reference_ids,
             three_year_rows=three_year_rows,
             three_year_reason=three_year_reason,
         )
