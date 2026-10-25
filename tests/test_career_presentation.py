@@ -162,8 +162,8 @@ def test_value_lens_route_uses_canonical_three_year_builder(monkeypatch):
     from types import SimpleNamespace
     from fastapi import FastAPI
     from fsffl.product import league_value_lens_routes as routes
-    monkeypatch.setattr('fsffl.product.career_presentation.career_reference_player_ids',
-                        lambda: frozenset({'a', 'b'}))
+    monkeypatch.setattr(routes, 'career_reference_player_ids',
+                        lambda: frozenset({'a', 'b', 'sleeper:player:11199'}))
     record = SimpleNamespace(status=SimpleNamespace(value='completed'), league_state_id='S',
         intrinsic_input_fingerprint='career-fp', contract=SimpleNamespace(
             player_input_assumptions={}, estimates=(
@@ -194,7 +194,11 @@ def test_value_lens_route_uses_canonical_three_year_builder(monkeypatch):
             return percentile * 10000
     monkeypatch.setattr(routes, 'build_value_presentation_coordinate', lambda *_: Coordinate())
     app = FastAPI()
+    cohort_reads = []
     coordinator = SimpleNamespace(
+        completed_player_ids_for_state=lambda *_: (
+            cohort_reads.append('read') or frozenset({'a', 'b'})
+        ),
         current=lambda *_: (_ for _ in ()).throw(
             AssertionError('3-Year value-lens reads must not query Current Shapley')
         ),
@@ -219,3 +223,6 @@ def test_value_lens_route_uses_canonical_three_year_builder(monkeypatch):
     assert [row['three_year_raw_intrinsic_value'] for row in result['players']] == [5., 15.]
     assert result['fsffl_intrinsic']['source_input_fingerprint'] == 'career-fp'
     assert result['intrinsic_execution']['status'] == 'career_artifact_read'
+    assert cohort_reads == ['read']
+    assert result['career_intrinsic']['presentation']['reference_player_ids'] == ['a', 'b']
+    assert 'sleeper:player:11199' not in result['career_intrinsic']['presentation']['reference_player_ids']
