@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 from fastapi import Depends, FastAPI, HTTPException
 
+from fsffl.analytics.dynasty_position_room import build_three_year_intrinsic_player_values
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
 
 from .intrinsic_background import (
@@ -21,6 +22,8 @@ from .league_value_lenses import (
 )
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 from .career_presentation import attach_career_player_lenses, career_reference_ids_from_current
+from .value_lens_evidence import percentile_ranks
+from .value_presentation import build_value_presentation_coordinate
 
 
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
@@ -56,13 +59,82 @@ def install_league_value_lens_routes(
         if (career_record is not None and career_publication_validator is not None
                 and not career_publication_validator(runtime, career_record)):
             career_record = None
+        three_year_rows = {}
+        three_year_reason = None
+        if career_record is not None and career_record.league_state_id == served:
+            player_values = build_three_year_intrinsic_player_values(
+                runtime.league_state,
+                career_forward=career_record.contract,
+                career_evidence_state_id=career_record.league_state_id,
+            )
+            if player_values:
+                ranks = percentile_ranks(
+                    (row.player_id, row.raw_intrinsic_value) for row in player_values
+                )
+                coordinate = None
+                try:
+                    evidence = getattr(runtime, "value_evidence", None)
+                    if evidence is not None:
+                        coordinate = build_value_presentation_coordinate(
+                            evidence.native_magnitude_observations
+                        )
+                except ValueError:
+                    # Percentile evidence remains valid when the optional shared
+                    # display coordinate cannot be built.
+                    coordinate = None
+                market_rows = {
+                    row["player_id"]: row for row in payload.get("players", ())
+                }
+                for value in player_values:
+                    percentile = ranks[value.player_id]
+                    market_row = market_rows.get(value.player_id, {})
+                    market_percentile = market_row.get("broad_market_percentile")
+                    intrinsic_index = (
+                        coordinate.index_for_percentile(percentile)
+                        if coordinate is not None else None
+                    )
+                    market_index = market_row.get("broad_market_value_index")
+                    three_year_rows[value.player_id] = {
+                        "raw_intrinsic_value": value.raw_intrinsic_value,
+                        "intrinsic_percentile": percentile,
+                        "intrinsic_value_index": intrinsic_index,
+                        "value_index_gap": (
+                            intrinsic_index - market_index
+                            if intrinsic_index is not None and market_index is not None else None
+                        ),
+                        "percentile_gap": (
+                            percentile - market_percentile
+                            if market_percentile is not None else None
+                        ),
+                        "comparison_available": market_percentile is not None,
+                    }
+            else:
+                three_year_reason = (
+                    "Career Current Y1-Y3 evidence does not meet the accepted exact-State coverage contract."
+                )
+        else:
+            three_year_reason = (
+                "Matching Career evidence is unavailable for the active publication generation."
+            )
         result = attach_career_player_lenses(
             payload,
             record=career_record,
             current_state_id=runtime.league_state.state_id,
             current_generation_id=runtime.publication_generation_id,
             reference_ids=reference_ids,
+            three_year_rows=three_year_rows,
+            three_year_reason=three_year_reason,
         )
+        readiness = result.get("surface_readiness")
+        if isinstance(readiness, dict):
+            missing = list(readiness.get("missing_optional") or ())
+            missing = [item for item in missing if item != "fsffl_intrinsic_all_player"]
+            if not three_year_rows:
+                missing.insert(0, "fsffl_intrinsic_all_player")
+            readiness["missing_optional"] = missing
+            if readiness.get("status") == "ready" and missing:
+                readiness["status"] = "degraded"
+            result["surface_readiness"] = readiness
         if served == runtime.league_state.state_id and generation is None and not persisted:
             result["publication_generation_id"] = runtime.publication_generation_id
         return result

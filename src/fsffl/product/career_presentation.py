@@ -125,8 +125,10 @@ def career_lens_for_publication(record, *, served_state_id: str,
 
 def attach_career_player_lenses(payload: dict, *, record, current_state_id: str,
                                current_generation_id: str | None = None,
-                               reference_ids: frozenset[str] | None = None) -> dict:
-    """Overlay optional product evidence without changing other Value lenses."""
+                               reference_ids: frozenset[str] | None = None,
+                               three_year_rows: Mapping[str, Mapping] | None = None,
+                               three_year_reason: str | None = None) -> dict:
+    """Overlay Career and the Career-owned 3-Year lens for one publication."""
     served = (payload.get("presentation_continuity") or {}).get("served_league_state_id") or payload.get("league_state_id")
     served_generation = payload.get("publication_generation_id")
     generation_matches = served_generation is None or served_generation == current_generation_id
@@ -138,10 +140,53 @@ def attach_career_player_lenses(payload: dict, *, record, current_state_id: str,
         current_generation_id if served_generation is None else served_generation
     )
     result = {**payload, "career_intrinsic": summary}
+    three_year_ready = bool(
+        summary.get("status") == "ready" and three_year_rows
+    )
+    three_year_rows = three_year_rows or {}
     if "fsffl_intrinsic" in result:
-        result["fsffl_intrinsic"] = {**result["fsffl_intrinsic"], "label": "3-Year Intrinsic"}
-    result["players"] = [{**row, **rows.get(row["player_id"], {
-        "career_intrinsic_index": None, "raw_career_forward_reference": None,
-        "career_status": "unavailable",
-    })} for row in payload.get("players", ())]
+        intrinsic = dict(result["fsffl_intrinsic"])
+        intrinsic.update({
+            "label": "3-Year Intrinsic",
+            "status": "ready" if three_year_ready else "unavailable",
+            "source": "career_current_y1_y3_components" if three_year_ready else None,
+            "player_count": len(three_year_rows) if three_year_ready else 0,
+            "source_state_id": served if three_year_ready else None,
+            "source_input_fingerprint": summary.get("dependency_fingerprint") if three_year_ready else None,
+            "publication_generation_id": (
+                current_generation_id if served_generation is None else served_generation
+            ) if three_year_ready else None,
+            "reason": None if three_year_ready else (
+                three_year_reason
+                or "Matching Career Current Y1-Y3 evidence is unavailable for this publication."
+            ),
+        })
+        result["fsffl_intrinsic"] = intrinsic
+    attached = []
+    for row in payload.get("players", ()):
+        player_id = row["player_id"]
+        three_year = three_year_rows.get(player_id)
+        # A Current-only Shapley score must never be presented under the
+        # 3-Year label when Career's exact-publication components are missing.
+        updated = {
+            **row,
+            "intrinsic_percentile": three_year.get("intrinsic_percentile") if three_year else None,
+            "intrinsic_value_index": three_year.get("intrinsic_value_index") if three_year else None,
+            "value_index_gap": three_year.get("value_index_gap") if three_year else None,
+            "percentile_gap": three_year.get("percentile_gap") if three_year else None,
+            "comparison_available": bool(three_year and three_year.get("comparison_available")),
+            "intrinsic_status": "ready" if three_year else "unavailable",
+            "intrinsic_reason": None if three_year else (
+                three_year_reason
+                or "Matching Career Current Y1-Y3 evidence is unavailable for this publication."
+            ),
+            "three_year_raw_intrinsic_value": three_year.get("raw_intrinsic_value") if three_year else None,
+            "three_year_source": "career_current_y1_y3_components" if three_year else None,
+            **rows.get(player_id, {
+                "career_intrinsic_index": None, "raw_career_forward_reference": None,
+                "career_status": "unavailable",
+            }),
+        }
+        attached.append(updated)
+    result["players"] = attached
     return result
