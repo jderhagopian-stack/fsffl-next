@@ -63,3 +63,4 @@ jobs:
           tests/test_career_intrinsic_product_presentation.py
           tests/test_career_client_lifecycle.py
           tests/test_career_memory_lifecycle.py
+          tests/test_player_intelligence_live_corrective.py
