@@ -22,11 +22,16 @@ IntrinsicInputFingerprintResolver = Callable[[UserRuntimeContext], str]
 IntrinsicOwnershipValidator = Callable[[UserRuntimeContext], bool]
 
 
-def _contract_player_ids(contract: ShapleyIntrinsicContract) -> frozenset[str]:
-    """Retain only the small player-identity summary needed by presentation reads."""
+def _contract_player_ids(
+    contract: ShapleyIntrinsicContract,
+) -> frozenset[str] | None:
+    """Retain a small player-identity summary when a contract exposes estimates."""
+    estimates = getattr(contract, "estimates", None)
+    if estimates is None:
+        return None
     return frozenset(
         player_id
-        for estimate in contract.estimates
+        for estimate in estimates
         if isinstance((player_id := getattr(estimate, "player_id", None)), str)
         and player_id
     )
