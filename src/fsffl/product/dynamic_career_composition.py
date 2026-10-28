@@ -436,10 +436,9 @@ def build_dynamic_rostered_career_contract(
                 "and point-in-time historical panel)"
             )
         return result(contract=None, failures=failures)
-    # Foundation 4 only needs inputs for eligible Career candidates. In
-    # particular, it must not overlap its fitting workspaces with the full
-    # league P0 future-scenario graph. Keep a compact candidate-only future
-    # contract for the materializer and later Shapley composition.
+    # Foundation 4 only needs future rows for eligible Career candidates.
+    # Compact the full P0 scenario graph before its wide fitting workspaces
+    # are created, while preserving candidate rows and multiplier provenance.
     eligible_future = replace(
         future,
         contract=future.contract.model_copy(
@@ -451,10 +450,8 @@ def build_dynamic_rostered_career_contract(
             }
         ),
     )
-    # ROS acquisition/scoring is complete. Career does not consume the
-    # whole-league ROS intermediate. Release it and the aliases used to find
-    # eligible future rows, without mutating a builder-owned result when a
-    # direct caller retains one.
+    # ROS acquisition/scoring is complete. Release the full graph and aliases
+    # used to select it without mutating the builder-owned result.
     live = replace(
         live,
         candidate_ids=tuple(sorted(eligible)),
@@ -468,7 +465,7 @@ def build_dynamic_rostered_career_contract(
         year_one_league={pid: live.year_one_league[pid] for pid in sorted(eligible)},
         # These already-digested acquisition coordinates are not inputs to
         # Foundation 4 or subsequent candidate composition. Keep the source
-        # manifest and eligible candidate observations/future rows intact.
+        # manifest and accepted candidate observations/future rows intact.
         ros_fumbles_lost=(), fumbles_eligible_player_ids=(),
     )
     del future, future_rows, eligible_future
@@ -502,8 +499,22 @@ def build_dynamic_rostered_career_contract(
     if not complete:
         return result(contract=None, failures=failures)
 
-    # The large future scenario graph is needed only for downstream Shapley.
-    # Do not keep it resident alongside Foundation 4's fit workspaces.
+    # The candidate future scenario graph is needed only for downstream
+    # Shapley. Retain rows only for candidates with complete Foundation 4
+    # components, then drop references to the full graph before constructing
+    # the separate baseline future contract. This preserves every accepted
+    # candidate input while preventing two full future contracts from
+    # overlapping during expanded-cohort composition.
+    candidate_future = live.future.contract.model_copy(
+        update={
+            "forecasts": tuple(
+                row for row in live.future.contract.forecasts if row.player_id in complete
+            )
+        }
+    )
+    live = replace(live, future=replace(live.future, contract=candidate_future))
+
+    # Build the baseline only after releasing incomplete candidate horizons.
     _reclaim_career_stage("career-foundation4-complete")
     base_future = current_intrinsic_loader._resolve_future_contract(
         league_state=state,
@@ -517,14 +528,6 @@ def build_dynamic_rostered_career_contract(
     # Shapley cohort. This keeps the wide materializer's RSS bounded and means
     # candidates missing later Career inputs never perturb another player's
     # full-cohort Shapley calculation.
-    candidate_future = live.future.contract.model_copy(
-        update={
-            "forecasts": tuple(
-                row for row in live.future.contract.forecasts
-                if row.player_id in complete
-            )
-        }
-    )
     composition_candidate = replace(
         live,
         candidate_ids=tuple(sorted(complete)),
@@ -538,7 +541,7 @@ def build_dynamic_rostered_career_contract(
         year_one_league={
             player_id: live.year_one_league[player_id] for player_id in complete
         },
-        future=replace(live.future, contract=candidate_future),
+        future=live.future,
         failures={},
     )
     _reclaim_career_stage("career-before-expanded-shapley")

@@ -43,13 +43,14 @@ def test_product_overlay_preserves_other_lenses_and_rejects_last_good_state(monk
                    {'player_id':'outside','intrinsic_value_index':10.}]}
     result = attach_career_player_lenses(payload, record=record, current_state_id='new')
     first, missing = result['players']
-    assert first['intrinsic_value_index'] == 7777
+    assert first['intrinsic_value_index'] is None
     assert first['broad_market_value_index'] == 3333
     assert first['career_intrinsic_index'] == 0
     assert first['raw_career_forward_reference'] == -5.
     assert first['career_input_assumption'] == 'Low confidence: YTD-only'
     assert missing['career_intrinsic_index'] is None
     assert result['fsffl_intrinsic']['label'] == '3-Year Intrinsic'
+    assert result['fsffl_intrinsic']['status'] == 'unavailable'
     assert 'career_intrinsic_index' not in payload['players'][0]
     stale = {**payload, 'presentation_continuity': {'served_league_state_id':'old'}}
     result = attach_career_player_lenses(stale, record=record, current_state_id='new')
@@ -119,5 +120,157 @@ def test_unversioned_saved_value_payload_is_not_promoted_to_current_career():
     assert result.get('publication_generation_id') is None
     assert result['career_intrinsic']['status'] == 'unavailable'
     assert result['players'][0]['career_intrinsic_index'] is None
-    assert result['players'][0]['intrinsic_value_index'] == 100.
+    assert result['players'][0]['intrinsic_value_index'] is None
     assert calls == []
+
+
+def test_franchise_three_year_overlay_uses_only_supplied_career_y1_y3_values(monkeypatch):
+    from types import SimpleNamespace
+    from fsffl.product.career_presentation import attach_career_player_lenses
+    monkeypatch.setattr('fsffl.product.career_presentation.career_reference_player_ids',
+                        lambda: frozenset({'a', 'b'}))
+    record = SimpleNamespace(status=SimpleNamespace(value='completed'), league_state_id='S',
+        contract=SimpleNamespace(estimates=(
+            SimpleNamespace(player_id='a', raw_career_forward_reference=100.),
+            SimpleNamespace(player_id='b', raw_career_forward_reference=200.),
+        )))
+    payload = {'league_state_id': 'S', 'fsffl_intrinsic': {'status': 'ready'},
+        'players': [
+            {'player_id': 'a', 'intrinsic_value_index': 7777.,
+             'broad_market_value_index': 2000., 'broad_market_percentile': .25},
+            {'player_id': 'b', 'intrinsic_value_index': 8888.,
+             'broad_market_value_index': 8000., 'broad_market_percentile': .75},
+        ]}
+    result = attach_career_player_lenses(
+        payload, record=record, current_state_id='S',
+        three_year_rows={
+            'a': {'raw_intrinsic_value': 10., 'intrinsic_percentile': .25,
+                  'intrinsic_value_index': 2100., 'value_index_gap': 100.,
+                  'percentile_gap': 0., 'comparison_available': True},
+            'b': {'raw_intrinsic_value': 20., 'intrinsic_percentile': .75,
+                  'intrinsic_value_index': 7900., 'value_index_gap': -100.,
+                  'percentile_gap': 0., 'comparison_available': True},
+        })
+    assert result['fsffl_intrinsic']['status'] == 'ready'
+    assert result['fsffl_intrinsic']['source'] == 'career_current_y1_y3_components'
+    assert [row['intrinsic_value_index'] for row in result['players']] == [2100., 7900.]
+    assert [row['three_year_raw_intrinsic_value'] for row in result['players']] == [10., 20.]
+    assert [row['career_intrinsic_index'] for row in result['players']] == [0., 10000.]
+
+
+def test_value_lens_route_uses_canonical_three_year_builder(monkeypatch):
+    from types import SimpleNamespace
+    from fastapi import FastAPI
+    from fsffl.product import league_value_lens_routes as routes
+    monkeypatch.setattr(routes, 'career_reference_player_ids',
+                        lambda: frozenset({'a', 'b', 'sleeper:player:11199'}))
+    record = SimpleNamespace(status=SimpleNamespace(value='completed'), league_state_id='S',
+        intrinsic_input_fingerprint='career-fp', contract=SimpleNamespace(
+            player_input_assumptions={}, estimates=(
+                SimpleNamespace(player_id='a', raw_career_forward_reference=10.),
+                SimpleNamespace(player_id='b', raw_career_forward_reference=20.),
+            )))
+    runtime = SimpleNamespace(
+        league_state=SimpleNamespace(state_id='S'), publication_generation_id='G',
+        forecast_evidence=object(), value_evidence=SimpleNamespace(native_magnitude_observations=()),
+    )
+    monkeypatch.setattr(routes, 'build_league_value_lenses', lambda *_args, **_kwargs: {
+        'league_state_id': 'S', 'publication_generation_id': 'G',
+        'fsffl_intrinsic': {'status': 'ready'},
+        'players': [
+            {'player_id': 'a', 'intrinsic_value_index': 7000.,
+             'broad_market_value_index': 1000., 'broad_market_percentile': .2},
+            {'player_id': 'b', 'intrinsic_value_index': 8000.,
+             'broad_market_value_index': 9000., 'broad_market_percentile': .8},
+        ],
+    })
+    monkeypatch.setattr(routes, 'build_three_year_intrinsic_player_values',
+        lambda *_args, **_kwargs: (
+            SimpleNamespace(player_id='a', raw_intrinsic_value=5.),
+            SimpleNamespace(player_id='b', raw_intrinsic_value=15.),
+        ))
+    class Coordinate:
+        def index_for_percentile(self, percentile):
+            return percentile * 10000
+    monkeypatch.setattr(routes, 'build_value_presentation_coordinate', lambda *_: Coordinate())
+    app = FastAPI()
+    cohort_reads = []
+    coordinator = SimpleNamespace(
+        completed_player_ids_for_state=lambda *_: (
+            cohort_reads.append('read') or frozenset({'a', 'b'})
+        ),
+        current=lambda *_: (_ for _ in ()).throw(
+            AssertionError('3-Year value-lens reads must not query Current Shapley')
+        ),
+        request=lambda *_: (_ for _ in ()).throw(
+            AssertionError('3-Year value-lens reads must not start Current Shapley')
+        ),
+    )
+    routes.install_league_value_lens_routes(
+        app, runtime_store=SimpleNamespace(get=lambda _: runtime),
+        contract_loader=lambda _: (_ for _ in ()).throw(
+            AssertionError('3-Year value-lens reads must not load Current Shapley')
+        ), require_user=lambda: 'fixture',
+        background_coordinator=coordinator,
+        career_record_loader=lambda _: record,
+        career_publication_validator=lambda *_: True,
+    )
+    endpoint = next(route.endpoint for route in app.routes
+                    if route.path == '/api/league/value-lenses')
+    result = endpoint(user_id='fixture')
+    assert result['fsffl_intrinsic']['source'] == 'career_current_y1_y3_components'
+    assert [row['intrinsic_value_index'] for row in result['players']] == [2500., 7500.]
+    assert [row['three_year_raw_intrinsic_value'] for row in result['players']] == [5., 15.]
+    assert result['fsffl_intrinsic']['source_input_fingerprint'] == 'career-fp'
+    assert result['intrinsic_execution']['status'] == 'career_artifact_read'
+    assert cohort_reads == ['read']
+    assert result['career_intrinsic']['presentation']['reference_player_ids'] == ['a', 'b']
+    assert 'sleeper:player:11199' not in result['career_intrinsic']['presentation']['reference_player_ids']
+
+def test_three_year_readiness_survives_missing_career_display_ruler(monkeypatch):
+    from types import SimpleNamespace
+    from fsffl.product.career_presentation import attach_career_player_lenses
+
+    record = SimpleNamespace(
+        status=SimpleNamespace(value="completed"),
+        league_state_id="S",
+        intrinsic_input_fingerprint="career-publication-fp",
+        contract=SimpleNamespace(estimates=(
+            SimpleNamespace(player_id="a", raw_career_forward_reference=100.),
+            SimpleNamespace(player_id="b", raw_career_forward_reference=200.),
+        )),
+    )
+    payload = {
+        "league_state_id": "S",
+        "publication_generation_id": "G",
+        "fsffl_intrinsic": {"status": "ready"},
+        "players": [{"player_id": "a"}, {"player_id": "b"}],
+    }
+    rows = {
+        "a": {"raw_intrinsic_value": 10., "intrinsic_percentile": .25,
+              "intrinsic_value_index": 2500., "comparison_available": True},
+        "b": {"raw_intrinsic_value": 20., "intrinsic_percentile": .75,
+              "intrinsic_value_index": 7500., "comparison_available": True},
+    }
+
+    result = attach_career_player_lenses(
+        payload, record=record, current_state_id="S", current_generation_id="G",
+        reference_ids=frozenset(), three_year_rows=rows,
+    )
+
+    assert result["career_intrinsic"]["status"] == "unavailable"
+    assert result["fsffl_intrinsic"]["status"] == "ready"
+    assert result["fsffl_intrinsic"]["source"] == "career_current_y1_y3_components"
+    assert result["fsffl_intrinsic"]["source_input_fingerprint"] == "career-publication-fp"
+    assert [row["intrinsic_value_index"] for row in result["players"]] == [2500., 7500.]
+    assert all(row["intrinsic_status"] == "ready" for row in result["players"])
+    assert all(row["career_status"] == "unavailable" for row in result["players"])
+
+    mismatched_generation = attach_career_player_lenses(
+        {**payload, "publication_generation_id": "old"},
+        record=record, current_state_id="S", current_generation_id="G",
+        reference_ids=frozenset(), three_year_rows=rows,
+    )
+    assert mismatched_generation["fsffl_intrinsic"]["status"] == "unavailable"
+    assert all(row["intrinsic_value_index"] is None
+               for row in mismatched_generation["players"])

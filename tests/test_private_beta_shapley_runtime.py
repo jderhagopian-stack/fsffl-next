@@ -376,9 +376,6 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         league_year_one=(candidate_y1,),
         candidate_source_rows={candidate_id: dynamic_row},
     )
-    # Model the common hosted shape: the P0 future contract contains many
-    # league-wide scenario rows, but only one rostered candidate is eligible
-    # for this Foundation 4 batch.
     unrelated_rows = tuple(
         row.model_copy(update={"player_id": "sleeper:player:unrelated"})
         for row in dynamic_future.contract.forecasts
@@ -386,9 +383,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     dynamic_future = replace(
         dynamic_future,
         contract=dynamic_future.contract.model_copy(
-            update={
-                "forecasts": dynamic_future.contract.forecasts + unrelated_rows
-            }
+            update={"forecasts": dynamic_future.contract.forecasts + unrelated_rows}
         ),
     )
     candidate = P0LiveCandidateResult(
@@ -434,6 +429,9 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     assert "Foundation 4 dynamic materializer input bundle is not configured" in result.failures[candidate_id]
     assert "route/development modules" in result.failures[candidate_id]
 
+    from weakref import ref as weakref_ref
+    unrelated_future_rows = []
+
     def no_components(_context, retained, ids):
         assert retained.ros_runtime is None
         assert retained.future is not candidate.future
@@ -442,7 +440,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         assert len(retained.future.contract.forecasts) == 2
         assert set(candidate.future.contract.player_ids) == {
             candidate_id, "sleeper:player:unrelated"
-        }  # caller-owned evidence was not mutated
+        }
         assert retained.candidate_source_rows == candidate.candidate_source_rows
         assert retained.year_one_league == {candidate_id: candidate_y1}
         assert retained.year_one_standard == {candidate_id: candidate_y1}
@@ -465,24 +463,13 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     assert result.contract is None
     assert result.failures[candidate_id] == "no F4 components"
 
-    from weakref import ref as weakref_ref
-
-    unrelated_future_rows = []
-
     def temporary_future_builder(_state, *, projection_history_as_of=None):
-        # Give the call a private full-cohort graph so this test can prove
-        # non-rostered rows are collectible before Foundation 4 starts.
         rows = tuple(row.model_copy() for row in candidate.future.contract.forecasts)
         unrelated_future_rows.append(
             weakref_ref(next(row for row in rows if row.player_id == "sleeper:player:unrelated"))
         )
-        isolated_contract = candidate.future.contract.model_copy(
-            update={"forecasts": rows}
-        )
-        return replace(
-            candidate,
-            future=replace(candidate.future, contract=isolated_contract),
-        )
+        isolated_contract = candidate.future.contract.model_copy(update={"forecasts": rows})
+        return replace(candidate, future=replace(candidate.future, contract=isolated_contract))
 
     def compacted_before_fit(_context, retained, ids):
         assert unrelated_future_rows[0]() is None
@@ -490,8 +477,7 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
 
     reclaimed_full_graph = bridge.build_dynamic_rostered_career_contract(
         context, SimpleNamespace(), current_intrinsic_loader=base_loader,
-        candidate_builder=temporary_future_builder,
-        materializer=compacted_before_fit,
+        candidate_builder=temporary_future_builder, materializer=compacted_before_fit,
     )
     assert reclaimed_full_graph.failures[candidate_id] == "no F4 components"
 
@@ -521,8 +507,12 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     monkeypatch.delenv('FSFFL_MEMORY_LIMIT_BYTES', raising=False)
     monkeypatch.setattr(resource, 'release_unused_process_memory', lambda **kw: None)
     calls = []
+    future_owner_refs = []
     def base_future(**kwargs):
         assert tuple(kwargs["raw_forecasts"]) == tuple(evidence.raw_forecasts)
+        assert future_owner_refs[-1]() is None, (
+            "full dynamic future contract still retained while building base future"
+        )
         calls.append('future')
         return SimpleNamespace(player_ids=(base_year_one.player_id,))
     def merge(**kwargs):
@@ -534,6 +524,13 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         'over-limit final composition must not start'))
     def complete_components(*args):
         return bridge.DynamicCareerComponents({candidate_id: ()}, {candidate_id: object()}, {})
+    def fresh_candidate(*args, **kwargs):
+        fresh_future = build_p0_future_forecast_contract(
+            league_state=state, raw_forecasts=raw, league_year_one=(candidate_y1,),
+            candidate_source_rows={candidate_id: dynamic_row},
+        )
+        future_owner_refs.append(ref(fresh_future))
+        return replace(candidate, future=fresh_future)
     for index, label, expected in (
         (4, 'career-foundation4-complete', []),
         (5, 'career-before-expanded-shapley', ['future']),
@@ -545,8 +542,9 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         with pytest.raises(MemoryError, match=f'hard memory limit reached before {label}'):
             bridge.build_dynamic_rostered_career_contract(
                 context, SimpleNamespace(), current_intrinsic_loader=base_loader,
-                candidate_builder=lambda *a, **kw: candidate, materializer=complete_components,
+                candidate_builder=fresh_candidate, materializer=complete_components,
             )
+        assert future_owner_refs[-1]() is None
         assert calls == expected
 
 
@@ -2120,6 +2118,10 @@ def test_restart_coordinator_restores_persisted_semantic_intrinsic_without_shapl
     assert restored.contract == built
     assert restored.league_state_id == advanced.state_id
     assert coordinator.current(advanced_context) == restored
+    active_player_ids = frozenset(row.player_id for row in built.estimates)
+    assert coordinator.completed_player_ids_for_state(advanced_context) == active_player_ids
+    assert coordinator.release_completed_contract(advanced_context, restored.contract)
+    assert coordinator.completed_player_ids_for_state(advanced_context) == active_player_ids
     assert len(store.records) == 1
     # The future contract is resolved to prove semantic compatibility, but the
     # persisted Shapley artifact is reused instead of another 2,048-permutation build.

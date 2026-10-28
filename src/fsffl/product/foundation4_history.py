@@ -66,25 +66,51 @@ class BoundedHorizonHistory:
     """
 
     def __init__(self, dev, base, raw, directory: Path, *, columns=None):
+        staged = self.stage_base(base, directory)
+        self._expand_staged(dev, staged, raw, columns=columns)
+
+    @staticmethod
+    def stage_base(base, directory: Path):
+        """Stage feature columns before expanding the much taller horizon panel.
+
+        The caller can drop its wide base DataFrame after this returns and before
+        ``from_staged`` allocates horizon metadata. This avoids holding both the
+        wide base and its expanded row metadata at the same time.
+        """
         directory.mkdir(parents=True, exist_ok=True)
         keys = base.loc[:, ['player_id', 'base_season', 'position']].copy()
         keys['_career_base_row'] = np.arange(len(base))
+        paths = {}
+        base_columns = tuple(base.columns)
+        for number, name in enumerate(base_columns):
+            path = directory / f'{number}.pkl'
+            base[name].to_pickle(path)
+            paths[name] = path
+        return keys, paths, base_columns
+
+    @classmethod
+    def from_staged(cls, dev, staged, raw, *, columns=None):
+        """Expand staged feature sources after the caller releases the base."""
+        instance = cls.__new__(cls)
+        instance._expand_staged(dev, staged, raw, columns=columns)
+        return instance
+
+    def _expand_staged(self, dev, staged, raw, *, columns=None):
+        keys, paths, base_columns = staged
         # The accepted implementation still owns horizon order, eligibility,
         # target seasons, actual lookup and absent-actual semantics.
         metadata = dev.build_long(keys, raw)
         self.source_rows = metadata.pop('_career_base_row').to_numpy(dtype=int)
-        self.metadata = metadata
-        self.paths = {}
-        self.columns = pd.Index(list(base.columns) + [name for name in metadata if name not in base])
+        self.paths = paths
+        metadata_columns = [name for name in metadata.columns if name not in base_columns]
+        self.columns = pd.Index(list(base_columns) + metadata_columns)
         if columns is not None:
             self.columns = self.columns[self.columns.isin(columns)]
-        for number, name in enumerate(base.columns):
-            if name not in metadata:
-                path = directory / f'{number}.pkl'
-                base[name].to_pickle(path)
-                self.paths[name] = path
+        retained_metadata = [name for name in metadata.columns if name in self.columns]
+        metadata.drop(columns=[name for name in metadata.columns if name not in retained_metadata], inplace=True)
+        self.metadata = metadata
         self.panel = self
-        self.positions = np.arange(len(metadata))
+        self.positions = np.arange(len(self.source_rows))
 
     def __len__(self):
         return len(self.positions)
