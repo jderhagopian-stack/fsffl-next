@@ -425,3 +425,26 @@ def test_sleeper_status_catalog_cannot_be_backdated_into_an_earlier_state():
         assert "captured after the State evidence cutoff" in str(exc)
     else:
         raise AssertionError("post-cutoff NFL status was accepted into an earlier State")
+
+
+def test_bounded_saved_state_identities_are_kept_without_unrostered_catalog():
+    payload = bundle()
+    players = {**payload.players, "unrostered-wr": {
+        "full_name": "Unrostered Receiver", "position": "WR", "team": "BUF",
+    }}
+    latest_league = {**payload.league}
+    latest_rosters = [
+        {**roster, "players": [pid for pid in roster["players"] if pid != "p2"]}
+        for roster in payload.rosters
+    ]
+    snapshot = ProviderSnapshot(
+        provider_name="sleeper", league_external_id="123", captured_at=AS_OF,
+        payload={"league": latest_league, "users": payload.users,
+                 "rosters": latest_rosters, "players": players},
+    )
+    bounded = SleeperSnapshotNormalizer(
+        include_unrostered_players=False,
+        include_player_ids=("sleeper:player:p2",),
+    ).normalize_snapshot(snapshot, as_of=AS_OF)
+    assert "sleeper:player:p2" in {player.player_id for player in bounded.players}
+    assert "sleeper:player:unrostered-wr" not in {player.player_id for player in bounded.players}
