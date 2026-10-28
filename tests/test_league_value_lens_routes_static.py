@@ -11,7 +11,7 @@ def test_persistent_webapp_installs_distinct_league_value_lens_route() -> None:
     assert "install_league_value_lens_routes" in webapp
     assert '"/api/league/value-lenses"' in routes
     assert "build_league_value_lenses" in routes
-    assert "Broad Market remains independently usable" in routes
+    assert "build_three_year_intrinsic_player_values" in routes
 
 
 def test_atlas_lens_contract_cannot_create_team_value_or_team_utility() -> None:
@@ -40,9 +40,10 @@ def test_primary_league_presentation_uses_approved_value_hierarchy() -> None:
 def test_player_board_intrinsic_build_is_optional_not_route_blocking() -> None:
     routes = (PRODUCT / "league_value_lens_routes.py").read_text(encoding="utf-8")
     assert '"status": "building_optional"' in routes
-    assert '"Broad Market remains independently usable."' in routes
+    assert "build_three_year_intrinsic_player_values" in routes
     assert "JSONResponse(status_code=202" not in routes
-    assert 'payload["fsffl_intrinsic"]' in routes
+    assert 'payload["intrinsic_execution"]' in routes
+    assert "contract_loader(runtime)" not in routes
 
 
 def test_market_value_lens_route_exposes_intrinsic_coordinate_and_build_state() -> None:
@@ -76,18 +77,17 @@ def test_hosted_readiness_does_not_restore_intrinsic_from_foreground_reads() -> 
 
 def test_first_load_stages_only_until_core_forecast_or_team_is_missing() -> None:
     routes = (PRODUCT / "league_value_lens_routes.py").read_text(encoding="utf-8")
-    branch = routes.split("if background_coordinator is not None:", 1)[1]
-    staging_index = branch.index("first_load_staging = bool(")
+    branch = routes.split("first_load_staging = bool(", 1)[1]
     staged_return_index = branch.index("return with_career(payload, runtime)")
-    current_index = branch.index("background_coordinator.current(runtime)")
 
-    assert staging_index < staged_return_index < current_index
-    assert 'runtime.publication_generation_id is None' in branch
-    assert 'runtime.forecast_evidence is None' in branch
-    assert 'runtime_store.working_generation_active(user_id)' not in branch
+    assert 'runtime.publication_generation_id is None' in branch[:staged_return_index]
+    assert 'runtime.forecast_evidence is None' in branch[:staged_return_index]
+    assert 'runtime_store.working_generation_active(user_id)' not in branch[:staged_return_index]
     assert '"status": "loading"' in branch[:staged_return_index]
     assert '"status": "staged"' in branch[:staged_return_index]
     assert '"players": []' in branch[:staged_return_index]
+    assert "background_coordinator.current(runtime)" not in routes
+    assert "background_coordinator.request(runtime)" not in routes
 
 
 def test_staged_intrinsic_restore_failure_falls_back_to_background_lifecycle() -> None:
