@@ -429,9 +429,10 @@ def test_sleeper_status_catalog_cannot_be_backdated_into_an_earlier_state():
 
 def test_bounded_saved_state_identities_are_kept_without_unrostered_catalog():
     payload = bundle()
-    players = {**payload.players, "unrostered-wr": {
+    players = {**payload.players, "p2": {**payload.players["p2"], "team": None}}
+    players["unrostered-wr"] = {
         "full_name": "Unrostered Receiver", "position": "WR", "team": "BUF",
-    }}
+    }
     latest_league = {**payload.league}
     latest_rosters = [
         {**roster, "players": [pid for pid in roster["players"] if pid != "p2"]}
@@ -447,4 +448,8 @@ def test_bounded_saved_state_identities_are_kept_without_unrostered_catalog():
         include_player_ids=("sleeper:player:p2",),
     ).normalize_snapshot(snapshot, as_of=AS_OF)
     assert "sleeper:player:p2" in {player.player_id for player in bounded.players}
+    p2 = next(item for item in bounded.players if item.player_id == "sleeper:player:p2")
+    p2_status = next(item for item in bounded.player_states if item.player_id == "sleeper:player:p2")
+    assert p2.nfl_team is None
+    assert p2_status.provenance.source == "sleeper:current_player_universe"
     assert "sleeper:player:unrostered-wr" not in {player.player_id for player in bounded.players}
