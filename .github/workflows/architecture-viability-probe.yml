@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'scripts/run_architecture_viability_probe.py'
+      - 'scripts/run_architecture_current_code_probe.py'
       - '.github/workflows/architecture-viability-probe.yml'
   workflow_dispatch:
 
@@ -41,4 +42,32 @@ jobs:
         with:
           name: architecture-viability-proxy-only
           path: "${{ runner.temp }}/architecture-viability-proxy.json"
+          if-no-files-found: warn
+
+  current-code-stage-probes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      FSFFL_BETA_AUTH: "0"
+      FSFFL_DATABASE_URL: ""
+      FSFFL_BETA_USERNAME: ""
+      FSFFL_BETA_PASSWORD: ""
+      PYTHONPATH: "${{ github.workspace }}"
+    steps:
+      - name: Checkout research head
+        uses: actions/checkout@v4
+      - name: Use production-Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install application and tests
+        run: python -m pip install -e '.[dev,web]'
+      - name: Run bounded current-code numeric and lifecycle stage probes
+        run: python scripts/run_architecture_current_code_probe.py --timeout-per-test 140 --output "$RUNNER_TEMP/current-code-stage-probes.json"
+      - name: Preserve sanitized current-code receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-current-code-stage-probes
+          path: "${{ runner.temp }}/current-code-stage-probes.json"
           if-no-files-found: warn
