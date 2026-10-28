@@ -45,7 +45,7 @@ jobs:
           if-no-files-found: warn
 
   current-code-stage-probes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 22
     env:
       FSFFL_BETA_AUTH: "0"
