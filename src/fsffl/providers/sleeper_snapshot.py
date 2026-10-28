@@ -42,9 +42,13 @@ class SleeperSnapshotNormalizer:
 
     provider_name = "sleeper"
 
-    def __init__(self, *, include_unrostered_players: bool = True) -> None:
+    def __init__(
+        self, *, include_unrostered_players: bool = True,
+        include_player_ids: Sequence[str] = (),
+    ) -> None:
         self._normalizer = SleeperNormalizer()
         self._include_unrostered_players = include_unrostered_players
+        self._include_player_ids = frozenset(str(player_id) for player_id in include_player_ids)
 
     def normalize_snapshot(self, snapshot: ProviderSnapshot, *, as_of) -> LeagueState:
         if snapshot.provider_name != self.provider_name:
@@ -77,6 +81,22 @@ class SleeperSnapshotNormalizer:
                 retrieved_at=snapshot.captured_at,
                 effective_at=as_of,
             )
+        elif self._include_player_ids:
+            # Retain fresh identity/status evidence for a bounded saved State
+            # cohort without materializing the full unrostered NFL universe.
+            raw_players = payload.get("players")
+            if isinstance(raw_players, Mapping):
+                selected = {
+                    str(external_id): raw
+                    for external_id, raw in raw_players.items()
+                    if f"sleeper:player:{external_id}" in self._include_player_ids
+                }
+                state = _attach_current_fantasy_player_universe(
+                    state,
+                    selected,
+                    retrieved_at=snapshot.captured_at,
+                    effective_at=as_of,
+                )
         state = _attach_fantasy_regular_season_horizon(state, payload.get("league"))
         byes, schedule_provenance = _normalize_nfl_byes(
             payload.get("nfl_schedule", ()),
