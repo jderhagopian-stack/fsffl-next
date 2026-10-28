@@ -1015,6 +1015,7 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     current_state = SleeperSnapshotNormalizer(
         include_unrostered_players=False,
+        include_player_ids=rostered_p0_ids,
     ).normalize_snapshot(
         latest_snapshot,
         as_of=latest_snapshot.captured_at,
