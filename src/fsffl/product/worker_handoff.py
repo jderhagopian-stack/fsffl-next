@@ -305,3 +305,66 @@ class PostgresWorkerDispatch:
                 (error_code, claim.spec.job_id, claim.lease_token),
             )
             return cursor.rowcount == 1
+
+
+class WorkerLeaseLost(RuntimeError):
+    """This process no longer owns the right to complete the job."""
+
+
+def execute_one_worker_job(
+    queue: PostgresWorkerDispatch,
+    *,
+    compute_and_persist: Callable[[WorkerJobSpec], WorkerResultReceipt],
+    lease_seconds: int = 300,
+    heartbeat_seconds: float = 30.0,
+) -> str:
+    """Execute ONE claimed request in the worker, without publishing results.
+
+    This executes only when a separate worker entrypoint explicitly calls it;
+    existing hosted app routes do not import or schedule it. Work implementation
+    must use the accepted model loader and persist the immutable Career artifact
+    before returning its receipt. The lifecycle owner later validates and commits.
+    """
+    from threading import Event, Thread
+
+    if not 10 <= lease_seconds <= 3600 or not 0 < heartbeat_seconds < lease_seconds / 2:
+        raise ValueError("invalid bounded worker execution heartbeat")
+    claim = queue.claim(lease_seconds=lease_seconds)
+    if claim is None:
+        return "idle"
+    stop = Event()
+    lost = Event()
+
+    def renew() -> None:
+        while not stop.wait(heartbeat_seconds):
+            try:
+                if not queue.heartbeat(claim, lease_seconds=lease_seconds):
+                    lost.set()
+                    break
+            except Exception:
+                # Do not print secrets, rerun the work, or claim publication.
+                lost.set()
+                break
+
+    renewer = Thread(target=renew, name="fsffl-worker-lease-heartbeat", daemon=True)
+    renewer.start()
+    try:
+        result = compute_and_persist(claim.spec)
+        if result.spec != claim.spec:
+            raise ValueError("worker computed the wrong exact-input job")
+        if lost.is_set():
+            raise WorkerLeaseLost("worker lost its database lease before completion")
+        if not queue.finish(claim, result):
+            raise WorkerLeaseLost("worker result completion was fenced")
+        return "computed_not_published"
+    except WorkerLeaseLost:
+        return "lease_lost_not_published"
+    except Exception:
+        # Never persist raw exception bodies: they can include provider URLs,
+        # roster identities, user information or database connection details.
+        if not lost.is_set():
+            queue.fail(claim, error_code="worker_execution_failed")
+        return "failed_not_published"
+    finally:
+        stop.set()
+        renewer.join(timeout=1.0)
