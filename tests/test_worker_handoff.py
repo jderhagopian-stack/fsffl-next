@@ -215,3 +215,58 @@ def test_migration_does_not_grant_public_access_or_trigger_live_work():
     assert "unique index" in migration and "status in ('queued', 'running')" in migration
     assert "grant " not in migration.lower()
     assert "trigger" not in migration.lower()
+
+
+def test_worker_execution_stages_result_without_any_publication():
+    from fsffl.product.worker_handoff import execute_one_worker_job
+    c = FakeCursor(row=dict(user_id="tenant-a", league_id="league-1",
+                            league_state_id="state-1", publication_generation_id="generation-1",
+                            source_manifest_fingerprint="evidence-fingerprint-1",
+                            model_version="career-contract-v1", capability="career_intrinsic",
+                            attempts=1, lease_expires_at=datetime.now(UTC) + timedelta(minutes=2)))
+    q = PostgresWorkerDispatch(PooledStore(c))
+    invoked = []
+    def calc(item):
+        invoked.append(item)
+        return receipt(item)
+    assert execute_one_worker_job(q, compute_and_persist=calc, heartbeat_seconds=0.01) == "computed_not_published"
+    assert invoked == [spec()]
+    assert "status='computed'" in c.executed[-1][0]
+    # Existing publication owner is never invoked by the worker itself.
+
+
+def test_worker_execution_failure_does_not_expose_exception_text_or_publish():
+    from fsffl.product.worker_handoff import execute_one_worker_job
+    c = FakeCursor(row=dict(user_id="tenant-a", league_id="league-1",
+                            league_state_id="state-1", publication_generation_id="generation-1",
+                            source_manifest_fingerprint="evidence-fingerprint-1",
+                            model_version="career-contract-v1", capability="career_intrinsic",
+                            attempts=1, lease_expires_at=datetime.now(UTC) + timedelta(minutes=2)))
+    q = PostgresWorkerDispatch(PooledStore(c))
+    def failing(_):
+        raise RuntimeError("private user data and source credentials")
+    assert execute_one_worker_job(q, compute_and_persist=failing, heartbeat_seconds=0.01) == "failed_not_published"
+    assert c.executed[-1][1][0] == "worker_execution_failed"
+    assert "private" not in repr(c.executed)
+
+
+def test_worker_execution_lost_lease_refuses_result_completion():
+    from fsffl.product.worker_handoff import execute_one_worker_job
+    c = FakeCursor(row=dict(user_id="tenant-a", league_id="league-1",
+                            league_state_id="state-1", publication_generation_id="generation-1",
+                            source_manifest_fingerprint="evidence-fingerprint-1",
+                            model_version="career-contract-v1", capability="career_intrinsic",
+                            attempts=1, lease_expires_at=datetime.now(UTC) + timedelta(minutes=2)))
+    pool = PooledStore(c)
+    queue = PostgresWorkerDispatch(pool)
+    def calc(item):
+        c.rowcount = 0  # lease revoked before final completion; fenced update
+        return receipt(item)
+    assert execute_one_worker_job(queue, compute_and_persist=calc, heartbeat_seconds=0.01) == "lease_lost_not_published"
+    assert "status='computed'" in c.executed[-1][0]  # attempted but updated zero rows
+
+
+def test_worker_execution_idle_does_no_calculation():
+    from fsffl.product.worker_handoff import execute_one_worker_job
+    q = PostgresWorkerDispatch(PooledStore(FakeCursor(row=None)))
+    assert execute_one_worker_job(q, compute_and_persist=lambda _: pytest.fail("should not compute")) == "idle"
