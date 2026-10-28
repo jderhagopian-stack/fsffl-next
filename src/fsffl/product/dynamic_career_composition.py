@@ -436,19 +436,39 @@ def build_dynamic_rostered_career_contract(
                 "and point-in-time historical panel)"
             )
         return result(contract=None, failures=failures)
-    # ROS acquisition/scoring is complete. Career consumes the retained
-    # candidate source, Y1, future and failure contracts; it never consumes
-    # the whole-league ROS intermediate. Release this local working-set
-    # reference without mutating the builder's result or its evidence.
+    # Foundation 4 only needs future rows for eligible Career candidates.
+    # Compact the full P0 scenario graph before its wide fitting workspaces
+    # are created, while preserving candidate rows and multiplier provenance.
+    eligible_future = replace(
+        future,
+        contract=future.contract.model_copy(
+            update={
+                "forecasts": tuple(
+                    row for row in future.contract.forecasts
+                    if row.player_id in eligible
+                )
+            }
+        ),
+    )
+    # ROS acquisition/scoring is complete. Release the full graph and aliases
+    # used to select it without mutating the builder-owned result.
     live = replace(
-        live, ros_runtime=None,
+        live,
+        candidate_ids=tuple(sorted(eligible)),
+        candidate_source_rows={
+            player_id: live.candidate_source_rows[player_id]
+            for player_id in sorted(eligible)
+        },
+        future=eligible_future,
+        ros_runtime=None,
         year_one_standard={pid: live.year_one_standard[pid] for pid in sorted(eligible)},
         year_one_league={pid: live.year_one_league[pid] for pid in sorted(eligible)},
         # These already-digested acquisition coordinates are not inputs to
         # Foundation 4 or subsequent candidate composition. Keep the source
-        # manifest and accepted candidate observations/future contracts intact.
+        # manifest and accepted candidate observations/future rows intact.
         ros_fumbles_lost=(), fumbles_eligible_player_ids=(),
     )
+    del future, future_rows, eligible_future
     try:
         _reclaim_career_stage("career-before-dynamic-foundation4")
         with sample_rss_phase("career.foundation4_materialization"):
@@ -485,16 +505,14 @@ def build_dynamic_rostered_career_contract(
     # the separate baseline future contract. This preserves every accepted
     # candidate input while preventing two full future contracts from
     # overlapping during expanded-cohort composition.
-    candidate_future = future.contract.model_copy(
+    candidate_future = live.future.contract.model_copy(
         update={
             "forecasts": tuple(
-                row for row in future.contract.forecasts if row.player_id in complete
+                row for row in live.future.contract.forecasts if row.player_id in complete
             )
         }
     )
-    future = replace(future, contract=candidate_future)
-    live = replace(live, future=future)
-    del future_rows
+    live = replace(live, future=replace(live.future, contract=candidate_future))
 
     # Build the baseline only after releasing incomplete candidate horizons.
     _reclaim_career_stage("career-foundation4-complete")
@@ -523,7 +541,7 @@ def build_dynamic_rostered_career_contract(
         year_one_league={
             player_id: live.year_one_league[player_id] for player_id in complete
         },
-        future=replace(future, contract=candidate_future),
+        future=live.future,
         failures={},
     )
     _reclaim_career_stage("career-before-expanded-shapley")

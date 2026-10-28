@@ -376,6 +376,16 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
         league_year_one=(candidate_y1,),
         candidate_source_rows={candidate_id: dynamic_row},
     )
+    unrelated_rows = tuple(
+        row.model_copy(update={"player_id": "sleeper:player:unrelated"})
+        for row in dynamic_future.contract.forecasts
+    )
+    dynamic_future = replace(
+        dynamic_future,
+        contract=dynamic_future.contract.model_copy(
+            update={"forecasts": dynamic_future.contract.forecasts + unrelated_rows}
+        ),
+    )
     candidate = P0LiveCandidateResult(
         evaluation_as_of=candidate_as_of,
         completed_through_week=4,
@@ -419,9 +429,18 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     assert "Foundation 4 dynamic materializer input bundle is not configured" in result.failures[candidate_id]
     assert "route/development modules" in result.failures[candidate_id]
 
+    from weakref import ref as weakref_ref
+    unrelated_future_rows = []
+
     def no_components(_context, retained, ids):
         assert retained.ros_runtime is None
-        assert retained.future is candidate.future
+        assert retained.future is not candidate.future
+        assert set(retained.future.contract.player_ids) == {candidate_id}
+        assert retained.future.scoring_multipliers is candidate.future.scoring_multipliers
+        assert len(retained.future.contract.forecasts) == 2
+        assert set(candidate.future.contract.player_ids) == {
+            candidate_id, "sleeper:player:unrelated"
+        }
         assert retained.candidate_source_rows == candidate.candidate_source_rows
         assert retained.year_one_league == {candidate_id: candidate_y1}
         assert retained.year_one_standard == {candidate_id: candidate_y1}
@@ -443,6 +462,24 @@ def test_hosted_dynamic_career_bridge_defers_shapley_until_foundation4_complete(
     assert candidate.ros_runtime is not None  # public builder result unchanged
     assert result.contract is None
     assert result.failures[candidate_id] == "no F4 components"
+
+    def temporary_future_builder(_state, *, projection_history_as_of=None):
+        rows = tuple(row.model_copy() for row in candidate.future.contract.forecasts)
+        unrelated_future_rows.append(
+            weakref_ref(next(row for row in rows if row.player_id == "sleeper:player:unrelated"))
+        )
+        isolated_contract = candidate.future.contract.model_copy(update={"forecasts": rows})
+        return replace(candidate, future=replace(candidate.future, contract=isolated_contract))
+
+    def compacted_before_fit(_context, retained, ids):
+        assert unrelated_future_rows[0]() is None
+        return no_components(_context, retained, ids)
+
+    reclaimed_full_graph = bridge.build_dynamic_rostered_career_contract(
+        context, SimpleNamespace(), current_intrinsic_loader=base_loader,
+        candidate_builder=temporary_future_builder, materializer=compacted_before_fit,
+    )
+    assert reclaimed_full_graph.failures[candidate_id] == "no F4 components"
 
     from weakref import ref
     unneeded = []
