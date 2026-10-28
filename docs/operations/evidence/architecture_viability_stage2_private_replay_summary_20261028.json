@@ -1,0 +1,62 @@
+{
+  "schema": "fsffl.architecture_viability.stage2_private_replay_public_summary.v1",
+  "date_utc": "2026-10-28",
+  "source_commit": "ec0d9b0582ddc165a45edc2d120d6be5256166e0",
+  "archived_baseline_date": "2026-10-13",
+  "private_inputs": "preserved Week-5 real-State offline checkpoint; private and never uploaded",
+  "accepted_f4_bundle_sha256_verification": true,
+  "execution_runtime": {
+    "python": "3.13.5",
+    "note": "not governed Render Python 3.12.10; scientific library versions differ"
+  },
+  "result": {
+    "career_estimates": 353,
+    "dynamic_estimates": 19,
+    "historical_unresolved": 9,
+    "baseline_estimates": 353,
+    "matching_estimate_ids": 353,
+    "max_abs_delta_by_component": {
+      "career": 0,
+      "y1_y3": 0,
+      "y4_y7": 0,
+      "y8_plus": 0
+    }
+  },
+  "topology": {
+    "model_alone": {
+      "peak_process_rss_bytes": 324083712,
+      "elapsed_seconds": 198.511
+    },
+    "co_resident_web_and_compute": {
+      "peak_process_rss_bytes": 343666688,
+      "elapsed_seconds": 203.096,
+      "web_health_requests": 670,
+      "web_health_failures": 0,
+      "web_health_p95_ms": 187.84,
+      "web_health_max_ms": 434.96
+    },
+    "separate_worker_same_container": {
+      "web_peak_sampled_rss_bytes": 216887296,
+      "worker_peak_sampled_rss_bytes": 326184960,
+      "max_sum_process_rss_proxy_bytes": 538386432,
+      "worker_elapsed_seconds": 199.31,
+      "overall_elapsed_seconds": 202.044,
+      "web_health_requests": 989,
+      "web_health_failures": 0,
+      "web_health_p95_ms": 6.05,
+      "web_health_max_ms": 183.21
+    }
+  },
+  "interpretation": "Web isolation shows large health-read p95 reduction at roughly unchanged compute latency, but adds a separate process baseline; summed RSS is not actual container RSS.",
+  "limits": [
+    "health GET is not an authenticated real browsing/restore/State read trace",
+    "same larger private test container, not an independently budgeted Render worker service",
+    "no actual Postgres transaction, publication, last-good, or real worker-restart recovery",
+    "no actual 512 MiB cgroup peak measurement; sum-of-RSS may double-count shared pages",
+    "archived October 13 State does not establish October 28 live-roster coverage",
+    "different Python/NumPy/sklearn versions from production",
+    "single complete run per topology; only historical F4 20-cell archive had three repetitions",
+    "no new production service, deploy, or paid resource authorized"
+  ],
+  "recommendation": "B: retain accepted analytics, restructure bounded heavy-compute owner; require production-runtime and costed worker/last-good acceptance before deployment"
+}
