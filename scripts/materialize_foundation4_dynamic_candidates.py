@@ -253,6 +253,32 @@ def build_candidate_features(dev, candidates, reference, raw, players, residual,
     return dev.merge_trajectory(x, residual, innovation)
 
 
+def frozen_current_reference_coordinates(board: pd.DataFrame) -> pd.DataFrame:
+    """Return only the frozen cohort coordinates used by dynamic candidates.
+
+    Candidate feature construction consumes the reference board solely for the
+    position-specific empirical Y1 percentile. Building the full 335-row
+    Foundation 4 reference feature table here repeated joins over raw history,
+    player metadata, and trajectory panels without changing that percentile.
+    Keep the exact accepted input transformation while avoiding those unused
+    feature joins and their temporary allocations.
+    """
+    required = {"player_id", "position", "league_y1_points"}
+    missing = sorted(required - set(board.columns))
+    if missing:
+        raise SystemExit(f"connected current board missing columns: {missing}")
+    reference = board.loc[board.position.isin(POSITIONS), [
+        "player_id", "position", "league_y1_points",
+    ]].copy()
+    if len(reference) != 335:
+        raise SystemExit(f"expected governed 335-player board, got {len(reference)}")
+    reference["output_player_id"] = reference["player_id"].astype(str)
+    reference["y1"] = pd.to_numeric(
+        reference["league_y1_points"], errors="coerce"
+    ).fillna(0).clip(lower=0)
+    return reference.loc[:, ["output_player_id", "position", "y1"]]
+
+
 def write_durable_roster_checkpoint(
     path: str | Path,
     *,
@@ -503,7 +529,7 @@ def main():
     innovation_header = pd.read_csv(a.innovation_states, nrows=0).columns
     innovation = pd.read_csv(a.innovation_states, usecols=[c for c in INNOVATION_COLUMNS if c in innovation_header])
     reference_board = pd.read_csv(a.reference_board)
-    reference = source.build_current(dev, reference_board, raw, players, residual, innovation)
+    reference = frozen_current_reference_coordinates(reference_board)
     reference_player_count = int(reference.output_player_id.nunique())
     reference_ids = set(reference.output_player_id.astype(str))
     candidates, candidate_input_failures = validate_candidates_per_player(
