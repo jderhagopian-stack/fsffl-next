@@ -19,6 +19,7 @@ jobs:
       - name: Check out exact PR head
         uses: actions/checkout@v4
         with:
+          ref: \${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: Use governed Python 3.12.10
         uses: actions/setup-python@v5
