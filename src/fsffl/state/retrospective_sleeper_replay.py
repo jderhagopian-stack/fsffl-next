@@ -83,6 +83,7 @@ class RetrospectiveSleeperTradeReplay(FrozenModel):
     after_ownership: tuple[RetrospectiveRosterOwnership, ...]
     roster_slot_coverage: Literal["unknown_at_trade_cutoff"] = "unknown_at_trade_cutoff"
     ownership_scope: Literal["retrospective_ownership_snapshot_only"] = "retrospective_ownership_snapshot_only"
+    pick_ownership_scope: Literal["archived_traded_pick_records_only"] = "archived_traded_pick_records_only"
     issues: tuple[str, ...]
     status: Literal["provisionally_consistent", "blocked"]
     evidence_scope: Literal["retrospective_archived_facts_only"] = "retrospective_archived_facts_only"
