@@ -4,13 +4,13 @@
 
 ## Change
 
-The archived Sleeper replay now returns complete league-wide player/pick ownership sets at the reconstructed boundaries immediately before and after the selected trade. It retains conditional archived FAAB-used values only for the two trade participants. Nonparticipant FAAB is excluded from this scoped result.
+The archived Sleeper replay now returns league-wide player ownership and ownership for pick records present in the retained traded-pick ledger at the reconstructed boundaries immediately before and after the selected trade. It retains conditional archived FAAB-used values only for the two trade participants. Nonparticipant FAAB is excluded from this scoped result.
 
-The result is explicitly `retrospective_ownership_snapshot_only`. Roster slot, starter, taxi, reserve, and IR placement at the trade cutoff remains unknown. The snapshot is not a canonical `LeagueState`, it does not authorize a historical grade, and archived FAAB remains conditional on the retained ledger.
+The result is explicitly `retrospective_ownership_snapshot_only`. The archive does not enumerate the full universe of untraded picks, so those are outside the pick snapshot. Roster slot, starter, taxi, reserve, and IR placement at the trade cutoff remains unknown. The snapshot is not a canonical `LeagueState`, it does not authorize a historical grade, and archived FAAB remains conditional on the retained ledger.
 
 ## Why the isolated archive discrepancy does not block this transition
 
-The selected trade is between provider rosters 2 and 7. The unrelated $3 FAAB usage delta belongs to a nonparticipant roster; this implementation omits nonparticipant FAAB rather than treating that discrepancy as resolved. The Deneric Prince screenshot separately supports the missing later player departure in the season-wide audit. It remains supplemental retrospective evidence, and the original provider audit is unchanged.
+The selected trade is between provider rosters 2 and 7; its transferred 2025 third-round pick is present in the retained ledger. The unrelated $3 FAAB usage delta belongs to a nonparticipant roster; this implementation omits nonparticipant FAAB rather than treating that discrepancy as resolved. The Deneric Prince screenshot separately supports the missing later player departure in the season-wide audit. It remains supplemental retrospective evidence, and the original provider audit is unchanged.
 
 ## Evidence boundary
 
