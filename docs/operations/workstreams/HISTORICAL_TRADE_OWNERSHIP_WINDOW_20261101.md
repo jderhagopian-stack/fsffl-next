@@ -1,6 +1,6 @@
 # Retrospective trade ownership window — 2026-11-01
 
-**Scope:** backend-only fact reconstruction for the selected October 1, 2023 completed trade. This checkpoint is for branch `historical-trade-ownership-window-20261101`, based on main `fbb2ad5e789ad76b4b2fdaa5d4554f03d76ab8af`.
+**Accepted:** merged as PR #500, merge `28c2164d4bec1fd3ca7640ec6fdf5bf24e8af298`, from exact tested head `ba5aa4db8f160fecbecf0b50060d437207be6520`. Scope remains backend-only fact reconstruction for the selected October 1, 2023 completed trade.
 
 ## Change
 
@@ -10,7 +10,7 @@ The result is explicitly `retrospective_ownership_snapshot_only`. The archive do
 
 ## Why the isolated archive discrepancy does not block this transition
 
-The selected trade is between provider rosters 2 and 7; its transferred 2025 third-round pick is present in the retained ledger. The unrelated $3 FAAB usage delta belongs to a nonparticipant roster; this implementation omits nonparticipant FAAB rather than treating that discrepancy as resolved. The Deneric Prince screenshot separately supports the missing later player departure in the season-wide audit. It remains supplemental retrospective evidence, and the original provider audit is unchanged.
+The transferred 2025 third-round pick is present in the retained ledger. The unrelated $3 FAAB usage delta belongs to a nonparticipant roster; this implementation omits nonparticipant FAAB rather than treating that discrepancy as resolved. The Deneric Prince screenshot separately supports the missing later player departure in the season-wide audit. It remains supplemental retrospective evidence, and the original provider audit is unchanged.
 
 ## Evidence boundary
 
@@ -18,4 +18,4 @@ The source remains the pinned, retrospectively retained 2023 league archive (leg
 
 ## Acceptance
 
-Synthetic tests assert deterministic pre/post ownership, pick transfer, participant-only FAAB, and explicit unknown roster-slot coverage across varied team counts. The exact pinned-source workflow verifies the same ownership window without logging private asset identities. Focused CI and the stable full suite remain pending for this draft candidate. No database writes, migration, Render deployment, or app change.
+Synthetic regressions passed across varied team counts. Pinned-source historical replay run 41347254052, ordinary CI run 41347254086, and Stable full suite run 41347339803 passed on the exact PR head; Stable passed 2,608 tests with 4 skipped. The pinned archive ran ephemerally without raw asset identities in logs. No database writes, migration, Render deployment, or app change.
