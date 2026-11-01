@@ -168,6 +168,8 @@ def reconcile_supplemental_player_movements(
             if movement.date_precision == SupplementalDatePrecision.EXACT_TIMESTAMP:
                 if movement.effective_at > issue.completed_at:
                     ordered.append(movement)
+                elif movement.effective_at == issue.completed_at:
+                    same_day_ambiguous.append(movement)
             elif movement.effective_date > issue.completed_at.date():
                 ordered.append(movement)
             elif movement.effective_date == issue.completed_at.date():
