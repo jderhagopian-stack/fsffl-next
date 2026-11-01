@@ -22,6 +22,32 @@ PINNED_SOURCE_BLOB = "e18c01bf25f58c5dfe3d0802f53de484ea257ca1"
 PINNED_TRADE = "1014282713371283456"
 
 
+def _ownership_window_is_consistent(replay):
+    before = {row.roster_id: row for row in replay.before_ownership}
+    after = {row.roster_id: row for row in replay.after_ownership}
+    if len(before) != replay.observed_team_count or len(after) != replay.observed_team_count:
+        return False
+    for transfer in replay.transfers:
+        field = "player_ids" if transfer.asset_kind == "player" else "pick_ids"
+        if sum(transfer.source_asset_id in getattr(row, field) for row in replay.before_ownership) != 1:
+            return False
+        if sum(transfer.source_asset_id in getattr(row, field) for row in replay.after_ownership) != 1:
+            return False
+        if transfer.source_asset_id not in getattr(before[transfer.before_roster_id], field):
+            return False
+        if transfer.source_asset_id not in getattr(after[transfer.after_roster_id], field):
+            return False
+    faab = {row.roster_id: row for row in replay.faab}
+    if set(faab) != {row.roster_id for row in replay.before_ownership if row.faab_used is not None}:
+        return False
+    if set(faab) != {row.roster_id for row in replay.after_ownership if row.faab_used is not None}:
+        return False
+    if any(before[team].faab_used != row.used_before or after[team].faab_used != row.used_after
+           for team, row in faab.items()):
+        return False
+    return replay.roster_slot_coverage == "unknown_at_trade_cutoff"
+
+
 def test_pinned_original_archive_2023_factual_replay_private():
     source = os.environ.get("FSFFL_RESEARCH_HISTORICAL_ARCHIVE")
     if not source:
@@ -36,6 +62,7 @@ def test_pinned_original_archive_2023_factual_replay_private():
     replay = replay_archived_sleeper_trade(
         s, transaction_id=PINNED_TRADE, source_revision="git-blob:" + PINNED_SOURCE_BLOB)
     assert replay.status == "provisionally_consistent", replay.issues
+    assert _ownership_window_is_consistent(replay)
     assert replay.future_completed_events_reversed == 191
     assert replay.observed_team_count == 12
     assert len([x for x in replay.transfers if x.asset_kind == "player"]) == 1
