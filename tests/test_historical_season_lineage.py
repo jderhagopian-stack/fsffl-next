@@ -124,3 +124,13 @@ def test_reject_duplicate_roster_map_or_source_receipt_wrong_kind():
     with pytest.raises(ValueError,match="settings evidence"):
         Source(season=a.season,provider_ref=a.provider_ref,
                settings_receipt=receipt(a.season,Kind.TRANSACTIONS,"wrong"))
+
+
+def test_sleeper_aliases_are_normalized_without_erasing_original_history():
+    original=source(2023,provider_id="alias",slots=("QB","SUPER_FLEX","BN","BN","LB"))
+    exact=original.model_copy(update={"provider_ref":ProviderRef(provider="sleeper", external_id="alias")})
+    assert exact.raw_position_or_slot_codes==("QB","SUPER_FLEX","BN","BN","LB")
+    assert exact.normalized_slot_codes==("QB","SUPERFLEX","BENCH","BENCH","LB")
+    assert exact.unknown_slot_codes==("LB",)
+    # No alias inheritance for an unrelated provider.
+    assert original.unknown_slot_codes==("BN","LB","SUPER_FLEX")
