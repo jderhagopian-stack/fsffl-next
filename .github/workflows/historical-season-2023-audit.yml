@@ -1,0 +1,61 @@
+name: Historical 2023 season-wide source ledger (research only)
+
+on:
+  pull_request:
+    paths:
+      - 'src/fsffl/state/retrospective_season_audit.py'
+      - 'tests/test_retrospective_season_audit.py'
+      - 'tests/test_retrospective_full_2023_archive.py'
+      - 'scripts/audit_retrospective_sleeper_season.py'
+      - '.github/workflows/historical-season-2023-audit.yml'
+      - 'docs/operations/workstreams/HISTORICAL_2023_SEASON_LEDGER_20261101.md'
+
+permissions:
+  contents: read
+
+jobs:
+  season-ledger:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact current PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Use governed Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install local code and tests
+        run: python -m pip install -e '.[dev]'
+      - name: Focused season and inherited historical contracts
+        run: |
+          python -m pytest -q tests/test_retrospective_season_audit.py \
+            tests/test_retrospective_sleeper_replay.py \
+            tests/test_historical_coverage.py \
+            tests/test_historical_season_lineage.py \
+            tests/test_historical_trade_transition.py \
+            tests/test_historical_trade_state.py \
+            tests/test_state_postgres_history.py
+      - name: Fetch disposable exact public legacy archive (not committed)
+        env:
+          SOURCE_URL: https://raw.githubusercontent.com/jderhagopian-stack/sleeper-league-data/1179d3104cbe3330cf27e4173d61df95f2494b1a/data/league_history.json
+        run: |
+          curl --fail --silent --show-error --location --retry 2 --output "$RUNNER_TEMP/historical-archive.json" "$SOURCE_URL"
+          test "$(git hash-object "$RUNNER_TEMP/historical-archive.json")" = "e18c01bf25f58c5dfe3d0802f53de484ea257ca1"
+      - name: Prove yearwide source discrepancy is surfaced (not guessed away)
+        env:
+          FSFFL_RESEARCH_HISTORICAL_ARCHIVE: ${{ runner.temp }}/historical-archive.json
+        run: |
+          python -m pytest -q tests/test_retrospective_full_2023_archive.py
+          set +e
+          python scripts/audit_retrospective_sleeper_season.py \
+            --archive "$FSFFL_RESEARCH_HISTORICAL_ARCHIVE" \
+            --git-blob-sha e18c01bf25f58c5dfe3d0802f53de484ea257ca1 --season 2023
+          status=$?
+          set -e
+          test "$status" -eq 2 # real original history has a known missing movement
+      - name: Delete temporary archive even on failure
+        if: always()
+        run: rm -f "$RUNNER_TEMP/historical-archive.json"
