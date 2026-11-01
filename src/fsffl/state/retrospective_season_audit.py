@@ -32,6 +32,8 @@ class RetrospectiveSeasonIssue(FrozenModel):
     completed_at: datetime | None = None
     event_type: str | None = None
     asset_id: str | None = None
+    provider_roster_id: str | None = None
+    asset_id: str | None = None
 
     @field_validator("completed_at")
     @classmethod
@@ -119,7 +121,7 @@ def audit_retrospective_sleeper_season(
         event_time = datetime.fromtimestamp(completed / 1000, tz=UTC) if type(completed) in (int, float) and completed > 0 else None
         anomalies.append(RetrospectiveSeasonIssue(code=code, transaction_id=str(tx.get("transaction_id")) if tx else None,
                                                 completed_at=event_time, event_type=str(tx.get("type")) if tx else None,
-                                                asset_id=asset_id))
+                                                asset_id=asset_id, provider_roster_id=provider_roster_id))
 
     if league.get("total_rosters") is not None and int(league["total_rosters"]) != len(rosters):
         record("end_anchor_roster_count_mismatch")
@@ -195,7 +197,7 @@ def audit_retrospective_sleeper_season(
             if dst not in owners:
                 record("unknown_event_roster", tx)
             elif str(player) not in owners[dst]:
-                record("post_event_player_missing", tx, asset_id=str(player))
+                record("post_event_player_missing", tx, asset_id=str(player), provider_roster_id=dst)
             else:
                 owners[dst].remove(str(player))
         for player, orig in (tx.get("drops") or {}).items():
