@@ -45,7 +45,8 @@ def _ownership_window_is_consistent(replay):
     if any(before[team].faab_used != row.used_before or after[team].faab_used != row.used_after
            for team, row in faab.items()):
         return False
-    return replay.roster_slot_coverage == "unknown_at_trade_cutoff"
+    return (replay.roster_slot_coverage == "unknown_at_trade_cutoff"
+            and replay.pick_ownership_scope == "archived_traded_pick_records_only")
 
 
 def test_pinned_original_archive_2023_factual_replay_private():
