@@ -23,7 +23,7 @@ Deneric Prince was **not part of the October 1, 2023 trade**. The August waiver 
 
 `src/fsffl/state/historical_supplemental_evidence.py` defines immutable provider-neutral receipts and player-movement facts. It carries evidence source, fingerprint, received/source-availability times, date precision, and a fixed retrospective-only scope. Date-only facts cannot carry an exact event time. The contract does not store raw screenshots, mutate provider history, perform replay, or authorize PIT Decision grades.
 
-This first implementation is **not yet validated or integrated**. Focused tests and consumer-side conflict handling remain required before it can be accepted. Keep the original archive audit unchanged until an explicit supplement-aware replay path reports both the provider-source issue and the separately supported reconciliation.
+The first implementation now includes a fail-closed reconciliation function. It matches provider, season, source player ID, source roster ID, and event ordering; nonmatching evidence remains unresolved, while same-day or multiple distinct later drops are marked ambiguous. The result embeds the original provider audit unchanged and is always ineligible for a PIT grade. It does not yet create canonical State or write to persistence.
 
 ## Next backend gate
 
