@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import field_validator, model_validator
 
 from .historical_coverage import HistoricalSeasonIdentity
 from .models import FrozenModel
