@@ -33,7 +33,6 @@ class RetrospectiveSeasonIssue(FrozenModel):
     event_type: str | None = None
     asset_id: str | None = None
     provider_roster_id: str | None = None
-    asset_id: str | None = None
 
     @field_validator("completed_at")
     @classmethod
@@ -116,7 +115,7 @@ def audit_retrospective_sleeper_season(
         raise ValueError("ambiguous season-roster IDs")
     anomalies: list[RetrospectiveSeasonIssue] = []
 
-    def record(code: str, tx: Mapping[str, Any] | None = None, *, asset_id: str | None = None) -> None:
+    def record(code: str, tx: Mapping[str, Any] | None = None, *, asset_id: str | None = None, provider_roster_id: str | None = None) -> None:
         completed = tx.get("status_updated") if tx is not None else None
         event_time = datetime.fromtimestamp(completed / 1000, tz=UTC) if type(completed) in (int, float) and completed > 0 else None
         anomalies.append(RetrospectiveSeasonIssue(code=code, transaction_id=str(tx.get("transaction_id")) if tx else None,
