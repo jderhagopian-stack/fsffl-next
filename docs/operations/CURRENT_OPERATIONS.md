@@ -1,3 +1,15 @@
+## 2026-11-01 — Management sequencing: league-agnostic historical intelligence foundation FIRST (draft, nonproduction)
+
+User accepted the historical-foundation-first program following source/code/database review. This **narrowly supersedes** the October 5 feature hold solely for separate read-only foundational PIT/history contracts and verified archival-data planning; it does **not** authorize history grade publication, live data backfill, source-rights changes, a new worker service, or arbitrary UI breadth. Preserve one primary History/Data workstream and at most one narrowly scoped nonconflicting worker-enabling lane. Existing Career/3-Year beta and PR #492 worker boundary remain unmerged/unaccepted, and beta receives critical maintenance only.
+
+Authority: `docs/charter.md`, `docs/NORTH_STAR_PRODUCT_DIRECTIVE.md`, `docs/architecture/authority-boundaries.md`, `docs/architecture/point-in-time-state.md`, `docs/operations/OPERATING_PROTOCOL.md`; primary workstream checkpoint `docs/operations/workstreams/HISTORICAL_INTELLIGENCE_FOUNDATION_20261101.md`. Main at review = `271a8a8be8dc7611f9fc6df1a8f5f9182b5a747c`; Render continues `6d1259e1f5f55078398814a6c2383f7a0d544b84` on one 0.5-CPU/512-MiB service. **No deployment/migration/purchase.**
+
+Read-only actual Supabase inventory: State history 465 rows, all 2026; 2026-only ROS projection revisions 150; 2026-only market observations 180,590; Behavioral events 1,736 from 2022–2025 completed scans; historical report artifacts and historical sync checkpoints 0. None of these counts proves valid 2022–2025 point-in-time Forecast, Value or historical State completeness. Keep distinct source-available timestamps and separate at-time decision from hindsight; no silent migration of 2026 evidence into older dates.
+
+First bounded nonproduction implementation: draft `foundation/historical-pit-universal-20261101` contains immutable season-family identities, exact-date evidence receipts, a version-preserving league-specific rules inventory, explicit missing/provisional/future-only reporting, and varied-size/structure regression tests. It consumes existing canonical `LeagueState` and **does not build forecasts, trades, grades, raw source data or historical State**. Draft-only CI checks historical State/Trade contracts under Python 3.12.10. No real source history imported. After this boundary passes, independently discover season links, true historical transaction coverage and access rights before choosing a secure bounded backfill.
+
+---
+
 ## 2026-10-28 — Verified recovery status (current)
 
 This section is the current cross-workstream status. Entries below it are dated evidence/history; their PR, deployment, and acceptance statuses are not current unless repeated here.
