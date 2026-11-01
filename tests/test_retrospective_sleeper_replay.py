@@ -73,6 +73,8 @@ def test_arbitrary_league_sizes_replay_with_readonly_fact_scope(count):
     assert after["2"].pick_ids == (f"2025:3:{min(3, count)}",)
     assert before["1"].faab_used == 10 and after["1"].faab_used == 20
     assert before["2"].faab_used == 15 and after["2"].faab_used == 5
+    assert all(row.faab_used is None for row in result.before_ownership if row.roster_id not in {"1", "2"})
+    assert all(row.faab_used is None for row in result.after_ownership if row.roster_id not in {"1", "2"})
 
 
 def test_year_specific_scoring_changes_rules_hash_not_factual_transfer():
