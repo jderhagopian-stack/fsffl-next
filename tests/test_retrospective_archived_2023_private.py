@@ -13,6 +13,9 @@ from pathlib import Path
 import pytest
 
 from fsffl.state.retrospective_sleeper_replay import replay_archived_sleeper_trade
+from fsffl.state.historical_trade import normalize_sleeper_completed_trade
+from fsffl.state.models import Provenance, PlayerAsset, PickAsset, FaabAsset
+from datetime import UTC, datetime
 
 
 PINNED_SOURCE_BLOB = "e18c01bf25f58c5dfe3d0802f53de484ea257ca1"
@@ -43,3 +46,51 @@ def test_pinned_original_archive_2023_factual_replay_private():
     balances = {x.roster_id: x for x in replay.faab}
     assert balances["2"].used_before == 60 and balances["2"].used_after == 70
     assert balances["7"].used_before == 25 and balances["7"].used_after == 15
+
+
+def test_real_archived_trade_reuses_existing_canonical_transaction_importer():
+    """Same archived transaction must have the same sends under NEXT's State authority."""
+    path = os.environ.get("FSFFL_RESEARCH_HISTORICAL_ARCHIVE")
+    if not path:
+        pytest.skip("original source not mounted")
+    blob = Path(path).read_bytes()
+    assert sha1(b"blob " + str(len(blob)).encode() + b"\0" + blob).hexdigest() == PINNED_SOURCE_BLOB
+    y = next(row for row in json.loads(blob) if row["league"]["season"] == "2023")
+    tx = next(t for t in y["transactions"] if t["transaction_id"] == PINNED_TRADE)
+    replay = replay_archived_sleeper_trade(y, transaction_id=PINNED_TRADE,
+                                            source_revision="git-blob:" + PINNED_SOURCE_BLOB)
+    assert replay.status == "provisionally_consistent"
+    source_rosters = {int(r["roster_id"]): f"year-2023-team-{int(r['roster_id'])}" for r in y["rosters"]}
+    source_player_ids = {str(pid): f"sleeper-player-{str(pid)}" for pid in tx["adds"]}
+    key_to_pick = {(int(p["season"]), int(p["round"]), source_rosters[int(p["roster_id"])]):
+                   f"pick-{p['season']}-{p['round']}-{p['roster_id']}" for p in tx["draft_picks"]}
+    canonical = normalize_sleeper_completed_trade(
+        tx, league_id="sleeper:" + str(y["league"]["league_id"]),
+        roster_to_team=source_rosters, player_id_by_sleeper_id=source_player_ids,
+        pick_id_by_key=key_to_pick,
+        provenance=Provenance(source="retrospectively_retained_archive", retrieved_at=datetime.now(UTC),
+                              effective_at=replay.trade_completed_at),
+        as_of=replay.trade_completed_at,
+    )
+    assert canonical.record is not None and canonical.skipped_reason is None
+    assert canonical.record.completed_at == replay.trade_completed_at
+    recorded_sends = {
+        (str(int(team_id.rsplit("-", 1)[1])), kind, asset_id)
+        for team_id, kinds in (
+            (leg.team_id,
+             [("player", str(int(asset.player_id.rsplit("-", 1)[1]))) if isinstance(asset, PlayerAsset)
+               else ("pick", asset.pick_id) if isinstance(asset, PickAsset)
+               else ("faab", str(asset.amount)) for asset in leg.sends])
+            for leg in canonical.record.legs
+        ) for kind, asset_id in kinds
+    }
+    expected_sends = set()
+    for transfer in replay.transfers:
+        label = (str(int(transfer.source_asset_id.rsplit(":", 1)[1])) if transfer.asset_kind == "pick"
+                 else transfer.source_asset_id)
+        asset_id = (f"pick-{transfer.source_asset_id.replace(':', '-')}" if transfer.asset_kind == "pick"
+                    else label)
+        expected_sends.add((transfer.before_roster_id, transfer.asset_kind, asset_id))
+    for item in tx.get("waiver_budget") or []:
+        expected_sends.add((str(item["sender"]), "faab", str(item["amount"])))
+    assert recorded_sends == expected_sends
