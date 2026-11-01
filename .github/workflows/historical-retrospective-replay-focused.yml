@@ -1,0 +1,47 @@
+name: Historical retrospective replay - provider adapter (nonproduction)
+on:
+  pull_request:
+    paths:
+      - 'src/fsffl/state/retrospective_sleeper_replay.py'
+      - 'tests/test_retrospective_sleeper_replay.py'
+      - 'tests/test_retrospective_archived_2023_private.py'
+      - 'scripts/replay_retrospective_sleeper_archive.py'
+      - '.github/workflows/historical-retrospective-replay-focused.yml'
+      - 'docs/operations/workstreams/HISTORICAL_REAL_TRADE_REPLAY_20261101.md'
+permissions:
+  contents: read
+jobs:
+  provider-fact-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Exact PR head checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install local project and test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Run source-adapter and affected historical State/Trade regressions
+        run: python -m pytest -q tests/test_retrospective_sleeper_replay.py tests/test_historical_coverage.py tests/test_historical_season_lineage.py tests/test_historical_trade_transition.py tests/test_historical_trade_state.py tests/test_state_postgres_history.py
+      - name: Fetch exact existing public archived source for ephemeral research proof
+        env:
+          SOURCE_URL: https://raw.githubusercontent.com/jderhagopian-stack/sleeper-league-data/1179d3104cbe3330cf27e4173d61df95f2494b1a/data/league_history.json
+        run: |
+          curl --fail --silent --show-error --location --retry 2 --output "$RUNNER_TEMP/historical-archive.json" "$SOURCE_URL"
+          test "$(git hash-object "$RUNNER_TEMP/historical-archive.json")" = "e18c01bf25f58c5dfe3d0802f53de484ea257ca1"
+      - name: Prove real pinned October 2023 transaction with same Python adapter
+        env:
+          FSFFL_RESEARCH_HISTORICAL_ARCHIVE: ${{ runner.temp }}/historical-archive.json
+        run: |
+          python -m pytest -q tests/test_retrospective_archived_2023_private.py
+          python scripts/replay_retrospective_sleeper_archive.py \
+            --archive "$FSFFL_RESEARCH_HISTORICAL_ARCHIVE" \
+            --git-blob-sha e18c01bf25f58c5dfe3d0802f53de484ea257ca1 \
+            --season 2023 --transaction 1014282713371283456
+      - name: Remove temporary source regardless of result
+        if: always()
+        run: rm -f "$RUNNER_TEMP/historical-archive.json"

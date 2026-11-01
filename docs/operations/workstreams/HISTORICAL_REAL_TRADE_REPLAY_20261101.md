@@ -1,0 +1,37 @@
+# Historical real 2023 factual replay — issue #494 (November 1, 2026)
+
+**Status (2026-11-01):** Read-only retrospective fact reconstruction **passed Python 3.12.10 synthetic and exact pinned real-source acceptance** in GitHub Actions run 41318274954: 63 contract/State/Trade regressions and two real-archive tests passed. **No canonical historical PIT State promoted. No at-time trade grades. No production deploy/database writes.**
+
+## Dependency and branch boundaries
+
+- Governing documents: repo root `AGENTS.md`, Charter, North Star, authority boundaries, point-in-time semantics, operational protocol and parent history workstream.
+- Parents: draft PR #493 (historical cutoff/receipt) -> stacked draft PR #495 (season lineage/trade witness). This slice is stacked **on #495**, not independently against main. Do not merge out of order.
+- Main at start `271a8a8be8dc7611f9fc6df1a8f5f9182b5a747c`. Beta remains unchanged. Current memory/worker PRs are separate.
+- New source adapter `src/fsffl/state/retrospective_sleeper_replay.py`, synthetic regressions `tests/test_retrospective_sleeper_replay.py`, optional secure pinned real-archive test `tests/test_retrospective_archived_2023_private.py`, offline sanitized probe `scripts/replay_retrospective_sleeper_archive.py`, focused CI workflow.
+
+## Pinned evidence and observed 2023 example
+
+- Read-only existing legacy repo `jderhagopian-stack/sleeper-league-data`, retained `data/league_history.json`, Git **blob** SHA-1 `e18c01bf25f58c5dfe3d0802f53de484ea257ca1` at legacy main commit `1179d3104cbe3330cf27e4173d61df95f2494b1a`. No raw data copied to this repository. Retrospective source retained by 2026, **not** proof original historical evidence was available in 2023.
+- Source 2023 record: 12 teams, own roster/scoring/FAAB configuration and archived end-of-season roster plus completed trades, drafts and historical traded picks. 48 trades, 37 containing picks, 22 containing FAAB, 8 with player+pick+FAAB; 1 multi-party example is explicitly unsupported by bilateral sender-only transition witness.
+- Chosen two-party October 1, 2023 completed transaction ID `1014282713371283456`; *created* at 18:52:32.630 UTC; *completed* at 19:15:33.375 UTC. The distinction is required: 13/48 historical completed trades had more than one hour between creation and completion; 3/48 exceeded 24 hours.
+- The existing legacy archive shows 191 later **completed** events after this trade. A read-only in-memory reverse pass over those later events found no player or pick ownership anomalies in that subset; 11 same-time event groups had no overlapping player/pick asset touches. There is one earlier/nontrade anomaly in a whole-season reverse check, **not** part of this subset. These are observations about a retained retrospective ledger, not independent contemporary archive validation.
+- Selected trade retrospective transfer check: one player moved from roster 7 to 2, a 2025 third-round origin pick moved from roster 2 to 7, and $10 of FAAB was sent from roster 2 to roster 7. Conditional reconstruction of archive roster `waiver_budget_used` over 191 later events gives roster 2 usage 60->70 and roster 7 usage 25->15; *usage-derived balances are not independently confirmed*. This reconstruction must never be displayed as a proven at-the-time roster/budget fact until independent anchor and transaction completeness gates pass.
+
+## New bounded source adapter
+
+The code accepts an **externally supplied original archived season record** and a pinned immutable source revision; it performs no network, SQL, writes or model math. It reconstructs player/pick ownership and conditional FAAB usage by reversing only later completed transactions. Source order uses `status_updated` and refuses absent completion timestamps instead of using `created` as a substitute. Independent batched/tied events may commute only when no player or pick identity overlaps; overlapping history blocks. All input dictionaries remain unmodified. Raw scoring and lineup codes, rules digest, original source content hash, and model version are retained. Changes in league sizes and scoring follow season-specific input, never fixed FSFFL 12-team constants.
+
+Outputs are explicitly **`retrospective_archived_facts_only`** and **`historical_anchor_independently_verified=False`, `eligible_for_pit_decision_grade=False`**. Acceptable first-slice state is `provisionally_consistent`, *not* canonical PIT-State certification. Contradictions block. The code does not infer career market, historical forecasts, pick market prices or owner acceptance percentages; the accepted State/Decision/Value/Forecast modules stay authoritative. The archive source is externally supplied and its licensing stage remains separate from code validity.
+
+The optional Python real-archive test pins the Git blob and selected transaction. It skips when the source is not securely mounted; **a skip is not a pass**. In dedicated GitHub Actions, the original existing public archive was fetched only into the ephemeral runner from a pinned immutable commit and passed the verified Git blob gate; both tests then passed, including matching the source-backed player/pick/FAAB sending legs to the existing canonical `normalize_sleeper_completed_trade` importer. The offline CLI verifies the exact Git blob by Git object hashing, outputs only aggregate counts/status, and never prints private player/manager/pick IDs. The ordinary PR CI runs synthetic source contracts; a separate authorized private run must supply the unchanged pinned archive to pass the real-archive gate, without uploading private bytes or changing live Supabase.
+
+## Remaining acceptance / follow-on
+
+1. **COMPLETE for the selected retained source:** Python 3.12.10 with exact Git SHA-1 blob pin, 63 regression + two real-source tests passed on Actions run 41318274954; sanitized Python output matched the separately observed JS replay (191 later events, 1 player + 1 pick + 2 FAAB usage rows, zero issue codes). This only validates agreement with one retrospective source, not source completeness or original PIT availability.
+2. Establish independent historical anchor(s) and all intervening event/crosswalk completeness, especially the full roster/taxi/reserve, pick trade chains and FAAB usage/budget semantics. Verify source timestamp and source rights separately. A chain derived from the end-of-season archive is still retrospective reconstruction, not an original 2023 snapshot.
+3. Materialize true canonical PIT `LeagueState` from verified source-backed facts **only after** adequate evidence. Use existing immutable state identity, State persistence, accepted pooled PostgreSQL path, and exact `HistoricalTradeRecord`/factual transition gates; do not create a competing Value or Decision authority.
+4. Proof against varying team counts/scoring and unsupported formats: IDP, auction, special rule changes fail as unsupported/partial until governing modules support them. Test another season/year and unrelated transaction independently.
+5. Future history backfill must be idempotent, tenant-fenced, dependency-keyed, write-safe, source-rights-approved and resource-metered. No sign-in-driven full historical re-fetch.
+6. When evidence supports it, at-time Decision assessment and retrospective outcome are two different outputs. The user interface remains downstream; no beta changes yet.
+
+**Release gate:** focused CI must pass; final-ready full-suite required before merges in parent order. No live deploy/new paid service/production migration authorized.
