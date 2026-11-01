@@ -61,6 +61,7 @@ def test_arbitrary_league_sizes_replay_with_readonly_fact_scope(count):
     assert result.trade_created_at < result.trade_completed_at
     assert result.trade_completed_at == datetime.fromtimestamp(TRADE_MS/1000, tz=UTC)
     assert result.ownership_scope == "retrospective_ownership_snapshot_only"
+    assert result.pick_ownership_scope == "archived_traded_pick_records_only"
     assert result.roster_slot_coverage == "unknown_at_trade_cutoff"
     before = {row.roster_id: row for row in result.before_ownership}
     after = {row.roster_id: row for row in result.after_ownership}
