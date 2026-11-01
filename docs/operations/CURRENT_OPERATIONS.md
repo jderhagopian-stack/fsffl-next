@@ -1,3 +1,17 @@
+## 2026-11-01 — Retrospective trade ownership window backend merged (nonproduction)
+
+PR #500 merged to `main` as squash `28c2164d4bec1fd3ca7640ec6fdf5bf24e8af298` from exact tested head `ba5aa4db8f160fecbecf0b50060d437207be6520`.
+
+The archived trade replay now returns pre/post player ownership across the season rosters and ownership for pick records present in the retained traded-pick ledger. It exposes only the two trade participants' conditional archived FAAB usage; nonparticipant FAAB is excluded. The transferred 2025 third-round pick is present in the ledger, but the archive does not enumerate all untraded future picks.
+
+The result is explicitly `retrospective_ownership_snapshot_only`. Trade-date lineup, taxi, reserve and IR assignments remain unknown. This is not a canonical `LeagueState` or a historical Decision grade. The unrelated $3 FAAB usage delta is on a nonparticipant roster and does not block this trade-specific ownership window; it remains unresolved in the season ledger. The Deneric Prince August 23 drop remains separate supplemental retrospective evidence; the original provider audit is preserved unchanged.
+
+**Exact-head validation:** pinned-source historical replay [run 41347254052](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41347254052) passed; ordinary CI [run 41347254086](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41347254086) passed; Stable full suite [run 41347339803](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41347339803) passed **2,608 tests, 4 skipped** on the exact PR head. The test workflow used the pinned source ephemerally and did not log player/manager identities.
+
+No production database write, migration, Render deployment or app change occurred. Canonical State materialization and any historical grade remain separately gated on complete, appropriately sourced evidence.
+
+---
+
 ## 2026-11-01 — Supplemental historical evidence backend merged (nonproduction)
 
 The historical backend remains the approved priority before app/UI work. PR #498 merged to `main` as squash `4e1a7951e52f8bc68187d661429c9dfae85fe7d8` from exact tested head `4125708ae17d5adc6898d733b66cb30b1ea5d67d`.
