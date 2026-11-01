@@ -39,3 +39,33 @@ def test_yearwide_2023_catches_exact_single_waiver_evidence_gap():
     assert out.source_provides_contemporaneous_state is False
     assert out.eligible_for_pit_decision_grade is False
     assert out.historically_validated_faab_balances is False
+
+
+def test_all_retained_seasons_preserve_original_rules_and_expose_incomplete_years():
+    """Source-wide research acceptance, not a claim of full historical coverage."""
+    path = os.getenv("FSFFL_RESEARCH_HISTORICAL_ARCHIVE")
+    if not path:
+        pytest.skip("original historical source not mounted")
+    raw = Path(path).read_bytes()
+    assert sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest() == PINNED_BLOB
+    years = sorted(json.loads(raw), key=lambda x: int(x["league"]["season"]))
+    assert [int(y["league"]["season"]) for y in years] == [2022, 2023, 2024, 2025, 2026]
+    summaries = []
+    for idx, y in enumerate(years):
+        if idx:
+            assert str(y["league"]["previous_league_id"]) == str(years[idx-1]["league"]["league_id"])
+        audit = audit_retrospective_sleeper_season(y, source_revision="git-blob:" + PINNED_BLOB)
+        assert audit.team_count == len(y["rosters"])
+        assert audit.completed_events_examined == len([t for t in y["transactions"] if t["status"] == "complete"])
+        assert audit.source_provides_contemporaneous_state is False
+        assert audit.eligible_for_pit_decision_grade is False
+        summaries.append(audit)
+    expected = [(2022, 246, 14), (2023, 350, 48), (2024, 358, 26), (2025, 339, 34), (2026, 107, 22)]
+    assert [(x.season, x.completed_events_examined, x.completed_trades_examined) for x in summaries] == expected
+    assert summaries[1].status == "incomplete_source_history"
+    assert [issue.code for issue in summaries[1].issues] == ["post_event_player_missing"]
+    assert all(not x.issues for idx, x in enumerate(summaries) if idx != 1)
+    assert summaries[1].original_rules_sha256 != summaries[2].original_rules_sha256
+    # Even a source-consistent 2022 or archived 2026 portion is not a valid PIT
+    # decision State: startup/draft events and original availability still need proof.
+    assert all(x.historically_validated_faab_balances is False for x in summaries)
