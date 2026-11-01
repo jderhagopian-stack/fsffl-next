@@ -83,9 +83,21 @@ class HistoricalSeasonSource(FrozenModel):
         return self
 
     @property
+    def normalized_slot_codes(self) -> tuple[str, ...]:
+        """Only adapter-verified aliases, never a guess for unknown formats.
+
+        Keep the original provider spellings in raw_position_or_slot_codes.
+        The identity of a similarly spelled IDP slot does NOT establish a
+        compatible simulation/forecast/scoring treatment.
+        """
+        aliases = {"SUPER_FLEX": "SUPERFLEX", "BN": "BENCH"} if self.provider_ref.provider.lower() == "sleeper" else {}
+        return tuple(aliases.get(code, code) for code in self.raw_position_or_slot_codes)
+
+    @property
     def unknown_slot_codes(self) -> tuple[str, ...]:
         supported = {slot.value for slot in RosterSlot}
-        return tuple(sorted({code for code in self.raw_position_or_slot_codes if code not in supported}))
+        return tuple(sorted({raw for raw, normalized in zip(self.raw_position_or_slot_codes, self.normalized_slot_codes)
+                             if normalized not in supported}))
 
     @property
     def roster_mapping_status(self) -> str:
