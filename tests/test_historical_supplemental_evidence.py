@@ -122,6 +122,16 @@ def test_exact_timestamp_after_provider_event_on_same_day_supports_gap():
     assert result.findings[0].status == SupplementalFindingStatus.SUPPORTED_RETROSPECTIVELY
 
 
+def test_exact_timestamp_tie_is_ambiguous():
+    exact = movement(
+        event_date=EVENT_AT.date(),
+        precision=SupplementalDatePrecision.EXACT_TIMESTAMP,
+        effective_at=EVENT_AT,
+    )
+    result = reconcile_supplemental_player_movements(provider_audit(), (exact,))
+    assert result.findings[0].status == SupplementalFindingStatus.AMBIGUOUS
+
+
 def test_multiple_distinct_later_drop_dates_are_ambiguous():
     first = movement()
     second = movement(
