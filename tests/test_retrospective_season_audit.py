@@ -78,6 +78,8 @@ def test_missing_unrecorded_departure_detected_as_gap_not_invented_drop():
     assert [v.code for v in x.issues]==["post_event_player_missing"]
     assert x.issues[0].transaction_id=="later-waiver"
     assert x.issues[0].event_type=="waiver"
+    assert x.issues[0].asset_id=="waiver-p"
+    assert x.issues[0].provider_roster_id=="1"
     assert x.source_provides_contemporaneous_state is False
 
 
