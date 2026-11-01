@@ -18,6 +18,8 @@ from .models import FrozenModel, LeagueState
 
 
 class HistoricalEvidenceKind(StrEnum):
+    SETTINGS = "settings"
+    ROSTERS = "rosters"
     TRANSACTIONS = "transactions"
     DRAFT = "draft"
     MATCHUPS = "matchups"
