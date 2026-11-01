@@ -37,6 +37,33 @@ class RetrospectiveFaabMovement(FrozenModel):
     )
 
 
+class RetrospectiveRosterOwnership(FrozenModel):
+    """Roster membership at a reconstructed trade boundary; slots are not asserted."""
+
+    roster_id: str
+    player_ids: tuple[str, ...]
+    pick_ids: tuple[str, ...]
+    faab_used: int | None
+    faab_evidence_status: Literal[
+        "conditional_on_archive_waiver_budget_used_and_later_complete_ledger",
+        "not_in_selected_trade",
+        "invalid_reconstructed_faab",
+    ]
+
+    @model_validator(mode="after")
+    def validate_roster(self) -> "RetrospectiveRosterOwnership":
+        if not self.roster_id.strip():
+            raise ValueError("reconstructed roster identity is required")
+        if self.faab_evidence_status in {"not_in_selected_trade", "invalid_reconstructed_faab"}:
+            if self.faab_used is not None:
+                raise ValueError("unavailable FAAB must remain unknown in the scoped snapshot")
+        elif self.faab_used is None or self.faab_used < 0:
+            raise ValueError("selected participant requires nonnegative conditional FAAB usage")
+        if len(self.player_ids) != len(set(self.player_ids)) or len(self.pick_ids) != len(set(self.pick_ids)):
+            raise ValueError("reconstructed roster assets must be unique")
+        return self
+
+
 class RetrospectiveSleeperTradeReplay(FrozenModel):
     provider: Literal["sleeper"] = "sleeper"
     source_revision: str
@@ -52,6 +79,11 @@ class RetrospectiveSleeperTradeReplay(FrozenModel):
     future_completed_events_reversed: int
     transfers: tuple[RetrospectiveTransfer, ...]
     faab: tuple[RetrospectiveFaabMovement, ...]
+    before_ownership: tuple[RetrospectiveRosterOwnership, ...]
+    after_ownership: tuple[RetrospectiveRosterOwnership, ...]
+    roster_slot_coverage: Literal["unknown_at_trade_cutoff"] = "unknown_at_trade_cutoff"
+    ownership_scope: Literal["retrospective_ownership_snapshot_only"] = "retrospective_ownership_snapshot_only"
+    pick_ownership_scope: Literal["archived_traded_pick_records_only"] = "archived_traded_pick_records_only"
     issues: tuple[str, ...]
     status: Literal["provisionally_consistent", "blocked"]
     evidence_scope: Literal["retrospective_archived_facts_only"] = "retrospective_archived_facts_only"
@@ -216,6 +248,26 @@ def replay_archived_sleeper_trade(
                 else:
                     used[owner] -= int(bid)
 
+    def ownership_snapshot() -> tuple[RetrospectiveRosterOwnership, ...]:
+        picks_by_roster: dict[str, list[str]] = {roster_id: [] for roster_id in owners}
+        for pick_id, roster_id in pick_owners.items():
+            if roster_id in picks_by_roster:
+                picks_by_roster[roster_id].append(pick_id)
+        return tuple(
+            RetrospectiveRosterOwnership(
+                roster_id=roster_id,
+                player_ids=tuple(sorted(owners[roster_id])),
+                pick_ids=tuple(sorted(picks_by_roster[roster_id])),
+                faab_used=(used[roster_id] if roster_id in selected_set and used[roster_id] >= 0 else None),
+                faab_evidence_status=(
+                    "not_in_selected_trade" if roster_id not in selected_set else
+                    "invalid_reconstructed_faab" if used[roster_id] < 0 else
+                    "conditional_on_archive_waiver_budget_used_and_later_complete_ledger"
+                ),
+            )
+            for roster_id in sorted(owners)
+        )
+
     later = sorted((row for row in all_tx if row[0] > completed), key=lambda r: (r[0], r[1]), reverse=True)
     # Identical timestamps occur in batched waivers. Independent assets can be
     # reversed in either order; overlapping player/pick identities cannot.
@@ -256,8 +308,10 @@ def replay_archived_sleeper_trade(
             issues.append("trade_post_pick_owner_mismatch")
         transfers.append(RetrospectiveTransfer(asset_kind="pick", source_asset_id=k,
             before_roster_id=sending, after_roster_id=receiving))
+    after_ownership = ownership_snapshot()
     faab_after = {r: used[r] for r in selected_sides if r in used}
     reverse(candidate, target=True)
+    before_ownership = ownership_snapshot()
     for transfer in transfers:
         if transfer.asset_kind == "player":
             seen = tuple(r for r, players in owners.items() if transfer.source_asset_id in players)
@@ -291,6 +345,7 @@ def replay_archived_sleeper_trade(
                                     "scoring": league.get("scoring_settings"), "slots": slots}),
         future_completed_events_reversed=reversed_count,
         transfers=tuple(sorted(transfers, key=lambda x: (x.asset_kind, x.source_asset_id))),
-        faab=faab, issues=tuple(sorted(set(issues))),
+        faab=faab, before_ownership=before_ownership, after_ownership=after_ownership,
+        issues=tuple(sorted(set(issues))),
         status="blocked" if issues else "provisionally_consistent",
     )

@@ -60,6 +60,22 @@ def test_arbitrary_league_sizes_replay_with_readonly_fact_scope(count):
     assert faab["2"].used_before == 15 and faab["2"].used_after == 5
     assert result.trade_created_at < result.trade_completed_at
     assert result.trade_completed_at == datetime.fromtimestamp(TRADE_MS/1000, tz=UTC)
+    assert result.ownership_scope == "retrospective_ownership_snapshot_only"
+    assert result.pick_ownership_scope == "archived_traded_pick_records_only"
+    assert result.roster_slot_coverage == "unknown_at_trade_cutoff"
+    before = {row.roster_id: row for row in result.before_ownership}
+    after = {row.roster_id: row for row in result.after_ownership}
+    assert len(before) == count and len(after) == count
+    assert before["1"].player_ids == ("player-a",)
+    assert before["2"].player_ids == ("player-b",)
+    assert after["1"].player_ids == ("player-b",)
+    assert after["2"].player_ids == ("player-a",)
+    assert before["1"].pick_ids == (f"2025:3:{min(3, count)}",)
+    assert after["2"].pick_ids == (f"2025:3:{min(3, count)}",)
+    assert before["1"].faab_used == 10 and after["1"].faab_used == 20
+    assert before["2"].faab_used == 15 and after["2"].faab_used == 5
+    assert all(row.faab_used is None for row in result.before_ownership if row.roster_id not in {"1", "2"})
+    assert all(row.faab_used is None for row in result.after_ownership if row.roster_id not in {"1", "2"})
 
 
 def test_year_specific_scoring_changes_rules_hash_not_factual_transfer():
