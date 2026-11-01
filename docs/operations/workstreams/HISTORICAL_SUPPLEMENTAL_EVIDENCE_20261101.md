@@ -15,12 +15,16 @@ The screenshot is a retrospective UI record. Its displayed dates have day-level 
 
 The pinned legacy archive's completed waiver row has `created` on July 20 and `status_updated` on July 27. The UI displays July 20 for the addition. Those fields have not been shown to share date semantics, so do not rewrite either timestamp or claim exact-time agreement.
 
-The August 23 drop supports the missing later ownership departure in the supplemental replay. The pinned archive-only season audit must continue to report its original `post_event_player_missing` issue unchanged. A separate, explicitly sourced supplemental-evidence path may record that the anomaly is reconciled by this screenshot; it must retain source type, receipt time, date-only precision, hash, and retrospective-only authority. It must not silently patch the archive or mark the original provider ledger complete.
+The August 23 drop supports the missing later ownership departure in the supplemental replay. The pinned archive-only season audit must continue to report its original `post_event_player_missing` issue unchanged. A supplemental-evidence replay may separately report the observation; it must not silently patch the archive or mark the original provider ledger complete.
 
 Deneric Prince was **not part of the October 1, 2023 trade**. The August waiver drop and the October trade are separate events. The screenshot does not establish any trade relationship.
 
-## Backend next gate
+## Backend contract added on this branch
 
-Add an immutable, provider-neutral supplemental fact/receipt contract that keeps original provider records and separately supplied evidence distinct. It must preserve event-date precision, receipt/availability semantics, source fingerprint, and authority limits; reject conflicting ownership timelines; and never promote retrospective evidence into point-in-time Decision eligibility.
+`src/fsffl/state/historical_supplemental_evidence.py` defines immutable provider-neutral receipts and player-movement facts. It carries evidence source, fingerprint, received/source-availability times, date precision, and a fixed retrospective-only scope. Date-only facts cannot carry an exact event time. The contract does not store raw screenshots, mutate provider history, perform replay, or authorize PIT Decision grades.
 
-Only after that evidence boundary exists should the replay accept supplemental ownership witnesses. Then proceed to bounded canonical State materialization, with taxi/reserve/IR and initial FAAB evidence still explicit blockers. No app/UI work, production database writes, migration, deployment, or new service is in scope.
+This first implementation is **not yet validated or integrated**. Focused tests and consumer-side conflict handling remain required before it can be accepted. Keep the original archive audit unchanged until an explicit supplement-aware replay path reports both the provider-source issue and the separately supported reconciliation.
+
+## Next backend gate
+
+Add focused validation and explicit supplement-aware replay with conflict detection and separate source/supplement status. Then proceed to bounded canonical State materialization only when taxi/reserve/IR, initial FAAB, source completeness, and historical rules can be represented without inference. No app/UI work, production database writes, migration, deployment, or new service is in scope.
