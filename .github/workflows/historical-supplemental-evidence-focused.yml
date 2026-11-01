@@ -1,0 +1,32 @@
+name: Historical supplemental evidence focused
+on:
+  pull_request:
+    paths:
+      - 'src/fsffl/state/historical_supplemental_evidence.py'
+      - 'src/fsffl/state/retrospective_season_audit.py'
+      - 'tests/test_historical_supplemental_evidence.py'
+      - 'tests/test_retrospective_season_audit.py'
+      - 'docs/operations/workstreams/HISTORICAL_SUPPLEMENTAL_EVIDENCE_20261101.md'
+      - '.github/workflows/historical-supplemental-evidence-focused.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Use governed Python 3.12.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install local core and test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Validate supplemental evidence and provider audit contracts
+        run: python -m pytest -q tests/test_historical_supplemental_evidence.py tests/test_retrospective_season_audit.py
