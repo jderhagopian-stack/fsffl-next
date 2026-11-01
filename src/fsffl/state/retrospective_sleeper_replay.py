@@ -47,15 +47,16 @@ class RetrospectiveRosterOwnership(FrozenModel):
     faab_evidence_status: Literal[
         "conditional_on_archive_waiver_budget_used_and_later_complete_ledger",
         "not_in_selected_trade",
+        "invalid_reconstructed_faab",
     ]
 
     @model_validator(mode="after")
     def validate_roster(self) -> "RetrospectiveRosterOwnership":
         if not self.roster_id.strip():
             raise ValueError("reconstructed roster identity is required")
-        if self.faab_evidence_status == "not_in_selected_trade":
+        if self.faab_evidence_status in {"not_in_selected_trade", "invalid_reconstructed_faab"}:
             if self.faab_used is not None:
-                raise ValueError("nonparticipant FAAB must remain outside the scoped snapshot")
+                raise ValueError("unavailable FAAB must remain unknown in the scoped snapshot")
         elif self.faab_used is None or self.faab_used < 0:
             raise ValueError("selected participant requires nonnegative conditional FAAB usage")
         if len(self.player_ids) != len(set(self.player_ids)) or len(self.pick_ids) != len(set(self.pick_ids)):
@@ -256,10 +257,11 @@ def replay_archived_sleeper_trade(
                 roster_id=roster_id,
                 player_ids=tuple(sorted(owners[roster_id])),
                 pick_ids=tuple(sorted(picks_by_roster[roster_id])),
-                faab_used=used[roster_id] if roster_id in selected_set else None,
+                faab_used=(used[roster_id] if roster_id in selected_set and used[roster_id] >= 0 else None),
                 faab_evidence_status=(
+                    "not_in_selected_trade" if roster_id not in selected_set else
+                    "invalid_reconstructed_faab" if used[roster_id] < 0 else
                     "conditional_on_archive_waiver_budget_used_and_later_complete_ledger"
-                    if roster_id in selected_set else "not_in_selected_trade"
                 ),
             )
             for roster_id in sorted(owners)
