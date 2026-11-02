@@ -1,3 +1,17 @@
+## 2026-11-02 — Evidence-gated bilateral trade State transformation merged (nonproduction)
+
+PR #502 merged to `main` as squash `83fbb699bcc60b836f02b8ff0a5849fee4da55b0` from exact tested head `e650213f66b797ad6dac9dba7e930b2f033c46c3`.
+
+The new `src/fsffl/state/historical_materializer.py` transforms a supplied pre-trade canonical `LeagueState` into a post-trade State for one evidenced bilateral transaction. It transfers player and pick ownership and bilateral FAAB; requires an exact transaction window, receiving roster-slot evidence, and appropriate caller-supplied FAAB/pick receipts; and returns explicit blockers for missing or conflicting inputs. It never authorizes a historical Decision grade. It reports whether the supplied receipts were available at the cutoff.
+
+The isolated $3 archive FAAB delta is on a nonparticipant and is outside this trade-scoped transform; it does not block the selected bilateral transaction. The retained 2023 archive still has no certified canonical pre-trade State or receiving slot evidence, so **that archive has not been materialized**. Deneric Prince's August waiver drop remains separate from the October trade.
+
+**Exact-head validation:** targeted local tests passed (30); regular CI [run 41375337041](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41375337041) passed; history/PIT workflows [41375336835](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41375336835), [41375336998](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41375336998), and [41375336834](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41375336834) passed; Stable full suite [run 41375454897](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41375454897) passed **2,612 tests, 4 skipped** on exact head `e650213f66b797ad6dac9dba7e930b2f033c46c3`. The exact-head checks before and after the full suite passed.
+
+No production database write, migration, Render deployment, or app change occurred. This is a reusable factual trade-to-State operation, not a full-season history builder or a live historical grade.
+
+---
+
 ## 2026-11-01 — Retrospective trade ownership window backend merged (nonproduction)
 
 PR #500 merged to `main` as squash `28c2164d4bec1fd3ca7640ec6fdf5bf24e8af298` from exact tested head `ba5aa4db8f160fecbecf0b50060d437207be6520`.
