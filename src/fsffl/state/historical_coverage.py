@@ -24,6 +24,7 @@ class HistoricalEvidenceKind(StrEnum):
     DRAFT = "draft"
     MATCHUPS = "matchups"
     PLAYER_STATUS = "player_status"
+    FAAB = "faab"
     FORECAST = "forecast"
     MARKET = "market"
     OWNER_IDENTITY = "owner_identity"
