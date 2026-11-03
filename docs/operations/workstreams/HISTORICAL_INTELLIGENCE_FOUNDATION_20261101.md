@@ -2,6 +2,16 @@
 
 **Management direction: 2026-11-01.** First-principles change in emphasis: preserve the beta, maintain accepted Career/Forecast/Simulation/Value/Decision authority, and prioritize reusable backend historical intelligence before polished historical/trade/records UI. This is a bounded *foundational* lane, not permission for a wholesale system rewrite, a competing Career fix, a live data backfill, paid infrastructure, or a source-rights promotion.
 
+## Corrected target and current milestone — 2026-11-02
+
+Historical intelligence has two separate evidence planes that eventually connect through canonical identities and explicit time/provenance: (1) NFL player forecasts, rankings, identity, and realized outcomes for building and testing player models; and (2) fantasy-league rules, rosters, transactions, lineups, picks, standings, and franchise identity for reconstructing league State and decision context. Neither dataset can substitute for the other.
+
+The target is a reusable backend capable of building leakage-safe historical player/model panels and canonical historical league State, then evaluating existing governed NEXT Forecast/Value/Decision authorities at historical cutoffs and comparing predictions with later outcomes. Preserve source availability and acquisition times, missingness, rights, model versions, and season-specific league settings. Keep retrospective facts and realized outcomes distinct from what was knowable at the cutoff. This does not authorize a beta write, deploy, or UI work.
+
+The first read-only discovery pass is recorded in [Historical Evidence Inventory](HISTORICAL_EVIDENCE_INVENTORY_20261102.md). It confirms one retained Sleeper league family archive for 2022–2026, no second real league/platform sample, current Supabase historical State/forecast/market data concentrated in 2026, and dated NFL projection leads/artifacts that do not yet form an overlapping admitted multi-source panel. The source matrix in `docs/forecast/modern-historical-window.md` remains the governing acquisition tracker; its RECOVERED status does not by itself certify rights, contemporaneous availability, identity joins, or benchmark admission.
+
+PR #504 is a separate unmerged Sleeper-shaped retrospective roster-context helper. It may be useful for factual diagnostics, but it does not satisfy either canonical historical State reconstruction or the row-level player forecast/outcome panel and must not be presented as the completed foundation.
+
 ## Ground truth / what is already present
 
 - Main reviewed: `271a8a8be8dc7611f9fc6df1a8f5f9182b5a747c`. Current Render beta separately on `6d1259e1f5f55078398814a6c2383f7a0d544b84` (web + compute in one 512 MiB service). Draft worker handoff #492 exists and has 18/18 focused database/collision/crash tests, but actual Career worker orchestration is NOT integrated. Do not conflate PR #492 with completed capacity or deploy it as a ready worker.
@@ -57,4 +67,4 @@ Independent synthetic fixture matrix covers 2/8/10/12/14/16-team structures, sco
 
 The new primary **History/Data foundation** lane must not overlap the active worker-boundary draft #492, open Career Memory PR #489 or public-beta release work. Keep #492 dormant as a separately scoped enabling lane. Existing October 5 feature hold is explicitly narrowed by the user's new instruction **only for safe, independent PIT/history foundation work**; the unresolved hosted Career and worker gates remain open. Do not start simultaneous conflicting writes to `persistent_webapp`, State publication or migration scripts. Primary purpose is now to build reusable backend intelligence and cut the beta feedback loop to critical maintenance only.
 
-Next action after this first PR: run a read-only discovery of actual historical season source and past trades (no data upload), then propose the narrowest factual ingest/reconstruction implementation with exact tests and rights gates.
+Next: extend the inventory into a source-by-season recovery ledger. For the league-history plane, verify season-family links, endpoint/record coverage, rules and missing State components without uploading raw data. For the NFL-model plane, broaden the 2019–2025 raw-projection matrix, verify timestamp/identity/outcome joins and rights, and identify overlapping seasons across at least three genuine projection sources. Only after these coverage facts are recorded should the next bounded backend implementation be selected; do not begin bulk backfill or model evaluation from unsupported rows.
