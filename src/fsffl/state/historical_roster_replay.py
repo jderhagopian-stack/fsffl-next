@@ -182,8 +182,7 @@ def reverse_player_transfer_batch(
                 or (move.to_team_id is not None and move.to_team_id not in owners)):
             issues.add("event_references_unknown_team")
             continue
-        current = next((team for team, players in owners.items() if move.player_id in players), None)
-        if current != move.to_team_id:
+        if move.to_team_id is not None and move.player_id not in owners[move.to_team_id]:
             issues.add("post_event_player_ownership_mismatch")
         if move.from_team_id is not None and move.player_id in owners[move.from_team_id]:
             issues.add("pre_event_player_ownership_conflict")
