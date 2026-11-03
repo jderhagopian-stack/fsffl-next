@@ -27,6 +27,8 @@ The acquisition sweep should be broad first and deep second. Do not spend excess
 
 ### NFL Fantasy
 
+The public [hvpkod/NFL-Data archive](https://github.com/hvpkod/NFL-Data) describes extracted Fantasy.NFL.com weekly data and projections from 2015 onward. Its history includes a dated 2021 Week 10 projection commit ([1fba943](https://github.com/hvpkod/NFL-Data/commit/1fba943ec8028187e33321087b3fcec099f14384)) and a 2024 Week 4 update ([a745896](https://github.com/hvpkod/NFL-Data/commit/a745896db577dd39d17d8afded30e6fee5bf311a)) that added projected files for later weeks. These create a concrete weekly acquisition lead. They do not automatically make a season recovered: verify each file's exact revision and schedule cutoff, distinguish projected from realized fields, and resolve underlying NFL.com data terms. The repository's MIT code license is not a substitute for rights to the source data.
+
 Historical projection pages are still addressable for prior seasons, including 2019 and 2025 season/week projection views. These pages expose projected passing, rushing, receiving, and fantasy-point fields. Each historical snapshot still needs a defensible availability timestamp and rights review before retained data enters the governed benchmark.
 
 ### FFB2022 public archive
@@ -61,7 +63,7 @@ This matrix tracks what has actually been recovered or credibly located so far. 
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | FantasyPros raw stats | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | RECOVERED | RECOVERED | NOT_YET_FOUND | NOT_YET_FOUND |
 | FFToday raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | RECOVERED | RECOVERED |
-| NFL Fantasy raw stats | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | LEAD |
+| NFL Fantasy raw stats | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | LEAD | LEAD |
 | CBS raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
 | ESPN raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
 | Yahoo raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
