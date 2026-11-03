@@ -99,4 +99,8 @@ def test_all_retained_seasons_produce_rule_scoped_roster_context_snapshots():
                for history in histories for snapshot in history.snapshots)
     assert histories[1].status == "incomplete_source_history"
     assert "post_event_player_ownership_mismatch" in histories[1].issues
-    assert all(not history.issues for index, history in enumerate(histories) if index != 1)
+    non_2023_issues = [
+        (history.season, history.issues)
+        for index, history in enumerate(histories) if index != 1 and history.issues
+    ]
+    assert not non_2023_issues, non_2023_issues
