@@ -1,3 +1,14 @@
+## 2026-11-03 — Provider-neutral historical roster replay in draft
+
+PR [#511](https://github.com/jderhagopian-stack/fsffl-next/pull/511) is open as a draft from `codex/provider-neutral-historical-replay`, based on main `c67a2cb25cced0e56df2026a86cc35170d9409af`; current head `f63554a030e4c14cbb601ca8de783df307f3a7ad`.
+
+The provider-neutral normalized replay contract is added and the Sleeper roster-history adapter delegates player transfer reversal to its atomic batch primitive. It carries provider/league/season/source/rule identity, supports retrospective cutoff and unambiguous pre-event queries, and fails closed on same-time player conflicts or anchor mismatches. The rule signature is identity metadata; this membership engine does not interpret league scoring or roster-slot semantics. Sleeper-specific pick/FAAB handling remains within the adapter and retains its existing coverage limits.
+
+A second private league is unavailable and is **not** a prerequisite. Synthetic fixtures cover 2/4/8/12/16/18 team counts, a changed rules fingerprint, and conflict cases. The focused historical contract and pinned archive workflows now include the shared replay. Exact-head workflow runs are pending; do not promote the PR until focused and archive gates pass, followed by the exact-head Stable full suite. See [the replay checkpoint](workstreams/HISTORICAL_PROVIDER_NEUTRAL_REPLAY_20261103.md).
+
+No persistence, database, migration, deployment, or app/UI change is included.
+---
+
 ## 2026-11-03 — Supplement-aware retrospective roster replay merged (backend primitive; nonproduction)
 
 PR [#507](https://github.com/jderhagopian-stack/fsffl-next/pull/507) merged to `main` as squash `eec049c2498e68da6d159a6f31dbc237531bcc58`, from exact tested head `8dac87c1cd9293e51923113dbdf35dacbb046adf`.
