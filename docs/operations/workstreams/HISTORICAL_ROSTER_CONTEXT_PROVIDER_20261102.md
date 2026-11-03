@@ -16,7 +16,8 @@ This output is retrospective roster context. It does not claim that a retained f
 - walks backward from the end-roster anchor and emits before/after snapshots for each completion-time batch, treating equal timestamps as one boundary;
 - fingerprints each season's scoring, roster settings, slots, and observed team count;
 - returns player membership, traded-pick membership only where the archive has ledger rows, and conditionally reconstructed waiver usage;
-- leaves roster-slot placement unknown, exposes source/completeness issues, and permanently marks the output ineligible for a PIT Decision grade.
+- leaves roster-slot placement unknown and permanently marks the output ineligible for a PIT Decision grade;
+- reports `membership_status` separately from pick-ledger and FAAB issue codes, so uncertain FAAB does not erase otherwise supported roster-membership context.
 
 The existing `retrospective_sleeper_replay.py` remains useful as the focused acceptance witness for one trade. The exact `historical_materializer.py` remains a separate transformation for a supplied canonical State with complete transition evidence.
 
@@ -25,7 +26,8 @@ The existing `retrospective_sleeper_replay.py` remains useful as the focused acc
 - Added `tests/test_historical_roster_context.py` for varying team counts, season/rule changes, event-boundary membership, conditional FAAB, traded-pick scope, and missing event time.
 - Local manual checks passed for a synthetic mixed-asset season, 4- and 12-team settings, changed season scoring/rule fingerprint, and missing-time incomplete status. `compileall` and `git diff --check` passed.
 - Focused `pytest` could not run in this environment because pytest is not installed; offline package resolution found no cached pytest wheel. Do not report the tests as passed until CI executes them.
-- No real archive was run through the new season-wide provider yet. The selected trade replay's prior pinned-source acceptance does not validate this new path.
+- The pinned 2022–2026 archive run exercised the new provider. It found the known 2023 player-ownership history gap and conditional FAAB usage underflow in 2022 and 2024; those FAAB amounts remain unknown at affected boundaries, while membership context stays usable where its own chronology is consistent.
+- The selected trade replay's prior pinned-source acceptance did not validate this new path; the new season-wide workflow is the required evidence for it.
 - Current adapter consumes Sleeper-shaped season archives. The snapshot model is shared, but another provider still needs its own normalization adapter.
 - Ownership is membership-only. Player position/age, full pick universe, verified point-in-time FAAB balances, and roster placement are not created by this function.
 

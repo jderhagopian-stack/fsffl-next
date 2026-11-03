@@ -73,7 +73,10 @@ class HistoricalRosterContextHistory(FrozenModel):
     completed_event_count: int
     snapshots: tuple[HistoricalRosterContextSnapshot, ...]
     issues: tuple[str, ...]
-    status: Literal["provisionally_consistent", "incomplete_source_history"]
+    membership_issues: tuple[str, ...]
+    pick_issues: tuple[str, ...]
+    faab_issues: tuple[str, ...]
+    membership_status: Literal["provisionally_consistent", "incomplete_source_history"]
     scope: Literal["retrospective_roster_membership_context"] = "retrospective_roster_membership_context"
     pick_scope: Literal["archived_traded_pick_records_only"] = "archived_traded_pick_records_only"
     faab_scope: Literal["conditional_archive_waiver_usage"] = "conditional_archive_waiver_usage"
@@ -84,8 +87,11 @@ class HistoricalRosterContextHistory(FrozenModel):
     def consistent(self) -> "HistoricalRosterContextHistory":
         if not self.provider.strip():
             raise ValueError("historical context source provider is required")
-        if bool(self.issues) != (self.status == "incomplete_source_history"):
-            raise ValueError("history status must reflect its issues")
+        scoped_issues = set(self.membership_issues) | set(self.pick_issues) | set(self.faab_issues)
+        if scoped_issues != set(self.issues):
+            raise ValueError("every history issue must be assigned to an evidence scope")
+        if bool(self.membership_issues) != (self.membership_status == "incomplete_source_history"):
+            raise ValueError("membership status must reflect membership issues")
         if self.observed_team_count < 2:
             raise ValueError("at least two season rosters are required")
         return self
@@ -339,10 +345,26 @@ def reconstruct_sleeper_roster_context(
         "observed_team_count": len(owners),
     })
     issue_tuple = tuple(sorted(issues))
+    faab_issue_codes = {
+        "missing_or_invalid_end_anchor_waiver_usage",
+        "unreconstructable_faab_transfer",
+        "unreconstructable_waiver_bid",
+        "reconstructed_waiver_usage_out_of_bounds",
+    }
+    pick_issue_codes = {
+        "malformed_traded_pick_anchor",
+        "duplicate_or_invalid_traded_pick_anchor",
+        "malformed_event_pick_movement",
+        "traded_pick_history_mismatch",
+    }
+    faab_issues = tuple(sorted(issues.intersection(faab_issue_codes)))
+    pick_issues = tuple(sorted(issues.intersection(pick_issue_codes)))
+    membership_issues = tuple(sorted(issues.difference(faab_issue_codes | pick_issue_codes)))
     return HistoricalRosterContextHistory(
         provider_league_id=league_id, season=season, source_revision=source_revision,
         source_sha256=_digest(season_data), league_rules_sha256=rules_digest,
         raw_roster_slots=slots, observed_team_count=len(owners), completed_event_count=completed_count,
         snapshots=tuple(snapshots), issues=issue_tuple,
-        status="incomplete_source_history" if issue_tuple else "provisionally_consistent",
+        membership_issues=membership_issues, pick_issues=pick_issues, faab_issues=faab_issues,
+        membership_status="incomplete_source_history" if membership_issues else "provisionally_consistent",
     )

@@ -97,10 +97,13 @@ def test_all_retained_seasons_produce_rule_scoped_roster_context_snapshots():
     assert all(row.eligible_for_pit_decision_grade is False for row in histories)
     assert all(snapshot.roster_slot_coverage == "unknown"
                for history in histories for snapshot in history.snapshots)
-    assert histories[1].status == "incomplete_source_history"
+    assert histories[1].membership_status == "incomplete_source_history"
     assert "post_event_player_ownership_mismatch" in histories[1].issues
     non_2023_issues = [
-        (history.season, history.issues)
-        for index, history in enumerate(histories) if index != 1 and history.issues
+        (history.season, history.membership_issues)
+        for index, history in enumerate(histories) if index != 1 and history.membership_issues
     ]
     assert not non_2023_issues, non_2023_issues
+    assert {2022, 2024}.issubset({history.season for history in histories if history.faab_issues})
+    assert all(history.membership_status == "provisionally_consistent"
+               for history in histories if history.season in {2022, 2024})

@@ -47,7 +47,7 @@ def _season(*, team_count: int = 4, season: int = 2023, scoring: int = 0):
 def test_reconstructs_all_event_boundaries_without_fixed_team_count(team_count: int) -> None:
     result = reconstruct_sleeper_roster_context(_season(team_count=team_count), source_revision="archive-sha")
 
-    assert result.status == "provisionally_consistent"
+    assert result.membership_status == "provisionally_consistent"
     assert result.observed_team_count == team_count
     assert result.completed_event_count == 2
     assert result.eligible_for_pit_decision_grade is False
@@ -83,6 +83,17 @@ def test_missing_event_timestamp_keeps_supported_membership_but_marks_history_in
     data["transactions"][1]["status_updated"] = None
     result = reconstruct_sleeper_roster_context(data, source_revision="archive-sha")
 
-    assert result.status == "incomplete_source_history"
+    assert result.membership_status == "incomplete_source_history"
     assert "completed_event_missing_completion_timestamp" in result.issues
     assert result.snapshots
+
+
+def test_faab_reconstruction_issue_does_not_block_roster_membership_context() -> None:
+    data = _season()
+    data["rosters"][0]["settings"]["waiver_budget_used"] = 1
+    result = reconstruct_sleeper_roster_context(data, source_revision="archive-sha")
+
+    assert result.membership_status == "provisionally_consistent"
+    assert not result.membership_issues
+    assert "reconstructed_waiver_usage_out_of_bounds" in result.faab_issues
+    assert next(row for row in result.snapshots[-1].teams if row.provider_roster_id == "1").waiver_budget_used is None
