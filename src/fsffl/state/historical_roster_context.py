@@ -27,6 +27,7 @@ from .historical_supplemental_evidence import (
     reconcile_supplemental_player_movements,
 )
 from .models import FrozenModel
+from .historical_roster_replay import PlayerTransfer, reverse_player_transfer_batch
 from .retrospective_season_audit import (
     RetrospectiveSeasonAudit,
     audit_retrospective_sleeper_season,
@@ -492,38 +493,33 @@ def reconstruct_sleeper_roster_context(
             snapshots.append(snapshot(at, "after_completed_event_batch", events))
 
             touched: set[tuple[str, str]] = set()
+            normalized_player_transfers: list[PlayerTransfer] = []
             for _, tx in events:
                 adds, drops = tx.get("adds") or {}, tx.get("drops") or {}
                 picks = tx.get("draft_picks") or ()
                 if not isinstance(adds, Mapping) or not isinstance(drops, Mapping):
                     issues.add("malformed_event_player_movements")
                     continue
-                keys = {("player", str(player)) for player in adds}
-                keys.update(("player", str(player)) for player in drops)
                 try:
-                    keys.update(("pick", _pick_id(pick)) for pick in picks)
+                    keys = {("pick", _pick_id(pick)) for pick in picks}
                 except (KeyError, TypeError, ValueError):
                     issues.add("malformed_event_pick_movement")
+                    keys = set()
                 if touched.intersection(keys):
                     issues.add("ambiguous_same_timestamp_asset_order")
                 touched.update(keys)
+                for player_id in set(adds) | set(drops):
+                    source = str(drops[player_id]) if player_id in drops else None
+                    destination = str(adds[player_id]) if player_id in adds else None
+                    try:
+                        normalized_player_transfers.append(PlayerTransfer(
+                            player_id=str(player_id), from_team_id=source, to_team_id=destination
+                        ))
+                    except ValueError:
+                        issues.add("malformed_event_player_movements")
+            issues.update(reverse_player_transfer_batch(owners, tuple(normalized_player_transfers)))
 
             for _, tx in events:
-                adds, drops = tx.get("adds") or {}, tx.get("drops") or {}
-                if not isinstance(adds, Mapping) or not isinstance(drops, Mapping):
-                    continue
-                for player_id, destination in adds.items():
-                    roster_id, player = str(destination), str(player_id)
-                    if roster_id not in owners or player not in owners[roster_id]:
-                        issues.add("post_event_player_ownership_mismatch")
-                    else:
-                        owners[roster_id].remove(player)
-                for player_id, source in drops.items():
-                    roster_id, player = str(source), str(player_id)
-                    if roster_id not in owners or player in owners[roster_id]:
-                        issues.add("pre_event_player_ownership_conflict")
-                    else:
-                        owners[roster_id].add(player)
                 for pick in tx.get("draft_picks") or ():
                     try:
                         pick_id = _pick_id(pick)

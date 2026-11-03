@@ -1,3 +1,17 @@
+## 2026-11-03 — Provider-neutral historical roster replay
+
+PR [#511](https://github.com/jderhagopian-stack/fsffl-next/pull/511) adds a normalized, provider-neutral historical player-membership replay contract and routes the Sleeper adapter's player-transfer reversal through its atomic batch primitive. It carries provider/league/season/source/rule identity, supports retrospective cutoff and unambiguous pre-event queries, and reports same-time conflicts without inventing order. The rule signature is identity metadata; this engine does not interpret league scoring or roster-slot semantics. Sleeper-specific pick/FAAB accounting remains within its adapter and retains existing evidence limits.
+
+A second private league is unavailable and is **not** a prerequisite. Synthetic fixtures cover 2/4/8/12/16/18 team sizes, changed rule identity and conflict cases. Exact executable code head `95834153cb02e039c5f02cf7741a7a05e8c5c221` passed:
+
+- General CI [41699077013](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077013).
+- Historical contract focused [41699076928](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699076928).
+- Pinned 2022–2026 archive workflow [41699077201](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077201), including the known 2023 history gap.
+- PR164 regression [41699077055](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077055).
+
+The draft PR now has validation-only documentation updates. Mark the stable head ready and require the exact-head Stable full suite before merge. No persistence, database, migration, deployment, or app/UI change is included. See [the replay checkpoint](workstreams/HISTORICAL_PROVIDER_NEUTRAL_REPLAY_20261103.md).
+---
+
 ## 2026-11-03 — Supplement-aware retrospective roster replay merged (backend primitive; nonproduction)
 
 PR [#507](https://github.com/jderhagopian-stack/fsffl-next/pull/507) merged to `main` as squash `eec049c2498e68da6d159a6f31dbc237531bcc58`, from exact tested head `8dac87c1cd9293e51923113dbdf35dacbb046adf`.
