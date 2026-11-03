@@ -153,6 +153,37 @@ def test_snapshot_identity_is_stable_and_scoped_to_season_rules_and_source() -> 
                for row in first.snapshots for other in changed_rules.snapshots)
 
 
+def test_league_family_identity_requires_explicit_matching_season_identity() -> None:
+    first_data = _season(team_count=4, season=2023)
+    second_data = _season(team_count=4, season=2024)
+    first_identity = HistoricalSeasonIdentity(
+        league_family_id="family-1", league_id="league-2023-4", season=2023,
+    )
+    second_identity = HistoricalSeasonIdentity(
+        league_family_id="family-1", league_id="league-2024-4", season=2024,
+    )
+
+    first = reconstruct_sleeper_roster_context(
+        first_data, source_revision="archive-sha", season_identity=first_identity,
+    )
+    second = reconstruct_sleeper_roster_context(
+        second_data, source_revision="archive-sha", season_identity=second_identity,
+    )
+    unlinked = reconstruct_sleeper_roster_context(first_data, source_revision="archive-sha")
+
+    assert first.league_family_id == second.league_family_id == "family-1"
+    assert first.family_identity_status == second.family_identity_status == "verified_family"
+    assert unlinked.league_family_id is None
+    assert unlinked.family_identity_status == "unlinked_season"
+    assert first.history_id != unlinked.history_id
+    assert second.history_id != first.history_id
+
+    with pytest.raises(ValueError, match="must match provider league and year"):
+        reconstruct_sleeper_roster_context(
+            first_data, source_revision="archive-sha", season_identity=second_identity,
+        )
+
+
 def test_missing_event_timestamp_keeps_supported_membership_but_marks_history_incomplete() -> None:
     data = _season()
     data["transactions"][1]["status_updated"] = None
