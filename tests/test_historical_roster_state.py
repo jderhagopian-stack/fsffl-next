@@ -179,7 +179,7 @@ def test_missing_roster_slot_evidence_blocks_state_instead_of_guessing():
     assert "roster_slot_coverage_incomplete_or_extra" in result.blockers
 
 
-def test_uncertain_membership_and_archive_anchor_are_not_promoted():
+def test_uncertain_membership_is_not_promoted():
     inputs = _inputs()
     history = inputs["history"]
     snapshot = inputs["snapshot"].model_copy(update={"uncertain_player_ids": ("101",)})
@@ -190,6 +190,19 @@ def test_uncertain_membership_and_archive_anchor_are_not_promoted():
     assert result.status == Status.BLOCKED
     assert "snapshot_contains_uncertain_player_membership" in result.blockers
     assert "snapshot_does_not_belong_to_history" in result.blockers
+
+
+def test_archive_end_anchor_is_not_a_materialization_cutoff():
+    inputs = _inputs()
+    inputs["snapshot"] = next(
+        item for item in inputs["history"].snapshots
+        if item.boundary == "archive_end_anchor"
+    )
+
+    result = materialize_historical_roster_state(**inputs)
+
+    assert result.status == Status.BLOCKED
+    assert "archive_end_anchor_is_not_an_event_cutoff" in result.blockers
 
 
 def test_wrong_league_evidence_is_rejected_as_blocked():
