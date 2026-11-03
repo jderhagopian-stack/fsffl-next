@@ -318,4 +318,6 @@ def test_unmatched_supplement_is_reported_but_does_not_change_source_replay():
     assert result.supplemental_replay_status == "no_supported_movement"
     assert result.provider_audit_status == "incomplete_source_history"
     assert result.supplemental_applied_evidence_ids == ()
+    assert result.history_id == baseline.history_id
+    assert result.supplemental_evidence_sha256 != baseline.supplemental_evidence_sha256
     assert result.snapshots == baseline.snapshots

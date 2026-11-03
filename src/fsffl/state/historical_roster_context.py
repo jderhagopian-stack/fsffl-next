@@ -319,7 +319,6 @@ def reconstruct_sleeper_roster_context(
         "source_revision": source_revision,
         "source_sha256": source_sha256,
         "league_rules_sha256": rules_digest,
-        "supplemental_evidence_sha256": supplemental_evidence_sha256,
         "model_version": model_version,
     })
 
