@@ -17,6 +17,7 @@ from typing import Any, Literal
 
 from pydantic import field_validator, model_validator
 
+from .historical_coverage import HistoricalSeasonIdentity
 from .historical_supplemental_evidence import (
     HistoricalSupplementalPlayerMovement,
     HistoricalSupplementalReconciliation,
@@ -90,6 +91,8 @@ class HistoricalRosterContextSnapshot(FrozenModel):
 class HistoricalRosterContextHistory(FrozenModel):
     history_id: str
     supplemental_evidence_sha256: str
+    league_family_id: str | None
+    family_identity_status: Literal["verified_family", "unlinked_season"]
     provider: str = "sleeper"
     provider_league_id: str
     season: int
@@ -135,6 +138,10 @@ class HistoricalRosterContextHistory(FrozenModel):
             raise ValueError("historical context identity is required")
         if not self.history_id.startswith("hctx_") or len(self.history_id) != 69:
             raise ValueError("historical context identity must be a versioned SHA-256 key")
+        if (self.league_family_id is None) != (self.family_identity_status == "unlinked_season"):
+            raise ValueError("family identity status must match explicit lineage evidence")
+        if self.league_family_id is not None and not self.league_family_id.strip():
+            raise ValueError("verified league family identity cannot be blank")
         if len({row.snapshot_id for row in self.snapshots}) != len(self.snapshots):
             raise ValueError("historical snapshot identities must be unique")
         if any(row.history_id != self.history_id for row in self.snapshots):
@@ -195,6 +202,7 @@ def _transaction_touches_player(row: Mapping[str, Any], player_id: str) -> bool:
 def reconstruct_sleeper_roster_context(
     season_data: Mapping[str, Any], *, source_revision: str,
     supplemental_movements: tuple[HistoricalSupplementalPlayerMovement, ...] = (),
+    season_identity: HistoricalSeasonIdentity | None = None,
 ) -> HistoricalRosterContextHistory:
     """Build roster-membership snapshots for every timestamped completed event.
 
@@ -224,6 +232,11 @@ def reconstruct_sleeper_roster_context(
         raise ValueError("historical season identity and settings are required") from exc
     if not league_id or not slots or not isinstance(settings, Mapping) or not isinstance(scoring, Mapping):
         raise ValueError("invalid season identity, roster slots, or settings")
+    if season_identity is not None and (
+        season_identity.league_id != league_id or season_identity.season != season
+    ):
+        raise ValueError("verified historical season identity must match provider league and year")
+    league_family_id = season_identity.league_family_id if season_identity is not None else None
     if len(rosters) < 2:
         raise ValueError("at least two season rosters are required")
 
@@ -315,6 +328,7 @@ def reconstruct_sleeper_roster_context(
     history_id = "hctx_" + _digest({
         "provider": "sleeper",
         "provider_league_id": league_id,
+        "league_family_id": league_family_id,
         "season": season,
         "source_revision": source_revision,
         "source_sha256": source_sha256,
@@ -606,6 +620,8 @@ def reconstruct_sleeper_roster_context(
     return HistoricalRosterContextHistory(
         history_id=history_id,
         supplemental_evidence_sha256=supplemental_evidence_sha256,
+        league_family_id=league_family_id,
+        family_identity_status="verified_family" if league_family_id is not None else "unlinked_season",
         provider_league_id=league_id, season=season, source_revision=source_revision,
         source_sha256=source_sha256, league_rules_sha256=rules_digest,
         raw_roster_slots=slots, observed_team_count=len(owners), completed_event_count=completed_count,
