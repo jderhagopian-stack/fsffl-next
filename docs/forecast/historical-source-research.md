@@ -34,6 +34,14 @@ Useful candidate for actual preseason, weekly, and rest-of-season projection res
 
 Status: **PRIORITY RAW-PROJECTION INVESTIGATION.**
 
+### NFL Fantasy retained weekly archive — new acquisition lead
+
+The public `hvpkod/NFL-Data` repository describes extracted Fantasy.NFL.com data split by season and position, including weekly numbers and projections from 2015 onward. It exposes CSV/JSON and carries an MIT repository license. That license does not by itself resolve NFL.com's underlying data rights.
+
+The repository history contains an explicit 2021 Week 10 projection commit (`1fba943ec8028187e33321087b3fcec099f14384`, committed 2021-11-10) that added projected position files, plus later season/week material. A Git commit timestamp proves when that copy was present in the public archive; it does not alone prove the provider's original release time or that every weekly file predates its target game's kickoff. Qualify each source-week by exact commit, file set, NFL schedule cutoff, and provider-field semantics before treating it as point-in-time input. Keep retrospective/late files outside the ex-ante panel.
+
+Status: **PRIORITY RECOVERY LEAD for weekly projection/actual schema and possible timestamped weekly cells; not yet admitted to the modern forecast benchmark.** Research-use and underlying source rights need review before retaining or redistributing payloads.
+
 ### FantasyPros direct
 
 Useful candidate for current or licensed projection access and as an aggregate comparator. Historical/bulk access and downstream rights should be treated as provider-license questions. Because FantasyPros aggregates other sources, it cannot automatically be treated as statistically independent from component providers.
