@@ -193,7 +193,7 @@ def test_supported_date_only_drop_repairs_retrospective_roster_replay_without_pr
     assert result.supplemental_reconciliation is not None
     assert result.supplemental_reconciliation.findings[0].status == SupplementalFindingStatus.SUPPORTED_RETROSPECTIVELY
     assert result.supplemental_replay_status == "applied_retrospectively"
-    assert result.history_id != baseline.history_id
+    assert result.history_id == baseline.history_id
     assert result.supplemental_evidence_sha256 != baseline.supplemental_evidence_sha256
     assert result.supplemental_applied_evidence_ids == ("supplement-1",)
     assert result.eligible_for_pit_decision_grade is False
