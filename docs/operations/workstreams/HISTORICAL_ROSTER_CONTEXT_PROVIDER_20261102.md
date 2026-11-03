@@ -33,10 +33,19 @@ The existing `retrospective_sleeper_replay.py` remains useful as the focused acc
 
 ## Next actions
 
-1. Run the new focused test file in CI and fix any failures on the same branch.
-2. Run the pinned 2022–2026 archive through the new provider in the sanitized workflow and report aggregate issue/snapshot counts only.
-3. Check the varying season rules and known 2023 event gap across the retained five-year cohort. Synthetic cases vary team count; another verified league source is needed to prove real-world team-count variation.
-4. Add provider adapters only where another source is available and its event semantics are understood.
-5. Connect the resulting context to a governed historical analysis after available historical Forecast/Value evidence is mapped; keep ex-ante and realized-outcome lenses separate.
+1. Discover a second real league/source with a different configuration and documented source semantics; keep acquisition read-only until provenance and rights are clear.
+2. Map exact cutoff availability for canonical State, Forecast, and Market evidence. A retained later archive is retrospective and cannot stand in for historical availability.
+3. Use existing State, evidence-receipt, and materializer owners to construct one bounded historical cutoff only after required facts and roster crosswalks are proven.
+4. Connect supported history to backend analysis while keeping ex-ante decision evidence and realized outcomes separate.
 
 No production database write, migration, deployment, or app/UI work is part of this slice.
+
+## 2026-11-03 — merged and source discovery checkpoint
+
+PR [#504](https://github.com/jderhagopian-stack/fsffl-next/pull/504) merged to `main` as `3a2497e994deb1ef1bcb194da4903240670d85e2` from exact tested head `52c2ec72391d3cda495a36fa8f59d1bf2718cd0a`.
+
+Exact-head regular CI [41568385233](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41568385233), pinned archive workflow [41568385277](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41568385277), PR164 focused regression [41568385235](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41568385235), and Stable full suite [41568504932](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41568504932) passed. The full suite reported **2,618 passed, 5 skipped**, and verified the PR head before and after.
+
+The pinned legacy archive covers five linked seasons, 2022–2026, from one 12-team league family. It contains season-specific settings and retrospective transaction/end-roster evidence. The long-range provider tests show membership context provisionally consistent in 2022, 2024–2026 and incomplete in 2023 due to the known missing post-event player movement; FAAB remains uncertain at affected 2022 and 2024 boundaries. This is not a contemporaneous State archive and does not establish historical Forecast/Market availability. No raw league payload was added to NEXT.
+
+The next program action is to identify a second real source/league setup and map admissible point-in-time evidence before any canonical State materialization. No historical Decision grade, persistence integration, production write, or app work has been accepted from this merge.
