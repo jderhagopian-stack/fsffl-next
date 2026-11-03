@@ -124,14 +124,12 @@ def replay_roster_membership(
         if not team_id.strip() or len(players) != len(set(players)):
             raise ValueError("team identities and unique end-anchor membership are required")
         owners[team_id] = set(players)
-    seen: set[str] = set()
-    event_players = {move.player_id for event in events for move in event.player_transfers}
+    seen: set[str] = {move.player_id for event in events for move in event.player_transfers}
     for players in owners.values():
         overlap = seen.intersection(players)
         if overlap:
             issues.add("end_anchor_duplicate_player_ownership")
         seen.update(players)
-    seen.update(event_players)
     if len({event.event_id for event in events}) != len(events):
         raise ValueError("completed event identities must be unique")
 
@@ -158,28 +156,8 @@ def replay_roster_membership(
         batch = tuple(sorted(grouped[at], key=lambda row: row.event_id))
         snapshots.append(snapshot(at, "after_completed_event_batch", batch))
         transfers = [move for event in batch for move in event.player_transfers]
-        touched = [move.player_id for move in transfers]
-        conflict = len(touched) != len(set(touched))
-        if conflict:
-            issues.add("ambiguous_same_timestamp_player_order")
-        else:
-            # Validate the whole batch before mutation, so a bad source row can
-            # never leave a partially reversed state.
-            valid = True
-            for move in transfers:
-                current = next((team for team, players in owners.items() if move.player_id in players), None)
-                if current != move.to_team_id:
-                    valid = False
-                    issues.add("post_event_player_ownership_mismatch")
-                if move.from_team_id is not None and move.player_id in owners[move.from_team_id]:
-                    valid = False
-                    issues.add("pre_event_player_ownership_conflict")
-            if valid:
-                for move in transfers:
-                    if move.to_team_id is not None:
-                        owners[move.to_team_id].remove(move.player_id)
-                    if move.from_team_id is not None:
-                        owners[move.from_team_id].add(move.player_id)
+        batch_issues = reverse_player_transfer_batch(owners, tuple(transfers))
+        issues.update(batch_issues)
         snapshots.append(snapshot(at, "before_completed_event_batch", batch))
 
     snapshots.sort(key=lambda row: (
@@ -189,3 +167,31 @@ def replay_roster_membership(
     ))
     return HistoricalRosterReplay(history_id, provider, league_id, season, source_revision,
                                   source_sha256, rules_sha256, tuple(snapshots), tuple(sorted(issues)))
+
+
+def reverse_player_transfer_batch(
+    owners: dict[str, set[str]], transfers: tuple[PlayerTransfer, ...]
+) -> tuple[str, ...]:
+    """Atomically reverse normalized transfers against a mutable owner map."""
+    touched = [move.player_id for move in transfers]
+    if len(touched) != len(set(touched)):
+        return ("ambiguous_same_timestamp_player_order",)
+    issues: set[str] = set()
+    for move in transfers:
+        if ((move.from_team_id is not None and move.from_team_id not in owners)
+                or (move.to_team_id is not None and move.to_team_id not in owners)):
+            issues.add("event_references_unknown_team")
+            continue
+        current = next((team for team, players in owners.items() if move.player_id in players), None)
+        if current != move.to_team_id:
+            issues.add("post_event_player_ownership_mismatch")
+        if move.from_team_id is not None and move.player_id in owners[move.from_team_id]:
+            issues.add("pre_event_player_ownership_conflict")
+    if issues:
+        return tuple(sorted(issues))
+    for move in transfers:
+        if move.to_team_id is not None:
+            owners[move.to_team_id].remove(move.player_id)
+        if move.from_team_id is not None:
+            owners[move.from_team_id].add(move.player_id)
+    return ()
