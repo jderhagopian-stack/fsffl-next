@@ -1,3 +1,13 @@
+## 2026-11-02 — Historical roster-context provider (backend, in progress)
+
+Management clarified the target: build a reusable historical roster-context capability across seasons and leagues, not a grader for the selected October 1, 2023 acceptance transaction. That trade remains a mixed-asset replay fixture only. Reuse the original FSFFL pattern of starting from retained later rosters and reversing completed events to reconstruct membership at historical event boundaries. Inputs must carry each season's own league settings, roster count, scoring, and slot configuration; no FSFFL team-count or scoring constants. Unknown exact lineup/taxi/reserve/IR placement must remain explicit and must not block roster-membership context.
+
+Current implementation on branch `codex/historical-roster-context-provider` adds `src/fsffl/state/historical_roster_context.py`, which emits before/after snapshots for completed timestamp batches from one season archive, fingerprints that season's configuration, scopes picks to archived traded-pick records, keeps FAAB conditional, and marks incomplete chronology. It is retrospective context, not canonical PIT `LeagueState`, player valuation, or a Decision grade. Synthetic coverage varies team counts and season rules; Python smoke checks and compile checks pass. The full pytest suite could not run in this environment because `pytest` is not installed and offline dependency resolution has no cached package. Pinned-source real-archive acceptance and CI remain pending.
+
+Next: run focused tests and the pinned-source acceptance across all retained 2022–2026 seasons in CI; verify a separate league source when available; add provider adapters only against understood source semantics; then connect supported historical context to backend analysis. Do not begin app work or claim PIT-grade authority from this provider.
+
+---
+
 ## 2026-11-02 — Evidence-gated bilateral trade State transformation merged (nonproduction)
 
 PR #502 merged to `main` as squash `83fbb699bcc60b836f02b8ff0a5849fee4da55b0` from exact tested head `e650213f66b797ad6dac9dba7e930b2f033c46c3`.
