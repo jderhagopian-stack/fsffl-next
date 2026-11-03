@@ -23,6 +23,7 @@ from .historical_roster_context import (
     HistoricalRosterContextHistory,
     HistoricalRosterContextSnapshot,
 )
+from .historical_supplemental_evidence import HistoricalSupplementalEvidenceReceipt
 from .models import (
     DraftPick,
     FrozenModel,
@@ -77,6 +78,7 @@ class HistoricalRosterStateMaterialization(FrozenModel):
     history_id: str
     snapshot_id: str
     evidence_receipts: tuple[HistoricalEvidenceReceipt, ...] = ()
+    supplemental_evidence_receipts: tuple[HistoricalSupplementalEvidenceReceipt, ...] = ()
     source_available_at_cutoff: bool = False
     eligible_for_pit_decision_grade: bool = False
     scope: str = "retrospective_roster_state_only"
@@ -127,6 +129,7 @@ def materialize_historical_roster_state(
     player_universe_receipt: HistoricalEvidenceReceipt | None,
     pick_universe_receipt: HistoricalEvidenceReceipt | None,
     pick_universe_complete: bool = False,
+    supplemental_evidence_receipts: tuple[HistoricalSupplementalEvidenceReceipt, ...] = (),
 ) -> HistoricalRosterStateMaterialization:
     """Build a factual roster ``LeagueState`` only when every required fact is supplied.
 
@@ -156,6 +159,12 @@ def materialize_historical_roster_state(
         blockers.add("duplicate_evidence_receipt_identity")
     if not pick_universe_complete:
         blockers.add("complete_pick_universe_not_asserted")
+    expected_supplemental_ids = set(snapshot.supplemental_evidence_ids)
+    supplied_supplemental_ids = {
+        receipt.evidence_id for receipt in supplemental_evidence_receipts
+    }
+    if expected_supplemental_ids != supplied_supplemental_ids:
+        blockers.add("supplemental_evidence_receipt_coverage_mismatch")
     if cutoff is None:
         blockers.add("snapshot_has_no_effective_timestamp")
     if snapshot.boundary == "archive_end_anchor":
@@ -304,6 +313,7 @@ def materialize_historical_roster_state(
             history_id=history.history_id,
             snapshot_id=snapshot.snapshot_id,
             evidence_receipts=evidence_receipts,
+            supplemental_evidence_receipts=supplemental_evidence_receipts,
         )
 
     placements_by_team: dict[str, list[RosterEntry]] = {team_id: [] for team_id in team_ids}
@@ -323,6 +333,10 @@ def materialize_historical_roster_state(
         receipt.available_at is not None
         and receipt.available_at <= cutoff
         for receipt in evidence_receipts
+    ) and all(
+        receipt.source_available_at is not None
+        and receipt.source_available_at <= cutoff
+        for receipt in supplemental_evidence_receipts
     )
     state = LeagueState(
         league=league,
@@ -346,5 +360,6 @@ def materialize_historical_roster_state(
         history_id=history.history_id,
         snapshot_id=snapshot.snapshot_id,
         evidence_receipts=evidence_receipts,
+        supplemental_evidence_receipts=supplemental_evidence_receipts,
         source_available_at_cutoff=available,
     )
