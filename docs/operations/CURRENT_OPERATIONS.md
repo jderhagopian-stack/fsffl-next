@@ -1,3 +1,13 @@
+## 2026-11-02 — Historical evidence discovery and corrected target (read-only)
+
+The historical backend target includes both a leakage-safe NFL player forecast/outcome panel and canonical fantasy-league State history. These evidence planes are separate until joined through verified identity, timestamps, and provenance. The roster-context helper on draft PR #504 is only a Sleeper-specific retrospective diagnostic; it is not the reusable historical model or canonical State foundation.
+
+The read-only source inventory is in [HISTORICAL_EVIDENCE_INVENTORY_20261102.md](workstreams/HISTORICAL_EVIDENCE_INVENTORY_20261102.md). It identifies one retained Sleeper league-family archive (2022–2026), no second real league/platform sample, current Supabase historical State/forecast/market rows concentrated in 2026, and historical NFL projection leads/artifacts that do not yet establish a multi-source overlapping evaluation panel. No raw source bytes were added to the repo or written to Supabase.
+
+The durable next step is a source-by-season recovery ledger covering source revision, fields/periods, timestamp and availability basis, canonical identity/outcome join coverage, missingness, rights, and overlap. Continue the broad 2019–2025 projection scan and verify league-history family/record coverage. Choose a bounded backend implementation only after these facts are recorded. No bulk backfill, model promotion, beta write/deploy, or app work is authorized by this inventory. The corrected sequencing and target are in [HISTORICAL_INTELLIGENCE_FOUNDATION_20261101.md](workstreams/HISTORICAL_INTELLIGENCE_FOUNDATION_20261101.md).
+
+---
+
 ## 2026-11-02 — Evidence-gated bilateral trade State transformation merged (nonproduction)
 
 PR #502 merged to `main` as squash `83fbb699bcc60b836f02b8ff0a5849fee4da55b0` from exact tested head `e650213f66b797ad6dac9dba7e930b2f033c46c3`.
