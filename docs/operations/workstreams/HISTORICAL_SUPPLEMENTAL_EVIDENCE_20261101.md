@@ -27,6 +27,8 @@ The first implementation now includes a fail-closed reconciliation function. It 
 
 ## Supplement-aware roster replay implementation candidate (November 3, 2026)
 
+Draft [PR #507](https://github.com/jderhagopian-stack/fsffl-next/pull/507), current exact head `825222a544b3b7d60f64898b1339b6279bb00f80`.
+
 `reconstruct_sleeper_roster_context()` now accepts optional supplemental movements. It first audits the original provider archive, reconciles the movements, and applies only a unique, supported, date-only drop after reversing provider events through the earliest plausible UTC date. The screenshot does not identify a timezone, so its date may span adjacent UTC dates: snapshots on the stated or either adjacent UTC date carry `uncertain_player_ids`, and untimed or in-window same-player source events make the finding ambiguous. Snapshots earlier than that uncertainty window carry the evidence IDs supporting the corrected membership. Exact-time supplemental replay remains explicitly unsupported by this date-boundary adapter and is reported ambiguous rather than rounded or reordered.
 
 The output is model version `historical-roster-context-v2`. It separately exposes the original `provider_audit` and unchanged `provider_audit_status`, the `supplemental_reconciliation`, replay status, and applied evidence IDs. The archive hash/source revision are unchanged. The raw source audit can remain incomplete while a separate retrospective membership replay is repaired; the result remains ineligible for a PIT Decision grade. This does not create canonical `LeagueState`, player Value, historical Forecast/Market inputs, or historical availability proof.
