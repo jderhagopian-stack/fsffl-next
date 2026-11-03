@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Mapping
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from hashlib import sha256
 import json
 from typing import Any, Literal
@@ -305,9 +305,10 @@ def reconstruct_sleeper_roster_context(
             ))
         teams = tuple(teams_list)
         uncertain = tuple(sorted({
-            movement.source_player_id for movement in supplemental_movements
+            movement.source_player_id for movement in uncertain_supplemental_movements
             if movement.date_precision == SupplementalDatePrecision.DATE_ONLY
-            and instant is not None and movement.effective_date == instant.date()
+            and instant is not None
+            and abs((movement.effective_date - instant.date()).days) <= 1
         }))
         return HistoricalRosterContextSnapshot(
             effective_at=instant, boundary=boundary, transaction_ids=event_ids,
@@ -322,6 +323,7 @@ def reconstruct_sleeper_roster_context(
     ] = "not_audited"
     reconciliation: HistoricalSupplementalReconciliation | None = None
     supported: list[HistoricalSupplementalPlayerMovement] = []
+    uncertain_supplemental_movements: list[HistoricalSupplementalPlayerMovement] = []
     supplemental_status: Literal[
         "not_requested", "no_supported_movement", "applied_retrospectively", "conflict"
     ] = "not_requested"
@@ -333,19 +335,27 @@ def reconstruct_sleeper_roster_context(
         reconciliation = reconcile_supplemental_player_movements(
             provider_audit, supplemental_movements
         )
-        # A movement cannot repair a date whose source ledger has another event
-        # for that same player: source ordering within the day is not established.
+        # A displayed calendar date has no timezone, so its plausible UTC
+        # interval spans adjacent dates. Untimed or in-window provider events
+        # touching the player make relative order ambiguous.
         findings = list(reconciliation.findings)
         for index, finding in enumerate(findings):
-            if finding.status != SupplementalFindingStatus.SUPPORTED_RETROSPECTIVELY:
-                continue
-            matches = [
+            matching = [
                 movement for movement in supplemental_movements
                 if movement.receipt.evidence_id in finding.evidence_ids
                 and movement.source_player_id == finding.issue.asset_id
                 and movement.provider_roster_id == finding.issue.provider_roster_id
                 and movement.kind == SupplementalPlayerMovementKind.DROPPED_TO_WAIVERS
             ]
+            if finding.status == SupplementalFindingStatus.AMBIGUOUS:
+                uncertain_supplemental_movements.extend(
+                    movement for movement in matching
+                    if movement.date_precision == SupplementalDatePrecision.DATE_ONLY
+                )
+                continue
+            if finding.status != SupplementalFindingStatus.SUPPORTED_RETROSPECTIVELY:
+                continue
+            matches = matching
             if any(movement.date_precision == SupplementalDatePrecision.EXACT_TIMESTAMP for movement in matches):
                 findings[index] = finding.model_copy(update={
                     "status": SupplementalFindingStatus.AMBIGUOUS,
@@ -354,17 +364,28 @@ def reconstruct_sleeper_roster_context(
                 continue
             conflicting_day = any(
                 _transaction_touches_player(tx, finding.issue.asset_id or "")
-                and _transaction_date(tx) == movement.effective_date
+                and (
+                    _transaction_date(tx) is None
+                    or abs((_transaction_date(tx) - movement.effective_date).days) <= 1
+                )
                 for movement in matches for tx in transactions
                 if isinstance(tx, Mapping) and tx.get("status") == "complete"
             )
             if conflicting_day:
                 findings[index] = finding.model_copy(update={
                     "status": SupplementalFindingStatus.AMBIGUOUS,
-                    "detail": "a source event touches this player on the supplemental date; within-day order is unknown",
+                    "detail": "an untimed or in-window source event touches this player; relative order is unknown",
                 })
+                uncertain_supplemental_movements.extend(
+                    movement for movement in matches
+                    if movement.date_precision == SupplementalDatePrecision.DATE_ONLY
+                )
             else:
                 supported.extend(matches)
+                uncertain_supplemental_movements.extend(
+                    movement for movement in matches
+                    if movement.date_precision == SupplementalDatePrecision.DATE_ONLY
+                )
         reconciliation = reconciliation.model_copy(update={"findings": tuple(findings)})
         supplemental_status = "no_supported_movement"
         if supported:
@@ -379,7 +400,11 @@ def reconstruct_sleeper_roster_context(
         day_groups[datetime.fromtimestamp(at / 1000, tz=UTC).date()].append(at)
     supplements_by_day: dict[date, list[HistoricalSupplementalPlayerMovement]] = defaultdict(list)
     for movement in supported:
-        supplements_by_day[movement.effective_date].append(movement)
+        # Apply the reverse correction only after crossing the earliest
+        # plausible UTC date; snapshots within the uncertainty window are
+        # marked uncertain and retain their unmodified membership.
+        replay_date = movement.effective_date - timedelta(days=1)
+        supplements_by_day[replay_date].append(movement)
     replay_conflict = False
     for event_date in sorted(set(day_groups) | set(supplements_by_day), reverse=True):
         for at in sorted(day_groups.get(event_date, ()), reverse=True):
@@ -464,9 +489,9 @@ def reconstruct_sleeper_roster_context(
 
             snapshots.append(snapshot(at, "before_completed_event_batch", events))
 
-        # A date-only drop is applied only after reversing every source event
-        # from that date. Its own date's timestamped snapshots stay explicitly
-        # uncertain; earlier snapshots inherit the retrospective correction.
+        # A date-only drop is applied only after reversing the earliest
+        # plausible UTC date. Snapshots within its uncertainty window stay
+        # explicitly uncertain; earlier snapshots inherit the correction.
         unique_movements: dict[tuple[Any, ...], list[HistoricalSupplementalPlayerMovement]] = defaultdict(list)
         for movement in supplements_by_day.get(event_date, ()):
             key = (movement.source_player_id, movement.provider_roster_id, movement.kind,

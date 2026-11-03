@@ -5,7 +5,7 @@ provider archive, establish contemporaneous availability, or authorize PIT grade
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from enum import StrEnum
 from typing import Literal
 
@@ -135,9 +135,10 @@ def reconcile_supplemental_player_movements(
     """Assess whether separately sourced drops support missing source-ledger exits.
 
     The source audit is embedded verbatim and remains incomplete. Only a
-    provider/season/player/roster-matched drop strictly after the source event
-    can support a missing ownership departure. Day-only same-day evidence is
-    ambiguous because it cannot establish event order.
+    provider/season/player/roster-matched drop clearly after the source event
+    can support a missing ownership departure. Because a displayed calendar
+    date has no timezone, date-only evidence is ambiguous when the provider
+    event falls on an adjacent UTC calendar date.
     """
     for movement in movements:
         if movement.season.league_id != provider_audit.provider_league_id:
@@ -170,10 +171,16 @@ def reconcile_supplemental_player_movements(
                     ordered.append(movement)
                 elif movement.effective_at == issue.completed_at:
                     same_day_ambiguous.append(movement)
-            elif movement.effective_date > issue.completed_at.date():
-                ordered.append(movement)
-            elif movement.effective_date == issue.completed_at.date():
-                same_day_ambiguous.append(movement)
+            else:
+                # A displayed calendar date has no timezone. Relative to UTC
+                # provider clocks, its possible instants can span the prior
+                # and following UTC dates; require a full-day buffer.
+                earliest_possible_utc_date = movement.effective_date - timedelta(days=1)
+                latest_possible_utc_date = movement.effective_date + timedelta(days=1)
+                if issue.completed_at.date() < earliest_possible_utc_date:
+                    ordered.append(movement)
+                elif issue.completed_at.date() <= latest_possible_utc_date:
+                    same_day_ambiguous.append(movement)
 
         if same_day_ambiguous:
             findings.append(SupplementalOwnershipFinding(

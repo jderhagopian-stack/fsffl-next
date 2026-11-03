@@ -213,25 +213,58 @@ def test_exact_timestamp_supplement_is_not_collapsed_into_a_date_boundary():
     assert result.supplemental_applied_evidence_ids == ()
 
 
-def test_date_only_player_is_marked_uncertain_on_same_date_snapshot():
+def test_untimed_player_event_makes_supplement_ambiguous():
     data = _season_with_missing_add()
-    aug23 = int(datetime(2023, 8, 23, 12, tzinfo=UTC).timestamp() * 1000)
     data["transactions"].append({
-        "type": "waiver", "status": "complete", "transaction_id": "same-day-other-player",
-        "created": aug23 - 1000, "status_updated": aug23, "roster_ids": [1],
-        "adds": {"other-player": 1}, "drops": {}, "settings": {"waiver_bid": 0},
-        "draft_picks": [], "waiver_budget": [],
+        "type": "waiver", "status": "complete", "transaction_id": "untimed-event",
+        "created": 1, "status_updated": None, "roster_ids": [1],
+        "adds": {"supplement-player": 2}, "drops": {},
+        "settings": {"waiver_bid": 0}, "draft_picks": [], "waiver_budget": [],
     })
     result = reconstruct_sleeper_roster_context(
         data, source_revision="archive-sha", supplemental_movements=(_supplement(),)
     )
-    same_day = next(row for row in result.snapshots if row.effective_at == datetime.fromtimestamp(aug23 / 1000, tz=UTC))
-    assert "supplement-player" in same_day.uncertain_player_ids
+
+    finding = next(
+        item for item in result.supplemental_reconciliation.findings
+        if item.issue.provider_roster_id == "1"
+    )
+    assert finding.status == SupplementalFindingStatus.AMBIGUOUS
+    assert "untimed or in-window" in finding.detail
+    assert result.supplemental_replay_status == "no_supported_movement"
+
+
+def test_date_only_player_is_marked_uncertain_across_timezone_window():
+    data = _season_with_missing_add()
+    for day in (22, 23, 24):
+        event_at = int(datetime(2023, 8, day, 12, tzinfo=UTC).timestamp() * 1000)
+        data["transactions"].append({
+            "type": "waiver", "status": "complete", "transaction_id": f"nearby-{day}",
+            "created": event_at - 1000, "status_updated": event_at, "roster_ids": [1],
+            "adds": {f"other-player-{day}": 1}, "drops": {},
+            "settings": {"waiver_bid": 0}, "draft_picks": [], "waiver_budget": [],
+        })
+    result = reconstruct_sleeper_roster_context(
+        data, source_revision="archive-sha", supplemental_movements=(_supplement(),)
+    )
+    for day in (22, 23, 24):
+        same_window = next(
+            row for row in result.snapshots
+            if row.effective_at == datetime(2023, 8, day, 12, tzinfo=UTC)
+        )
+        assert "supplement-player" in same_window.uncertain_player_ids
     assert result.supplemental_replay_status == "applied_retrospectively"
 
 
 def test_unmatched_supplement_is_reported_but_does_not_change_source_replay():
     data = _season_with_missing_add()
+    aug23 = int(datetime(2023, 8, 23, 12, tzinfo=UTC).timestamp() * 1000)
+    data["transactions"].append({
+        "type": "waiver", "status": "complete", "transaction_id": "unrelated-same-window",
+        "created": aug23 - 1000, "status_updated": aug23, "roster_ids": [1],
+        "adds": {"player-b": 1}, "drops": {"player-b": 2},
+        "settings": {"waiver_bid": 0}, "draft_picks": [], "waiver_budget": [],
+    })
     baseline = reconstruct_sleeper_roster_context(data, source_revision="archive-sha")
     result = reconstruct_sleeper_roster_context(
         data, source_revision="archive-sha", supplemental_movements=(_supplement(player="unrelated-player"),)

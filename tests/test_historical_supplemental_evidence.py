@@ -98,12 +98,19 @@ def test_later_matching_drop_supports_gap_without_mutating_provider_audit():
         {"player": "different-player"},
         {"roster": "8"},
         {"kind": SupplementalPlayerMovementKind.ADDED_TO_ROSTER},
-        {"event_date": date(2023, 7, 26)},
     ],
 )
 def test_nonmatching_or_nonlater_movement_does_not_support_gap(kwargs):
     result = reconcile_supplemental_player_movements(provider_audit(), (movement(**kwargs),))
     assert result.findings[0].status == SupplementalFindingStatus.UNRESOLVED
+
+
+@pytest.mark.parametrize("event_date", [date(2023, 7, 26), date(2023, 7, 28)])
+def test_date_only_evidence_with_adjacent_utc_day_is_ambiguous(event_date):
+    result = reconcile_supplemental_player_movements(
+        provider_audit(), (movement(event_date=event_date),)
+    )
+    assert result.findings[0].status == SupplementalFindingStatus.AMBIGUOUS
 
 
 def test_same_day_date_only_evidence_is_ambiguous():
