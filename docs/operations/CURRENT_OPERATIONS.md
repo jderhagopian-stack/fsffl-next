@@ -1,3 +1,15 @@
+## 2026-11-03 — Supplement-aware retrospective roster replay (candidate; nonproduction)
+
+The next backend gate in [the supplemental-evidence checkpoint](workstreams/HISTORICAL_SUPPLEMENTAL_EVIDENCE_20261101.md) is now implemented on branch `codex/supplement-aware-roster-replay`; exact PR/head and hosted checks will be recorded here after the draft is opened. This closes the explicit gap between separately reconciled movement evidence and the reusable retrospective roster-context provider, before moving to second-source/league validation.
+
+`reconstruct_sleeper_roster_context()` now applies only uniquely supported date-only drops, after reversing all provider events on that UTC day. It flags same-day membership as uncertain, rejects same-day same-player source conflicts, and explicitly leaves exact-time supplemental replay unresolved in this date-boundary model. Output v2 carries the original provider audit/status separately from reconciliation and replay status. The original source hash and audit are not rewritten; historical PIT eligibility remains false. This changes retrospective roster membership only and does not produce canonical `LeagueState`, Forecast, Market, Value, Decision, or an operational historical grade.
+
+Local validation: 22 focused roster/supplement tests and 3 pinned-archive tests passed; a sanitized run against the pinned archive verified the Deneric Prince evidence path and unchanged source audit. Exact-head CI and Stable full suite are pending. No persistence, database, migration, deployment, or app/UI changes.
+
+Next after exact-head acceptance: identify a second real league/source with different rules and defensible timestamp/identity provenance, then build at most a bounded canonical historical State when roster slots, initial FAAB, source completeness, and point-in-time evidence are supportable. The broader historical capability remains nonproduction and no historical Decision grade is authorized.
+
+---
+
 ## 2026-11-03 — Historical roster-context provider merged (backend primitive, nonproduction)
 
 Management clarified the target: build a reusable historical roster-context capability across seasons and leagues, not a grader for the selected October 1, 2023 acceptance transaction. That trade remains a mixed-asset replay fixture only. Reuse the original FSFFL pattern of starting from retained later rosters and reversing completed events to reconstruct membership at historical event boundaries. Inputs must carry each season's own league settings, roster count, scoring, and slot configuration; no FSFFL team-count or scoring constants. Unknown exact lineup/taxi/reserve/IR placement must remain explicit and must not block roster-membership context.

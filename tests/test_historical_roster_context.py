@@ -1,10 +1,19 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 
 from fsffl.state.historical_roster_context import reconstruct_sleeper_roster_context
+from fsffl.state.historical_coverage import HistoricalSeasonIdentity
+from fsffl.state.historical_supplemental_evidence import (
+    HistoricalSupplementalEvidenceReceipt,
+    HistoricalSupplementalPlayerMovement,
+    SupplementalDatePrecision,
+    SupplementalEvidenceSource,
+    SupplementalFindingStatus,
+    SupplementalPlayerMovementKind,
+)
 
 
 def _season(*, team_count: int = 4, season: int = 2023, scoring: int = 0):
@@ -41,6 +50,34 @@ def _season(*, team_count: int = 4, season: int = 2023, scoring: int = 0):
              "settings": {"waiver_bid": 4}, "draft_picks": [], "waiver_budget": []},
         ],
     }
+
+
+def _supplement(*, effective_date=date(2023, 8, 23), player="supplement-player"):
+    return HistoricalSupplementalPlayerMovement(
+        season=HistoricalSeasonIdentity(
+            league_family_id="family-1", league_id="league-2023-4", season=2023,
+        ),
+        provider="sleeper", source_player_id=player, player_id="canonical-player",
+        provider_roster_id="1", kind=SupplementalPlayerMovementKind.DROPPED_TO_WAIVERS,
+        effective_date=effective_date, date_precision=SupplementalDatePrecision.DATE_ONLY,
+        receipt=HistoricalSupplementalEvidenceReceipt(
+            evidence_id="supplement-1", source=SupplementalEvidenceSource.USER_SUPPLIED_SCREENSHOT,
+            source_fingerprint_sha256="c" * 64, received_at=datetime(2026, 11, 1, tzinfo=UTC),
+            source_reference="private evidence reference",
+        ),
+    )
+
+
+def _season_with_missing_add():
+    data = _season()
+    july_add = int(datetime(2023, 7, 27, 7, 5, 25, 93000, tzinfo=UTC).timestamp() * 1000)
+    data["transactions"].append({
+        "type": "waiver", "status": "complete", "transaction_id": "missing-add",
+        "created": july_add - 1000, "status_updated": july_add, "roster_ids": [1],
+        "adds": {"supplement-player": 1}, "drops": {},
+        "settings": {"waiver_bid": 3}, "draft_picks": [], "waiver_budget": [],
+    })
+    return data
 
 
 @pytest.mark.parametrize("team_count", [4, 12, 18])
@@ -100,3 +137,107 @@ def test_faab_reconstruction_issue_does_not_block_roster_membership_context() ->
         next(row for row in snapshot.teams if row.provider_roster_id == "1").waiver_budget_used is None
         for snapshot in result.snapshots[:-1]
     )
+
+
+def test_supported_date_only_drop_repairs_retrospective_roster_replay_without_promoting_source_audit():
+    data = _season_with_missing_add()
+    original = repr(data)
+    result = reconstruct_sleeper_roster_context(
+        data, source_revision="archive-sha", supplemental_movements=(_supplement(),)
+    )
+
+    assert repr(data) == original
+    assert result.provider_audit is not None
+    assert result.provider_audit.status == "incomplete_source_history"
+    assert result.provider_audit_status == "incomplete_source_history"
+    assert [issue.code for issue in result.provider_audit.issues] == ["post_event_player_missing"]
+    assert result.supplemental_reconciliation is not None
+    assert result.supplemental_reconciliation.findings[0].status == SupplementalFindingStatus.SUPPORTED_RETROSPECTIVELY
+    assert result.supplemental_replay_status == "applied_retrospectively"
+    assert result.supplemental_applied_evidence_ids == ("supplement-1",)
+    assert result.eligible_for_pit_decision_grade is False
+    assert result.membership_status == "provisionally_consistent"
+
+    add_time = datetime(2023, 7, 27, 7, 5, 25, 93000, tzinfo=UTC)
+    after_add = next(row for row in result.snapshots
+                     if row.effective_at == add_time and row.boundary == "after_completed_event_batch")
+    before_add = next(row for row in result.snapshots
+                      if row.effective_at == add_time and row.boundary == "before_completed_event_batch")
+    after_owners = {team.provider_roster_id: team.player_ids for team in after_add.teams}
+    before_owners = {team.provider_roster_id: team.player_ids for team in before_add.teams}
+    assert "supplement-player" in after_owners["1"]
+    assert "supplement-player" not in before_owners["1"]
+    assert "supplement-1" in after_add.supplemental_evidence_ids
+
+
+def test_same_day_player_event_makes_supported_supplement_ambiguous_and_unapplied():
+    data = _season_with_missing_add()
+    aug23 = int(datetime(2023, 8, 23, 12, tzinfo=UTC).timestamp() * 1000)
+    data["transactions"].append({
+        "type": "waiver", "status": "complete", "transaction_id": "same-day-event",
+        "created": aug23 - 1000, "status_updated": aug23, "roster_ids": [1],
+        "adds": {"supplement-player": 2}, "drops": {},
+        "settings": {"waiver_bid": 0}, "draft_picks": [], "waiver_budget": [],
+    })
+    result = reconstruct_sleeper_roster_context(
+        data, source_revision="archive-sha", supplemental_movements=(_supplement(),)
+    )
+
+    finding = next(
+        item for item in result.supplemental_reconciliation.findings
+        if item.issue.provider_roster_id == "1"
+    )
+    assert finding.status == SupplementalFindingStatus.AMBIGUOUS
+    assert result.supplemental_replay_status == "no_supported_movement"
+    assert result.supplemental_applied_evidence_ids == ()
+    assert result.provider_audit_status == "incomplete_source_history"
+
+
+def test_exact_timestamp_supplement_is_not_collapsed_into_a_date_boundary():
+    data = _season_with_missing_add()
+    exact = _supplement().model_copy(update={
+        "date_precision": SupplementalDatePrecision.EXACT_TIMESTAMP,
+        "effective_at": datetime(2023, 8, 23, 12, tzinfo=UTC),
+    })
+    result = reconstruct_sleeper_roster_context(
+        data, source_revision="archive-sha", supplemental_movements=(exact,)
+    )
+
+    finding = next(
+        item for item in result.supplemental_reconciliation.findings
+        if item.issue.provider_roster_id == "1"
+    )
+    assert finding.status == SupplementalFindingStatus.AMBIGUOUS
+    assert "exact-time supplemental replay is not supported" in finding.detail
+    assert result.supplemental_replay_status == "no_supported_movement"
+    assert result.supplemental_applied_evidence_ids == ()
+
+
+def test_date_only_player_is_marked_uncertain_on_same_date_snapshot():
+    data = _season_with_missing_add()
+    aug23 = int(datetime(2023, 8, 23, 12, tzinfo=UTC).timestamp() * 1000)
+    data["transactions"].append({
+        "type": "waiver", "status": "complete", "transaction_id": "same-day-other-player",
+        "created": aug23 - 1000, "status_updated": aug23, "roster_ids": [1],
+        "adds": {"other-player": 1}, "drops": {}, "settings": {"waiver_bid": 0},
+        "draft_picks": [], "waiver_budget": [],
+    })
+    result = reconstruct_sleeper_roster_context(
+        data, source_revision="archive-sha", supplemental_movements=(_supplement(),)
+    )
+    same_day = next(row for row in result.snapshots if row.effective_at == datetime.fromtimestamp(aug23 / 1000, tz=UTC))
+    assert "supplement-player" in same_day.uncertain_player_ids
+    assert result.supplemental_replay_status == "applied_retrospectively"
+
+
+def test_unmatched_supplement_is_reported_but_does_not_change_source_replay():
+    data = _season_with_missing_add()
+    baseline = reconstruct_sleeper_roster_context(data, source_revision="archive-sha")
+    result = reconstruct_sleeper_roster_context(
+        data, source_revision="archive-sha", supplemental_movements=(_supplement(player="unrelated-player"),)
+    )
+
+    assert result.supplemental_replay_status == "no_supported_movement"
+    assert result.provider_audit_status == "incomplete_source_history"
+    assert result.supplemental_applied_evidence_ids == ()
+    assert result.snapshots == baseline.snapshots
