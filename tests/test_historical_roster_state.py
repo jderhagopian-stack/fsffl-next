@@ -212,3 +212,15 @@ def test_pick_receipt_without_complete_universe_attestation_blocks():
 
     assert result.status == Status.BLOCKED
     assert "complete_pick_universe_not_asserted" in result.blockers
+
+
+def test_supplemented_membership_requires_receipt_payload_to_be_carried_forward():
+    inputs = _inputs()
+    inputs["snapshot"] = inputs["snapshot"].model_copy(update={
+        "supplemental_evidence_ids": ("supplement-1",),
+    })
+
+    result = materialize_historical_roster_state(**inputs)
+
+    assert result.status == Status.BLOCKED
+    assert "supplemental_evidence_receipt_coverage_mismatch" in result.blockers
