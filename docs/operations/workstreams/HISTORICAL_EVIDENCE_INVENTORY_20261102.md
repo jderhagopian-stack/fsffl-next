@@ -24,6 +24,22 @@ A Sleeper league archive cannot substitute for historical NFL projections. Curre
 - The 2023 archived record has season configuration, end rosters, completed transactions, drafts, and a traded-pick ledger. Prior acceptance documented 48 completed trades and a verified source-backed October 1 example. The full reverse history also exposes an unrelated membership anomaly. This is retrospective archive evidence; it does not prove that these records or final rosters were available at the historical decision cutoff.
 - Sleeper's live history adapter follows `previous_league_id` and retrieves season transactions. Existing `historical_season_lineage.py` and `historical_coverage.py` provide provider-neutral lineage and cutoff-evidence contracts. The behavioral adapter's event timestamps serve a behavioral-history use and are not, by themselves, certified effective/availability times for canonical historical State.
 
+### Retained archive season ledger
+
+The pinned archival CI acceptance over the same immutable source revision confirms the adjacent season chain and these season-level totals. The reconstructed roster helper separately reports membership and conditional FAAB status.
+
+| Season | Teams | Completed events | Trades | Membership-history finding | FAAB reconstruction |
+| --- | ---: | ---: | ---: | --- | --- |
+| 2022 | 12 | 246 | 14 | No source-ledger issue found; startup-draft context still requires special treatment | Underflow issue; balances unknown at affected boundaries |
+| 2023 | 12 | 350 | 48 | Incomplete: one completed waiver pickup is absent from the later retained roster/event history | Never independently verified as a point-in-time balance |
+| 2024 | 12 | 358 | 26 | No source-ledger issue found | Underflow issue; balances unknown at affected boundaries |
+| 2025 | 12 | 339 | 34 | No source-ledger issue found | Never independently verified as a point-in-time balance |
+| 2026 | 12 | 107 | 22 | No source-ledger issue found in the retained slice | Never independently verified as a point-in-time balance |
+
+The source test verifies the 2022–2026 previous_league_id chain, original per-year rules, and all five years' event totals against the pinned archive. All five recorded snapshots have 12 teams; team-count variation is synthetic-only. The 2023-to-2024 rules fingerprint changes. No row in this table certifies a contemporaneous PIT State, complete lineup/taxi/IR/standings history, or Decision-grade evidence.
+
+**2026 is an in-progress season in this archive revision.** The helper's "archive end anchor" means the latest retained archive snapshot, not an official end-of-season roster. The same caveat applies to any later season whose archive capture is not demonstrably final.
+
 ### What it supports and what is missing
 
 - It supports a bounded factual replay of archived roster membership and selected transaction legs, with known gaps exposed.
