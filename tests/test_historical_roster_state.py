@@ -224,3 +224,17 @@ def test_supplemented_membership_requires_receipt_payload_to_be_carried_forward(
 
     assert result.status == Status.BLOCKED
     assert "supplemental_evidence_receipt_coverage_mismatch" in result.blockers
+
+
+def test_duplicate_provider_team_reference_blocks_identity_ambiguity():
+    inputs = _inputs()
+    second = inputs["teams"][1]
+    wrong_team = second.team.model_copy(update={
+        "provider_refs": (ProviderRef(provider="sleeper", external_id="1"),),
+    })
+    inputs["teams"] = (inputs["teams"][0], second.model_copy(update={"team": wrong_team}))
+
+    result = materialize_historical_roster_state(**inputs)
+
+    assert result.status == Status.BLOCKED
+    assert "team_provider_identity_mapping_is_not_one_to_one" in result.blockers
