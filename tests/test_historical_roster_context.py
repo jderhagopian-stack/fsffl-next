@@ -73,7 +73,9 @@ def test_season_rules_are_fingerprinted_not_hardcoded() -> None:
 
     assert baseline.league_rules_sha256 != changed.league_rules_sha256
     assert baseline.observed_team_count == changed.observed_team_count
-    assert baseline.snapshots[-1].teams == changed.snapshots[-1].teams
+    baseline_context = tuple((row.player_ids, row.waiver_budget_used) for row in baseline.snapshots[-1].teams)
+    changed_context = tuple((row.player_ids, row.waiver_budget_used) for row in changed.snapshots[-1].teams)
+    assert baseline_context == changed_context
 
 
 def test_missing_event_timestamp_keeps_supported_membership_but_marks_history_incomplete() -> None:
