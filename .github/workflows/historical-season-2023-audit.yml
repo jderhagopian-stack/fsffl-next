@@ -4,8 +4,10 @@ on:
   pull_request:
     paths:
       - 'src/fsffl/state/retrospective_season_audit.py'
+      - 'src/fsffl/state/historical_roster_context.py'
       - 'tests/test_retrospective_season_audit.py'
       - 'tests/test_retrospective_full_2023_archive.py'
+      - 'tests/test_historical_roster_context.py'
       - 'scripts/audit_retrospective_sleeper_season.py'
       - '.github/workflows/historical-season-2023-audit.yml'
       - 'docs/operations/workstreams/HISTORICAL_2023_SEASON_LEDGER_20261101.md'
@@ -32,6 +34,7 @@ jobs:
       - name: Focused season and inherited historical contracts
         run: |
           python -m pytest -q tests/test_retrospective_season_audit.py \
+            tests/test_historical_roster_context.py \
             tests/test_retrospective_sleeper_replay.py \
             tests/test_historical_coverage.py \
             tests/test_historical_season_lineage.py \

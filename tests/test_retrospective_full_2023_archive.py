@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from fsffl.state.retrospective_season_audit import audit_retrospective_sleeper_season
+from fsffl.state.historical_roster_context import reconstruct_sleeper_roster_context
 
 PINNED_BLOB = "e18c01bf25f58c5dfe3d0802f53de484ea257ca1"
 
@@ -69,3 +70,40 @@ def test_all_retained_seasons_preserve_original_rules_and_expose_incomplete_year
     # Even a source-consistent 2022 or archived 2026 portion is not a valid PIT
     # decision State: startup/draft events and original availability still need proof.
     assert all(x.historically_validated_faab_balances is False for x in summaries)
+
+
+def test_all_retained_seasons_produce_rule_scoped_roster_context_snapshots():
+    """Exercise the reusable provider across the complete retained year cohort."""
+    path = os.getenv("FSFFL_RESEARCH_HISTORICAL_ARCHIVE")
+    if not path:
+        pytest.skip("original historical source not mounted")
+    raw = Path(path).read_bytes()
+    assert sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest() == PINNED_BLOB
+    years = sorted(json.loads(raw), key=lambda x: int(x["league"]["season"]))
+    histories = [
+        reconstruct_sleeper_roster_context(year, source_revision="git-blob:" + PINNED_BLOB)
+        for year in years
+    ]
+
+    assert [row.season for row in histories] == [2022, 2023, 2024, 2025, 2026]
+    assert [row.observed_team_count for row in histories] == [12, 12, 12, 12, 12]
+    assert [row.completed_event_count for row in histories] == [246, 350, 358, 339, 107]
+    assert all(row.provider_league_id == str(year["league"]["league_id"])
+               for row, year in zip(histories, years))
+    assert all(row.raw_roster_slots == tuple(year["league"]["roster_positions"])
+               for row, year in zip(histories, years))
+    assert all(row.league_rules_sha256 for row in histories)
+    assert len({row.league_rules_sha256 for row in histories}) > 1
+    assert all(row.eligible_for_pit_decision_grade is False for row in histories)
+    assert all(snapshot.roster_slot_coverage == "unknown"
+               for history in histories for snapshot in history.snapshots)
+    assert histories[1].membership_status == "incomplete_source_history"
+    assert "post_event_player_ownership_mismatch" in histories[1].issues
+    non_2023_issues = [
+        (history.season, history.membership_issues)
+        for index, history in enumerate(histories) if index != 1 and history.membership_issues
+    ]
+    assert not non_2023_issues, non_2023_issues
+    assert {2022, 2024}.issubset({history.season for history in histories if history.faab_issues})
+    assert all(history.membership_status == "provisionally_consistent"
+               for history in histories if history.season in {2022, 2024})

@@ -1,3 +1,13 @@
+## 2026-11-02 — Historical roster-context provider (backend, in progress)
+
+Management clarified the target: build a reusable historical roster-context capability across seasons and leagues, not a grader for the selected October 1, 2023 acceptance transaction. That trade remains a mixed-asset replay fixture only. Reuse the original FSFFL pattern of starting from retained later rosters and reversing completed events to reconstruct membership at historical event boundaries. Inputs must carry each season's own league settings, roster count, scoring, and slot configuration; no FSFFL team-count or scoring constants. Unknown exact lineup/taxi/reserve/IR placement must remain explicit and must not block roster-membership context.
+
+Current implementation on branch `codex/historical-roster-context-provider` adds `src/fsffl/state/historical_roster_context.py`, which emits before/after snapshots for completed timestamp batches from one season archive, fingerprints that season's configuration, scopes picks to archived traded-pick records, keeps FAAB conditional, and separates membership/pick/FAAB issue codes. A FAAB reconstruction gap does not by itself block otherwise supported roster membership. It is retrospective context, not canonical PIT `LeagueState`, player valuation, or a Decision grade. Exact-head regular CI run [41562534503](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41562534503) and pinned-source archive run [41562534478](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41562534478) passed on head `0f146b699052bd1a4bb778ab9a01b6dc2379de77`. The archive run reports the 2023 membership gap and 2022/2024 FAAB underflows separately. Stable full-suite was skipped because the PR remains draft.
+
+Next: finish regular CI on the exact PR head, review the final diff, then use the Stable full-suite gate before promotion. A separate league source is still needed to validate a non-Sleeper adapter. Then connect supported historical context to backend analysis. Do not begin app work or claim PIT-grade authority from this provider.
+
+---
+
 ## 2026-11-02 — Evidence-gated bilateral trade State transformation merged (nonproduction)
 
 PR #502 merged to `main` as squash `83fbb699bcc60b836f02b8ff0a5849fee4da55b0` from exact tested head `e650213f66b797ad6dac9dba7e930b2f033c46c3`.
@@ -435,7 +445,7 @@ Management reported upgrading Supabase; connected Supabase organization details 
 
 **Canonical decision:** [Management Continuity](MANAGEMENT_CONTINUITY.md) and [Living Product Priorities](../FSFFL_NEXT_PRODUCT_PRIORITIES.md). Existing workstream checkpoints and previously accepted safeguards remain authoritative. Management review cadence: weekly concise owner-visible result, measured performance/cost, blocker and next decision.
 
-Updated: 2026-10-09  
+Updated: 2026-10-09
 Authority: sole current cross-workstream status. Historical snapshots are under `docs/operations/archive/`. Detailed P0 decisions and evidence remain in [Architecture Recovery](workstreams/ARCHITECTURE_RECOVERY.md).
 
 ## 2026-10-10 — 100k-league storage scale plan recorded
