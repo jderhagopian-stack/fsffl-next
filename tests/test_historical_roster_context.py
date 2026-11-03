@@ -105,11 +105,18 @@ def test_reconstructs_all_event_boundaries_without_fixed_team_count(team_count: 
 
 
 def test_season_rules_are_fingerprinted_not_hardcoded() -> None:
-    baseline = reconstruct_sleeper_roster_context(_season(season=2023, scoring=0), source_revision="archive-sha")
-    changed = reconstruct_sleeper_roster_context(_season(season=2024, scoring=2), source_revision="archive-sha")
+    baseline_data = _season(season=2023, scoring=0)
+    changed_data = _season(season=2024, scoring=2)
+    changed_data["league"]["roster_positions"] = [
+        "QB", "RB", "WR", "TE", "FLEX", "FLEX", "K", "DST", "BN",
+    ]
+    changed_data["league"]["settings"]["reserve_slots"] = 1
+    baseline = reconstruct_sleeper_roster_context(baseline_data, source_revision="archive-sha")
+    changed = reconstruct_sleeper_roster_context(changed_data, source_revision="archive-sha")
 
     assert baseline.league_rules_sha256 != changed.league_rules_sha256
     assert baseline.observed_team_count == changed.observed_team_count
+    assert changed.raw_roster_slots == tuple(changed_data["league"]["roster_positions"])
     baseline_context = tuple((row.player_ids, row.waiver_budget_used) for row in baseline.snapshots[-1].teams)
     changed_context = tuple((row.player_ids, row.waiver_budget_used) for row in changed.snapshots[-1].teams)
     assert baseline_context == changed_context
