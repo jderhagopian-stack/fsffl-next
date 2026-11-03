@@ -184,6 +184,13 @@ def test_supported_date_only_drop_repairs_retrospective_roster_replay_without_pr
     result = reconstruct_sleeper_roster_context(
         data, source_revision="archive-sha", supplemental_movements=(_supplement(),)
     )
+    changed_receipt = _supplement().receipt.model_copy(update={
+        "source_fingerprint_sha256": "d" * 64,
+    })
+    changed_evidence = _supplement().model_copy(update={"receipt": changed_receipt})
+    changed_evidence_result = reconstruct_sleeper_roster_context(
+        data, source_revision="archive-sha", supplemental_movements=(changed_evidence,)
+    )
 
     assert repr(data) == original
     assert result.provider_audit is not None
@@ -195,6 +202,8 @@ def test_supported_date_only_drop_repairs_retrospective_roster_replay_without_pr
     assert result.supplemental_replay_status == "applied_retrospectively"
     assert result.history_id == baseline.history_id
     assert result.supplemental_evidence_sha256 != baseline.supplemental_evidence_sha256
+    assert changed_evidence_result.history_id == result.history_id
+    assert changed_evidence_result.supplemental_evidence_sha256 != result.supplemental_evidence_sha256
     assert result.supplemental_applied_evidence_ids == ("supplement-1",)
     assert result.eligible_for_pit_decision_grade is False
     assert result.membership_status == "provisionally_consistent"
@@ -213,6 +222,10 @@ def test_supported_date_only_drop_repairs_retrospective_roster_replay_without_pr
                               if row.effective_at == add_time
                               and row.boundary == "after_completed_event_batch")
     assert baseline_after_add.snapshot_id != after_add.snapshot_id
+    changed_after_add = next(row for row in changed_evidence_result.snapshots
+                             if row.effective_at == add_time
+                             and row.boundary == "after_completed_event_batch")
+    assert changed_after_add.snapshot_id != after_add.snapshot_id
 
 
 def test_same_day_player_event_makes_supported_supplement_ambiguous_and_unapplied():

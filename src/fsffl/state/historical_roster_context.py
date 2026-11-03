@@ -354,6 +354,15 @@ def reconstruct_sleeper_roster_context(
             and instant is not None
             and abs((movement.effective_date - instant.date()).days) <= 1
         }))
+        applied_evidence_payload = [
+            movement.model_dump(mode="json")
+            for movement in supplemental_movements
+            if movement.receipt.evidence_id in applied_evidence_ids
+        ]
+        applied_evidence_sha256 = _digest(sorted(
+            applied_evidence_payload,
+            key=lambda row: json.dumps(row, sort_keys=True, separators=(",", ":")),
+        ))
         snapshot_identity = {
             "history_id": history_id,
             "effective_at": instant.isoformat() if instant is not None else None,
@@ -363,6 +372,7 @@ def reconstruct_sleeper_roster_context(
             "teams": [team.model_dump(mode="json") for team in teams],
             "uncertain_player_ids": uncertain,
             "supplemental_evidence_ids": tuple(sorted(applied_evidence_ids)),
+            "applied_supplemental_evidence_sha256": applied_evidence_sha256,
         }
         return HistoricalRosterContextSnapshot(
             history_id=history_id,
