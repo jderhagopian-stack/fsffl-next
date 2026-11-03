@@ -5,12 +5,14 @@ on:
       - 'src/fsffl/state/historical_supplemental_evidence.py'
       - 'src/fsffl/state/historical_roster_context.py'
       - 'src/fsffl/state/historical_roster_state.py'
+      - 'src/fsffl/state/historical_roster_replay.py'
       - 'src/fsffl/state/historical_materializer.py'
       - 'src/fsffl/state/retrospective_season_audit.py'
       - 'tests/test_historical_supplemental_evidence.py'
       - 'tests/test_historical_coverage.py'
       - 'tests/test_historical_roster_context.py'
       - 'tests/test_historical_roster_state.py'
+      - 'tests/test_historical_roster_replay.py'
       - 'tests/test_historical_state_materializer.py'
       - 'tests/test_retrospective_season_audit.py'
       - 'docs/operations/workstreams/HISTORICAL_SUPPLEMENTAL_EVIDENCE_20261101.md'
@@ -42,5 +44,6 @@ jobs:
           tests/test_historical_coverage.py
           tests/test_historical_roster_context.py
           tests/test_historical_roster_state.py
+          tests/test_historical_roster_replay.py
           tests/test_historical_state_materializer.py
           tests/test_retrospective_season_audit.py
