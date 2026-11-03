@@ -89,6 +89,7 @@ class HistoricalRosterContextSnapshot(FrozenModel):
 
 class HistoricalRosterContextHistory(FrozenModel):
     history_id: str
+    supplemental_evidence_sha256: str
     provider: str = "sleeper"
     provider_league_id: str
     season: int
@@ -302,6 +303,14 @@ def reconstruct_sleeper_roster_context(
         "settings": settings, "scoring": scoring, "slots": slots,
         "observed_team_count": len(owners),
     })
+    supplemental_evidence_payload = [
+        movement.model_dump(mode="json")
+        for movement in supplemental_movements
+    ]
+    supplemental_evidence_sha256 = _digest(sorted(
+        supplemental_evidence_payload,
+        key=lambda row: json.dumps(row, sort_keys=True, separators=(",", ":")),
+    ))
     model_version = "historical-roster-context-v3"
     history_id = "hctx_" + _digest({
         "provider": "sleeper",
@@ -310,6 +319,7 @@ def reconstruct_sleeper_roster_context(
         "source_revision": source_revision,
         "source_sha256": source_sha256,
         "league_rules_sha256": rules_digest,
+        "supplemental_evidence_sha256": supplemental_evidence_sha256,
         "model_version": model_version,
     })
 
@@ -586,6 +596,7 @@ def reconstruct_sleeper_roster_context(
     membership_issues = tuple(sorted(issues.difference(faab_issue_codes | pick_issue_codes)))
     return HistoricalRosterContextHistory(
         history_id=history_id,
+        supplemental_evidence_sha256=supplemental_evidence_sha256,
         provider_league_id=league_id, season=season, source_revision=source_revision,
         source_sha256=source_sha256, league_rules_sha256=rules_digest,
         raw_roster_slots=slots, observed_team_count=len(owners), completed_event_count=completed_count,
