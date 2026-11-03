@@ -122,6 +122,68 @@ def test_season_rules_are_fingerprinted_not_hardcoded() -> None:
     assert baseline_context == changed_context
 
 
+def test_snapshot_identity_is_stable_and_scoped_to_season_rules_and_source() -> None:
+    data = _season(team_count=4, season=2023, scoring=0)
+    first = reconstruct_sleeper_roster_context(data, source_revision="archive-sha-a")
+    repeated = reconstruct_sleeper_roster_context(data, source_revision="archive-sha-a")
+    different_source = reconstruct_sleeper_roster_context(data, source_revision="archive-sha-b")
+
+    changed_rules_data = _season(team_count=8, season=2024, scoring=2)
+    changed_rules = reconstruct_sleeper_roster_context(
+        changed_rules_data, source_revision="archive-sha-a"
+    )
+    changed_league_data = _season(team_count=4, season=2023, scoring=0)
+    changed_league_data["league"]["league_id"] = "different-provider-league"
+    changed_league = reconstruct_sleeper_roster_context(
+        changed_league_data, source_revision="archive-sha-a"
+    )
+
+    assert first.model_version == "historical-roster-context-v3"
+    assert first.history_id.startswith("hctx_")
+    assert first.history_id == repeated.history_id
+    assert tuple(row.snapshot_id for row in first.snapshots) == tuple(
+        row.snapshot_id for row in repeated.snapshots
+    )
+    assert len({row.snapshot_id for row in first.snapshots}) == len(first.snapshots)
+    assert all(row.history_id == first.history_id for row in first.snapshots)
+    assert first.history_id != different_source.history_id
+    assert first.history_id != changed_rules.history_id
+    assert first.history_id != changed_league.history_id
+    assert all(row.snapshot_id != other.snapshot_id
+               for row in first.snapshots for other in changed_rules.snapshots)
+
+
+def test_league_family_identity_requires_explicit_matching_season_identity() -> None:
+    first_data = _season(team_count=4, season=2023)
+    second_data = _season(team_count=4, season=2024)
+    first_identity = HistoricalSeasonIdentity(
+        league_family_id="family-1", league_id="league-2023-4", season=2023,
+    )
+    second_identity = HistoricalSeasonIdentity(
+        league_family_id="family-1", league_id="league-2024-4", season=2024,
+    )
+
+    first = reconstruct_sleeper_roster_context(
+        first_data, source_revision="archive-sha", season_identity=first_identity,
+    )
+    second = reconstruct_sleeper_roster_context(
+        second_data, source_revision="archive-sha", season_identity=second_identity,
+    )
+    unlinked = reconstruct_sleeper_roster_context(first_data, source_revision="archive-sha")
+
+    assert first.league_family_id == second.league_family_id == "family-1"
+    assert first.family_identity_status == second.family_identity_status == "verified_family"
+    assert unlinked.league_family_id is None
+    assert unlinked.family_identity_status == "unlinked_season"
+    assert first.history_id != unlinked.history_id
+    assert second.history_id != first.history_id
+
+    with pytest.raises(ValueError, match="must match provider league and year"):
+        reconstruct_sleeper_roster_context(
+            first_data, source_revision="archive-sha", season_identity=second_identity,
+        )
+
+
 def test_missing_event_timestamp_keeps_supported_membership_but_marks_history_incomplete() -> None:
     data = _season()
     data["transactions"][1]["status_updated"] = None
@@ -149,8 +211,16 @@ def test_faab_reconstruction_issue_does_not_block_roster_membership_context() ->
 def test_supported_date_only_drop_repairs_retrospective_roster_replay_without_promoting_source_audit():
     data = _season_with_missing_add()
     original = repr(data)
+    baseline = reconstruct_sleeper_roster_context(data, source_revision="archive-sha")
     result = reconstruct_sleeper_roster_context(
         data, source_revision="archive-sha", supplemental_movements=(_supplement(),)
+    )
+    changed_receipt = _supplement().receipt.model_copy(update={
+        "source_fingerprint_sha256": "d" * 64,
+    })
+    changed_evidence = _supplement().model_copy(update={"receipt": changed_receipt})
+    changed_evidence_result = reconstruct_sleeper_roster_context(
+        data, source_revision="archive-sha", supplemental_movements=(changed_evidence,)
     )
 
     assert repr(data) == original
@@ -161,6 +231,10 @@ def test_supported_date_only_drop_repairs_retrospective_roster_replay_without_pr
     assert result.supplemental_reconciliation is not None
     assert result.supplemental_reconciliation.findings[0].status == SupplementalFindingStatus.SUPPORTED_RETROSPECTIVELY
     assert result.supplemental_replay_status == "applied_retrospectively"
+    assert result.history_id == baseline.history_id
+    assert result.supplemental_evidence_sha256 != baseline.supplemental_evidence_sha256
+    assert changed_evidence_result.history_id == result.history_id
+    assert changed_evidence_result.supplemental_evidence_sha256 != result.supplemental_evidence_sha256
     assert result.supplemental_applied_evidence_ids == ("supplement-1",)
     assert result.eligible_for_pit_decision_grade is False
     assert result.membership_status == "provisionally_consistent"
@@ -175,6 +249,14 @@ def test_supported_date_only_drop_repairs_retrospective_roster_replay_without_pr
     assert "supplement-player" in after_owners["1"]
     assert "supplement-player" not in before_owners["1"]
     assert "supplement-1" in after_add.supplemental_evidence_ids
+    baseline_after_add = next(row for row in baseline.snapshots
+                              if row.effective_at == add_time
+                              and row.boundary == "after_completed_event_batch")
+    assert baseline_after_add.snapshot_id != after_add.snapshot_id
+    changed_after_add = next(row for row in changed_evidence_result.snapshots
+                             if row.effective_at == add_time
+                             and row.boundary == "after_completed_event_batch")
+    assert changed_after_add.snapshot_id != after_add.snapshot_id
 
 
 def test_same_day_player_event_makes_supported_supplement_ambiguous_and_unapplied():
@@ -280,4 +362,6 @@ def test_unmatched_supplement_is_reported_but_does_not_change_source_replay():
     assert result.supplemental_replay_status == "no_supported_movement"
     assert result.provider_audit_status == "incomplete_source_history"
     assert result.supplemental_applied_evidence_ids == ()
+    assert result.history_id == baseline.history_id
+    assert result.supplemental_evidence_sha256 != baseline.supplemental_evidence_sha256
     assert result.snapshots == baseline.snapshots
