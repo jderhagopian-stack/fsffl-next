@@ -3,8 +3,15 @@ on:
   pull_request:
     paths:
       - 'src/fsffl/state/historical_supplemental_evidence.py'
+      - 'src/fsffl/state/historical_roster_context.py'
+      - 'src/fsffl/state/historical_roster_state.py'
+      - 'src/fsffl/state/historical_materializer.py'
       - 'src/fsffl/state/retrospective_season_audit.py'
       - 'tests/test_historical_supplemental_evidence.py'
+      - 'tests/test_historical_coverage.py'
+      - 'tests/test_historical_roster_context.py'
+      - 'tests/test_historical_roster_state.py'
+      - 'tests/test_historical_state_materializer.py'
       - 'tests/test_retrospective_season_audit.py'
       - 'docs/operations/workstreams/HISTORICAL_SUPPLEMENTAL_EVIDENCE_20261101.md'
       - '.github/workflows/historical-supplemental-evidence-focused.yml'
@@ -29,4 +36,11 @@ jobs:
       - name: Install local core and test dependencies
         run: python -m pip install -e '.[dev]'
       - name: Validate supplemental evidence and provider audit contracts
-        run: python -m pytest -q tests/test_historical_supplemental_evidence.py tests/test_retrospective_season_audit.py
+        run: >-
+          python -m pytest -q
+          tests/test_historical_supplemental_evidence.py
+          tests/test_historical_coverage.py
+          tests/test_historical_roster_context.py
+          tests/test_historical_roster_state.py
+          tests/test_historical_state_materializer.py
+          tests/test_retrospective_season_audit.py
