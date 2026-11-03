@@ -35,6 +35,10 @@ Output model `historical-roster-context-v3` separately exposes the original `pro
 
 **Validation:** focused roster/supplement tests **24 passed**; pinned 2022–2026 archive tests **3 passed**; sanitized pinned-archive integration passed. Exact PR head `8dac87c1cd9293e51923113dbdf35dacbb046adf`: CI [41574190856](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41574190856), historical source ledger [41574190952](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41574190952), supplemental focused [41574190883](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41574190883), PR164 regression [41574190927](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41574190927), and Stable full suite [41574497863](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41574497863) all passed. Merged squash: `eec049c2498e68da6d159a6f31dbc237531bcc58`. No database write, migration, deployment, or app/UI change occurred.
 
+## Explicit season-family lineage key (November 3, 2026)
+
+PR #509 extends the replay identity contract: callers may provide a verified `HistoricalSeasonIdentity` to associate a season with an explicitly identified league family. The identity must match the provider league ID and season; no family is inferred from similar names, settings, or roster IDs. Without this explicit link, the replay reports `unlinked_season`. Family identity participates in the history key, so seasons remain individually addressable while sharing a declared family. Added regressions cover repeated identity, two linked seasons, unlinked seasons, and mismatched identity rejection. This remains replay metadata, not canonical State or persistence.
+
 ## Next backend gate: no second private league required
 
 Management has no second private historical league to provide. This is not a blocker and is no longer a prerequisite. Keep factual 2023 replay bounded to the one pinned league archive; do not make claims about a second real source or league.
