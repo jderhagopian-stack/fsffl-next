@@ -79,9 +79,15 @@ The inventory did not identify a completed, governed row-level panel that joins:
 - missingness, source lineage/rights, and normalization version;
 - chronological train/validation/holdout boundaries.
 
-Existing current-season projection and market tables are not that historical panel. ECR is not a substitute for raw-stat forecasts. Later-published archives cannot be described as contemporaneously available without a defensible timestamp basis.
+Existing current-season projection and market tables are not that historical panel. NEXT's annual preseason snapshot contract is reusable for future capture but is not a historical backfill or outcome panel. ECR is not a substitute for raw-stat forecasts. Later-published archives cannot be described as contemporaneously available without a defensible timestamp basis.
 
 **Conclusion:** there are credible historical forecast acquisition leads and some dated artifacts, but not yet a sufficiently overlapping, admitted model-evaluation panel.
+
+### Existing reusable annual forecast snapshot contract
+
+NEXT already has a league-agnostic annual preseason snapshot implementation in `src/fsffl/forecast/annual_preseason_snapshot.py` and persistence code in `src/fsffl/persistence/annual_preseason_snapshot.py`. It retains raw provider rows, provider content hashes, captured/effective times, normalized observations, an ensemble, and source/normalization versions; it can replay the same raw ensemble through different league scoring rules.
+
+This is valuable existing model infrastructure and should be reused. Its capture service deliberately records the first valid snapshot during the current season's T-14-to-opener window and preserves it immutably. It does **not** recover 2019–2025 provider artifacts, establish historical source availability, join realized outcomes, or build a historical holdout panel. The stored evidence contract has captured_at/effective_at; a historical adapter must separately preserve a defensible original availability basis where it differs or is unknown. No new parallel forecast snapshot owner should be created.
 
 ## C. Reuse of existing NEXT model authority
 
