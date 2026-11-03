@@ -208,6 +208,17 @@ def materialize_historical_roster_state(
     team_by_roster = {row.provider_roster_id: row for row in teams}
     team_ids = {row.team.team_id for row in teams}
     provider_roster_by_team = {row.team.team_id: row.provider_roster_id for row in teams}
+    team_provider_refs = [
+        ref.external_id
+        for row in teams
+        for ref in row.team.provider_refs
+        if ref.provider == history.provider
+    ]
+    if (
+        len(team_provider_refs) != len(set(team_provider_refs))
+        or set(team_provider_refs) != {row.provider_roster_id for row in snapshot.teams}
+    ):
+        blockers.add("team_provider_identity_mapping_is_not_one_to_one")
     if len(team_ids) != len(teams):
         blockers.add("duplicate_canonical_team_identity")
     if league.rules.team_count != len(snapshot.teams):
@@ -234,15 +245,26 @@ def materialize_historical_roster_state(
                 if problem:
                     blockers.add(problem)
 
-    source_players = {row.provider_player_id: row for row in players}
-    canonical_player_ids = {row.player.player_id for row in players}
-    if len(canonical_player_ids) != len(players):
-        blockers.add("duplicate_canonical_player_identity")
     expected_membership = {
         (team.provider_roster_id, player_id)
         for team in snapshot.teams
         for player_id in team.player_ids
     }
+    source_players = {row.provider_player_id: row for row in players}
+    canonical_player_ids = {row.player.player_id for row in players}
+    player_provider_refs = [
+        ref.external_id
+        for row in players
+        for ref in row.player.provider_refs
+        if ref.provider == history.provider
+    ]
+    if (
+        len(player_provider_refs) != len(set(player_provider_refs))
+        or set(player_provider_refs) != {player for _roster, player in expected_membership}
+    ):
+        blockers.add("player_provider_identity_mapping_is_not_one_to_one")
+    if len(canonical_player_ids) != len(players):
+        blockers.add("duplicate_canonical_player_identity")
     if set(source_players) != {player for _roster, player in expected_membership}:
         blockers.add("player_identity_coverage_mismatch")
     for row in players:
