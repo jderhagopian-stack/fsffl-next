@@ -39,6 +39,18 @@ Output model `historical-roster-context-v3` separately exposes the original `pro
 
 PR #509 extends the replay identity contract: callers may provide a verified `HistoricalSeasonIdentity` to associate a season with an explicitly identified league family. The identity must match the provider league ID and season; no family is inferred from similar names, settings, or roster IDs. Without this explicit link, the replay reports `unlinked_season`. Family identity participates in the history key, so seasons remain individually addressable while sharing a declared family. Added regressions cover repeated identity, two linked seasons, unlinked seasons, and mismatched identity rejection. This remains replay metadata, not canonical State or persistence.
 
+## Bounded canonical roster State builder (candidate; PR #510)
+
+PR [#509](https://github.com/jderhagopian-stack/fsffl-next/pull/509) has merged as `7bc452ece388249da2ee28b89f4eab606821de62` from exact stable head `fdef40968feea75f7048802cd0263c41f9083133`. CI `41676915686`, supplemental focused `41676916107`, pinned 2023 season ledger `41676915826`, PR164 regression `41676915916`, and Stable full suite `41676999749` passed on that head. This adds deterministic replay/snapshot identities and explicit season-family identity while keeping historical PIT-grade eligibility false.
+
+PR #510 begins the next backend step. `materialize_historical_roster_state()` converts an event-boundary roster-context snapshot into canonical `LeagueState` only when the caller provides matching season/rules, canonical team/player identities, exact roster-slot evidence, per-team FAAB balances, and a complete draft-pick universe. It returns explicit blockers instead of inferring those values. Date-only uncertain membership, incomplete history, archive-end anchors, mismatched receipts, or missing pick completeness prevent construction. The result retains receipts and records whether the evidence was available by the cutoff; retrospective materialization never authorizes a PIT Decision grade. It does not write persistence or acquire data.
+
+Synthetic tests cover an 8-team-compatible model path (current fixture has two teams), explicit slot differences including taxi, missing placements, uncertain membership, mismatched league receipts, and absent pick-universe completeness. Exact-head CI and Stable full suite are pending. The pinned 2023 archive is expected to remain blocked on absent historical slot/FAAB/pick-universe evidence; this PR makes that boundary operational without fabricating State.
+
+**Next after PR #510:** run the materializer against the pinned 2023 archive, record which required evidence is and is not present, then add only evidence adapters supported by the archive. Do not create canonical State for the 2023 history unless every required fact passes its evidence gates. No second private league, app/UI work, production database write, migration, or deployment is required.
+
+---
+
 ## Next backend gate: no second private league required
 
 Management has no second private historical league to provide. This is not a blocker and is no longer a prerequisite. Keep factual 2023 replay bounded to the one pinned league archive; do not make claims about a second real source or league.
