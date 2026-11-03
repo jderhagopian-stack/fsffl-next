@@ -21,3 +21,15 @@ The Sleeper adapter is the only provider adapter exercised against a real archiv
 ## Validation gate
 
 The exact PR head must pass the focused historical contract workflow and pinned-archive workflow. After review is complete, mark that stable head ready and require the exact-head Stable full suite before merge. Record the exact SHA and all results in `CURRENT_OPERATIONS.md` after the gate.
+
+## Exact-head focused validation
+
+The final executable code head was `95834153cb02e039c5f02cf7741a7a05e8c5c221`.
+
+- General CI [41699077013](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077013): passed.
+- Historical supplemental focused [41699076928](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699076928): passed, including the new replay contract and existing State/materializer contracts.
+- Pinned historical archive [41699077201](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077201): passed, including retained 2022–2026 source and the known 2023 source-history gap.
+- PR164 regression [41699077055](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077055): passed.
+- Manual local replay smoke: 2/4/8/12/16/18-team profiles and same-timestamp ambiguity passed; `py_compile` passed. Local pytest is unavailable, so GitHub Actions is the test authority.
+
+During CI, the first draft attempt exposed an unavailable transfer helper; the next exposed overly strict global ownership validation. Both were fixed before this final passing head. No private archive payload was committed.
