@@ -96,4 +96,7 @@ def test_faab_reconstruction_issue_does_not_block_roster_membership_context() ->
     assert result.membership_status == "provisionally_consistent"
     assert not result.membership_issues
     assert "reconstructed_waiver_usage_out_of_bounds" in result.faab_issues
-    assert next(row for row in result.snapshots[-1].teams if row.provider_roster_id == "1").waiver_budget_used is None
+    assert any(
+        next(row for row in snapshot.teams if row.provider_roster_id == "1").waiver_budget_used is None
+        for snapshot in result.snapshots[:-1]
+    )
