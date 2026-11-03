@@ -1,12 +1,15 @@
-## 2026-11-03 — Provider-neutral historical roster replay in draft
+## 2026-11-03 — Provider-neutral historical roster replay
 
-PR [#511](https://github.com/jderhagopian-stack/fsffl-next/pull/511) is open as a draft from `codex/provider-neutral-historical-replay`, based on main `c67a2cb25cced0e56df2026a86cc35170d9409af`; current head `f63554a030e4c14cbb601ca8de783df307f3a7ad`.
+PR [#511](https://github.com/jderhagopian-stack/fsffl-next/pull/511) adds a normalized, provider-neutral historical player-membership replay contract and routes the Sleeper adapter's player-transfer reversal through its atomic batch primitive. It carries provider/league/season/source/rule identity, supports retrospective cutoff and unambiguous pre-event queries, and reports same-time conflicts without inventing order. The rule signature is identity metadata; this engine does not interpret league scoring or roster-slot semantics. Sleeper-specific pick/FAAB accounting remains within its adapter and retains existing evidence limits.
 
-The provider-neutral normalized replay contract is added and the Sleeper roster-history adapter delegates player transfer reversal to its atomic batch primitive. It carries provider/league/season/source/rule identity, supports retrospective cutoff and unambiguous pre-event queries, and fails closed on same-time player conflicts or anchor mismatches. The rule signature is identity metadata; this membership engine does not interpret league scoring or roster-slot semantics. Sleeper-specific pick/FAAB handling remains within the adapter and retains its existing coverage limits.
+A second private league is unavailable and is **not** a prerequisite. Synthetic fixtures cover 2/4/8/12/16/18 team sizes, changed rule identity and conflict cases. Exact executable code head `95834153cb02e039c5f02cf7741a7a05e8c5c221` passed:
 
-A second private league is unavailable and is **not** a prerequisite. Synthetic fixtures cover 2/4/8/12/16/18 team counts, a changed rules fingerprint, and conflict cases. The focused historical contract and pinned archive workflows now include the shared replay. Exact-head workflow runs are pending; do not promote the PR until focused and archive gates pass, followed by the exact-head Stable full suite. See [the replay checkpoint](workstreams/HISTORICAL_PROVIDER_NEUTRAL_REPLAY_20261103.md).
+- General CI [41699077013](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077013).
+- Historical contract focused [41699076928](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699076928).
+- Pinned 2022–2026 archive workflow [41699077201](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077201), including the known 2023 history gap.
+- PR164 regression [41699077055](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699077055).
 
-No persistence, database, migration, deployment, or app/UI change is included.
+The draft PR now has validation-only documentation updates. Mark the stable head ready and require the exact-head Stable full suite before merge. No persistence, database, migration, deployment, or app/UI change is included. See [the replay checkpoint](workstreams/HISTORICAL_PROVIDER_NEUTRAL_REPLAY_20261103.md).
 ---
 
 ## 2026-11-03 — Supplement-aware retrospective roster replay merged (backend primitive; nonproduction)
