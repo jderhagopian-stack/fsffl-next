@@ -33,3 +33,7 @@ The final executable code head was `95834153cb02e039c5f02cf7741a7a05e8c5c221`.
 - Manual local replay smoke: 2/4/8/12/16/18-team profiles and same-timestamp ambiguity passed; `py_compile` passed. Local pytest is unavailable, so GitHub Actions is the test authority.
 
 During CI, the first draft attempt exposed an unavailable transfer helper; the next exposed overly strict global ownership validation. Both were fixed before this final passing head. No private archive payload was committed.
+
+## Merge checkpoint
+
+PR [#511](https://github.com/jderhagopian-stack/fsffl-next/pull/511) merged to main as squash `b3911cbe0b1434f3d9b7384ba10502a28da8b230` from exact tested head `667aa70a0355f0eae950ad4db55bc8e8f4daed27`. Stable full suite [41699753466](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/41699753466) passed **2,644 tests, 5 skipped**, with pre- and post-test SHA checks. Focused workflow evidence is recorded above. No deployment, database write, migration, or app/UI change occurred.
