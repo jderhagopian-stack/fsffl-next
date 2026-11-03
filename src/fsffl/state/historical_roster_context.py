@@ -58,6 +58,8 @@ class HistoricalRosterContextTeam(FrozenModel):
 
 
 class HistoricalRosterContextSnapshot(FrozenModel):
+    history_id: str
+    snapshot_id: str
     effective_at: datetime | None
     boundary: Literal["before_completed_event_batch", "after_completed_event_batch", "archive_end_anchor"]
     transaction_ids: tuple[str, ...]
@@ -69,6 +71,14 @@ class HistoricalRosterContextSnapshot(FrozenModel):
     supplemental_evidence_ids: tuple[str, ...] = ()
     roster_slot_coverage: Literal["unknown"] = "unknown"
 
+    @model_validator(mode="after")
+    def valid_identity(self) -> "HistoricalRosterContextSnapshot":
+        if not self.history_id.startswith("hctx_") or len(self.history_id) != 69:
+            raise ValueError("snapshot requires a versioned historical context identity")
+        if not self.snapshot_id.startswith("hsnap_") or len(self.snapshot_id) != 70:
+            raise ValueError("snapshot requires a deterministic snapshot identity")
+        return self
+
     @field_validator("effective_at")
     @classmethod
     def aware(cls, value: datetime | None) -> datetime | None:
@@ -78,6 +88,7 @@ class HistoricalRosterContextSnapshot(FrozenModel):
 
 
 class HistoricalRosterContextHistory(FrozenModel):
+    history_id: str
     provider: str = "sleeper"
     provider_league_id: str
     season: int
@@ -106,7 +117,7 @@ class HistoricalRosterContextHistory(FrozenModel):
     pick_scope: Literal["archived_traded_pick_records_only"] = "archived_traded_pick_records_only"
     faab_scope: Literal["conditional_archive_waiver_usage"] = "conditional_archive_waiver_usage"
     eligible_for_pit_decision_grade: Literal[False] = False
-    model_version: Literal["historical-roster-context-v2"] = "historical-roster-context-v2"
+    model_version: Literal["historical-roster-context-v3"] = "historical-roster-context-v3"
 
     @model_validator(mode="after")
     def consistent(self) -> "HistoricalRosterContextHistory":
@@ -119,6 +130,14 @@ class HistoricalRosterContextHistory(FrozenModel):
             raise ValueError("membership status must reflect membership issues")
         if self.observed_team_count < 2:
             raise ValueError("at least two season rosters are required")
+        if not self.history_id.strip():
+            raise ValueError("historical context identity is required")
+        if not self.history_id.startswith("hctx_") or len(self.history_id) != 69:
+            raise ValueError("historical context identity must be a versioned SHA-256 key")
+        if len({row.snapshot_id for row in self.snapshots}) != len(self.snapshots):
+            raise ValueError("historical snapshot identities must be unique")
+        if any(row.history_id != self.history_id for row in self.snapshots):
+            raise ValueError("every snapshot must belong to its parent history")
         if (self.provider_audit is None) != (self.supplemental_reconciliation is None):
             raise ValueError("supplemental reconciliation must retain its source audit")
         if self.provider_audit is None and self.provider_audit_status != "not_audited":
@@ -278,6 +297,22 @@ def reconstruct_sleeper_roster_context(
             issues.add("invalid_event_clock")
         grouped[at].append((tx_id, tx))
 
+    source_sha256 = _digest(season_data)
+    rules_digest = _digest({
+        "settings": settings, "scoring": scoring, "slots": slots,
+        "observed_team_count": len(owners),
+    })
+    model_version = "historical-roster-context-v3"
+    history_id = "hctx_" + _digest({
+        "provider": "sleeper",
+        "provider_league_id": league_id,
+        "season": season,
+        "source_revision": source_revision,
+        "source_sha256": source_sha256,
+        "league_rules_sha256": rules_digest,
+        "model_version": model_version,
+    })
+
     def snapshot(at: int | None, boundary: str, events: list[tuple[str, Mapping[str, Any]]] | None = None) -> HistoricalRosterContextSnapshot:
         picks_by_roster: dict[str, list[str]] = {roster_id: [] for roster_id in owners}
         for pick_id, owner_id in pick_owners.items():
@@ -310,7 +345,19 @@ def reconstruct_sleeper_roster_context(
             and instant is not None
             and abs((movement.effective_date - instant.date()).days) <= 1
         }))
+        snapshot_identity = {
+            "history_id": history_id,
+            "effective_at": instant.isoformat() if instant is not None else None,
+            "boundary": boundary,
+            "transaction_ids": event_ids,
+            "event_types": types,
+            "teams": [team.model_dump(mode="json") for team in teams],
+            "uncertain_player_ids": uncertain,
+            "supplemental_evidence_ids": tuple(sorted(applied_evidence_ids)),
+        }
         return HistoricalRosterContextSnapshot(
+            history_id=history_id,
+            snapshot_id="hsnap_" + _digest(snapshot_identity),
             effective_at=instant, boundary=boundary, transaction_ids=event_ids,
             event_types=types, teams=teams,
             uncertain_player_ids=uncertain,
@@ -521,10 +568,6 @@ def reconstruct_sleeper_roster_context(
         ),
     )
     snapshots = event_snapshots + [end_anchor]
-    rules_digest = _digest({
-        "settings": settings, "scoring": scoring, "slots": slots,
-        "observed_team_count": len(owners),
-    })
     issue_tuple = tuple(sorted(issues))
     faab_issue_codes = {
         "missing_or_invalid_end_anchor_waiver_usage",
@@ -542,8 +585,9 @@ def reconstruct_sleeper_roster_context(
     pick_issues = tuple(sorted(issues.intersection(pick_issue_codes)))
     membership_issues = tuple(sorted(issues.difference(faab_issue_codes | pick_issue_codes)))
     return HistoricalRosterContextHistory(
+        history_id=history_id,
         provider_league_id=league_id, season=season, source_revision=source_revision,
-        source_sha256=_digest(season_data), league_rules_sha256=rules_digest,
+        source_sha256=source_sha256, league_rules_sha256=rules_digest,
         raw_roster_slots=slots, observed_team_count=len(owners), completed_event_count=completed_count,
         snapshots=tuple(snapshots), issues=issue_tuple,
         provider_audit=provider_audit,
