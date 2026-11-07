@@ -1,8 +1,16 @@
-## 2026-11-07 — Provider-neutral historical pick and budget replay (PR #513; validation pending)
+## 2026-11-07 — Provider-neutral historical pick and budget replay (PR #513; exact-code gates passed)
 
-PR [#513](https://github.com/jderhagopian-stack/fsffl-next/pull/513) is open as a draft from exact base `11c9f2f45e28d5196de2b879870637c8033ccef7`. It extends the retrospective normalized replay with pick ownership and cumulative budget-usage movements, routes Sleeper pick/FAAB reversal through shared primitives, exposes independent completeness flags, and corrects valid end-anchor player duplication detection. New synthetic tests cover the generic ledger semantics.
+PR [#513](https://github.com/jderhagopian-stack/fsffl-next/pull/513) is ready for review from exact base `11c9f2f45e28d5196de2b879870637c8033ccef7`. The executable code head `1a0b83e81a7c5df594859284a9c6e7afba694291` passed all required checks:
 
-This is a reusable replay step, not yet canonical whole-season `LeagueState`. Complete pick inventory, evidenced historical slot placements, and certified budget evidence remain prerequisites for that materializer; absence returns scoped incomplete coverage. A second private league is not required. Focused tests, pinned 2022–2026 archive, CI, and Stable full suite are pending exact-head results. No UI, database, migration, or deployment change. See [the ledger replay checkpoint](workstreams/HISTORICAL_PROVIDER_NEUTRAL_LEDGER_20261107.md).
+- General CI [42330766543](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42330766543).
+- Historical contract [42330766505](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42330766505).
+- Pinned 2022–2026 season ledger [42330766501](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42330766501), including the known 2023 source-history gap.
+- PR164 regression [42330766490](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42330766490).
+- Stable full suite [42330983662](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42330983662), with pre-test and post-test PR-head checks passing.
+
+It extends the retrospective normalized replay with pick ownership and cumulative budget-usage movements, routes Sleeper pick/FAAB reversal through shared primitives, exposes independent completeness flags, and corrects valid end-anchor player duplication detection. Synthetic tests cover the generic ledger semantics.
+
+This is a reusable replay step, not yet canonical whole-season `LeagueState`. Complete pick inventory, evidenced historical slot placements, and certified budget evidence remain prerequisites for that materializer; absence returns scoped incomplete coverage. A second private league is not required. The checkpoint documentation update contains no executable code change, and its exact-head Stable revalidation must pass before merge. No UI, database, migration, or deployment change. See [the ledger replay checkpoint](workstreams/HISTORICAL_PROVIDER_NEUTRAL_LEDGER_20261107.md).
 
 ---
 
