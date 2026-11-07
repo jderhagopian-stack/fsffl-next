@@ -1,3 +1,11 @@
+## 2026-11-07 — Provider-neutral historical pick and budget replay (PR #513; validation pending)
+
+PR [#513](https://github.com/jderhagopian-stack/fsffl-next/pull/513) is open as a draft from exact base `11c9f2f45e28d5196de2b879870637c8033ccef7`. It extends the retrospective normalized replay with pick ownership and cumulative budget-usage movements, routes Sleeper pick/FAAB reversal through shared primitives, exposes independent completeness flags, and corrects valid end-anchor player duplication detection. New synthetic tests cover the generic ledger semantics.
+
+This is a reusable replay step, not yet canonical whole-season `LeagueState`. Complete pick inventory, evidenced historical slot placements, and certified budget evidence remain prerequisites for that materializer; absence returns scoped incomplete coverage. A second private league is not required. Focused tests, pinned 2022–2026 archive, CI, and Stable full suite are pending exact-head results. No UI, database, migration, or deployment change. See [the ledger replay checkpoint](workstreams/HISTORICAL_PROVIDER_NEUTRAL_LEDGER_20261107.md).
+
+---
+
 ## 2026-11-03 — Provider-neutral historical roster replay
 
 PR [#511](https://github.com/jderhagopian-stack/fsffl-next/pull/511) merged to main as squash `b3911cbe0b1434f3d9b7384ba10502a28da8b230` from exact tested head `667aa70a0355f0eae950ad4db55bc8e8f4daed27`. It adds a normalized, provider-neutral historical player-membership replay contract and routes the Sleeper adapter's player-transfer reversal through its atomic batch primitive. It carries provider/league/season/source/rule identity, supports retrospective cutoff and unambiguous pre-event queries, and reports same-time conflicts without inventing order. The rule signature is identity metadata; this engine does not interpret league scoring or roster-slot semantics. Sleeper-specific pick/FAAB accounting remains within its adapter and retains existing evidence limits.
