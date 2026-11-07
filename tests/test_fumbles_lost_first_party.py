@@ -368,6 +368,69 @@ def test_missing_required_current_schema_fails_closed_not_zero() -> None:
         )
 
 
+@pytest.mark.parametrize("has_candidate_stats", [True, False])
+def test_bounded_career_feed_preserves_real_schema_and_candidate_fumbles(has_candidate_stats):
+    from fsffl.product.p0_live_candidate_runtime import (
+        _CachedSleeperWeeklyStatsSource,
+        _weekly_supplement_rows,
+    )
+
+    player_id = "sleeper:player:10213"
+    candidate_ids = frozenset({player_id})
+    full = {}
+    for week in (1, 2):
+        candidate = (SleeperWeeklyStatLine(
+            player_id=player_id, season=2026, week=week,
+            stats={"rush_att": 1.0, "rec": 4.0}, captured_at=CAPTURED,
+        ),) if has_candidate_stats else ()
+        # A noncandidate quarterback proves passing/sack field semantics.
+        witnesses = (
+            SleeperWeeklyStatLine("reference-qb", 2026, week,
+                                  {"pass_att": 30.0, "sack": 2.0}, CAPTURED),
+            SleeperWeeklyStatLine("other-rb", 2026, week,
+                                  {"rush_att": 12.0, "rec": 1.0}, CAPTURED),
+        )
+        unused = tuple(SleeperWeeklyStatLine(
+            f"unrelated-{index}", 2026, week, {"rush_att": 2.0}, CAPTURED,
+        ) for index in range(100))
+        full[week] = candidate + witnesses + unused
+
+    bounded = {week: _weekly_supplement_rows(rows, candidate_ids) for week, rows in full.items()}
+    for week, rows in bounded.items():
+        assert len(rows) <= (1 if has_candidate_stats else 0) + 4
+        assert not any(row.player_id.startswith("unrelated-") for row in rows)
+        assert all(any(row is original for original in full[week]) for row in rows)
+
+    state = _state(player_id, Position.WR)
+    expected = build_first_party_fumbles_lost_supplement(
+        state, base_observations=_base(player_id, Position.WR),
+        stats_source=FakeSleeperStats(full), clock=lambda: CAPTURED,
+    )
+    cached = _CachedSleeperWeeklyStatsSource(
+        nfl_state=SleeperNflState(2026, 3, "regular", CAPTURED), lines_by_week=bounded,
+    )
+    actual = build_first_party_fumbles_lost_supplement(
+        state, base_observations=_base(player_id, Position.WR),
+        stats_source=cached, clock=lambda: CAPTURED,
+    )
+    assert actual.observations == expected.observations
+    assert actual.player_evidence == expected.player_evidence
+
+    # Truly absent feed fields must still fail closed, not be zero-filled.
+    invalid = {week: tuple(row for row in rows if row.player_id != "reference-qb")
+               for week, rows in full.items()}
+    cached_invalid = _CachedSleeperWeeklyStatsSource(
+        nfl_state=SleeperNflState(2026, 3, "regular", CAPTURED),
+        lines_by_week={week: _weekly_supplement_rows(rows, candidate_ids)
+                       for week, rows in invalid.items()},
+    )
+    with pytest.raises(ValueError, match="lacks accepted opportunity semantics: pass_att,sack"):
+        build_first_party_fumbles_lost_supplement(
+            state, base_observations=_base(player_id, Position.WR),
+            stats_source=cached_invalid, clock=lambda: CAPTURED,
+        )
+
+
 def test_identity_light_and_cold_start_never_receive_zero_uncertainty() -> None:
     identity_light_id = "sleeper:player:13269"
     identity_light = build_first_party_fumbles_lost_supplement(

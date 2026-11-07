@@ -8,6 +8,12 @@ PR #489 was returned to draft before updating its head. Its history is being rec
 
 Current Render deploy/health documentation could not be fetched as either Markdown or HTML (network proxy HTTP 403). Use the connected deployment API and observe actual live state/health; do not infer unverified platform timeout thresholds from memory. No Blueprint or health-check configuration change is required for this existing-service deployment.
 
+### Exact-head automated review correction
+
+PR #489 head `b005fa6e48e87097ef95efc265c089cf31c72c3a` passed its focused checks, but automated review found that candidate-only weekly stats could erase full-feed passing/sack schema evidence needed by the unchanged fumbles supplement. The PR was returned to draft before correction. Keep candidate-only ordinary actuals and a separate supplement input containing candidates plus real schema-witness rows, bounded by at most four extra rows per acquired week under the accepted model's required-field set. Full-response fingerprints and chronology checks remain unchanged; no field is synthesized, and a genuinely incomplete feed still fails closed. Release the extra references with the other acquisition inputs before subsequent model phases.
+
+Regressions compare the real supplement's complete candidate observations/evidence against the full feed, cover non-QB and cold-start inputs, enforce bounded retention and actual-source rows, and prove that the production P0 builder passes the witnesses to its cached supplement source. The focused CI now includes these tests. The earlier full-suite run is not acceptance for the corrected head; exact-head checks and review must run again.
+
 ## Status and authority
 
 User authorized finishing the local saved-roster correction, correcting GET-triggered Intrinsic computation, focused validation and preparation of a reviewable candidate. No deployment, provider/plan change, production mutation, migration or remote publication is included.

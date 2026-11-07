@@ -2,6 +2,8 @@
 
 The user clarified that hosted deployment/testing should proceed. Advance the prepared reliability candidate through exact-head review and CI/Stable, then deploy to the existing service and observe one controlled authenticated refresh. The missing private replay package must not indefinitely block this hosted proof. Preserve current service size, hard cap, source/model/coverage contracts and last-good; no repeated failed refreshes, provider/plan change or migration. PR #489 has been returned to draft before head updates; reuse that PR with non-force history reconciliation. No new deployment has been triggered at this checkpoint. Details: [candidate record](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md).
 
+Automated review on `b005fa6e48e87097ef95efc265c089cf31c72c3a` found a genuine supplement-schema regression in the candidate-only stats filter. The draft correction retains bounded real schema-witness rows separately from ordinary candidate actuals and adds real-model parity plus producer-wiring regressions to focused CI. This is a predeployment correctness correction; new-head CI/Stable and review must replace the superseded head's evidence.
+
 ---
 
 ## 2026-11-07 — Local reliability candidate prepared (not deployed)

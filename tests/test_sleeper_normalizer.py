@@ -125,6 +125,71 @@ def test_career_identity_acquisition_keeps_dropped_saved_reference_without_waive
         )
 
 
+def test_career_passes_bounded_schema_witnesses_to_accepted_supplement(monkeypatch):
+    from types import SimpleNamespace
+    import pytest
+    import fsffl.product.p0_live_candidate_runtime as runtime
+    import fsffl.forecast.in_season_orchestration as orchestration
+    from fsffl.providers.sleeper_weekly_stats import SleeperNflState, SleeperWeeklyStatLine
+
+    source = bundle()
+    captured = datetime(2026, 9, 26, tzinfo=UTC)
+    snapshot = ProviderSnapshot(
+        provider_name="sleeper", league_external_id="123", captured_at=captured,
+        payload={"league": source.league, "users": source.users,
+                 "rosters": source.rosters, "players": source.players,
+                 "traded_picks": source.traded_picks},
+    )
+
+    class SavedWeekNormalizer(SleeperSnapshotNormalizer):
+        def normalize_snapshot(self, snapshot, *, as_of):
+            return super().normalize_snapshot(snapshot, as_of=as_of).model_copy(
+                update={"completed_through_week": 2},
+            )
+
+    state = SavedWeekNormalizer().normalize_snapshot(snapshot, as_of=captured)
+    monkeypatch.setattr(runtime, "SleeperSnapshotNormalizer", SavedWeekNormalizer)
+    ros = SimpleNamespace(evaluation_as_of=captured, source_observations=())
+    ros.model_copy = lambda **_kwargs: ros
+    monkeypatch.setattr(runtime, "build_in_season_forecasts", lambda *_args, **_kwargs: ros)
+
+    class SupplementBoundaryReached(BaseException):
+        pass
+
+    observed_rows = {}
+
+    def inspect_supplement(_state, *, stats_source, **_kwargs):
+        for week in (1, 2):
+            observed_rows[week] = stats_source.fetch_week(season=2026, week=week)
+        raise SupplementBoundaryReached
+
+    monkeypatch.setattr(orchestration, "build_current_ros_fumbles_lost_supplement_observations",
+                        inspect_supplement)
+
+    def fetch_week(*, season, week):
+        return (
+            SleeperWeeklyStatLine("sleeper:player:p2", season, week,
+                                  {"rush_att": 1.0, "rec": 2.0}, captured),
+            SleeperWeeklyStatLine("reference-qb", season, week,
+                                  {"pass_att": 30.0, "sack": 2.0}, captured),
+        ) + tuple(SleeperWeeklyStatLine(f"unused-{index}", season, week,
+                                       {"rush_att": 1.0}, captured) for index in range(100))
+
+    with pytest.raises(SupplementBoundaryReached):
+        runtime.build_live_p0_rostered_candidate_forecasts(
+            state, evaluation_as_of=captured,
+            stats_source=SimpleNamespace(
+                fetch_nfl_state=lambda: SleeperNflState(2026, 3, "regular", captured),
+                fetch_week=fetch_week, fetch_season=lambda **_kwargs: (),
+            ),
+            sleeper_source=SimpleNamespace(fetch_latest=lambda **_kwargs: snapshot),
+        )
+    assert set(observed_rows) == {1, 2}
+    for rows in observed_rows.values():
+        assert {"pass_att", "sack", "rush_att", "rec"} <= {key for row in rows for key in row.stats}
+        assert len(rows) <= 5
+
+
 def test_normalizer_returns_provider_neutral_state() -> None:
     state = SleeperNormalizer().normalize(bundle(), as_of=AS_OF)
 
