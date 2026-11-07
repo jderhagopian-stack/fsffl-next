@@ -21,4 +21,4 @@ For the retained 2023 archive, this bridge does not itself supply missing placem
 
 ## Validation
 
-Focused historical contract, pinned 2022–2026 archive, general CI, and PR164 checks are passing on code head `d46b25b48d3a38c1e86314bb64ad9ff08b98b038`. The checkpoint documentation update and Stable full-suite validation are pending. Results will be added to `docs/operations/CURRENT_OPERATIONS.md`.
+Focused historical contract [42333621463](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42333621463), pinned archive [42333621726](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42333621726), general CI [42333621507](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42333621507), and PR164 [42333621455](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42333621455) passed on executable head `d46b25b48d3a38c1e86314bb64ad9ff08b98b038`. Stable full suite [42334001651](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42334001651) passed on exact ready head `d8cb66050aaa5533c0ad10588c8a91efc53ee420`, with before/after head checks. PR #514 merged as `6f27c9443392f91757a5ee4c1ef6b86abfd5b8f1`.
