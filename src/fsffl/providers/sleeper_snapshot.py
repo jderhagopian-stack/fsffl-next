@@ -42,9 +42,13 @@ class SleeperSnapshotNormalizer:
 
     provider_name = "sleeper"
 
-    def __init__(self, *, include_unrostered_players: bool = True) -> None:
+    def __init__(
+        self, *, include_unrostered_players: bool = True,
+        include_player_ids: Sequence[str] = (),
+    ) -> None:
         self._normalizer = SleeperNormalizer()
         self._include_unrostered_players = include_unrostered_players
+        self._include_player_ids = frozenset(str(player_id) for player_id in include_player_ids)
 
     def normalize_snapshot(self, snapshot: ProviderSnapshot, *, as_of) -> LeagueState:
         if snapshot.provider_name != self.provider_name:
@@ -77,6 +81,23 @@ class SleeperSnapshotNormalizer:
                 retrieved_at=snapshot.captured_at,
                 effective_at=as_of,
             )
+        elif self._include_player_ids:
+            # Retain fresh identity/status evidence for a bounded saved State
+            # cohort without materializing the full unrostered NFL universe.
+            raw_players = payload.get("players")
+            if isinstance(raw_players, Mapping):
+                selected = {
+                    str(external_id): raw
+                    for external_id, raw in raw_players.items()
+                    if f"sleeper:player:{external_id}" in self._include_player_ids
+                }
+                state = _attach_current_fantasy_player_universe(
+                    state,
+                    selected,
+                    retrieved_at=snapshot.captured_at,
+                    effective_at=as_of,
+                    retain_player_ids=self._include_player_ids,
+                )
         state = _attach_fantasy_regular_season_horizon(state, payload.get("league"))
         byes, schedule_provenance = _normalize_nfl_byes(
             payload.get("nfl_schedule", ()),
@@ -150,6 +171,7 @@ def _attach_current_fantasy_player_universe(
     *,
     retrieved_at,
     effective_at,
+    retain_player_ids: Sequence[str] = (),
 ) -> LeagueState:
     """Add current unrostered fantasy-relevant NFL players to live State.
 
@@ -170,6 +192,7 @@ def _attach_current_fantasy_player_universe(
         provider_ref=ProviderRef(provider="sleeper", external_id="players:nfl"),
     )
 
+    retained_ids = frozenset(str(player_id) for player_id in retain_player_ids)
     for external_id, raw in raw_players.items():
         if not isinstance(raw, Mapping):
             continue
@@ -182,7 +205,8 @@ def _attach_current_fantasy_player_universe(
         # Keep teamless free agents already on a fantasy roster in the exact
         # State universe so their NFL status is explicit. Teamless unrostered
         # names remain excluded from automatic waiver discovery.
-        if existing_player is None and nfl_team is None:
+        if (existing_player is None and nfl_team is None
+                and player_id not in retained_ids):
             continue
         if existing_player is not None and existing_player.position != position:
             continue

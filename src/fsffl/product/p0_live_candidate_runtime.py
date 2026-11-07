@@ -1003,13 +1003,20 @@ def build_live_p0_rostered_candidate_forecasts(
     latest_snapshot = sleeper.fetch_latest(
         league_external_id=league_state.league.league_id.rsplit(":", 1)[-1]
     )
+    # This builder enriches only exact-State roster players outside frozen P0.
+    # Do not materialize the much larger waiver universe beside the canonical
+    # State and full provider catalog.
+    rostered_p0_ids = frozenset(exact_state_rostered_p0_subject_ids(league_state))
     # The live catalog supplies identity, experience, and depth-chart evidence.
     # Include its capture time in the run cutoff before selecting persisted ROS
     # revisions or stamping any derived Year-1 rows.
     cutoff = _catalog_evidence_cutoff(
         cutoff, latest_snapshot.captured_at, explicit_cutoff=evaluation_as_of is not None
     )
-    current_state = SleeperSnapshotNormalizer().normalize_snapshot(
+    current_state = SleeperSnapshotNormalizer(
+        include_unrostered_players=False,
+        include_player_ids=rostered_p0_ids,
+    ).normalize_snapshot(
         latest_snapshot,
         as_of=latest_snapshot.captured_at,
     )
@@ -1071,11 +1078,30 @@ def build_live_p0_rostered_candidate_forecasts(
     del latest_snapshot
     from .resource_coordinator import release_unused_process_memory
     release_unused_process_memory(label="career-p0-unrostered-catalog-released")
-    weekly: dict[int, tuple[SleeperWeeklyStatLine, ...]] = {
-        week: stats.fetch_week(season=league_state.league.season, week=week)
-        for week in range(1, completed + 1)
-    }
-    prior_lines = stats.fetch_season(season=league_state.league.season - 1)
+    # Sleeper's stats responses cover the NFL, while this Career extension
+    # consumes only rostered candidates. Fingerprint and validate the complete
+    # responses, then retain only rows used by this exact-State build.
+    weekly: dict[int, tuple[SleeperWeeklyStatLine, ...]] = {}
+    weekly_digests: dict[str, str] = {}
+    weekly_capture_times: list[datetime] = []
+    for week in range(1, completed + 1):
+        fetched_week = stats.fetch_week(season=league_state.league.season, week=week)
+        for line in fetched_week:
+            if line.season != league_state.league.season or line.week != week:
+                raise ValueError("Sleeper weekly stat line does not match its requested window")
+        weekly_digests[str(week)] = _rows_digest(fetched_week)
+        weekly_capture_times.extend(line.captured_at for line in fetched_week)
+        weekly[week] = tuple(
+            line for line in fetched_week if line.player_id in rostered_p0_ids
+        )
+        del fetched_week
+    fetched_prior_lines = stats.fetch_season(season=league_state.league.season - 1)
+    prior_lines_digest = _rows_digest(fetched_prior_lines)
+    prior_capture_times = tuple(line.captured_at for line in fetched_prior_lines)
+    prior_lines = tuple(
+        line for line in fetched_prior_lines if line.player_id in rostered_p0_ids
+    )
+    del fetched_prior_lines
     prior = {item.player_id: item for item in prior_lines}
 
     next_week = completed + 1
@@ -1106,12 +1132,8 @@ def build_live_p0_rostered_candidate_forecasts(
     )
     source_captures = (
         ("REST-of-season projections", ros_runtime.evaluation_as_of),
-        *(
-            (f"Sleeper weekly stats week {week}", line.captured_at)
-            for week, rows in weekly.items()
-            for line in rows
-        ),
-        *( ("Sleeper prior-season stats", line.captured_at) for line in prior_lines ),
+        *( ("Sleeper weekly stats", captured_at) for captured_at in weekly_capture_times ),
+        *( ("Sleeper prior-season stats", captured_at) for captured_at in prior_capture_times ),
     )
     cutoff = _source_evidence_cutoff(
         cutoff,
@@ -1146,7 +1168,7 @@ def build_live_p0_rostered_candidate_forecasts(
     available_ros_rows = _all_ros_source_observations(ros_runtime, fallback_ros_observations)
     fumbles_eligible_player_ids = _single_source_fumbles_gap_player_ids(
         league_state=league_state,
-        candidate_ids=set(exact_state_rostered_p0_subject_ids(league_state)),
+        candidate_ids=set(rostered_p0_ids),
         source_observations=available_ros_rows,
     )
     try:
@@ -1218,7 +1240,7 @@ def build_live_p0_rostered_candidate_forecasts(
     }
     candidates = tuple(
         player_id
-        for player_id in exact_state_rostered_p0_subject_ids(league_state)
+        for player_id in rostered_p0_ids
         if player_id in current_positions
     )
     facts: dict[str, P0CandidateFacts] = {}
@@ -1483,9 +1505,8 @@ def build_live_p0_rostered_candidate_forecasts(
         "canonical_state": league_state.state_id,
         "nfl_state": _input_digest(asdict(nfl_state)),
         "current_catalog": catalog_fingerprint,
-        "completed_week_stats": _input_digest({str(week): _rows_digest(rows)
-                                               for week, rows in sorted(weekly.items())}),
-        "prior_season_stats": _rows_digest(prior_lines),
+        "completed_week_stats": _input_digest(weekly_digests),
+        "prior_season_stats": prior_lines_digest,
         "ros": _input_digest({
             "observations": _rows_digest(available_ros_rows),
             "ensemble_ready": getattr(ros_runtime, "ensemble_ready", True),
