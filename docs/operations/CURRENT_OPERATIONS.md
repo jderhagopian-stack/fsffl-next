@@ -1,3 +1,11 @@
+## 2026-11-07 — Provider-neutral replay to canonical roster State (PR #514; in progress)
+
+PR [#514](https://github.com/jderhagopian-stack/fsffl-next/pull/514) is open as a draft from exact base `aede8bda785127f9bf492f4132724c412cb4d5ef`. The existing fail-closed whole-roster State builder now accepts the provider-neutral replay snapshot directly. It blocks on membership defects, conflicting/incomplete pick history, and missing receipts for placements, canonical identities, settings, FAAB balances, or the complete pick universe. Sleeper context remains supported through the same materialization path.
+
+Synthetic replay-to-State construction and incomplete-pick blocking pass without a second private league. Focused historical contract, pinned 2022–2026 archive, general CI, and PR164 checks pass on code head `d46b25b48d3a38c1e86314bb64ad9ff08b98b038`. A documentation checkpoint is being added; exact final-head Stable validation remains before merge. The retained 2023 archive still lacks evidence required to materialize its historical State; this is reported as blockers rather than inferred. No UI, database, migration, or deployment change. See [the replay-to-State checkpoint](workstreams/HISTORICAL_REPLAY_STATE_BRIDGE_20261107.md).
+
+---
+
 ## 2026-11-07 — Provider-neutral historical pick and budget replay (PR #513; exact-code gates passed)
 
 PR [#513](https://github.com/jderhagopian-stack/fsffl-next/pull/513) is ready for review from exact base `11c9f2f45e28d5196de2b879870637c8033ccef7`. The executable code head `1a0b83e81a7c5df594859284a9c6e7afba694291` passed all required checks:

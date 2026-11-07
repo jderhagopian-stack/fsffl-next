@@ -8,6 +8,7 @@ It never guesses those facts and never authorizes a historical Decision grade.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
@@ -24,6 +25,7 @@ from .historical_roster_context import (
     HistoricalRosterContextSnapshot,
 )
 from .historical_supplemental_evidence import HistoricalSupplementalEvidenceReceipt
+from .historical_roster_replay import HistoricalRosterReplay, RosterMembershipSnapshot
 from .models import (
     DraftPick,
     FrozenModel,
@@ -114,11 +116,121 @@ def _receipt_blocker(
     return None
 
 
+
+@dataclass(frozen=True)
+class _SourceRoster:
+    provider_roster_id: str
+    player_ids: tuple[str, ...]
+    traded_pick_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _SourceSnapshot:
+    history_id: str
+    snapshot_id: str
+    effective_at: datetime | None
+    boundary: str
+    teams: tuple[_SourceRoster, ...]
+    uncertain_player_ids: tuple[str, ...]
+    supplemental_evidence_ids: tuple[str, ...]
+    pick_universe_complete: bool | None
+    belongs_to_history: bool
+
+
+@dataclass(frozen=True)
+class _SourceHistory:
+    history_id: str
+    provider: str
+    provider_league_id: str
+    season: int
+    league_family_id: str | None
+    membership_complete: bool
+    snapshot_ids: frozenset[str]
+    pick_issues: tuple[str, ...] = ()
+    budget_usage_issues: tuple[str, ...] = ()
+    budget_usage_complete: bool | None = None
+
+
+def _source_views(
+    history: HistoricalRosterContextHistory | HistoricalRosterReplay,
+    snapshot: HistoricalRosterContextSnapshot | RosterMembershipSnapshot,
+) -> tuple[_SourceHistory, _SourceSnapshot]:
+    """Normalize adapter-specific and provider-neutral snapshots for one builder."""
+    if isinstance(history, HistoricalRosterReplay) and isinstance(snapshot, RosterMembershipSnapshot):
+        pick_owner = dict(snapshot.pick_owners)
+        source_teams = tuple(
+            _SourceRoster(
+                provider_roster_id=team_id,
+                player_ids=players,
+                traded_pick_ids=tuple(sorted(
+                    pick_id for pick_id, owner_id in pick_owner.items() if owner_id == team_id
+                )),
+            )
+            for team_id, players in snapshot.teams
+        )
+        source_history = _SourceHistory(
+            history_id=history.history_id,
+            provider=history.provider,
+            provider_league_id=history.league_id,
+            season=history.season,
+            league_family_id=None,
+            membership_complete=not history.membership_issues,
+            snapshot_ids=frozenset(row.snapshot_id for row in history.snapshots),
+            pick_issues=history.pick_issues,
+            budget_usage_issues=history.budget_usage_issues,
+            budget_usage_complete=snapshot.budget_usage_complete,
+        )
+        source_snapshot = _SourceSnapshot(
+            history_id=snapshot.history_id,
+            snapshot_id=snapshot.snapshot_id,
+            effective_at=snapshot.effective_at,
+            boundary=snapshot.boundary,
+            teams=source_teams,
+            uncertain_player_ids=(),
+            supplemental_evidence_ids=(),
+            pick_universe_complete=snapshot.pick_universe_complete,
+            belongs_to_history=snapshot in history.snapshots,
+        )
+        return source_history, source_snapshot
+
+    if isinstance(history, HistoricalRosterContextHistory) and isinstance(snapshot, HistoricalRosterContextSnapshot):
+        source_teams = tuple(
+            _SourceRoster(
+                provider_roster_id=row.provider_roster_id,
+                player_ids=row.player_ids,
+                traded_pick_ids=row.traded_pick_ids,
+            )
+            for row in snapshot.teams
+        )
+        source_history = _SourceHistory(
+            history_id=history.history_id,
+            provider=history.provider,
+            provider_league_id=history.provider_league_id,
+            season=history.season,
+            league_family_id=history.league_family_id,
+            membership_complete=history.membership_status == "provisionally_consistent",
+            snapshot_ids=frozenset(row.snapshot_id for row in history.snapshots),
+        )
+        source_snapshot = _SourceSnapshot(
+            history_id=snapshot.history_id,
+            snapshot_id=snapshot.snapshot_id,
+            effective_at=snapshot.effective_at,
+            boundary=snapshot.boundary,
+            teams=source_teams,
+            uncertain_player_ids=snapshot.uncertain_player_ids,
+            supplemental_evidence_ids=snapshot.supplemental_evidence_ids,
+            pick_universe_complete=None,
+            belongs_to_history=snapshot in history.snapshots,
+        )
+        return source_history, source_snapshot
+    raise TypeError("history and snapshot must be a matching provider adapter or normalized replay pair")
+
+
 def materialize_historical_roster_state(
     *,
     season: HistoricalSeasonIdentity,
-    history: HistoricalRosterContextHistory,
-    snapshot: HistoricalRosterContextSnapshot,
+    history: HistoricalRosterContextHistory | HistoricalRosterReplay,
+    snapshot: HistoricalRosterContextSnapshot | RosterMembershipSnapshot,
     league: League,
     teams: tuple[HistoricalRosterTeamEvidence, ...],
     players: tuple[HistoricalRosterPlayerEvidence, ...],
@@ -131,15 +243,16 @@ def materialize_historical_roster_state(
     pick_universe_complete: bool = False,
     supplemental_evidence_receipts: tuple[HistoricalSupplementalEvidenceReceipt, ...] = (),
 ) -> HistoricalRosterStateMaterialization:
-    """Build a factual roster ``LeagueState`` only when every required fact is supplied.
+    """Build State from either an adapter context or normalized replay plus receipts.
 
-    The return value is retrospective even when source availability at the
-    cutoff is proven. Matchups, projections, market values, and lineup history
-    are outside this roster-state scope. Missing slots, team/player mappings,
-    FAAB, or complete pick-universe evidence block State construction.
+    Historical membership is accepted from the provider-neutral replay, while
+    placements, canonical identities, FAAB balances, settings, and the complete
+    pick universe still require separate evidence. This never authorizes a
+    historical Decision grade.
     """
 
-    cutoff = snapshot.effective_at
+    source_history, source_snapshot = _source_views(history, snapshot)
+    cutoff = source_snapshot.effective_at
     blockers: set[str] = set()
     evidence_receipts = tuple(
         receipt
@@ -159,7 +272,11 @@ def materialize_historical_roster_state(
         blockers.add("duplicate_evidence_receipt_identity")
     if not pick_universe_complete:
         blockers.add("complete_pick_universe_not_asserted")
-    expected_supplemental_ids = set(snapshot.supplemental_evidence_ids)
+    if source_snapshot.pick_universe_complete is False:
+        blockers.add("replay_pick_universe_incomplete")
+    if source_history.pick_issues:
+        blockers.add("replay_pick_history_incomplete")
+    expected_supplemental_ids = set(source_snapshot.supplemental_evidence_ids)
     supplied_supplemental_ids = {
         receipt.evidence_id for receipt in supplemental_evidence_receipts
     }
@@ -167,24 +284,28 @@ def materialize_historical_roster_state(
         blockers.add("supplemental_evidence_receipt_coverage_mismatch")
     if cutoff is None:
         blockers.add("snapshot_has_no_effective_timestamp")
-    if snapshot.boundary == "archive_end_anchor":
+    if source_snapshot.boundary == "archive_end_anchor":
         blockers.add("archive_end_anchor_is_not_an_event_cutoff")
-    if snapshot.uncertain_player_ids:
+    if source_snapshot.uncertain_player_ids:
         blockers.add("snapshot_contains_uncertain_player_membership")
-    if history.membership_status != "provisionally_consistent":
+    if not source_history.membership_complete:
         blockers.add("source_membership_history_incomplete")
-    if history.history_id != snapshot.history_id or snapshot not in history.snapshots:
+    if (
+        source_history.history_id != source_snapshot.history_id
+        or source_snapshot.snapshot_id not in source_history.snapshot_ids
+        or not source_snapshot.belongs_to_history
+    ):
         blockers.add("snapshot_does_not_belong_to_history")
     if (
-        history.provider_league_id != season.league_id
-        or history.season != season.season
+        source_history.provider_league_id != season.league_id
+        or source_history.season != season.season
         or league.league_id != season.league_id
         or league.season != season.season
     ):
         blockers.add("league_season_identity_mismatch")
-    if history.league_family_id is not None and history.league_family_id != season.league_family_id:
+    if source_history.league_family_id is not None and source_history.league_family_id != season.league_family_id:
         blockers.add("league_family_identity_mismatch")
-    if len(teams) != len(snapshot.teams) or len({row.provider_roster_id for row in teams}) != len(teams):
+    if len(teams) != len(source_snapshot.teams) or len({row.provider_roster_id for row in teams}) != len(teams):
         blockers.add("team_identity_coverage_mismatch")
     if len(players) != len({row.provider_player_id for row in players}):
         blockers.add("duplicate_player_identity")
@@ -212,25 +333,25 @@ def materialize_historical_roster_state(
         ref.external_id
         for row in teams
         for ref in row.team.provider_refs
-        if ref.provider == history.provider
+        if ref.provider == source_history.provider
     ]
     if (
         len(team_provider_refs) != len(set(team_provider_refs))
-        or set(team_provider_refs) != {row.provider_roster_id for row in snapshot.teams}
+        or set(team_provider_refs) != {row.provider_roster_id for row in source_snapshot.teams}
     ):
         blockers.add("team_provider_identity_mapping_is_not_one_to_one")
     if len(team_ids) != len(teams):
         blockers.add("duplicate_canonical_team_identity")
-    if league.rules.team_count != len(snapshot.teams):
+    if league.rules.team_count != len(source_snapshot.teams):
         blockers.add("league_rule_team_count_mismatch")
     if len({row.team.team_id for row in teams}) != league.rules.team_count:
         blockers.add("canonical_team_count_mismatch")
     for row in teams:
-        if row.provider_roster_id not in {team.provider_roster_id for team in snapshot.teams}:
+        if row.provider_roster_id not in {team.provider_roster_id for team in source_snapshot.teams}:
             blockers.add("team_identity_not_in_snapshot")
         if row.team.league_id != league.league_id:
             blockers.add("team_league_identity_mismatch")
-        if ProviderRef(provider=history.provider, external_id=row.provider_roster_id) not in row.team.provider_refs:
+        if ProviderRef(provider=source_history.provider, external_id=row.provider_roster_id) not in row.team.provider_refs:
             blockers.add("team_provider_identity_not_asserted")
         if row.faab_balance < 0:
             blockers.add("invalid_faab_balance")
@@ -247,7 +368,7 @@ def materialize_historical_roster_state(
 
     expected_membership = {
         (team.provider_roster_id, player_id)
-        for team in snapshot.teams
+        for team in source_snapshot.teams
         for player_id in team.player_ids
     }
     source_players = {row.provider_player_id: row for row in players}
@@ -256,7 +377,7 @@ def materialize_historical_roster_state(
         ref.external_id
         for row in players
         for ref in row.player.provider_refs
-        if ref.provider == history.provider
+        if ref.provider == source_history.provider
     ]
     if (
         len(player_provider_refs) != len(set(player_provider_refs))
@@ -268,7 +389,7 @@ def materialize_historical_roster_state(
     if set(source_players) != {player for _roster, player in expected_membership}:
         blockers.add("player_identity_coverage_mismatch")
     for row in players:
-        if ProviderRef(provider=history.provider, external_id=row.provider_player_id) not in row.player.provider_refs:
+        if ProviderRef(provider=source_history.provider, external_id=row.provider_player_id) not in row.player.provider_refs:
             blockers.add("player_provider_identity_not_asserted")
         if row.player_state.player_id != row.player.player_id:
             blockers.add("player_state_identity_mismatch")
@@ -319,7 +440,7 @@ def materialize_historical_roster_state(
             blockers.add("draft_pick_owner_identity_mismatch")
     source_pick_owners = {
         pick_id: team.provider_roster_id
-        for team in snapshot.teams
+        for team in source_snapshot.teams
         for pick_id in team.traded_pick_ids
     }
     for provider_pick_id, provider_roster_id in source_pick_owners.items():
@@ -332,8 +453,8 @@ def materialize_historical_roster_state(
         return HistoricalRosterStateMaterialization(
             status=HistoricalStateMaterializationStatus.BLOCKED,
             blockers=tuple(sorted(blockers or {"snapshot_has_no_effective_timestamp"})),
-            history_id=history.history_id,
-            snapshot_id=snapshot.snapshot_id,
+            history_id=source_history.history_id,
+            snapshot_id=source_snapshot.snapshot_id,
             evidence_receipts=evidence_receipts,
             supplemental_evidence_receipts=supplemental_evidence_receipts,
         )
@@ -379,8 +500,8 @@ def materialize_historical_roster_state(
     return HistoricalRosterStateMaterialization(
         status=HistoricalStateMaterializationStatus.MATERIALIZED,
         state=state,
-        history_id=history.history_id,
-        snapshot_id=snapshot.snapshot_id,
+        history_id=source_history.history_id,
+        snapshot_id=source_snapshot.snapshot_id,
         evidence_receipts=evidence_receipts,
         supplemental_evidence_receipts=supplemental_evidence_receipts,
         source_available_at_cutoff=available,
