@@ -154,6 +154,44 @@ def test_candidate_y1_percentile_uses_frozen_reference():
     assert result.iloc[0].age == 24
 
 
+def test_slim_frozen_reference_coordinates_match_accepted_current_transform():
+    positions = ["QB", "RB", "WR", "TE"]
+    board = pd.DataFrame({
+        "player_id": [f"reference-{index}" for index in range(335)],
+        "position": [positions[index % len(positions)] for index in range(335)],
+        "league_y1_points": [None if index == 0 else (-2 if index == 1 else index)
+                             for index in range(335)],
+        "historical_gsis_id": [""] * 335,
+        "age": [24.0] * 335,
+        "experience": [2.0] * 335,
+        "y2_player_league_expected_points": [20.0] * 335,
+        "y3_player_league_expected_points": [30.0] * 335,
+    })
+
+    class Dev:
+        @staticmethod
+        def merge_lags(frame, _raw): return frame.copy()
+        @staticmethod
+        def add_engineered_features(frame, _players): return frame.copy()
+        @staticmethod
+        def merge_trajectory(frame, _residual, _innovation): return frame.copy()
+
+    source_file = FILE.with_name("materialize_foundation4_fsffl_coordinate.py")
+    source_spec = importlib.util.spec_from_file_location("foundation4_coordinate_test", source_file)
+    assert source_spec and source_spec.loader
+    source = importlib.util.module_from_spec(source_spec)
+    source_spec.loader.exec_module(source)
+    accepted = source.build_current(
+        Dev(), board, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+    )
+    slim = MOD.frozen_current_reference_coordinates(board)
+
+    pd.testing.assert_frame_equal(
+        slim.reset_index(drop=True),
+        accepted.loc[:, ["output_player_id", "position", "y1"]].reset_index(drop=True),
+    )
+
+
 def test_missing_historical_crosswalk_uses_canonical_key_without_zero_filling():
     seen = {}
     class Dev:

@@ -252,7 +252,7 @@ def test_completed_but_unavailable_intrinsic_surfaces_governed_reason(monkeypatc
         forecast_model_version="forecast-vnext-fixture",
     )
     coordinator = SimpleNamespace(
-        request=lambda _runtime: SimpleNamespace(
+        current=lambda _runtime: SimpleNamespace(
             status=IntrinsicBuildStatus.COMPLETED,
             contract=unavailable,
             error=None,
@@ -302,7 +302,7 @@ def test_completed_intrinsic_contract_marks_non_h3_player_individually_unavailab
         status_reason="governed H3 cohort is available",
     )
     coordinator = SimpleNamespace(
-        request=lambda _runtime: SimpleNamespace(
+        current=lambda _runtime: SimpleNamespace(
             status=IntrinsicBuildStatus.COMPLETED,
             contract=intrinsic,
             error=None,

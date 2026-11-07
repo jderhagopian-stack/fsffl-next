@@ -1,3 +1,11 @@
+## 2026-11-07 — First reliability candidate prepared locally
+
+The [local reliability checkpoint](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md) records the saved-roster memory candidate and three Intrinsic reader scheduling corrections, two local executable commits and passing focused/frozen-reference regressions. This advances the first delivery-review step only. Full private accepted-input replay and actual hosted acceptance are still open; nothing was pushed or deployed. The independent historical lane and accepted model/source contracts remain unchanged.
+
+## 2026-11-07 — Delivery review overlay (proposal; no deployment acceptance)
+
+The [broader delivery review](workstreams/PROJECT_DELIVERY_REVIEW_20261107.md) reconciles current main, live Render, open memory/worker PRs and sampled code/tests. Proposed sequence: finish one bounded beta reliability release; complete the existing worker boundary based on real workload evidence; continue the independent historical coverage-report lane; finish a real Explore-to-Trade journey; then advance shared historical/Owner/Decision/records/counterfactual capabilities. Existing accepted model math and source rules remain authoritative. No spending, migration, model promotion, production refresh or deployment occurred. Older NEXT labels below are historical context, not a current deployment queue; current live identity and unresolved gates are in CURRENT_OPERATIONS and the review.
+
 ## 2026-11-07 — Provider-neutral historical replay now feeds the canonical roster State builder
 
 Backend-first historical snapshot development has completed two reusable increments: PR [#513](https://github.com/jderhagopian-stack/fsffl-next/pull/513) added normalized player/pick/budget replay; PR [#514](https://github.com/jderhagopian-stack/fsffl-next/pull/514) connected those snapshots to the existing fail-closed canonical whole-roster State materializer. Synthetic configurations remove the need for a second private league. Exact focused/archive and Stable gates passed; current run details are in [CURRENT_OPERATIONS](CURRENT_OPERATIONS.md) and [the replay-to-State checkpoint](workstreams/HISTORICAL_REPLAY_STATE_BRIDGE_20261107.md).
