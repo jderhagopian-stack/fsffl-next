@@ -295,7 +295,7 @@ def test_player_intelligence_withholds_unpublished_career_without_changing_curre
         return context.publication_generation_id == 'new'
     ns = dict(app=FastAPI(), Depends=lambda fn:None, require_user=lambda:None,
         _validated_player_id=lambda pid:pid, runtime_store=NS(get=lambda user:runtime),
-        intrinsic_coordinator=NS(request=lambda ctx:NS(status=IntrinsicBuildStatus.COMPLETED,contract=current)),
+        intrinsic_coordinator=NS(current=lambda ctx:NS(status=IntrinsicBuildStatus.COMPLETED,contract=current)),
         build_player_intelligence_overview=lambda *args,**kwargs:{'value':{'raw_shapley_marginal_points':7.5}},
         future_forecasts=object(), career_record_loader=lambda ctx:career,
         career_publication_validator=validate, career_lens_for_publication=career_lens_for_publication,

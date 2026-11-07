@@ -48,10 +48,18 @@ def install_shapley_intrinsic_routes(
         if state is None:
             raise HTTPException(status_code=409, detail="Connect a league before requesting Shapley Intrinsic Value")
 
-        if contract_loader is None:
-            contract = None
-        elif background_coordinator is not None:
-            record = background_coordinator.request(context)
+        if background_coordinator is not None:
+            # Explicit refresh owns computation. Reads may resolve an already
+            # completed, weakly released contract through the guarded owner.
+            record = background_coordinator.current(context)
+            if record is None:
+                return JSONResponse(status_code=503, content={
+                    "status": "refresh_required",
+                    "capability": "current_intrinsic",
+                    "league_state_id": state.state_id,
+                    "publication_generation_id": context.publication_generation_id,
+                    "reason": "Refresh league intelligence to prepare governed Shapley Intrinsic.",
+                })
             if record.status in {
                 IntrinsicBuildStatus.QUEUED,
                 IntrinsicBuildStatus.RUNNING,
@@ -75,14 +83,17 @@ def install_shapley_intrinsic_routes(
                     content=intrinsic_loading_payload(record),
                 )
             contract = record.contract
+        elif contract_loader is not None:
+            # A synchronous loader is not a read contract: it may acquire and
+            # compute. Keep the installation argument for compatibility, but
+            # require the lifecycle owner to prepare evidence before serving it.
+            return JSONResponse(status_code=503, content={
+                "status": "refresh_required",
+                "capability": "current_intrinsic",
+                "reason": "Governed Shapley Intrinsic must be prepared by the intelligence lifecycle.",
+            })
         else:
-            try:
-                contract = contract_loader(context)
-            except Exception as exc:
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Governed Shapley Intrinsic contract unavailable: {type(exc).__name__}: {exc}",
-                ) from exc
+            contract = None
 
         if contract is None:
             contract = build_unavailable_shapley_intrinsic_contract(

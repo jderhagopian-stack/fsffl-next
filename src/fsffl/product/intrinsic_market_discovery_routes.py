@@ -28,7 +28,7 @@ def install_intrinsic_market_discovery_routes(
     require_user,
     background_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
 ) -> None:
-    """Expose a lazy discovery lens without changing Search or Value authority."""
+    """Read prepared Intrinsic for discovery without starting a model build."""
 
     @app.get("/api/opportunities/value-disagreements")
     def value_disagreements(
@@ -43,7 +43,14 @@ def install_intrinsic_market_discovery_routes(
                 detail="Connect a league before requesting value disagreement discovery",
             )
         if background_coordinator is not None:
-            record = background_coordinator.request(runtime)
+            record = background_coordinator.current(runtime)
+            if record is None:
+                return JSONResponse(status_code=503, content={
+                    "status": "refresh_required",
+                    "capability": "current_intrinsic",
+                    "league_state_id": runtime.league_state.state_id,
+                    "reason": "Refresh league intelligence to prepare value disagreement evidence.",
+                })
             if record.status in {
                 IntrinsicBuildStatus.QUEUED,
                 IntrinsicBuildStatus.RUNNING,
@@ -61,6 +68,8 @@ def install_intrinsic_market_discovery_routes(
                 )
             intrinsic = record.contract
             if intrinsic is None:
+                if record.contract_ref is not None:
+                    return JSONResponse(status_code=202, content=intrinsic_loading_payload(record))
                 return JSONResponse(
                     status_code=503,
                     content={
@@ -69,16 +78,11 @@ def install_intrinsic_market_discovery_routes(
                     },
                 )
         else:
-            try:
-                intrinsic = contract_loader(runtime)
-            except Exception as exc:
-                raise HTTPException(
-                    status_code=503,
-                    detail=(
-                        "Governed Intrinsic disagreement evidence unavailable: "
-                        f"{type(exc).__name__}: {exc}"
-                    ),
-                ) from exc
+            return JSONResponse(status_code=503, content={
+                "status": "refresh_required",
+                "capability": "current_intrinsic",
+                "reason": "Value disagreement evidence must be prepared by the intelligence lifecycle.",
+            })
         return build_intrinsic_market_discovery(
             runtime,
             intrinsic,

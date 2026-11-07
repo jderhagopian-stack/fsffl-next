@@ -295,10 +295,11 @@ def install_player_intelligence_routes(
                 detail="Connect a league before requesting Player Intelligence",
             )
         try:
-            intrinsic_record = intrinsic_coordinator.request(runtime)
+            intrinsic_record = intrinsic_coordinator.current(runtime)
             intrinsic = (
                 intrinsic_record.contract
-                if intrinsic_record.status == IntrinsicBuildStatus.COMPLETED
+                if (intrinsic_record is not None
+                    and intrinsic_record.status == IntrinsicBuildStatus.COMPLETED)
                 else None
             )
             payload = build_player_intelligence_overview(
@@ -326,8 +327,29 @@ def install_player_intelligence_routes(
         }))
         value["career_presentation"] = career_summary
         value["intrinsic_label"] = "3-Year Intrinsic"
-        value["intrinsic_lifecycle_status"] = intrinsic_record.status.value
-        if intrinsic_record.status in {
+        lifecycle_status = intrinsic_record.status if intrinsic_record is not None else None
+        released_current = bool(
+            lifecycle_status == IntrinsicBuildStatus.COMPLETED
+            and intrinsic is None
+            and intrinsic_record.contract_ref is not None
+        )
+        value["intrinsic_lifecycle_status"] = (
+            lifecycle_status.value if lifecycle_status is not None else "not_prepared"
+        )
+        if intrinsic_record is None:
+            value["intrinsic_status"] = "refresh_required"
+            value["intrinsic_error"] = (
+                "Refresh league intelligence to prepare governed 3-Year Intrinsic."
+            )
+        elif released_current:
+            # Preserve the existing client polling states while Career owns the
+            # memory lane. The completed lifecycle is not a new running build.
+            value["intrinsic_status"] = "running"
+            value["intrinsic_build_status"] = "waiting_for_retained_contract"
+            value["intrinsic_error"] = (
+                "Governed 3-Year Intrinsic is temporarily waiting for model work to finish."
+            )
+        elif lifecycle_status in {
             IntrinsicBuildStatus.QUEUED,
             IntrinsicBuildStatus.RUNNING,
         }:
@@ -370,7 +392,7 @@ def install_player_intelligence_routes(
             "publication_generation_id",
             None,
         )
-        if intrinsic_record.status in {
+        if released_current or lifecycle_status in {
             IntrinsicBuildStatus.QUEUED,
             IntrinsicBuildStatus.RUNNING,
         }:
