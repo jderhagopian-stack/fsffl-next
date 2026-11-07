@@ -1,9 +1,9 @@
 """Provider-neutral reverse replay for retrospective roster membership.
 
-Provider adapters normalize their immutable season-end anchor and completed
-player ownership events into these records. The replay deliberately owns only
-membership: league rules are identity metadata for downstream consumers, while
-slots, scoring, forecasts, and point-in-time eligibility remain separate.
+Provider adapters normalize immutable season-end anchors and completed
+player, draft-pick, and cumulative budget-usage movements into these records.
+League rules are identity metadata for downstream consumers; slots, scoring,
+forecasts, and point-in-time eligibility remain separate.
 """
 from __future__ import annotations
 
