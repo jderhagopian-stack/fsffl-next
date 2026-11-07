@@ -292,6 +292,46 @@ def materialized():
     return persistence, calls, loader, context, contract
 
 
+def test_new_current_receipt_reuses_identical_long_horizon_component(materialized, monkeypatch):
+    import fsffl.product.foundation4_career_forward_runtime as runtime
+
+    prior, _calls, old_loader, context, expected = materialized
+    component = runtime.LongTermIntrinsicShadowContract.model_validate(next(
+        row.payload for row in prior.artifacts
+        if row.key.artifact_kind == FOUNDATION4_Y4_Y7_ARTIFACT_KIND
+    ))
+    store = MemoryPersistence()
+    store.put_artifact(prior.get_reusable_artifact(old_loader._component_key(context, component)))
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("identical Y4-Y7 authority must not be recomputed")
+
+    monkeypatch.setattr(runtime, "build_long_term_intrinsic_shadow", forbidden)
+    loader = CareerIntrinsicLoader(
+        current_intrinsic_loader=lambda _: _current_intrinsic(),
+        current_intrinsic_fingerprint_resolver=lambda _: "new-current-receipt",
+        persistence_store=store,
+    )
+    actual = loader(context)
+    assert actual.model_dump() == expected.model_dump()
+    assert sum(row.key.artifact_kind == FOUNDATION4_Y4_Y7_ARTIFACT_KIND
+               for row in store.artifacts) == 1
+
+
+def test_component_restore_rejects_payload_under_wrong_semantic_key(materialized):
+    import fsffl.product.foundation4_career_forward_runtime as runtime
+    prior, _calls, old_loader, context, _expected = materialized
+    component = runtime.LongTermIntrinsicShadowContract.model_validate(next(
+        row.payload for row in prior.artifacts
+        if row.key.artifact_kind == FOUNDATION4_Y4_Y7_ARTIFACT_KIND
+    ))
+    record = prior.get_reusable_artifact(old_loader._component_key(context, component))
+    store = MemoryPersistence()
+    store.put_artifact(replace(record, payload={**record.payload, "input_fingerprint": "wrong"}))
+    loader = _loader(store, [])
+    assert loader._restore_component(context) is None
+
+
 def test_full_current_cohort_materializes_and_persists_both_shadow_artifacts(
     materialized,
 ) -> None:

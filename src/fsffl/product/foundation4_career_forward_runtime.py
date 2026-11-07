@@ -8,6 +8,8 @@ from threading import RLock, Timer
 from typing import Callable, Mapping
 from weakref import ref
 
+from fsffl.forecast.long_horizon_contract import LongHorizonForecastAuthorityContract
+
 from fsffl.persistence.contracts import (
     ArtifactKey,
     canonical_fingerprint,
@@ -461,23 +463,30 @@ class CareerIntrinsicLoader:
             # Recheck under the lock: concurrent readers must deserialize once.
             return self._restore_component(context)
 
-    def _restore_component(self, context: UserRuntimeContext) -> LongTermIntrinsicShadowContract | None:
+    def _restore_component(
+        self,
+        context: UserRuntimeContext,
+        *,
+        forecast: LongHorizonForecastAuthorityContract | None = None,
+    ) -> LongTermIntrinsicShadowContract | None:
         fingerprint = self.intrinsic_input_fingerprint(context)
-        if (self._cached_user_id == context.user_id
+        if (forecast is None and self._cached_user_id == context.user_id
                 and self._cached_fingerprint == fingerprint
                 and self._cached_component is not None):
             return self._cached_component
         if self._persistence_store is None or context.league_state is None:
             return None
-        forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
-            context.league_state.league.rules
-        )
+        supplied_forecast = forecast is not None
+        if forecast is None:
+            forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
+                context.league_state.league.rules
+            )
         # restore_compatible already retained the exact Career subject contract;
         # use its reference IDs to locate the corresponding scoped component.
         # This does not rebuild Current or reread the full Career payload.
         with self._lock:
             restored = self._cached_contract if self._cached_user_id == context.user_id else None
-        if restored is not None:
+        if restored is not None and not supplied_forecast:
             reference_ids = {row.player_id for row in forecast.forecasts}
             active_ids = {row.player_id for row in restored.estimates} & reference_ids
             forecast, _ = align_foundation4_cohort(player_ids=active_ids,
@@ -512,6 +521,12 @@ class CareerIntrinsicLoader:
                 dict(record.payload)
             )
         except (TypeError, ValueError):
+            return None
+        # The durable key alone is not proof of the decoded payload's authority.
+        # A refreshed State may reuse Y4-Y7 only for identical board/rules/cohort.
+        if (contract.input_fingerprint != expected_input
+                or contract.value_model_version != LONG_TERM_INTRINSIC_MODEL_VERSION
+                or {row.player_id for row in contract.estimates} != set(forecast.player_ids)):
             return None
         if migrated_legacy:
             self._persistence_store.put_artifact(
@@ -741,7 +756,8 @@ class CareerIntrinsicLoader:
         if context.league_state.league.season != 2026:
             raise ValueError("Foundation 4 frozen current-cohort shadow is 2026-only")
 
-        dependency_fingerprint = self.intrinsic_input_fingerprint(context)
+        with sample_rss_phase("career.preflight"):
+            dependency_fingerprint = self.intrinsic_input_fingerprint(context)
         with self._lock:
             if (
                 self._cached_user_id == context.user_id
@@ -804,11 +820,13 @@ class CareerIntrinsicLoader:
         # Scoring-coordinate compatibility is an authority precondition for the
         # holistic sum.  Validate it before loading Current Intrinsic so an
         # incompatible league cannot spend work or appear partially materialized.
-        long_forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
-            context.league_state.league.rules
-        )
+        with sample_rss_phase("career.frozen_inputs"):
+            long_forecast = provide_foundation4_long_horizon_forecast_contract_for_rules(
+                context.league_state.league.rules
+            )
 
-        current = self._current_intrinsic_loader(context)
+        with sample_rss_phase("career.current_reuse"):
+            current = self._current_intrinsic_loader(context)
         if current.status != ShapleyIntrinsicAvailability.READY:
             raise ValueError(
                 "Foundation 4 requires ready governed Current Intrinsic Y1-Y3"
@@ -819,10 +837,15 @@ class CareerIntrinsicLoader:
             player_ids=player_ids, long_forecast=long_forecast,
             terminal_features=provide_foundation4_terminal_features(),
         )
-        component = build_long_term_intrinsic_shadow(
-            long_forecast,
-            rules=context.league_state.league.rules,
-        )
+        with sample_rss_phase("career.long_horizon_restore"):
+            component = self._restore_component(context, forecast=long_forecast)
+        component_restored = component is not None
+        if component is None:
+            with sample_rss_phase("career.long_horizon_build"):
+                component = build_long_term_intrinsic_shadow(
+                    long_forecast,
+                    rules=context.league_state.league.rules,
+                )
         component_player_ids = {item.player_id for item in component.estimates}
         if component_player_ids != player_ids or set(terminal_features) != player_ids:
             raise ValueError(
@@ -867,7 +890,7 @@ class CareerIntrinsicLoader:
                 self._persist(
                     context,
                     dependency_fingerprint=dependency_fingerprint,
-                    component=component,
+                    component=None if component_restored else component,
                     contract=frozen_contract,
                 )
             # Explicit Y4-Y7 readers restore the persisted component on demand.
@@ -893,7 +916,7 @@ class CareerIntrinsicLoader:
         self._persist(
             context,
             dependency_fingerprint=dependency_fingerprint,
-            component=component,
+            component=None if component_restored else component,
             contract=contract,
             source_manifest=source_manifest,
             retryable_batch_incomplete=retryable_batch_incomplete,

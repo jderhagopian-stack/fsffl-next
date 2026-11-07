@@ -2109,8 +2109,9 @@ def create_app(
                     f"available: FSFFL Intrinsic is {intrinsic_status}."
                 )
             return (
-                "Canonical Sleeper State and all currently governed product intelligence "
-                "were atomically published."
+                "Canonical Sleeper State and core Forecast, Simulation, Value and Current "
+                "Intrinsic were atomically published. Career, user-facing 3-Year lenses "
+                "and Dynasty readiness are reported separately."
             )
 
         def work(progress) -> str | None:

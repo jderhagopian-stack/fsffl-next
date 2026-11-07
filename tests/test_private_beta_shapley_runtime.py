@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from threading import Event, Thread
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
 
 import pytest
@@ -83,6 +84,84 @@ from fsffl.value.private_beta_activation_data import (
 )
 from fsffl.value.shapley_intrinsic import FROZEN_SHAPLEY_PERMUTATIONS
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
+
+
+def test_concurrent_compatibility_reads_share_only_inflight_resolution(monkeypatch):
+    state, _ = _fixture()
+    context = UserRuntimeContext(user_id="reader", league_state=state)
+    loader = PrivateBetaShapleyContractLoader()
+    entered, release = Event(), Event()
+    calls = []
+
+    def resolve(_context):
+        calls.append(1)
+        entered.set()
+        assert release.wait(5)
+        return "exact-input", "model"
+
+    monkeypatch.setattr(loader, "_resolve_compatibility_identity", resolve)
+    # Instrument the shared Future wait, so release cannot race the second caller.
+    import fsffl.product.private_beta_shapley_runtime as runtime
+    original_future = runtime.Future
+    waiting = Event()
+
+    class ObservedFuture(original_future):
+        def result(self, *args, **kwargs):
+            waiting.set()
+            return super().result(*args, **kwargs)
+
+    monkeypatch.setattr(runtime, "Future", ObservedFuture)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(loader.intrinsic_input_fingerprint, context)
+        assert entered.wait(5)
+        second = pool.submit(loader.intrinsic_input_fingerprint, context)
+        assert waiting.wait(5)
+        release.set()
+        assert first.result(5) == second.result(5) == "exact-input"
+    assert len(calls) == 1
+    assert loader._compatibility_pending is None
+    # There is no TTL or State-only cache: the next call rechecks source authority.
+    assert loader.intrinsic_input_fingerprint(context) == "exact-input"
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("changed", ["state", "forecast", "epoch", "cutoff"])
+def test_compatibility_coalescing_keeps_distinct_dependencies_separate(monkeypatch, changed):
+    state, _ = _fixture()
+    context = UserRuntimeContext(user_id="reader", league_state=state)
+    loader = PrivateBetaShapleyContractLoader()
+    first_entered, both_entered, release = Event(), Event(), Event()
+    calls = []
+
+    def resolve(_context):
+        calls.append(1)
+        first_entered.set()
+        if len(calls) == 2:
+            both_entered.set()
+        assert release.wait(5)
+        return "input", "model"
+
+    monkeypatch.setattr(loader, "_resolve_compatibility_identity", resolve)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(loader.intrinsic_input_fingerprint, context)
+        assert first_entered.wait(5)
+        if changed == "state":
+            other = replace(context, league_state=state.model_copy())
+        elif changed == "forecast":
+            other = replace(context, forecast_evidence=object())
+        elif changed == "cutoff":
+            other = replace(context, career_fingerprint_evaluation_as_of=state.as_of)
+        else:
+            loader.clear_user_cache(context.user_id)
+            other = context
+        second = pool.submit(loader.intrinsic_input_fingerprint, other)
+        try:
+            assert both_entered.wait(5)
+        finally:
+            release.set()
+        assert first.result(5) == second.result(5) == "input"
+    assert len(calls) == 2
+    assert loader._compatibility_pending is None
 
 
 def _fixture() -> tuple[LeagueState, ForecastObservation]:

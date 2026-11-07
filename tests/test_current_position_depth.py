@@ -318,9 +318,10 @@ def test_superflex_is_ranked_as_its_own_configured_slot() -> None:
 def test_governed_current_builder_consumes_existing_in_season_outlook(monkeypatch) -> None:
     state = _state()
     governed = SimpleNamespace(
-        season_outlook=_outlook(),
+        season_outlook=tuple(row for row in _outlook() if row.player_id != "a-wr1"),
         evidence_basis="current_rest_of_season",
         completed_through_week=4,
+        season_outlook_failures={"a-wr1": "rest_of_season_forecast_missing"},
     )
     calls = []
 
@@ -339,6 +340,13 @@ def test_governed_current_builder_consumes_existing_in_season_outlook(monkeypatc
         preseason_season_forecasts=(),
         history_writer="history-writer",
     )
+    assert contract.player_coverage_failures == governed.season_outlook_failures
+    player = next(row for row in contract.players if row.player_id == "a-wr1")
+    assert player.season_outlook_failure == "rest_of_season_forecast_missing"
+    assert player.season_outlook_points is None
+    wr = next(row for row in contract.slots if row.slot == RosterSlot.WR)
+    assert wr.status == "unavailable"
+    assert wr.incomplete_team_ids == ("a",)
 
     assert calls == [
         (

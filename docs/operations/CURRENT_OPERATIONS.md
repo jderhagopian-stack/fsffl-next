@@ -1,3 +1,21 @@
+## 2026-11-07 — Post-refresh correction authorized; candidate in progress
+
+User requested fixes for app-wide missing Intrinsic and Current WR failure. Main remains `02ffb963`; branch `fix/refresh-resource-coverage-20261107` adds exact-semantic Y4-Y7 component reuse during Career, in-flight sharing of compatibility reads, truthful core completion wording, early Career attribution and preserved Current coverage diagnostics. Real saved 334-player reference replay matches the unchanged output: ~77.480 s recomputation versus ~0.835 s reuse, corrected peak 195,660 KiB. This is not full dynamic/hosted acceptance.
+
+Saved CBS/Razzball replay proves the WR blocker is independent source coverage: three missing subjects have one source and three have none; no eligible scorer partial exists. Do not weaken the accepted two-source/scoring-gap fallback rule to fabricate a complete WR room. Full WR coverage requires more admissible evidence or a reviewed fallback. Focused validation and review are in progress; no new deployment or retry. [Evidence and exact scope](workstreams/HOSTED_REFRESH_RECEIPT_20261107.md).
+
+---
+
+## 2026-11-07 — Observed refresh: core durable; optional Career OOM (local receipt)
+
+The user initiated one refresh at 20:48:04 UTC on deployed `02ffb963`. Core job `intelligence:bf580e335a5b42b9a6c06c3694ae6a92` completed in **229.625 s** and atomically published State `14f7f85f2a342769050981873a765022ae6e22e58c58b06b97cb2f3d230614b7`. Core process peak reached **457,007,104 B**. Follow-on Career/browser work did not complete: Render event `evt-dbnp0ae0tbcc738kua30` confirms **OOM at 20:55:05.212622 UTC, 512Mi limit**. Last observed RSS was 564,867,072 B; Render's coarser charged-memory sample was 499,302,400 B five seconds before the kill. CPU reached the full 0.5 allocation. These are distinct measurements, not contradictory peak evidence.
+
+Restart restored the new Forecast/Simulation/Value/Current Intrinsic successfully. No new Career/reference checkpoint was saved. Current Position & Depth remains partial; Dynasty rooms unavailable. Core-completed/product-full flags do not establish optional Career acceptance. Stop retries; next proposal is bounded dependency-receipt reads, precise early-Career attribution and retained-object reduction, then an isolated durable execution boundary if unchanged-cap headroom cannot be demonstrated. No further code/deployment/plan/schema change. [Full receipt and proposed fix](workstreams/HOSTED_REFRESH_RECEIPT_20261107.md).
+
+Deployment documentation PR #516 passed CI and Stable, but automatic approval review rejected its default-branch merge for lack of explicit approval. It remains open; this new receipt/status overlay is local and unmerged.
+
+---
+
 ## 2026-11-07 — Reliability correction deployed; one authenticated refresh required
 
 PR #489 merged as `02ffb963218d2a1408ecb58b1c07a563e9845054` from tested head `3da7891be3489a1fcc5a2f4a62659cac47b20704`; their Git trees match exactly. CI and focused diagnostics passed; Stable [42410655322](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42410655322) passed **2,660 / 5 skipped**, with exact-head checks. Fresh automated review is clean and earlier findings resolved. Render deployment `dep-dbnoncu7bikc73d4oc3g` is live at **20:37:35.958383Z** on that exact merge SHA, with the existing 0.5 CPU/512 MiB instance and auto-deploy off. No infrastructure/provider/schema changes.
