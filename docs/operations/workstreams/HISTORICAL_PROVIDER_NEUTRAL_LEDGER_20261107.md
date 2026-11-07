@@ -25,4 +25,4 @@ No database writes, migrations, deployment, or app/UI changes are included.
 
 ## Validation
 
-Focused contract tests, the pinned 2022–2026 archive workflow, general CI, and the Stable full suite are pending on the exact ready PR head. Results will be recorded in `docs/operations/CURRENT_OPERATIONS.md` after the gates complete.
+All executable changes passed focused contract validation, pinned archive validation, general CI, PR164 regression, and the Stable full suite on code head `1a0b83e81a7c5df594859284a9c6e7afba694291`. The docs-only checkpoint update is being revalidated by Stable before merge. The exact run IDs are recorded in `docs/operations/CURRENT_OPERATIONS.md`.
