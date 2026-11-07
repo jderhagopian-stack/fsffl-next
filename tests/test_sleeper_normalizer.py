@@ -62,6 +62,69 @@ def bundle() -> SleeperPayloadBundle:
     )
 
 
+def test_career_identity_acquisition_keeps_dropped_saved_reference_without_waiver_pool(monkeypatch):
+    """The builder validates frozen roster identities as well as dynamic ones."""
+    from types import SimpleNamespace
+    import pytest
+    import fsffl.product.p0_live_candidate_runtime as runtime
+    from fsffl.product.p0_forecast_runtime import frozen_p0_source_rows
+
+    source = bundle()
+    reference_id = frozen_p0_source_rows()[0].player_id
+    external_id = reference_id.rsplit(":", 1)[-1]
+    players = {key: value for key, value in source.players.items() if key != "p1"}
+    players[external_id] = source.players["p1"]
+    players["unrelated-waiver"] = {
+        "full_name": "Unrelated Waiver", "position": "WR", "team": "BUF",
+    }
+    saved_rosters = [
+        {**row, "players": [external_id if p == "p1" else p for p in row["players"]],
+         "starters": [external_id if p == "p1" else p for p in row.get("starters", [])]}
+        for row in source.rosters
+    ]
+
+    def snapshot(rosters):
+        return ProviderSnapshot(
+            provider_name="sleeper", league_external_id="123", captured_at=AS_OF,
+            payload={"league": source.league, "users": source.users,
+                     "rosters": rosters, "players": players,
+                     "traded_picks": source.traded_picks},
+        )
+
+    saved = SleeperSnapshotNormalizer().normalize_snapshot(snapshot(saved_rosters), as_of=AS_OF)
+    live_rosters = [
+        {**row, "players": [p for p in row["players"] if p != external_id],
+         "starters": [p for p in row["starters"] if p != external_id]}
+        for row in saved_rosters
+    ]
+    assert reference_id not in runtime.exact_state_rostered_p0_subject_ids(saved)
+
+    class IdentityBoundaryReached(Exception):
+        pass
+
+    class InspectNormalizer(SleeperSnapshotNormalizer):
+        def normalize_snapshot(self, snapshot, *, as_of):
+            normalized = super().normalize_snapshot(snapshot, as_of=as_of)
+            ids = {player.player_id for player in normalized.players}
+            assert reference_id in ids
+            assert "sleeper:player:unrelated-waiver" not in ids
+            # Stop at the inspected acquisition boundary; later providers and
+            # model calculations are unrelated to this identity regression.
+            raise IdentityBoundaryReached
+
+    monkeypatch.setattr(runtime, "SleeperSnapshotNormalizer", InspectNormalizer)
+    with pytest.raises(IdentityBoundaryReached):
+        runtime.build_live_p0_rostered_candidate_forecasts(
+            saved,
+            stats_source=SimpleNamespace(fetch_nfl_state=lambda: SimpleNamespace(
+                season=2026, completed_through_week=saved.completed_through_week,
+                captured_at=AS_OF,
+            )),
+            sleeper_source=SimpleNamespace(fetch_latest=lambda **_: snapshot(live_rosters)),
+            evaluation_as_of=AS_OF,
+        )
+
+
 def test_normalizer_returns_provider_neutral_state() -> None:
     state = SleeperNormalizer().normalize(bundle(), as_of=AS_OF)
 
@@ -425,3 +488,31 @@ def test_sleeper_status_catalog_cannot_be_backdated_into_an_earlier_state():
         assert "captured after the State evidence cutoff" in str(exc)
     else:
         raise AssertionError("post-cutoff NFL status was accepted into an earlier State")
+
+
+def test_bounded_saved_state_identities_are_kept_without_unrostered_catalog():
+    payload = bundle()
+    players = {**payload.players, "p2": {**payload.players["p2"], "team": None}}
+    players["unrostered-wr"] = {
+        "full_name": "Unrostered Receiver", "position": "WR", "team": "BUF",
+    }
+    latest_league = {**payload.league}
+    latest_rosters = [
+        {**roster, "players": [pid for pid in roster["players"] if pid != "p2"]}
+        for roster in payload.rosters
+    ]
+    snapshot = ProviderSnapshot(
+        provider_name="sleeper", league_external_id="123", captured_at=AS_OF,
+        payload={"league": latest_league, "users": payload.users,
+                 "rosters": latest_rosters, "players": players},
+    )
+    bounded = SleeperSnapshotNormalizer(
+        include_unrostered_players=False,
+        include_player_ids=("sleeper:player:p2",),
+    ).normalize_snapshot(snapshot, as_of=AS_OF)
+    assert "sleeper:player:p2" in {player.player_id for player in bounded.players}
+    p2 = next(item for item in bounded.players if item.player_id == "sleeper:player:p2")
+    p2_status = next(item for item in bounded.player_states if item.player_id == "sleeper:player:p2")
+    assert p2.nfl_team is None
+    assert p2_status.provenance.source == "sleeper:current_player_universe"
+    assert "sleeper:player:unrostered-wr" not in {player.player_id for player in bounded.players}
