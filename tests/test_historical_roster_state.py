@@ -7,6 +7,7 @@ from fsffl.state.historical_coverage import (
 )
 from fsffl.state.historical_materializer import HistoricalRosterPlacement
 from fsffl.state.historical_roster_context import reconstruct_sleeper_roster_context
+from fsffl.state.historical_roster_replay import CompletedRosterEvent, replay_roster_membership
 from fsffl.state.historical_roster_state import (
     HistoricalDraftPickOwner,
     HistoricalRosterPlayerEvidence,
@@ -251,3 +252,45 @@ def test_duplicate_provider_team_reference_blocks_identity_ambiguity():
 
     assert result.status == Status.BLOCKED
     assert "team_provider_identity_mapping_is_not_one_to_one" in result.blockers
+
+
+def _normalized_replay(*, pick_universe_complete=True):
+    history = replay_roster_membership(
+        provider="sleeper", league_id=SEASON.league_id, season=SEASON.season,
+        source_revision="normalized-fixture", source_sha256="f" * 64,
+        rules_sha256="rules-fingerprint",
+        end_rosters={"1": ("101",), "2": ("202",)},
+        events=(CompletedRosterEvent("cutoff", CUTOFF, "snapshot_boundary", ()),),
+        end_pick_owners={}, pick_universe_complete=pick_universe_complete,
+        end_budget_usage={"1": 0, "2": 0}, budget_usage_complete=True,
+    )
+    snapshot = next(
+        item for item in history.snapshots
+        if item.effective_at == CUTOFF and item.boundary == "after_completed_event_batch"
+    )
+    return history, snapshot
+
+
+def test_materializes_canonical_state_directly_from_provider_neutral_replay():
+    inputs = _inputs()
+    inputs["history"], inputs["snapshot"] = _normalized_replay()
+
+    result = materialize_historical_roster_state(**inputs)
+
+    assert result.status == Status.MATERIALIZED
+    assert result.state is not None and result.state.as_of == CUTOFF
+    assert {entry.player_id for team in result.state.team_states for entry in team.roster} == {
+        "player-101", "player-202",
+    }
+    assert result.eligible_for_pit_decision_grade is False
+
+
+def test_normalized_replay_cannot_claim_complete_pick_universe_without_archive_coverage():
+    inputs = _inputs()
+    inputs["history"], inputs["snapshot"] = _normalized_replay(pick_universe_complete=False)
+
+    result = materialize_historical_roster_state(**inputs)
+
+    assert result.status == Status.BLOCKED
+    assert result.state is None
+    assert "replay_pick_universe_incomplete" in result.blockers
