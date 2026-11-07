@@ -1,3 +1,9 @@
+## 2026-11-07 — Provider-neutral historical replay now feeds the canonical roster State builder
+
+Backend-first historical snapshot development has completed two reusable increments: PR [#513](https://github.com/jderhagopian-stack/fsffl-next/pull/513) added normalized player/pick/budget replay; PR [#514](https://github.com/jderhagopian-stack/fsffl-next/pull/514) connected those snapshots to the existing fail-closed canonical whole-roster State materializer. Synthetic configurations remove the need for a second private league. Exact focused/archive and Stable gates passed; current run details are in [CURRENT_OPERATIONS](CURRENT_OPERATIONS.md) and [the replay-to-State checkpoint](workstreams/HISTORICAL_REPLAY_STATE_BRIDGE_20261107.md).
+
+**Next backend milestone:** use the retained 2023 archive through the bridge and emit a machine-readable coverage/blocker report at relevant event cutoffs. Preserve the evidence boundary: actual canonical State requires cutoff-matched roster slot placements, canonical identity maps, settings and player-status receipts, direct FAAB balance evidence, and the complete pick universe. Do not infer unavailable facts or treat the membership replay as decision-grade. Continue synthetic rule/team-count profiles for generality; no app/UI work is scheduled until the backend evidence/state path is operational. No database or deployment change was made by PRs #513/#514.
+
 # FSFFL NEXT — Product Roadmap
 
 ## 2026-10-09 — Provider acquisition instrumentation deployed; source-cohort optimization remains gated
