@@ -27,7 +27,14 @@ from .historical_supplemental_evidence import (
     reconcile_supplemental_player_movements,
 )
 from .models import FrozenModel
-from .historical_roster_replay import PlayerTransfer, reverse_player_transfer_batch
+from .historical_roster_replay import (
+    BudgetUsageMovement,
+    DraftPickTransfer,
+    PlayerTransfer,
+    reverse_budget_usage_batch,
+    reverse_draft_pick_transfer_batch,
+    reverse_player_transfer_batch,
+)
 from .retrospective_season_audit import (
     RetrospectiveSeasonAudit,
     audit_retrospective_sleeper_season,
@@ -493,6 +500,7 @@ def reconstruct_sleeper_roster_context(
             snapshots.append(snapshot(at, "after_completed_event_batch", events))
 
             touched: set[tuple[str, str]] = set()
+            ambiguous_pick_ids: set[str] = set()
             normalized_player_transfers: list[PlayerTransfer] = []
             for _, tx in events:
                 adds, drops = tx.get("adds") or {}, tx.get("drops") or {}
@@ -505,8 +513,10 @@ def reconstruct_sleeper_roster_context(
                 except (KeyError, TypeError, ValueError):
                     issues.add("malformed_event_pick_movement")
                     keys = set()
-                if touched.intersection(keys):
+                overlap = touched.intersection(keys)
+                if overlap:
                     issues.add("ambiguous_same_timestamp_asset_order")
+                    ambiguous_pick_ids.update(asset_id for kind, asset_id in overlap if kind == "pick")
                 touched.update(keys)
                 for player_id in set(adds) | set(drops):
                     source = str(drops[player_id]) if player_id in drops else None
@@ -527,19 +537,32 @@ def reconstruct_sleeper_roster_context(
                     except (KeyError, TypeError, ValueError):
                         issues.add("malformed_event_pick_movement")
                         continue
-                    if before not in owners or after not in owners or before == after or pick_owners.get(pick_id) != after:
+                    if pick_id in ambiguous_pick_ids:
+                        continue
+                    try:
+                        normalized_pick = DraftPickTransfer(pick_id, before, after)
+                    except ValueError:
                         issues.add("traded_pick_history_mismatch")
-                    pick_owners[pick_id] = before
+                        continue
+                    pick_issues = reverse_draft_pick_transfer_batch(
+                        pick_owners, owners, (normalized_pick,)
+                    )
+                    if pick_issues:
+                        issues.add("traded_pick_history_mismatch")
                 for movement in tx.get("waiver_budget") or ():
                     if not isinstance(movement, Mapping):
                         issues.add("unreconstructable_faab_transfer")
                         continue
                     try:
                         sender, receiver, amount = str(movement["sender"]), str(movement["receiver"]), int(movement["amount"])
-                        if sender not in used or receiver not in used or amount < 1 or used[sender] is None or used[receiver] is None:
+                        if amount < 1:
                             raise ValueError
-                        used[sender] -= amount
-                        used[receiver] += amount
+                        movement_issues = reverse_budget_usage_batch(
+                            used, owners,
+                            (BudgetUsageMovement(((sender, amount), (receiver, -amount))),),
+                        )
+                        if movement_issues:
+                            raise ValueError
                     except (KeyError, TypeError, ValueError):
                         issues.add("unreconstructable_faab_transfer")
                         for key in ("sender", "receiver"):
@@ -558,9 +581,15 @@ def reconstruct_sleeper_roster_context(
                             issues.add("unreconstructable_waiver_bid")
                             faab_uncertain.add(roster_id)
                         else:
-                            used[roster_id] -= int(bid)
-                            if used[roster_id] < 0:
+                            movement_issues = reverse_budget_usage_batch(
+                                used, owners,
+                                (BudgetUsageMovement(((roster_id, int(bid)),)),) if int(bid) else (),
+                            )
+                            if "budget_usage_reverse_out_of_bounds" in movement_issues:
                                 issues.add("reconstructed_waiver_usage_out_of_bounds")
+                                faab_uncertain.add(roster_id)
+                            elif movement_issues:
+                                issues.add("unreconstructable_waiver_bid")
                                 faab_uncertain.add(roster_id)
 
             snapshots.append(snapshot(at, "before_completed_event_batch", events))

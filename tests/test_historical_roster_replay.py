@@ -3,7 +3,9 @@ from datetime import UTC, datetime
 import pytest
 
 from fsffl.state.historical_roster_replay import (
+    BudgetUsageMovement,
     CompletedRosterEvent,
+    DraftPickTransfer,
     PlayerTransfer,
     replay_roster_membership,
 )
@@ -79,3 +81,61 @@ def test_conflicting_anchor_blocks_whole_batch_without_mutation():
     before = history.pre_transaction_state("one")
     assert "post_event_player_ownership_mismatch" in history.issues
     assert before is not None and before.owner_map() == {}
+
+
+def test_replays_picks_and_budget_usage_with_explicit_coverage():
+    at = datetime(2023, 9, 1, tzinfo=UTC)
+    event = CompletedRosterEvent(
+        "ledger", at, "trade", (),
+        pick_transfers=(DraftPickTransfer("2024:1:1", "a", "b"),),
+        budget_usage_movements=(BudgetUsageMovement((("a", 5),)),),
+    )
+    history = replay_roster_membership(
+        provider="provider", league_id="league", season=2023,
+        source_revision="rev", source_sha256="d" * 64, rules_sha256="e" * 64,
+        end_rosters={"a": (), "b": ()}, events=(event,),
+        end_pick_owners={"2024:1:1": "b"}, pick_universe_complete=False,
+        end_budget_usage={"a": 5, "b": 0}, budget_usage_complete=True,
+    )
+    before = history.pre_transaction_state("ledger")
+    after = history.state_at(at)
+    assert before is not None and after is not None
+    assert dict(before.pick_owners) == {"2024:1:1": "a"}
+    assert dict(after.pick_owners) == {"2024:1:1": "b"}
+    assert dict(before.budget_usage_used) == {"a": 0, "b": 0}
+    assert before.budget_usage_complete is True
+    assert before.pick_universe_complete is False
+
+
+def test_conflicting_pick_anchor_blocks_only_pick_batch():
+    at = datetime(2023, 9, 1, tzinfo=UTC)
+    event = CompletedRosterEvent(
+        "ledger", at, "trade", (),
+        pick_transfers=(DraftPickTransfer("pick-1", "a", "b"),),
+    )
+    history = replay_roster_membership(
+        provider="provider", league_id="league", season=2023,
+        source_revision="rev", source_sha256="d" * 64, rules_sha256="e" * 64,
+        end_rosters={"a": (), "b": ()}, events=(event,), end_pick_owners={"pick-1": "a"},
+    )
+    before = history.pre_transaction_state("ledger")
+    assert before is not None
+    assert dict(before.pick_owners) == {"pick-1": "a"}
+    assert "post_event_pick_ownership_mismatch" in history.issues
+
+
+def test_budget_anchor_unknown_stays_scoped_and_unknown():
+    at = datetime(2023, 9, 1, tzinfo=UTC)
+    event = CompletedRosterEvent(
+        "ledger", at, "waiver", (),
+        budget_usage_movements=(BudgetUsageMovement((("a", 3),)),),
+    )
+    history = replay_roster_membership(
+        provider="provider", league_id="league", season=2023,
+        source_revision="rev", source_sha256="d" * 64, rules_sha256="e" * 64,
+        end_rosters={"a": (), "b": ()}, events=(event,), end_budget_usage={"a": None},
+    )
+    before = history.pre_transaction_state("ledger")
+    assert before is not None
+    assert dict(before.budget_usage_used)["a"] is None
+    assert "budget_usage_anchor_unknown" in history.issues
