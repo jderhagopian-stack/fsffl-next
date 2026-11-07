@@ -1,3 +1,11 @@
+## 2026-11-07 — Reliability correction deployed; one authenticated refresh required
+
+PR #489 merged as `02ffb963218d2a1408ecb58b1c07a563e9845054` from tested head `3da7891be3489a1fcc5a2f4a62659cac47b20704`; their Git trees match exactly. CI and focused diagnostics passed; Stable [42410655322](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/42410655322) passed **2,660 / 5 skipped**, with exact-head checks. Fresh automated review is clean and earlier findings resolved. Render deployment `dep-dbnoncu7bikc73d4oc3g` is live at **20:37:35.958383Z** on that exact merge SHA, with the existing 0.5 CPU/512 MiB instance and auto-deploy off. No infrastructure/provider/schema changes.
+
+Startup RSS 281,247,744 B / peak 295,448,576 B is below budget, but readiness is **partial**: restored October 28 State, Value present, Forecast/Simulation and Current Intrinsic unavailable. Startup fallback errors correctly report a current-input/old-State cutoff mismatch. This is not full refresh acceptance. The next test is one authenticated Refresh Intelligence from the user's signed-in session, followed by phase memory/runtime, cohort, Career/3-Year/Position & Depth and publication verification. The assistant has requested that single action; no refresh has been started by the agent. Preserve last-good and stop on failure. Full details and exact evidence: [release checkpoint](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md).
+
+---
+
 ## 2026-11-07 — Controlled deployment now authorized; review/CI in progress
 
 The user clarified that hosted deployment/testing should proceed. Advance the prepared reliability candidate through exact-head review and CI/Stable, then deploy to the existing service and observe one controlled authenticated refresh. The missing private replay package must not indefinitely block this hosted proof. Preserve current service size, hard cap, source/model/coverage contracts and last-good; no repeated failed refreshes, provider/plan change or migration. PR #489 has been returned to draft before head updates; reuse that PR with non-force history reconciliation. No new deployment has been triggered at this checkpoint. Details: [candidate record](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md).
