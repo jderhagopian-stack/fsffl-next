@@ -1,0 +1,34 @@
+name: Architecture viability source snapshot (public code only)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/architecture-viability-source-snapshot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact research commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Package only tracked repository sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=tar HEAD | gzip -1 > "$RUNNER_TEMP/fsffl-research-source.tar.gz"
+          test -s "$RUNNER_TEMP/fsffl-research-source.tar.gz"
+          echo "source_sha=$(git rev-parse HEAD)"
+          sha256sum "$RUNNER_TEMP/fsffl-research-source.tar.gz"
+      - name: Export source-only archive for private local proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsffl-research-source-public-code-only
+          path: ${{ runner.temp }}/fsffl-research-source.tar.gz
+          retention-days: 7
