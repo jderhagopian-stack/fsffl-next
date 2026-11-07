@@ -1,3 +1,7 @@
+## 2026-11-07 — Reliability correction deployed for hosted verification
+
+PR #489 is merged and live on Render at `02ffb963218d2a1408ecb58b1c07a563e9845054` after exact-head CI, clean review and 2,660-test Stable pass. Bounded Career inputs, complete saved-roster identity retention, bounded real fumbles-schema witnesses and removal of GET-triggered Current Intrinsic builds are deployed. Startup fits the memory budget but restored intelligence remains partial because its October 28 State does not match current inputs. One authenticated refresh and its full resource/output acceptance remain the next gate; do not mark the recurring incident or Career/3-Year coverage complete from deployment alone. See [release checkpoint](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md). No plan/provider/worker/storage migration occurred.
+
 ## 2026-11-07 — First reliability candidate prepared locally
 
 The [local reliability checkpoint](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md) records the saved-roster memory candidate and three Intrinsic reader scheduling corrections, two local executable commits and passing focused/frozen-reference regressions. This advances the first delivery-review step only. Full private accepted-input replay and actual hosted acceptance are still open; nothing was pushed or deployed. The independent historical lane and accepted model/source contracts remain unchanged.
