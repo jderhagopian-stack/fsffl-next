@@ -1,3 +1,21 @@
+## 2026-11-07 — Local reliability candidate prepared (not deployed)
+
+User authorized local implementation after the broader review. Branch `codex/reliability-candidate-20261107` from verified main `1c757c99d4a54a59d36991f5121d2c949b555f42` now has executable commits `6d6ca76b6a469ed672c4e270cc35416eb905b14a` (PR #489 memory candidate plus complete saved-roster identity correction) and `aed01a60b8ae4f6f5463909a3cc2f12fa870c9eb` (Shapley, Player Intelligence Intrinsic and Value Disagreement GETs no longer schedule Current model builds). These are local only; no push, merge, deployment, production write, source acquisition or plan change occurred.
+
+Focused selections passed 127, 130, 20 and 16 tests respectively, with overlap. Sanitized frozen-335 Shapley max delta 0; Career numeric max delta 9.09e-13. Synthetic browser peak 186,388,480 B; this is **not** full Career-refresh memory acceptance. Cold GET, active/failed explicit job, restored authority and Career weak-release behavior are covered. Independent Player Intelligence Future Forecast/history behavior remains unchanged. Full private accepted-input replay, exact hosted-runtime checks, remote exact-head CI/Stable, independent review and hosted acceptance remain open. See [candidate checkpoint](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md) for exact code identity, tests, remaining blockers and handoff.
+
+---
+
+## 2026-11-07 — Broader delivery review and live incident reconciliation (local review)
+
+User requested continued refresh diagnosis plus a broader code/release/roadmap review. The [delivery review](workstreams/PROJECT_DELIVERY_REVIEW_20261107.md) records findings, measured tests, a local saved-roster identity correction on PR #489's exact head, and proposed execution order. No push, merge, deployment, production write, migration or plan change occurred; recommendations are not capability acceptance.
+
+GitHub main verified at `1c757c99d4a54a59d36991f5121d2c949b555f42`. Read-only Render now confirms latest live deployment `dep-dbk1lni9lscs73fk2khg` (November 2) still runs `6d1259e1f5f55078398814a6c2383f7a0d544b84` on one 0.5-CPU/512-MiB web instance, auto-deploy off. The older `dep-dbgm32rvvlss73b2gs2g` is deactivated. Render explicitly confirms an **October 28 15:09:24.793846Z OOM**, after that code shipped, as well as October 25. This supersedes any implication below that the deployed correction merely lacks post-change failure evidence.
+
+PR #489 exact head `d50c84e6cb176da6c4b703bd5300d10cfea4e1ed` has successful CI/Stable but remains open; local review found its saved-roster retention fix still omits dropped frozen-reference identities. Local correction plus failing-before/passing-after regression: 47 selected tests pass. PR #492 is draft/nonmergeable and remains an unintegrated worker seam. Latest historical helpers are merged but do not fix the live compute boundary. See the report for source/runtime dependency and GET-scheduling inconsistencies, preserved gates and exact next work. Private accepted-input full-refresh replay remains blocked by unavailable mounted inputs.
+
+---
+
 ## 2026-11-07 — Provider-neutral replay to canonical roster State (PR #514; merged)
 
 PR [#514](https://github.com/jderhagopian-stack/fsffl-next/pull/514) merged to main as squash `6f27c9443392f91757a5ee4c1ef6b86abfd5b8f1` from exact ready head `d8cb66050aaa5533c0ad10588c8a91efc53ee420`. It connects provider-neutral `HistoricalRosterReplay` snapshots to the fail-closed whole-roster State materializer. Synthetic tests prove successful State construction with independently supplied canonical identities, slot placements, balances, settings, and full pick-universe evidence; incomplete pick coverage and source conflicts return blockers. No second private league is required.
