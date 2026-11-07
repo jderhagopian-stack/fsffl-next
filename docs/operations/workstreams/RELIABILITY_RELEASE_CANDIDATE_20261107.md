@@ -1,5 +1,13 @@
 # Local reliability release candidate — 2026-11-07
 
+## Subsequent authorization — controlled existing-service deployment
+
+The user challenged withholding deployment because hosted testing is necessary. The execution direction is now to advance this candidate through exact-head CI/review and deploy it to the existing Render service, then observe one controlled authenticated refresh. The unavailable private replay package is no longer an absolute predeployment prerequisite. Preserve the existing 0.5 CPU/512 MiB service, hard guard, model/source rules, cohort coverage, atomic publication and last-good; stop and diagnose if the single run fails rather than repeating it. No plan/provider/storage migration or new worker is authorized.
+
+PR #489 was returned to draft before updating its head. Its history is being reconciled by a normal merge (retaining the tested saved-roster correction) so the existing PR branch can advance without force-pushing or opening a competing memory PR. Historical statements below describe the preceding local-only checkpoint.
+
+Current Render deploy/health documentation could not be fetched as either Markdown or HTML (network proxy HTTP 403). Use the connected deployment API and observe actual live state/health; do not infer unverified platform timeout thresholds from memory. No Blueprint or health-check configuration change is required for this existing-service deployment.
+
 ## Status and authority
 
 User authorized finishing the local saved-roster correction, correcting GET-triggered Intrinsic computation, focused validation and preparation of a reviewable candidate. No deployment, provider/plan change, production mutation, migration or remote publication is included.

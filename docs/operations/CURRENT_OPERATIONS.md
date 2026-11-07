@@ -1,3 +1,9 @@
+## 2026-11-07 — Controlled deployment now authorized; review/CI in progress
+
+The user clarified that hosted deployment/testing should proceed. Advance the prepared reliability candidate through exact-head review and CI/Stable, then deploy to the existing service and observe one controlled authenticated refresh. The missing private replay package must not indefinitely block this hosted proof. Preserve current service size, hard cap, source/model/coverage contracts and last-good; no repeated failed refreshes, provider/plan change or migration. PR #489 has been returned to draft before head updates; reuse that PR with non-force history reconciliation. No new deployment has been triggered at this checkpoint. Details: [candidate record](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md).
+
+---
+
 ## 2026-11-07 — Local reliability candidate prepared (not deployed)
 
 User authorized local implementation after the broader review. Branch `codex/reliability-candidate-20261107` from verified main `1c757c99d4a54a59d36991f5121d2c949b555f42` now has executable commits `6d6ca76b6a469ed672c4e270cc35416eb905b14a` (PR #489 memory candidate plus complete saved-roster identity correction) and `aed01a60b8ae4f6f5463909a3cc2f12fa870c9eb` (Shapley, Player Intelligence Intrinsic and Value Disagreement GETs no longer schedule Current model builds). These are local only; no push, merge, deployment, production write, source acquisition or plan change occurred.
