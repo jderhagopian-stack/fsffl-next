@@ -115,8 +115,11 @@ class HistoricalRosterReplay:
     rules_sha256: str
     snapshots: tuple[RosterMembershipSnapshot, ...]
     issues: tuple[str, ...]
+    membership_issues: tuple[str, ...] = ()
+    pick_issues: tuple[str, ...] = ()
+    budget_usage_issues: tuple[str, ...] = ()
     eligible_for_pit_decision_grade: Literal[False] = False
-    model_version: Literal["provider-neutral-roster-replay-v2"] = "provider-neutral-roster-replay-v2"
+    model_version: Literal["provider-neutral-roster-replay-v3"] = "provider-neutral-roster-replay-v3"
 
     def state_at(self, cutoff: datetime, *, boundary: Literal["before", "after"] = "after") -> RosterMembershipSnapshot | None:
         """Return latest reconstructed membership at/before an aware cutoff."""
@@ -160,6 +163,9 @@ def replay_roster_membership(
         raise ValueError("valid season and at least two roster anchors are required")
     owners: dict[str, set[str]] = {}
     issues: set[str] = set()
+    membership_issues: set[str] = set()
+    pick_issues: set[str] = set()
+    budget_usage_issues: set[str] = set()
     for team_id, players in end_rosters.items():
         if not team_id.strip() or len(players) != len(set(players)):
             raise ValueError("team identities and unique end-anchor membership are required")
@@ -169,6 +175,7 @@ def replay_roster_membership(
         overlap = seen.intersection(players)
         if overlap:
             issues.add("end_anchor_duplicate_player_ownership")
+            membership_issues.add("end_anchor_duplicate_player_ownership")
         seen.update(players)
     seen.update(move.player_id for event in events for move in event.player_transfers)
     if len({event.event_id for event in events}) != len(events):
@@ -180,7 +187,7 @@ def replay_roster_membership(
     history_id = "hrpl_" + _digest({
         "provider": provider, "league_id": league_id, "season": season,
         "source_revision": source_revision, "source_sha256": source_sha256,
-        "rules_sha256": rules_sha256, "model_version": "provider-neutral-roster-replay-v2",
+        "rules_sha256": rules_sha256, "model_version": "provider-neutral-roster-replay-v3",
         "end_pick_owners": sorted((end_pick_owners or {}).items()),
         "pick_universe_complete": pick_universe_complete,
         "end_budget_usage": sorted((end_budget_usage or {}).items()),
@@ -220,10 +227,15 @@ def replay_roster_membership(
         transfers = [move for event in batch for move in event.player_transfers]
         batch_issues = reverse_player_transfer_batch(owners, tuple(transfers))
         issues.update(batch_issues)
+        membership_issues.update(batch_issues)
         pick_batch = tuple(move for event in batch for move in event.pick_transfers)
-        issues.update(reverse_draft_pick_transfer_batch(pick_owners, owners, pick_batch))
+        batch_pick_issues = reverse_draft_pick_transfer_batch(pick_owners, owners, pick_batch)
+        issues.update(batch_pick_issues)
+        pick_issues.update(batch_pick_issues)
         budget_batch = tuple(move for event in batch for move in event.budget_usage_movements)
-        issues.update(reverse_budget_usage_batch(budget_usage, owners, budget_batch))
+        batch_budget_issues = reverse_budget_usage_batch(budget_usage, owners, budget_batch)
+        issues.update(batch_budget_issues)
+        budget_usage_issues.update(batch_budget_issues)
         snapshots.append(snapshot(at, "before_completed_event_batch", batch))
 
     snapshots.sort(key=lambda row: (
@@ -231,8 +243,12 @@ def replay_roster_membership(
         row.effective_at or datetime.max.replace(tzinfo=events[0].effective_at.tzinfo) if events else datetime.max,
         0 if row.boundary == "before_completed_event_batch" else 1,
     ))
-    return HistoricalRosterReplay(history_id, provider, league_id, season, source_revision,
-                                  source_sha256, rules_sha256, tuple(snapshots), tuple(sorted(issues)))
+    return HistoricalRosterReplay(
+        history_id, provider, league_id, season, source_revision,
+        source_sha256, rules_sha256, tuple(snapshots), tuple(sorted(issues)),
+        tuple(sorted(membership_issues)), tuple(sorted(pick_issues)),
+        tuple(sorted(budget_usage_issues)),
+    )
 
 
 def reverse_player_transfer_batch(
