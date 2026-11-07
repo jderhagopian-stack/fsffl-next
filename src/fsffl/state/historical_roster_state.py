@@ -134,6 +134,7 @@ class _SourceSnapshot:
     uncertain_player_ids: tuple[str, ...]
     supplemental_evidence_ids: tuple[str, ...]
     pick_universe_complete: bool | None
+    belongs_to_history: bool
 
 
 @dataclass(frozen=True)
@@ -188,6 +189,7 @@ def _source_views(
             uncertain_player_ids=(),
             supplemental_evidence_ids=(),
             pick_universe_complete=snapshot.pick_universe_complete,
+            belongs_to_history=snapshot in history.snapshots,
         )
         return source_history, source_snapshot
 
@@ -218,6 +220,7 @@ def _source_views(
             uncertain_player_ids=snapshot.uncertain_player_ids,
             supplemental_evidence_ids=snapshot.supplemental_evidence_ids,
             pick_universe_complete=None,
+            belongs_to_history=snapshot in history.snapshots,
         )
         return source_history, source_snapshot
     raise TypeError("history and snapshot must be a matching provider adapter or normalized replay pair")
@@ -287,7 +290,11 @@ def materialize_historical_roster_state(
         blockers.add("snapshot_contains_uncertain_player_membership")
     if not source_history.membership_complete:
         blockers.add("source_membership_history_incomplete")
-    if source_history.history_id != source_snapshot.history_id or source_snapshot.snapshot_id not in source_history.snapshot_ids:
+    if (
+        source_history.history_id != source_snapshot.history_id
+        or source_snapshot.snapshot_id not in source_history.snapshot_ids
+        or not source_snapshot.belongs_to_history
+    ):
         blockers.add("snapshot_does_not_belong_to_history")
     if (
         source_history.provider_league_id != season.league_id
