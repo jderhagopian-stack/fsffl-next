@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .intrinsic_presentation import intrinsic_magnitude_coordinate
+
 from collections import defaultdict
 
 from fsffl.value.shapley_intrinsic_contract import (
@@ -109,6 +111,7 @@ def build_intrinsic_market_discovery(
     market = lens_evidence.market_percentiles
     intrinsic_values = lens_evidence.intrinsic_raw
     intrinsic_ranks = lens_evidence.intrinsic_percentiles
+    magnitude = intrinsic_magnitude_coordinate(state.league.rules, "three_year")
     value_coordinate = lens_evidence.value_coordinate
     assert value_coordinate is not None
     owner_by_player = _ownership(runtime)
@@ -138,10 +141,11 @@ def build_intrinsic_market_discovery(
         intrinsic_percentile = intrinsic_ranks[player_id]
         gap = intrinsic_percentile - market_percentile
         market_index = value_coordinate.index_for_percentile(market_percentile)
-        intrinsic_index = value_coordinate.index_for_percentile(intrinsic_percentile)
+        intrinsic_index = (magnitude.index(intrinsic_values.get(player_id)) if magnitude else
+                           value_coordinate.index_for_percentile(intrinsic_percentile))
         display_gap = (
             intrinsic_index - market_index
-            if market_index is not None and intrinsic_index is not None
+            if magnitude is None and market_index is not None and intrinsic_index is not None
             else None
         )
         if abs(gap) < minimum_percentile_gap:
@@ -181,6 +185,7 @@ def build_intrinsic_market_discovery(
                 "intrinsic_percentile": intrinsic_percentile,
                 "market_value_index": market_index,
                 "intrinsic_value_index": intrinsic_index,
+                "intrinsic_index_overflow": bool(magnitude and magnitude.overflow(intrinsic_values.get(player_id))),
                 "value_index_gap": display_gap,
                 "percentile_gap": gap,
                 "absolute_percentile_gap": abs(gap),
@@ -208,6 +213,7 @@ def build_intrinsic_market_discovery(
         ),
         "model_version": INTRINSIC_MARKET_DISCOVERY_VERSION,
         "league_state_id": state.state_id,
+        "intrinsic_presentation": magnitude.summary() if magnitude else None,
         "focal_team_id": runtime.selected_team_id,
         "market_context_id": lens_evidence.market_context_id,
         "market_model_version": lens_evidence.market_model_version,

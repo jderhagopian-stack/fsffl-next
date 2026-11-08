@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .intrinsic_presentation import intrinsic_magnitude_coordinate
+
 from collections import defaultdict
 
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric
@@ -77,6 +79,7 @@ def build_league_value_lenses(
     lens_evidence = build_governed_value_lens_evidence(runtime, intrinsic)
     market = lens_evidence.market_percentiles
     intrinsic_ranks = lens_evidence.intrinsic_percentiles
+    magnitude = intrinsic_magnitude_coordinate(state.league.rules, "three_year")
     value_coordinate = lens_evidence.value_coordinate
     value_coordinate_error = lens_evidence.value_coordinate_error
 
@@ -107,13 +110,14 @@ def build_league_value_lenses(
             else None
         )
         intrinsic_index = (
+            magnitude.index(lens_evidence.intrinsic_raw.get(player_id)) if magnitude is not None else
             value_coordinate.index_for_percentile(intrinsic_percentile)
             if value_coordinate is not None
             else None
         )
         display_gap = (
             intrinsic_index - market_index
-            if market_index is not None and intrinsic_index is not None
+            if magnitude is None and market_index is not None and intrinsic_index is not None
             else None
         )
         player_state = player_states.get(player_id)
@@ -142,6 +146,7 @@ def build_league_value_lenses(
                 "intrinsic_percentile": intrinsic_percentile,
                 "broad_market_value_index": market_index,
                 "intrinsic_value_index": intrinsic_index,
+                "intrinsic_index_overflow": bool(magnitude and magnitude.overflow(lens_evidence.intrinsic_raw.get(player_id))),
                 "value_index_gap": display_gap,
                 "percentile_gap": gap,
                 "comparison_available": gap is not None,
@@ -271,7 +276,8 @@ def build_league_value_lenses(
             "quantity_semantics": (
                 intrinsic.quantity_semantics if intrinsic is not None else None
             ),
-            "display_coordinate": INTRINSIC_PRESENTATION_COORDINATE,
+            "display_coordinate": magnitude.summary()["version"] if magnitude else INTRINSIC_PRESENTATION_COORDINATE,
+            "presentation": magnitude.summary() if magnitude else None,
             "player_count": len(intrinsic_ranks),
             "team_total_authority": False,
             "reason": (

@@ -19,6 +19,7 @@ from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 from .career_presentation import attach_career_player_lenses, career_reference_player_ids
 from .value_lens_evidence import percentile_ranks
 from .value_presentation import build_value_presentation_coordinate
+from .intrinsic_presentation import intrinsic_magnitude_coordinate, reproject_published_intrinsic
 
 
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
@@ -41,6 +42,7 @@ def install_league_value_lens_routes(
 
     def with_career(payload, runtime, *, persisted=False):
         served = (payload.get("presentation_continuity") or {}).get("served_league_state_id") or payload.get("league_state_id")
+        rules = getattr(getattr(runtime.league_state, "league", None), "rules", None)
         generation = payload.get("publication_generation_id")
         generation_matches = ((generation is not None and generation == runtime.publication_generation_id)
                               or (generation is None and not persisted))
@@ -77,10 +79,11 @@ def install_league_value_lens_routes(
                 ranks = percentile_ranks(
                     (row.player_id, row.raw_intrinsic_value) for row in player_values
                 )
+                magnitude = intrinsic_magnitude_coordinate(rules, "three_year")
                 coordinate = None
                 try:
                     evidence = getattr(runtime, "value_evidence", None)
-                    if evidence is not None:
+                    if evidence is not None and magnitude is None:
                         coordinate = build_value_presentation_coordinate(
                             evidence.native_magnitude_observations
                         )
@@ -96,6 +99,7 @@ def install_league_value_lens_routes(
                     market_row = market_rows.get(value.player_id, {})
                     market_percentile = market_row.get("broad_market_percentile")
                     intrinsic_index = (
+                        magnitude.index(value.raw_intrinsic_value) if magnitude is not None else
                         coordinate.index_for_percentile(percentile)
                         if coordinate is not None else None
                     )
@@ -106,7 +110,7 @@ def install_league_value_lens_routes(
                         "intrinsic_value_index": intrinsic_index,
                         "value_index_gap": (
                             intrinsic_index - market_index
-                            if intrinsic_index is not None and market_index is not None else None
+                            if magnitude is None and intrinsic_index is not None and market_index is not None else None
                         ),
                         "percentile_gap": (
                             percentile - market_percentile
@@ -130,7 +134,10 @@ def install_league_value_lens_routes(
             reference_ids=reference_ids,
             three_year_rows=three_year_rows,
             three_year_reason=three_year_reason,
+            rules=rules,
         )
+        if served == runtime.league_state.state_id:
+            result = reproject_published_intrinsic(result, rules)
         readiness = result.get("surface_readiness")
         if isinstance(readiness, dict):
             missing = list(readiness.get("missing_optional") or ())

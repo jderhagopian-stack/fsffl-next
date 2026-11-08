@@ -64,7 +64,7 @@ def test_player_intelligence_preserves_value_and_forecast_authority_boundaries()
     assert "Raw Market and raw Shapley quantities are never subtracted" in source
     assert "Future Y2/Y3 points come directly from Forecast authority" in source
     assert "they are not inferred from Intrinsic" in source
-    assert "shared 0–10,000 presentation ruler" in source
+    assert "Comparison uses percentile ranks" in source
     assert "League Market Value remains unavailable by design" in source
 
 
@@ -266,9 +266,9 @@ def test_north_star_overview_keeps_decision_relevant_content_in_first_screenful(
 
 def test_north_star_value_comparison_only_presents_descriptive_governed_lenses() -> None:
     source = _text("player_intelligence.js")
-    assert "shared 0–10,000 presentation ruler" in source
+    assert "Comparison uses percentile ranks" in source
     assert "separate governed lenses" in source
-    assert "This is not a buy/sell command." in source
+    assert "their difference is not trade value" in source
     assert "Value comparison unavailable" in source
 
 

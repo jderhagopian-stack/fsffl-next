@@ -216,6 +216,26 @@ def _builders(prefix: str):
     )
 
 
+def test_promotion_stamps_nested_current_intrinsic_generation_without_relabelling_stale_evidence():
+    state = _state(datetime(2026, 11, 8, tzinfo=UTC))
+    runtime = _runtime(state)
+    persistence = MemoryPersistence()
+    store = PresentationContinuityStore(persistence)
+    raw = {
+        "league_state_id": state.state_id,
+        "career_intrinsic": {"league_state_id": state.state_id, "publication_generation_id": "old"},
+        "fsffl_intrinsic": {"source_state_id": "stale-state", "publication_generation_id": "stale"},
+    }
+    promotion = store.promote(user_id="jimmy", runtime=runtime,
+                              builders=((MARKET_VALUE_LENSES_ALL_SURFACE, lambda: raw),))
+    assert promotion is not None
+    surface = next(row for row in persistence.artifacts if row.payload.get("surface") == MARKET_VALUE_LENSES_ALL_SURFACE)
+    saved = surface.payload["payload"]
+    assert saved["career_intrinsic"]["publication_generation_id"] == promotion.publication_generation_id
+    assert saved["fsffl_intrinsic"]["publication_generation_id"] == "stale"
+    assert raw["career_intrinsic"]["publication_generation_id"] == "old"
+
+
 def test_cold_surface_read_reuses_manifest_during_snapshot_validation() -> None:
     persistence = MemoryPersistence()
     continuity = PresentationContinuityStore(persistence)

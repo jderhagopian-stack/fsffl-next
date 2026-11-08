@@ -26,7 +26,7 @@ def _node() -> str:
 
 def test_market_disagreement_experience_preserves_value_authority_boundaries() -> None:
     script = _text("intrinsic_market_discovery.js")
-    assert "shared 0-10,000 Value Index is presentation-only" in script
+    assert "versioned 0-10,000 Value Index is presentation-only" in script
     assert "Percentile remains secondary" in script
     assert "not a buy/sell instruction" in script
     assert "raw Market and raw Shapley quantities are never subtracted" in script

@@ -40,6 +40,6 @@ def test_franchise_shapley_migration_preserves_approved_value_hierarchy() -> Non
     assert "League Market Value" in source
     assert "Team Utility" in source
     assert "Broad Market and Shapley Intrinsic use different raw units" in source
-    assert "same versioned 0-10,000 Value Index for presentation" in source
+    assert "its own versioned 0-10,000 reference for presentation" in source
     assert "Raw Market and raw Shapley quantities are never subtracted" in source
     assert "FSFFL Cardinal Value" not in source

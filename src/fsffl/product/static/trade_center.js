@@ -17,7 +17,7 @@ function tradeValueMarkup(option){
   const payload=tradeUiState.valueLenses;
   const row=payload?.league_state_id===state.context?.state_id?(payload.players||[]).find(item=>item.player_id===option.player_id):null;
   const index=value=>typeof value==='number'&&Number.isFinite(value)?Math.round(value).toLocaleString():'Unavailable';
-  return `<span class="asset-kind" title="Presentation indexes only; never package economics">Broad Market ${index(row?.broad_market_value_index)} · 3-Year Intrinsic ${index(row?.intrinsic_value_index)} · Career Intrinsic ${index(row?.career_intrinsic_index)} <small>0–10,000 indexes · raw Career ${escapeHtml(row?.raw_career_forward_reference??'unavailable')}</small></span>`;
+  return `<span class="asset-kind" title="Presentation indexes only; never package economics">Broad Market ${index(row?.broad_market_value_index)} · 3-Year Intrinsic ${index(row?.intrinsic_value_index)}${row?.intrinsic_index_overflow?'+':''} · Career Intrinsic ${index(row?.career_intrinsic_index)}${row?.career_index_overflow?'+':''} <small>0–10,000 indexes · raw Career ${escapeHtml(row?.raw_career_forward_reference??'unavailable')}</small></span>`;
 }
 
 function selectedRefs(side){return side==='focal'?tradeUiState.focalSelected:tradeUiState.counterpartySelected}

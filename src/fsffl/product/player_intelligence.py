@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .intrinsic_presentation import intrinsic_magnitude_coordinate
+
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from threading import RLock
@@ -438,6 +440,7 @@ def build_player_intelligence_overview(
     intrinsic_percentile = None
     intrinsic_index = None
     intrinsic_raw = None
+    magnitude = intrinsic_magnitude_coordinate(state.league.rules, "three_year")
     value_presentation = None
 
     if intrinsic is not None:
@@ -447,7 +450,8 @@ def build_player_intelligence_overview(
         intrinsic_raw = lens.intrinsic_raw.get(player_id)
         if lens.value_coordinate is not None:
             market_index = lens.value_coordinate.index_for_percentile(market_percentile)
-            intrinsic_index = lens.value_coordinate.index_for_percentile(intrinsic_percentile)
+            intrinsic_index = (magnitude.index(intrinsic_raw) if magnitude else
+                               lens.value_coordinate.index_for_percentile(intrinsic_percentile))
             value_presentation = {
                 "status": "ready",
                 **lens.value_coordinate.summary_payload(),
@@ -483,6 +487,9 @@ def build_player_intelligence_overview(
             }
         except ValueError as exc:
             value_presentation = {"status": "unavailable", "reason": str(exc)}
+
+    if magnitude is not None:
+        intrinsic_index = magnitude.index(intrinsic_raw)
 
     forecasts: list[dict[str, object]] = []
     if y1 is not None:
@@ -628,6 +635,8 @@ def build_player_intelligence_overview(
             "broad_market_value_index": market_index,
             "broad_market_percentile": market_percentile,
             "intrinsic_value_index": intrinsic_index,
+            "intrinsic_presentation": magnitude.summary() if magnitude else None,
+            "intrinsic_index_overflow": bool(magnitude and magnitude.overflow(intrinsic_raw)),
             "intrinsic_percentile": intrinsic_percentile,
             "raw_shapley_marginal_points": intrinsic_raw,
             "league_market_value": None,
