@@ -61,3 +61,22 @@ Focused validation: role/producer/fumbles/room/state-identity selection **62 pas
 ### Final provenance correction before promotion
 
 PR #522 first head `11e60c9bd29930fad6738e73019ec27eb6c1438e` passed focused CI and clean automated review. During final source-label inspection, the candidate-only provider-fumbles preservation path could retain an already complete provider row but still label it as using the first-party supplement when a second provider for that player needed completion. Returned the PR to draft before editing. The production routing now clears the unused supplement before scoring/labeling when retaining provider fumbles, and a mixed-provider live-producer regression verifies the exact source label. Updated focused selection: **63 passed**. A new exact-head review/CI/Stable result must replace the earlier head's evidence; no deployment occurred on the superseded head.
+
+
+## Live release — PR #522, 13:55 UTC
+
+Exact final head `40002d866b9d9ed497a5e02493414e993041db83` passed clean automated review at **13:40:17 UTC**, focused CI `42485914489`, Forecast `42485914477`, PR164 `42485914454`, and Stable `42485922748` / job `128747673473`: **2,688 passed / 5 skipped / one warning**, 831.72 s (13:51). Before/after exact-head checks passed. No unresolved review threads. Earlier `11e60c9b` evidence is superseded by this final head.
+
+Merged as **`e0e045a44b4c5b19061922995b1a49d3347c91d2`**, identical tested tree **`fc877a1cfe648e9ca50f8e547be888f1f902f2d7`**. Render **`dep-dbo7u1psrm7s73b74et0`** is live at **2026-11-08T13:55:37.925116Z** on that exact merge. Existing single `0.5c-512mb` web service, branch main, auto-deploy off, no provider/plan/schema/worker change. No full suite repeated on merge push.
+
+At **13:55:56.877397 UTC**, startup restored the existing State `703e822c...` with **Forecast/Simulation/Value complete**, product status **full**, Intrinsic **full**. RSS **340,697,088 B (324.91 MiB)** / process high-water **374,874,112 B (357.51 MiB)**; budget 429,496,720 B, active none/waiters zero. This validates preservation of the old publication at deployment; it is not new-policy RB coverage acceptance or a full refresh memory measurement.
+
+The old publication intentionally remains unchanged, including 11/12 complete RB rooms. The assistant requested exactly one authenticated user Refresh Intelligence after the live restore check. No agent-triggered production refresh or manual artifact rewrite. New publication acceptance requires terminal Career expansion, all rostered coverage or explicit valid remaining failures, complete RB ranks in both 3-Year and Career, coherent source/policy labels, and resource/error evidence. Do not claim the columns are fixed numerically merely because code is deployed.
+
+
+Deployment success event: `evt-dbo7umlfi0pc73b1rmj0`. Canonical Career artifact restored with a durable hit at **13:55:51 UTC** (3,407,281 JSON bytes); no compatible-restore error, failure or restart observed during the checked deployment interval. Refresh action was still pending while this receipt was written.
+
+
+## Completed current-league refresh / user confirmation
+
+The subsequent owned refresh produced State `f0aebd59...`, Career **367 estimates / zero coverage failures**, and final generation `4066eb14...` at **14:22:17 UTC**. Saved QB/RB/WR/TE Career rooms are all **12/12 complete**. The user confirms these capabilities are now operational, with slowness remaining. This closes the current-league RB functional acceptance layer; multi-league/waiver coverage and performance/headroom remain open. [Verified run evidence and next scale work](INTRINSIC_DISPLAY_SCALE_REVIEW_20261108.md).

@@ -46,3 +46,30 @@ Branch `fix/restart-inactive-partial-20261108`, base verified current main `7898
 Three new unrostered/Taxi/IR cases fail before the fix and pass after; also reject wrong-State/version supplements and newly active partials, with both empty and matching stored scopes. Full focused rolling-materiality/persistence selection: **89 passed**. A real saved-guard replay using the exact production supplement/partial/scope plus all **214 active roster IDs** returns **false before / true after**, with zero provider requests/database writes. This is exact guard-input evidence, not a full decoder/hosted restore claim. A new manifest-bound persistence roundtrip verifies the partial row and raw evidence are preserved across restart.
 
 No additional intelligence refresh was initiated. Hosted restart must restore Forecast/Simulation/Career before physical roster/history acceptance can close.
+
+
+## Restart correction deployed — PR #520
+
+Exact head `5195391b55fe588b8df0e470260872178d000f50`: clean automated review at 04:43:26 UTC, CI `42447851464`, Forecast `42447851509`, PR164 `42447851657`, and Stable `42447858603` / job `128630508901` passed. Stable: **2,674 passed / 5 skipped / one warning**, 830.29 s (13:50), before/after head checks passed. Squash `c9c572f75edb242ab08493d12d3a15836a9693c2` has identical tree `4fd23892e860659aaa4cca5a1b52a581d3f76069`. Existing Render deployment `dep-dbo02jgu01pc73dte7lg` is live at **04:59:12.802143 UTC** on that exact merge. No suite repeated on merge push; no plan/provider/schema/source/calculation change and no intelligence refresh initiated.
+
+Additional private read-only evidence while CI ran:
+
+- Actual complete saved Forecast decodes and restores natively with the corrected guard (before: Forecast/Simulation absent, Value present; after: Forecast present). Native local Simulation compatibility correctly rejects local Python 3.12.14/NumPy 2.3.5 versus stored hosted 3.12.10/2.5.3. Its decoder succeeds. With only runtime identity mocked to the recorded hosted identity, the complete exact Forecast/Simulation/Value bundle restores unchanged generation `ffae3672dcb9f9624816b1e7f03a24ed77c0ca5fa00f08e19075982d03aff419` in ~0.310 s, process high-water 221,204 KiB. This is not native hosted proof. Render build logs independently confirm real deployed Python 3.12.10 and pinned NumPy 2.5.3.
+- Lamar Jackson's actual saved career history matches the **current State/rules** key and contains **eight seasons, 2018–2025**, with stats and fantasy points. The normal service restores it without provider acquisition/writes; the actual local background coordinator/FastAPI route returns **HTTP 200 ready, 8 seasons**, ~0.194 s, process peak **169,268 KiB**. This is local API evidence, not physical Safari acceptance.
+- All replay files are private, mode 0600 under `/tmp`; none of the raw State/artifact/history payloads is committed. Historical records and partial data remain intact.
+
+Hosted startup and physical acceptance are recorded below when observed. Saved publication/readiness or a passing test alone must not close the user's roster/history/chart gate.
+
+
+### Hosted restore observed — 04:59:31 UTC
+
+Deployment succeeded event `evt-dbo0387j2his73f2u6jg`. Startup read the canonical `career_intrinsic_v1` record successfully (3,407,281 JSON bytes, 04:59:26 UTC), with no compatible-restore error. At **04:59:31.491826 UTC**, runtime logged **Forecast=true / Simulation=true / Value=true / complete=true**, same State `703e822cd9186c3d1b7590d64a2479ff93763c451d1ac5c21d4c66c1f1dda846`; product status **full**, Intrinsic **full**. RSS **338,165,760 B (322.50 MiB)** / process high-water **369,860,608 B (352.73 MiB)**; budget 429,496,720 B, active none/waiters zero. No server failure/restart or history failure/503 observed in the post-deploy interval checked. This is successful startup/restore evidence, not a concurrent page-use peak measurement.
+
+Physical roster Career/history/chart confirmation is still pending. The user has been asked to reload once and open the affected cards, without another refresh. No authenticated user session is available to the agent for an independent hosted card read. The actual local history route is ready from real saved current-rules evidence; final Safari rendering and hosted history delivery must still be confirmed. Preserve the remaining page-use memory gate; one successful startup does not establish broad concurrency capacity.
+
+State: LIVE CORRECTIONS / PHYSICAL ACCEPTANCE PENDING. Next action: observe the user's normal roster/player-card reads, confirm the eight historical rows/chart and Career indexes, inspect memory/errors; diagnose any logged provider failure separately. No repeated refresh or plan/source changes.
+
+
+## Physical follow-up and RB-specific continuation
+
+The user subsequently confirmed everything is filling in except RB Position & Depth in 3-Year/Career. This confirms the preceding roster Career/history/chart recovery; RB remains a separate coverage gate. The shared room aggregator has 11/12 complete RB rooms because unsigned Pierce was blocked by a partial provider row. User-directed input rules and live PR #522 are recorded in [the RB workstream](POSITION_ROOM_RB_COVERAGE_20261108.md). That release preserves existing publication identity on startup and requires one new governed refresh for new values. No broad page-use/concurrency capacity claim follows from this confirmation.
