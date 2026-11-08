@@ -40,3 +40,33 @@ Saved ROS replay remains undercovered: Mingo/McMillan/McCaffrey have one source 
 ## Remaining acceptance
 
 After exact-head Stable/review and an authorized merge/deployment: confirm exact live SHA, restore readiness and memory, then observe one authenticated explicit refresh. Verify terminal Career coverage, coherent 3-Year/Career values in all views, Position & Depth state and persistence, peak memory/CPU, errors/restarts and physical user results. No plan/provider/schema/worker change or repeated failure loop is authorized by this receipt.
+
+## Observed hosted refresh — 03:49:42 UTC
+
+The user started exactly one authenticated refresh after deployment. Job `intelligence:33fc280d64114c0594e301220ca313a7`, State `703e822cd9186c3d1b7590d64a2479ff93763c451d1ac5c21d4c66c1f1dda846`. Core completed successfully in **118.847 s** at 03:51:41.569950 UTC. The new completion text correctly separates Career/Dynasty readiness.
+
+- Forecast used the accepted immutable preseason fallback because only Razzball supplied eligible live full-season evidence. CBS served the wrong horizon, FFToday returned 403, NFL Fantasy lacked projection content. Source-health degradation remains explicit; no source minimum was lowered.
+- Simulation kernel **6.495 s wall / 3.189 s CPU**; 50,000 trials, existing behavior.
+- Career exact Y4-Y7 restore **3.005 s wall**, including a compatibility check. No reference long-horizon rebuild marker appeared.
+- The new 334-player reference checkpoint was saved at 03:51:58.566724 UTC.
+- Live P0 acquisition/scoring **13.388 s wall / 5.471 s CPU**, sampled RSS peak **483,422,208 B**, after-release RSS **423,395,328 B**.
+- Accepted dynamic Foundation 4 materialization **198.434 s wall / 97.817 s CPU**, sampled RSS peak **486,268,928 B**. It completed at 03:55:34.172859 UTC.
+- Expanded-cohort composition and final persistence produced **366 Career estimates** at 03:59:22.753301 UTC. It is a complete expansion, not only a reference checkpoint. Dependency fingerprint `b001f7cd7612ee81689c4144bdd7a66a0f6050fc155681c30aae4266a5ef5d11`.
+- Final Career-backed presentation generation **ffae3672dcb9f9624816b1e7f03a24ed77c0ca5fa00f08e19075982d03aff419** was durably pointed to at 04:00:09.767284 UTC; atomic pointer phase completed at 04:00:11.511608 UTC. End-to-end through this save: **about 10 min 29 s** from the user action.
+- No Render OOM, server-failed or restarted event during the observed run.
+
+### Peak and capacity limits
+
+Highest reported process high-water at final presentation: **513,142,784 B = 489.37 MiB**. The sampler's maximum earlier in fitting was 486,268,928 B. Render 30-second charged-memory samples reached **444,805,120 B = 424.20 MiB**; CPU reached the complete **0.5 allocation**. RSS and charged memory are different measures, and sampled container metrics can miss short peaks. The successful run does not establish comfortable headroom: process high-water is only ~22.6 MiB below the configured 512 MiB threshold and exceeds the 409.6 MiB application working target. Final observed RSS remains about 471.7 MiB. Preserve further memory/retention and concurrent-reader capacity work as an open gate; do not infer broad multi-user safety from one survivor.
+
+Some compatibility reads still overlapped before the job (three start markers at 03:49:05–06), despite the exact-object in-flight coalescing working in the saved-input test. Do not claim every semantic-equivalent reader is coalesced. The guard intentionally distinguishes different immutable input objects/epochs; investigate producer-owned lightweight dependency receipts before broadening reuse.
+
+### Publication and user-visible coverage
+
+Read-only database verification confirms the final matching-State generation contains ready rostered-player 3-Year/Career lenses and ready Dynasty position rooms. All five screenshot subjects (Dak Prescott, Omarion Hampton, Quinshon Judkins, Drake London, CeeDee Lamb) now have finite 3-Year and Career indexes and ready row statuses in that saved publication.
+
+Career covers **257 / 258 rostered QB/RB/WR/TE subjects**. The remaining explicit failure is **Dameon Pierce (`sleeper:player:8129`)**: no complete Y1 raw scoring row, CBS absent, Razzball only, verified current role unsigned; role evidence is not a return projection or proof of whole-season absence. His canonical roster row is preserved and no value is invented.
+
+Current Position & Depth is **ready for every configured slot, including WR**, in this new publication. This is not a numerical fallback change: the formerly deficient team now has additional covered WR roster IDs `sleeper:player:3286` and `sleeper:player:4177`; its third WR slot is filled by the latter. Missing outlooks for the old undercovered subjects remain missing. The new exact State/roster permits the unchanged comparison to run. Do not claim the source-coverage policy issue was repaired by changing calculations.
+
+Physical confirmation is pending. The assistant asked whether 3-Year/Career values and Current WR appear after one page reload, explicitly without another intelligence refresh. A saved ready publication is not itself proof of the user's rendered device state.

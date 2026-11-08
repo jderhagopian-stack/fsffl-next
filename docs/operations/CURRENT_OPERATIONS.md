@@ -1,3 +1,13 @@
+## 2026-11-08 — Hosted refresh and Career publication completed; physical confirmation pending
+
+On deployed `259c7b9e`, the user's single job `intelligence:33fc280d64114c0594e301220ca313a7` published core in **118.847 s**, then completed dynamic Career fitting/composition and saved **366 estimates**, covering **257/258 rostered QB/RB/WR/TE**. Dameon Pierce remains explicitly unscored for insufficient current Y1 evidence. Final Career-backed generation `ffae3672dcb9f9624816b1e7f03a24ed77c0ca5fa00f08e19075982d03aff419` for State `703e822cd9186c3d1b7590d64a2479ff93763c451d1ac5c21d4c66c1f1dda846` was durably pointed to at 04:00:09 UTC (~10 min 29 s total through atomic save). No OOM/restart observed.
+
+Saved 3-Year/Career lenses and Dynasty rooms are ready; screenshot subjects have both indexes. Current WR is also ready in this new State because the previously deficient roster now contains additional covered WRs; accepted source/fallback rules are unchanged and old subject evidence gaps persist. Physical device confirmation after one page reload is pending.
+
+Memory remains tight: process peak **513,142,784 B (489.37 MiB)**, Render sampled charged-memory maximum **444,805,120 B**, CPU reaches 0.5. The run survived but does not establish comfortable concurrency/scaling headroom. Reference restore took 3.005 s; dynamic fitting 198.434 s wall/97.817 s CPU. Forecast source-health degraded into the accepted preserved preseason fallback. [Complete evidence and limits](workstreams/REFRESH_CORRECTION_ACCEPTANCE_20261108.md).
+
+---
+
 ## 2026-11-08 — Memory correction deployed; full refresh and WR acceptance open
 
 PR #517 merged as `259c7b9e28b157577d3782b6ee77fa2c249d5277` from exact head `2841872f782420cb1ee6748c8a2aa394c867b411`, identical tree. CI and fresh automated review passed; Stable `42441934203` passed **2,667 / 5 skipped**, 750.46 s, with before/after head checks. Existing Render deployment `dep-dbnupbh5efls73cdm2j0` is **live at 03:31:23.208615 UTC** on that merge, unchanged 0.5 CPU/512 MiB service. Restored core evidence/standalone Current is ready; startup RSS 342,052,864 B / peak 354,840,576 B. This is not Career or full user-facing acceptance.
