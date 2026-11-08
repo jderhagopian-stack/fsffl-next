@@ -9,6 +9,13 @@ import pytest
 
 
 def function(path, name, namespace):
+    # Extracted functions execute outside their module; supply the real new
+    # presentation dependencies just as the production module imports them.
+    from fsffl.product.intrinsic_presentation import (
+        intrinsic_magnitude_coordinate, reproject_published_intrinsic,
+    )
+    namespace.setdefault("intrinsic_magnitude_coordinate", intrinsic_magnitude_coordinate)
+    namespace.setdefault("reproject_published_intrinsic", reproject_published_intrinsic)
     tree = ast.parse(Path(path).read_text())
     node = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == name)
     node.returns = None

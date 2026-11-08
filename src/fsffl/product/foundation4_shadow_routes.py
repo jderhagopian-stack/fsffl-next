@@ -263,7 +263,7 @@ def install_career_intrinsic_routes(
         )
         summary, presentation_rows = career_lens_for_publication(
             record, served_state_id=record.league_state_id, reference_ids=reference_ids,
-            rules=_context.league_state.league.rules,
+            rules=getattr(getattr(_context.league_state, "league", None), "rules", None),
         )
         payload["career_presentation"] = summary
         for row in payload["estimates"]:
