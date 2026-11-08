@@ -1,3 +1,13 @@
+## 2026-11-08 — Memory correction deployed; full refresh and WR acceptance open
+
+PR #517 merged as `259c7b9e28b157577d3782b6ee77fa2c249d5277` from exact head `2841872f782420cb1ee6748c8a2aa394c867b411`, identical tree. CI and fresh automated review passed; Stable `42441934203` passed **2,667 / 5 skipped**, 750.46 s, with before/after head checks. Existing Render deployment `dep-dbnupbh5efls73cdm2j0` is **live at 03:31:23.208615 UTC** on that merge, unchanged 0.5 CPU/512 MiB service. Restored core evidence/standalone Current is ready; startup RSS 342,052,864 B / peak 354,840,576 B. This is not Career or full user-facing acceptance.
+
+Saved-input concurrent-reader replay matches the actual production Intrinsic dependency key: four readers now share one authority replay, measured ~0.226 s / 180,244 KiB versus four independent replays ~0.646 s / 194,016 KiB. The 334-player reference parity/reuse result remains valid. Full dynamic replay has a precise blocker: accepted research bundle restores, but the execution proxy rejects the initial Sleeper NFL-state request with 403. No source inputs were fabricated.
+
+The assistant requested one authenticated Refresh Intelligence after deployment and is awaiting the user's action. No agent-triggered production refresh or repeated failure run. Current WR is still source-undercovered under the unchanged two-source/scoring-gap fallback rules; diagnostics are improved, numerical coverage is not claimed. Preserve the all-view 3-Year/Career, Position & Depth, persistence and physical gates. [Exact receipt and limits](workstreams/REFRESH_CORRECTION_ACCEPTANCE_20261108.md).
+
+---
+
 ## 2026-11-07 — Post-refresh correction authorized; candidate in progress
 
 User requested fixes for app-wide missing Intrinsic and Current WR failure. Main remains `02ffb963`; [PR #517](https://github.com/jderhagopian-stack/fsffl-next/pull/517), branch `fix/refresh-resource-coverage-20261107`, implementation `c84e5c0f8923325359e70edb2eea61a06a4a53e3`, adds exact-semantic Y4-Y7 component reuse during Career, in-flight sharing of compatibility reads, truthful core completion wording, early Career attribution and preserved Current coverage diagnostics. Real saved 334-player reference replay matches the unchanged output: ~77.480 s recomputation versus ~0.835 s reuse, corrected peak 195,660 KiB. This is not full dynamic/hosted acceptance.
