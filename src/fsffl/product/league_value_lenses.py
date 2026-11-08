@@ -146,6 +146,7 @@ def build_league_value_lenses(
                 "intrinsic_percentile": intrinsic_percentile,
                 "broad_market_value_index": market_index,
                 "intrinsic_value_index": intrinsic_index,
+                "intrinsic_index_overflow": bool(magnitude and magnitude.overflow(lens_evidence.intrinsic_raw.get(player_id))),
                 "value_index_gap": display_gap,
                 "percentile_gap": gap,
                 "comparison_available": gap is not None,

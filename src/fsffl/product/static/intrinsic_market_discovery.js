@@ -1,6 +1,6 @@
 /* Phase 3 Intrinsic-vs-Broad-Market discovery lens.
  * Lazy-loads only after the customer opens the lens.
- * The shared 0-10,000 Value Index is presentation-only; raw Market and raw
+ * The versioned 0-10,000 Value Index is presentation-only; raw Market and raw
  * Shapley remain distinct authorities. No recommendation or acceptance
  * probability is created here.
  */
@@ -65,7 +65,7 @@
         <small>${esc(row.position||'')}${finite(row.age_years)?` · age ${row.age_years}`:''} · ${esc(row.owner_team_name||'Owner unavailable')}</small>
       </div>
       <div><small>Broad Market</small><strong>${index(row.market_value_index)}</strong><span>${pct(row.market_percentile)}</span></div>
-      <div><small>FSFFL Intrinsic</small><strong>${index(row.intrinsic_value_index)}</strong><span>${pct(row.intrinsic_percentile)}</span></div>
+      <div><small>FSFFL Intrinsic</small><strong>${index(row.intrinsic_value_index)}${row.intrinsic_index_overflow?'+':''}</strong><span>${pct(row.intrinsic_percentile)}</span></div>
       <div class="imd-gap"><small>Percentile difference</small><strong>${signedPct(row.percentile_gap)}</strong><span>${esc(directionCopy(row))}</span></div>
       <button type="button" class="secondary-button" data-imd-focus="${rowIndex}">${esc(actionLabel(row))}</button>
     </article>`;
@@ -87,7 +87,7 @@
         <button type="button" class="text-button" data-imd-close>Close</button>
       </header>
       ${loading?'<div class="imd-loading"><i></i><span>Preparing governed Intrinsic server-side. This will end in ready or an explicit unavailable state.</span></div>':bodyMarkup(payload)}
-      <details class="imd-methods"><summary>Methods & authority</summary><p>The 0-10,000 Value Index is a presentation-only percentile-equated ruler derived from governed native Market distributions. Broad Market and raw Shapley remain different authorities; raw Market and raw Shapley quantities are never subtracted. The displayed Index gap is allowed only because both display numbers use the same versioned ruler. League Market Value remains unavailable. Team Utility and acceptance evidence remain separate.</p></details>
+      <details class="imd-methods"><summary>Methods & authority</summary><p>Broad Market and Intrinsic have independent presentation references. Intrinsic magnitude scores preserve contribution proportions below the fixed benchmark. A plus sign marks values above the display reference. Comparison uses percentile ranks; raw Market and raw Shapley quantities are never subtracted. League Market Value remains unavailable. Team Utility and acceptance evidence remain separate.</p></details>
     </section>`;
   }
   function installTrigger(panel){

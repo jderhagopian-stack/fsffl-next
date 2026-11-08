@@ -175,6 +175,21 @@ def test_percentile_ranks_center_ties_without_inventing_common_units() -> None:
     assert ranks == {"a": 0.125, "b": 0.5, "c": 0.5, "d": 0.875}
 
 
+def test_magnitude_discovery_reports_overflow_and_uses_rank_disagreement(monkeypatch):
+    from fsffl.product import intrinsic_market_discovery as module
+    from fsffl.product.intrinsic_presentation import IntrinsicMagnitudeCoordinate
+    monkeypatch.setattr(module, "intrinsic_magnitude_coordinate",
+                        lambda rules, horizon: IntrinsicMagnitudeCoordinate(horizon, 750, "fixture"))
+    intrinsic = _intrinsic()
+    next(row for row in intrinsic.estimates if row.player_id == "p2").raw_intrinsic_value = 900
+    result = build_intrinsic_market_discovery(_runtime(), intrinsic)
+    row = next(row for row in result["rows"] if row["player_id"] == "p2")
+    assert row["intrinsic_value_index"] == 10000
+    assert row["intrinsic_index_overflow"] is True
+    assert row["value_index_gap"] is None
+    assert row["percentile_gap"] == row["intrinsic_percentile"] - row["market_percentile"]
+
+
 def test_discovery_uses_shared_value_index_and_preserves_action_boundaries() -> None:
     runtime = _runtime()
     payload = build_intrinsic_market_discovery(
