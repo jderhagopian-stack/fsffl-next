@@ -1,3 +1,11 @@
+## 2026-11-08 — Intrinsic magnitude v1 deployed; reload without a refresh
+
+PR #524 merged as **53712984**, identical tree to tested **5319d87b**. Exact-head clean automated review, CI and Stable **2699 passed / 5 skipped**, 638.91 s, before/after SHA checks. Render **dep-dboc345g1s2s73ep3f3g** live **18:39:56 UTC** on that merge; unchanged 0.5 CPU/512 MiB single web service, auto-deploy off. At **18:40:13 UTC**, saved State `f0aebd59...` restores Forecast/Simulation/Value complete and product/Intrinsic **full**; RSS **334.05 MiB**, high-water **363.84 MiB**, no active work/waiters.
+
+Supported-format 3-Year/Career displays now use fixed linear 750/2200 raw benchmarks with explicit overflow, separate percentiles and independent Market. Current saved raw rows project without another refresh or historical writes. All 367 current values were reconciled before release. Market overflow stays independent; Analytics/League disagreement uses rank gaps. Raw models, source rules, player coverage, historical payloads and Position & Depth raw calculations are preserved. User only needs to reload the page. Direct signed-in hosted browser verification is blocked by environment proxy/credentials; physical screen acceptance remains distinct. Startup does not close slow-refresh or page-use headroom work. [Exact receipts, limits and next work](workstreams/INTRINSIC_MAGNITUDE_RELEASE_20261108.md).
+
+---
+
 ## 2026-11-08 — Historical-actuals scale evaluation accepted; linear display release authorized
 
 User directs proceeding through deployment using historical actuals for display-scale diagnostics. Historical forecast vintages are not a blanket release prerequisite. Preserve accepted raw models and uncertainty; 750/2200 are fixed versioned display benchmarks, not forecast ceilings. Historical test: 1/1623 complete Superflex three-year windows over 750, by at most 0.4853%; 1QB 0/1623. Current 367 players reconcile with accepted raw artifacts and none exceeds either reference. Career tail retains its accepted research/model/holdout authority.
