@@ -111,3 +111,5 @@ Direct CBS HTML fetch is blocked by the execution network proxy (403); the conne
 - `git diff --check` passes. Private saved input/output files remain outside the repository with mode 0600. Remote CI, exact-head Stable/review, full dynamic/hosted memory and all-view physical acceptance remain required before promotion.
 
 No claim that the WR room is numerically restored or that the deployed service is fixed. The proposed source/fallback decision remains explicit; there is no model-rule change in this candidate.
+
+Candidate implementation commit: `c84e5c0f8923325359e70edb2eea61a06a4a53e3`, [PR #517](https://github.com/jderhagopian-stack/fsffl-next/pull/517), opened draft. Its final documentation head must pass remote CI/Stable and fresh review before merge. The PR includes deployment record #516's ancestor commit but does not merge or close #516; no blocked default-branch mutation was retried. The current Render release remains `02ffb963`.
