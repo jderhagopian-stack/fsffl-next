@@ -1,3 +1,13 @@
+## 2026-11-08 — Player-card and restart corrections live; physical confirmation pending
+
+PR #519 merged `7898f79c` after clean review/CI and Stable **2,670 / 5 skipped**; PR #520 merged `c9c572f7` after clean review/CI and Stable **2,674 / 5 skipped**. Current Render **`dep-dbo02jgu01pc73dte7lg`**, exact `c9c572f7`, live **04:59:12 UTC**, unchanged single 0.5 CPU/512 MiB web service, auto-deploy off. No new intelligence refresh or provider/plan/schema/source/scoring change.
+
+At **04:59:31 UTC**, the saved State `703e822c...` restored **Forecast/Simulation/Value complete**, product/Intrinsic **full**, with a canonical Career artifact hit. Startup RSS **322.50 MiB**, peak **352.73 MiB**, active none/waiters zero. The inactive-partial validator bug is corrected with active-player/State/supplement checks preserved. Roster cards consume ready exact-generation Career lenses, compatibility workspaces serialize/reclaim, and history memory admission retries without caching a permanent failure.
+
+Lamar's actual current-rules history exists for **2018–2025**; a local real-data background/API replay returned **HTTP 200 ready with eight seasons**, 0.194 s, peak 169,268 KiB, zero provider calls/writes. Physical Safari Career/history/chart and normal hosted-page memory acceptance remain open; user reload/card reads requested, no further refresh. Unsigned Dameon Pierce's absent projection is expected. [Full correction/test/deploy evidence](workstreams/PLAYER_CARD_CORRECTION_20261108.md); [preceding successful refresh receipt and peak limits](workstreams/REFRESH_CORRECTION_ACCEPTANCE_20261108.md).
+
+---
+
 ## 2026-11-08 — Player-card correction deployed; narrow restart validator fix in progress
 
 PR #519 passed CI/clean review and exact-head Stable **2,670 / 5 skipped**, then merged as `7898f79c` and deployed live at **04:35:34 UTC** (`dep-dbnvnd6417fc73esqkog`) on the unchanged Render plan. Roster now consumes exact-generation published Career indexes, the Career endpoint uses retained cohort IDs, compatibility workspaces serialize/reclaim, and history memory admission is retryable. Physical acceptance remains open.
