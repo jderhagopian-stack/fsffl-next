@@ -75,3 +75,8 @@ The old publication intentionally remains unchanged, including 11/12 complete RB
 
 
 Deployment success event: `evt-dbo7umlfi0pc73b1rmj0`. Canonical Career artifact restored with a durable hit at **13:55:51 UTC** (3,407,281 JSON bytes); no compatible-restore error, failure or restart observed during the checked deployment interval. Refresh action was still pending while this receipt was written.
+
+
+## Completed current-league refresh / user confirmation
+
+The subsequent owned refresh produced State `f0aebd59...`, Career **367 estimates / zero coverage failures**, and final generation `4066eb14...` at **14:22:17 UTC**. Saved QB/RB/WR/TE Career rooms are all **12/12 complete**. The user confirms these capabilities are now operational, with slowness remaining. This closes the current-league RB functional acceptance layer; multi-league/waiver coverage and performance/headroom remain open. [Verified run evidence and next scale work](INTRINSIC_DISPLAY_SCALE_REVIEW_20261108.md).

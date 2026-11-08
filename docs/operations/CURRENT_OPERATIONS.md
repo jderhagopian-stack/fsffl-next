@@ -1,3 +1,13 @@
+## 2026-11-08 — Current-league Intrinsic/RB recovery accepted; resume display-scale work
+
+User confirms the repaired capabilities now work, though very slowly, and asks to resume useful/consistent Intrinsic 0–10,000 translation. Exact live/main remains `e0e045a4` (#522). Latest State `f0aebd59...`, final generation `4066eb14...`, saved **14:22:17 UTC**, has **367 Career estimates / no coverage failures**, Pierce's approved assumption, and **12/12 complete QB/RB/WR/TE Career rooms**. Current-league RB functional acceptance is confirmed; broader coverage/performance is not closed.
+
+Code audit recovers #375: 3-Year currently maps raw ranks through a Market-shaped display curve; Career maps its independent raw reference game to empirical midrank ×10,000. Both preserve ordering but discard raw Intrinsic gap magnitude and use different display spacing. Next proposed deliverable: an offline, saved-publication comparison for one governed Intrinsic scaling methodology with explicit horizon/format anchors, zero/negative/outlier rules, stable versions and all-surface consistency; raw economics/room/Decision authority remain unchanged. No new numerical mapping is approved or deployed.
+
+Speed remains release work: Career publication followed core by ~8m54s, fitting took 194.967s, and ~4m56s remained through later composition/publication. A later compatibility read still took 3.193s. Observed process high-water ~543.35 MiB and Render sampled charged memory ~493.71 MiB mean comfortable headroom is unproven, despite no failure/restart event in the checked interval. [Full audit, original authority, examples, run evidence and proposed sequence](workstreams/INTRINSIC_DISPLAY_SCALE_REVIEW_20261108.md).
+
+---
+
 ## 2026-11-08 — Unsigned ROS and single-source fumbles rules deployed; one refresh requested
 
 PR #522 exact head `40002d86` passed clean review/CI and Stable **2,688 / 5 skipped**, 831.72 s, before/after head checks. Merge **`e0e045a4`** has the identical tested tree. Render **`dep-dbo7u1psrm7s73b74et0`** is live at **13:55:37 UTC**, unchanged single 0.5 CPU/512 MiB service. Fresh verified unsigned status now has priority over provider ROS rows; retain YTD actuals, assume no added ROS production, and preserve future/Shapley/Career methods. Admitted single-source gaps are completed through the existing FUMBLES_LOST model across both scoring systems; existing provider fumbles is retained and labeled accurately.
