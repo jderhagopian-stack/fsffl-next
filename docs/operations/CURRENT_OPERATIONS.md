@@ -1,3 +1,13 @@
+## 2026-11-08 — Physical recovery confirmed; RB column blocked by projection-row veto
+
+User reports all prior card/history/Career symptoms recovered, except RB Position & Depth in both 3-Year and Career. Read-only saved publication shows **11/12 complete RB rooms**; unsigned rostered Dameon Pierce is the only missing Career subject. The shared aggregator suppresses every league RB rank/strength index until all rooms are complete; the UI disables those cells.
+
+Existing generic unsigned and exact-State IR YTD-only exceptions do exist. Both deliberately reject **any provider projection row**, including unusable partial rows, under the October 24 recorded rule. Pierce has a nonzero undercovered Razzball row, so that veto blocks his fallback. Backup/practice-squad one-source eligibility and developmental future modeling are separate rules, not blanket zero Career. Existing role/exception suites: **22 passed**, code unchanged.
+
+Proposal: extend already-approved role-eligible YTD-only admission to cases with no **complete admissible** projection, retaining provider priority/conflict disclosure, actuals, low-confidence labels and unchanged future/Shapley/Career math. This changes the explicit provider-row veto and requires user disposition; no numerical/source/deployment/refresh change made. [Full audit, exact source evidence and proposed rule](workstreams/POSITION_ROOM_RB_COVERAGE_20261108.md).
+
+---
+
 ## 2026-11-08 — Player-card and restart corrections live; physical confirmation pending
 
 PR #519 merged `7898f79c` after clean review/CI and Stable **2,670 / 5 skipped**; PR #520 merged `c9c572f7` after clean review/CI and Stable **2,674 / 5 skipped**. Current Render **`dep-dbo02jgu01pc73dte7lg`**, exact `c9c572f7`, live **04:59:12 UTC**, unchanged single 0.5 CPU/512 MiB web service, auto-deploy off. No new intelligence refresh or provider/plan/schema/source/scoring change.

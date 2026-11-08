@@ -1,0 +1,38 @@
+# RB Position & Depth coverage — November 8, 2026
+
+## Physical acceptance and exact scope
+
+User confirms everything is filling in except RB in both 3-Year and Career Position & Depth. This confirms recovery of the preceding roster Career/history/chart symptoms on their device; RB room acceptance remains open. Current main verified read-only at `c9c572f75edb242ab08493d12d3a15836a9693c2`, live Render `dep-dbo02jgu01pc73dte7lg`. No new refresh, code deployment, source capture, production mutation or calculation change.
+
+## Confirmed diagnosis
+
+Read-only final saved generation `ffae3672dcb9f9624816b1e7f03a24ed77c0ca5fa00f08e19075982d03aff419`, State `703e822cd9186c3d1b7590d64a2479ff93763c451d1ac5c21d4c66c1f1dda846`, contains 12/12 complete QB/WR/TE rooms and **11/12 RB rooms**. The RB room for team 3 is incomplete; the only Career coverage failure is Dameon Pierce `sleeper:player:8129`, verified unsigned with an explicitly empty current NFL catalog team. His roster identity remains present.
+
+`analytics/dynasty_position_room.py:_position_rooms` requires all teams complete before assigning league_rank or league-average strength_index. All 12 RB ranks/indexes therefore remain null, including 11 rooms with valid raw totals. `static/league_comparison.js:laPositionCell` renders those as disabled dashes. Both horizons use this common room aggregator.
+
+## Existing exception audit (not a missing fallback implementation)
+
+- `p0_live_candidate_runtime.py:recorded_ytd_only_year_one_evidence`: generic verified-unsigned YTD-only/no-additional-ROS assumption, approved October 24; fresh exact roster/catalog/season/cutoff admission.
+- `recorded_ir_no_projection_year_one_evidence`: exact-State fantasy IR slot plus no provider projection permits the same labeled assumption. Fantasy IR alone does not erase an existing projection.
+- Official whole-season-unavailability receipts support status-based zero ROS, preserving their stronger provenance and whole-season rules.
+- `_active_backup_player_ids` plus `_score_complete_single_source_year_one`: supported NFL backup/practice-squad/injured/PUP role may use a complete one-source projection. Backup or practice-squad status is not an automatic zero.
+- Selected previously approved developmental roles have YTD-only evidence; accepted P0 developmental routes and the `out` current state can support future years even when Y1 is zero. Neither young age nor fantasy taxi status universally means zero Career.
+- Retired status is normalized by the provider, but no separate blanket retired-status-to-zero-Career rule was found. A retired player's explicitly empty catalog team can qualify via generic unsigned admission; otherwise an applicable governed status/forecast input is needed.
+
+The decisive guard is `admit_ytd_only`, lines 1308–1311: **any available provider ROS row blocks the fallback**, including partial rows. This implements the recorded October 24 decision in CURRENT_OPERATIONS: “A projection row blocks these zero-ROS assumptions.” Existing `test_default_live_producer_applies_approved_ytd_only_after_provider_path` explicitly expects an unresolved player when provider_available='partial'.
+
+Pierce has Razzball-only rows and no current CBS row in the run's failure diagnostic. The latest retained Razzball revision before the publication cutoff (November 7 20:50:50 UTC) is nonzero: rush_yards=35.1, rush_td=0.3, rec_yards=6, receptions=0.9, rec_td=0. It is not a blank/all-zero placeholder. Historical older CBS rows do not authorize treating a newer missing CBS row as current. This source conflict is why “unsigned” alone does not trigger the currently approved fallback.
+
+Correction to earlier explanation: lack of an accepted complete projection for unsigned Pierce is expected, but exceptions do exist; the provider-row veto, not absence of an unsigned exception, prevents completion. These are not equivalent to an explicit zero forecast.
+
+## Validation
+
+Existing role/exception suites: **22 passed** using `/workspace/.venvs/fsffl-next/bin/python`, current code unchanged. The initial invocation used an expired `/tmp` pytest path and collected no tests; the workspace venv selection passed. SQL reads and saved-State inspection were read-only; no private payloads committed.
+
+## Concrete proposed change — policy disposition required
+
+For already eligible, freshly verified unsigned players (and, if approved, the existing exact-State IR eligibility), extend YTD-only admission from “no provider rows” to “no complete admissible Year-1 projection after normal provider paths”. Complete accepted provider authority retains priority. Retain actual earned stats and scoring completeness, record the undercovered provider row and conflict, label the no-additional-production assumption as low confidence, and run the unchanged accepted future/whole-cohort Shapley/Career calculation. Do not assign zero Career, exclude roster players, invent signing/return probabilities, or silently fill missing provider metrics.
+
+This broadens the explicit October 24 provider-row veto and can change values/ranks; the user must disposition that concrete rule before promotion. Alternative without changing input rules: preserve missing authority and show known-room raw data/coverage or deterministic rank ranges instead of disabling every RB cell. Exact 12-team ranks cannot be claimed while one room's value remains unpriced.
+
+Next: obtain the user's policy choice, then implement focused absent/partial/complete provider and status/IR/active-role/cutoff cases, preserve accepted math/history, review and exact-head CI/Stable, and deploy only the authorized rule. No new failed-refresh loop.
