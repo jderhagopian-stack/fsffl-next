@@ -1454,6 +1454,13 @@ def build_live_p0_rostered_candidate_forecasts(
                         for item in ros_fumbles_lost
                         if item.player_id == player_id
                     )
+                    if fallback_policy is not None and any(
+                        row.metric == ForecastMetric.FUMBLES_LOST for row in source_rows
+                    ):
+                        # Retain an already complete provider coordinate. This
+                        # also keeps the evidence label truthful when another
+                        # provider for this player needed the supplement.
+                        fumbles_rows = ()
                     candidate_year_one = _score_complete_single_source_year_one(
                         player_id=player_id,
                         source_rows=source_rows,

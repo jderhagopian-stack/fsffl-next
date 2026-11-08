@@ -524,6 +524,11 @@ def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=Fal
                      for row in runtime._status_based_zero_ros(league_state=state,evidence=evidence,as_of=capture))
     rows = () if provider_case=='absent' else complete if provider_case=='complete' else tuple(
         row for row in complete if row.metric.value in {'rush_yards','rush_td','receptions','rec_yards','rec_td'})
+    if provider_case=='mixed':
+        # Both captured providers are outside the ensemble in this fallback
+        # fixture. CBS already has fumbles; Razzball still needs the model.
+        rows=tuple(row.model_copy(update={'source':'cbs'}) for row in complete)+tuple(
+            row for row in complete if row.metric.value!='fumbles_lost')
     ensemble = complete if provider_case=='complete' else ()
     ros = SimpleNamespace(evaluation_as_of=capture,source_observations=rows,raw_ensemble=ensemble,
                           successful_source_ids=('razzball',),model_copy=lambda **_:SimpleNamespace())
@@ -582,3 +587,11 @@ def test_existing_ir_projectionless_fallback_retains_its_receipt_in_live_produce
     assert not result.failures
     assert result.year_one_league[pid].distribution.mean == pytest.approx(9.)
     assert 'exact-state-ir-no-projection' in result.year_one_evidence_modes[pid]
+
+
+
+def test_single_source_provider_fumbles_is_not_mislabeled_as_model_completion(monkeypatch):
+    result,pid,requested=_run_current_ros_policy_case(monkeypatch,unsigned=False,provider_case='mixed')
+    assert not result.failures
+    assert requested == [{pid}]
+    assert result.year_one_evidence_modes[pid] == 'single_source_low_confidence:cbs'

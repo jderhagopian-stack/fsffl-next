@@ -56,3 +56,8 @@ Version `career-ros-fallback-v3:unsigned-priority-single-source-fumbles`, effect
 The live IR fallback also now retains its generated receipt before composing the evidence label; this avoids a missing-map-key failure without changing its existing projectionless-only admission.
 
 Focused validation: role/producer/fumbles/room/state-identity selection **62 passed**; in-season first-party completion **3 passed**; dynamic capture/bridge selection **9 passed**, with overlap. Early new-test failures were fixture/assertion mistakes (nonexistent result field and omitted required stddev), corrected before final selection. Full exact-head CI/Stable, clean review and hosted deployment remain required. No new production refresh has been started. After deployment, request one explicit governed refresh and verify Pierce coverage and complete RB rooms in both horizons, source labels, memory, publication and historical continuity.
+
+
+### Final provenance correction before promotion
+
+PR #522 first head `11e60c9bd29930fad6738e73019ec27eb6c1438e` passed focused CI and clean automated review. During final source-label inspection, the candidate-only provider-fumbles preservation path could retain an already complete provider row but still label it as using the first-party supplement when a second provider for that player needed completion. Returned the PR to draft before editing. The production routing now clears the unused supplement before scoring/labeling when retaining provider fumbles, and a mixed-provider live-producer regression verifies the exact source label. Updated focused selection: **63 passed**. A new exact-head review/CI/Stable result must replace the earlier head's evidence; no deployment occurred on the superseded head.
