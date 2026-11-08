@@ -88,6 +88,17 @@ def reproject_published_intrinsic(payload: dict, rules: LeagueRules) -> dict:
             or not any("three_year_raw_intrinsic_value" in row or "raw_career_forward_reference" in row
                        for row in payload["players"])):
         return payload
+    if any(
+        row.get(index_key) is not None and raw_key not in row
+        for row in payload["players"]
+        for raw_key, index_key in (
+            ("three_year_raw_intrinsic_value", "intrinsic_value_index"),
+            ("raw_career_forward_reference", "career_intrinsic_index"),
+        )
+    ):
+        # Older surfaces may retain only an index. Keep the complete original
+        # coordinate rather than label a mixture of ordinal and magnitude scores.
+        return payload
     rows = []
     for row in payload["players"]:
         updated = dict(row)

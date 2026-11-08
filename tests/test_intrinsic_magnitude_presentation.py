@@ -79,6 +79,12 @@ def test_saved_raw_projection_is_pure_versioned_and_does_not_impute_missing_rows
     assert reproject_published_intrinsic(new, supported_rules()) == new
 
 
+def test_legacy_index_only_surface_does_not_receive_mixed_coordinate_labels():
+    old = {"players": [{"player_id": "p", "intrinsic_value_index": 8000,
+                        "career_intrinsic_index": 9000, "raw_career_forward_reference": 220}]}
+    assert reproject_published_intrinsic(old, supported_rules()) is old
+
+
 def test_value_lens_route_uses_same_fixed_rulers_without_market_shape(monkeypatch):
     from types import SimpleNamespace as N
     from fastapi import FastAPI

@@ -17,7 +17,7 @@ Baseline main verified `e0e045a44b4c5b19061922995b1a49d3347c91d2`. Candidate bra
 
 ## Validation before promotion
 
-Focused presentation/API/continuity/static selections: **165 passed**, one existing Starlette/httpx deprecation warning, 4.51 s. Includes fixed-ratio and population stability, unsupported-format boundary, missing/overflow handling, immutable saved projection, common roster/card formula and generation stamping. JavaScript syntax checks and `git diff --check` pass.
+Focused presentation/API/continuity/static selections: **166 passed**, one existing Starlette/httpx deprecation warning, 4.67 s. Includes fixed-ratio and population stability, unsupported-format boundary, missing/overflow handling, immutable saved projection, common roster/card formula and generation stamping. JavaScript syntax checks and `git diff --check` pass.
 
 Actual saved **367-player** response replay against candidate projection: **0.0007054 s** conversion, all raw quantities and input payload unchanged, zero overflows, expected version. Process peak **157372 KiB**, including Python/test-fixture imports; this is not a full-refresh or hosted memory measurement. Existing historical production replay: Superflex **63.216 s / 66368 KiB**, 1QB **54.134 s / cumulative 72080 KiB**, exact corrected-archive parity for Superflex.
 
@@ -26,3 +26,5 @@ Required before merge: inspect stable diff, exact-head CI and Stable full suite,
 ## Release state
 
 Implementation/focused validation complete; review/CI/Stable and hosted deployment verification pending. Exact PR/head/check/deploy receipts will be appended after they exist.
+
+Pre-merge review found and corrected one compatibility edge: an old index-only surface must retain its complete original coordinate, rather than receive new magnitude metadata while one horizon still carries an old rank score. Added a regression; all 166 focused tests pass on the corrected candidate. PR #524 is the deployment candidate. No raw-model, source-policy or transport changes found in the remaining diff.
