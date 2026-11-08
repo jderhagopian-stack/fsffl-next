@@ -1233,8 +1233,13 @@ def test_product_career_read_is_small_exact_publication_and_never_launches_work(
     coordinator = SimpleNamespace(current=lambda _context: record,
         request=lambda *_args: pytest.fail("GET must not launch fitting or acquisition"))
     app = FastAPI()
+    current = SimpleNamespace(
+        current=lambda _: pytest.fail("display must not restore the released Current contract"),
+        completed_player_ids_for_state=lambda _: frozenset(row.player_id for row in built.estimates),
+    )
     install_foundation4_shadow_routes(app, runtime_store=SimpleNamespace(get=lambda _: context),
-                                      loader=loader, coordinator=coordinator)
+                                      loader=loader, coordinator=coordinator,
+                                      current_intrinsic_coordinator=current)
     endpoint = next(route.endpoint for route in app.routes if route.path == FOUNDATION4_CAREER_FORWARD_ENDPOINT)
     response = endpoint(SimpleNamespace(url=SimpleNamespace(path=FOUNDATION4_CAREER_FORWARD_ENDPOINT)),
                         state_id=context.league_state.state_id,
@@ -1246,6 +1251,11 @@ def test_product_career_read_is_small_exact_publication_and_never_launches_work(
     assert all("uncertainty" not in row for row in response["estimates"])
     assert [row["raw_career_forward_reference"] for row in response["estimates"]] == [row.raw_career_forward_reference for row in built.estimates]
     assert len(json.dumps(response)) < len(built.model_dump_json()) / 3
+    current.completed_player_ids_for_state = lambda _: None
+    missing_cohort = endpoint(SimpleNamespace(url=SimpleNamespace(path=FOUNDATION4_CAREER_FORWARD_ENDPOINT)),
+                              user_id=context.user_id)
+    assert missing_cohort["career_presentation"]["status"] == "unavailable"
+    assert all(row["career_intrinsic_index"] is None for row in missing_cohort["estimates"])
     stale = endpoint(SimpleNamespace(url=SimpleNamespace(path=FOUNDATION4_CAREER_FORWARD_ENDPOINT)),
                      state_id="other-served-state", user_id=context.user_id)
     assert stale.status_code == 409

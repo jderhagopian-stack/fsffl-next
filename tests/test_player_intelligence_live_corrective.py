@@ -486,7 +486,8 @@ def test_hosted_intrinsic_readiness_stays_partial_for_incomplete_governed_scope(
 
 
 
-def test_player_history_capacity_wait_remains_retryable_over_http() -> None:
+@pytest.mark.parametrize("memory_wait", [False, True])
+def test_player_history_capacity_wait_remains_retryable_over_http(memory_wait) -> None:
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
@@ -494,6 +495,9 @@ def test_player_history_capacity_wait_remains_retryable_over_http() -> None:
 
     class _CapacityHistory:
         def request(self, _runtime, _player_id):
+            if memory_wait:
+                return SimpleNamespace(status=routes.PlayerHistoryBuildStatus.CAPACITY_WAIT,
+                                       league_state_id="state")
             raise routes.PlayerHistoryCapacityError("fixture capacity wait")
 
     app = FastAPI()
@@ -509,9 +513,80 @@ def test_player_history_capacity_wait_remains_retryable_over_http() -> None:
     response = TestClient(app).get(
         "/api/player-intelligence/sleeper:player:101/history"
     )
-    assert response.status_code == 200
+    assert response.status_code == (202 if memory_wait else 200)
     payload = response.json()
     assert payload["status"] == "loading"
     assert payload["build_status"] == "capacity_wait"
     assert payload["retry_after_ms"] == 2500
-    assert payload["message"] == "fixture capacity wait"
+    if not memory_wait:
+        assert payload["message"] == "fixture capacity wait"
+
+
+def test_history_memory_admission_retries_after_backoff_without_caching_failure():
+    from contextlib import contextmanager
+    from dataclasses import replace
+    from datetime import timedelta
+    from fsffl.product.resource_coordinator import HeavyWorkMemoryAdmissionError
+
+    admitted = False
+    claims = []
+    @contextmanager
+    def claim(**kwargs):
+        claims.append(kwargs)
+        if not admitted:
+            raise HeavyWorkMemoryAdmissionError("fixture memory pressure")
+        yield
+
+    calls = []
+    coordinator = PlayerHistoryBackgroundCoordinator(
+        SimpleNamespace(player_history=lambda *args: (calls.append(1) or ())),
+        heavy_work_coordinator=SimpleNamespace(claim=claim),
+    )
+    context = _context()
+    coordinator.request(context, "p")
+    deadline = monotonic() + 2
+    while monotonic() < deadline:
+        waiting = coordinator.request(context, "p")
+        if waiting.status == PlayerHistoryBuildStatus.CAPACITY_WAIT:
+            break
+        sleep(.005)
+    assert waiting.status == PlayerHistoryBuildStatus.CAPACITY_WAIT
+    assert calls == []
+    assert coordinator.request(context, "p") is waiting
+    assert len(claims) == 1
+    admitted = True
+    key = coordinator._key(context, "p")
+    with coordinator._lock:
+        coordinator._records[key] = replace(waiting, updated_at=waiting.updated_at - timedelta(seconds=3))
+    coordinator.request(context, "p")
+    deadline = monotonic() + 2
+    while monotonic() < deadline:
+        completed = coordinator.request(context, "p")
+        if completed.status == PlayerHistoryBuildStatus.COMPLETED:
+            break
+        sleep(.005)
+    assert completed.status == PlayerHistoryBuildStatus.COMPLETED
+    assert calls == [1]
+    assert len(claims) == 2
+    coordinator._executor.shutdown(wait=True)
+
+
+def test_history_provider_failure_remains_terminal_and_not_retried():
+    calls = []
+    def fail(*args):
+        calls.append(1)
+        raise ValueError("fixture provider failure")
+    coordinator = PlayerHistoryBackgroundCoordinator(SimpleNamespace(player_history=fail))
+    context = _context()
+    coordinator.request(context, "p")
+    deadline = monotonic() + 2
+    while monotonic() < deadline:
+        record = coordinator.request(context, "p")
+        if record.status == PlayerHistoryBuildStatus.FAILED:
+            break
+        sleep(.005)
+    assert record.status == PlayerHistoryBuildStatus.FAILED
+    assert record.error == "ValueError: fixture provider failure"
+    assert coordinator.request(context, "p") is record
+    assert calls == [1]
+    coordinator._executor.shutdown(wait=True)

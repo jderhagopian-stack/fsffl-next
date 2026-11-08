@@ -39,6 +39,7 @@ from fsffl.value.shapley_intrinsic_contract import (
     build_unavailable_shapley_intrinsic_contract,
 )
 
+from .resource_coordinator import release_unused_process_memory
 from .runtime import LiveForecastEvidence, UserRuntimeContext
 
 _SUPPORTED_POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
@@ -327,6 +328,7 @@ class PrivateBetaShapleyContractLoader:
         self._cached_user_id: str | None = None
         self._user_cache_epochs: dict[str, int] = {}
         self._compatibility_lock = RLock()
+        self._compatibility_workspace_lock = RLock()
         self._compatibility_pending = None
 
     @property
@@ -501,8 +503,16 @@ class PrivateBetaShapleyContractLoader:
         if not owner:
             return future.result()
         try:
-            with sample_rss_phase("intrinsic.compatibility_identity"):
-                result = self._resolve_compatibility_identity(context)
+            # Different immutable contexts must recheck independently, but their
+            # scoring/JSON workspaces must not overlap on the small web instance.
+            with self._compatibility_workspace_lock:
+                try:
+                    with sample_rss_phase("intrinsic.compatibility_identity"):
+                        result = self._resolve_compatibility_identity(context)
+                finally:
+                    # The resolver frame is gone; release its transient arenas
+                    # before admitting the next reader. No authority cache changes.
+                    release_unused_process_memory(label="intrinsic-compatibility-read")
             future.set_result(result)
             return result
         except BaseException as exc:

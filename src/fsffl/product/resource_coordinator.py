@@ -240,6 +240,10 @@ def reclaim_before_heavy_allocation(*, label: str) -> None:
         raise MemoryError(f"hard memory limit reached before {label}")
 
 
+class HeavyWorkMemoryAdmissionError(MemoryError):
+    """Temporary refusal before a heavy phase has begun allocating."""
+
+
 class HeavyWorkCoordinator:
     """Process-wide admission gate for memory-heavy private-beta work.
 
@@ -372,7 +376,7 @@ class HeavyWorkCoordinator:
             release_unused_process_memory(label=f"heavy-admission:{kind}")
             resident = current_rss_bytes()
             if resident > self._memory_limit_bytes:
-                raise MemoryError(
+                raise HeavyWorkMemoryAdmissionError(
                     "memory hard limit exceeded before heavy-work admission: "
                     f"{resident} > {self._memory_limit_bytes}"
                 )

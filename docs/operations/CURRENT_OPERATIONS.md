@@ -1,3 +1,11 @@
+## 2026-11-08 — Physical roster Career/history failures reopened
+
+The user confirms roster Career indexes remain unavailable despite raw totals and ready 3-Year indexes; historical player stats/chart return HTTP 503. Post-refresh page use raised process high-water to **548.81 MiB**, above the earlier refresh-only 489.37 MiB. Current restore admission timeout and overlapping compatibility replays are confirmed in logs. Historical failed-record error was not logged; memory admission is strongly implicated but exact failure remains unproven. Unsigned Dameon Pierce legitimately has no projections.
+
+Candidate from verified main `259c7b9e`, branch `fix/player-card-history-career-20261108`, uses exact-generation published roster indexes and retained Current cohort IDs; serializes differing compatibility workspaces; distinguishes retryable pre-work history memory refusal from terminal provider failures. No new production refresh or plan/provider/source/model change. [Evidence, measurements and acceptance gates](workstreams/PLAYER_CARD_CORRECTION_20261108.md). Earlier core/Career persistence success remains valid; physical acceptance remains open.
+
+---
+
 ## 2026-11-07 — Post-refresh correction authorized; candidate in progress
 
 User requested fixes for app-wide missing Intrinsic and Current WR failure. Main remains `02ffb963`; [PR #517](https://github.com/jderhagopian-stack/fsffl-next/pull/517), branch `fix/refresh-resource-coverage-20261107`, implementation `c84e5c0f8923325359e70edb2eea61a06a4a53e3`, adds exact-semantic Y4-Y7 component reuse during Career, in-flight sharing of compatibility reads, truthful core completion wording, early Career attribution and preserved Current coverage diagnostics. Real saved 334-player reference replay matches the unchanged output: ~77.480 s recomputation versus ~0.835 s reuse, corrected peak 195,660 KiB. This is not full dynamic/hosted acceptance.

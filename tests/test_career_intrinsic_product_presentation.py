@@ -54,6 +54,16 @@ const html=franchiseNSPlayerRow({player_id:'p',full_name:'A very long player nam
 assert.equal((html.match(/class="franchise-ns-player-value /g)||[]).length,3);
 assert.match(html,/class="franchise-ns-player-value career"[^>]*><small>Career Intrinsic<\/small><strong>6,789<\/strong><small>Raw Career 123.5<\/small>/);
 assert.doesNotMatch(html,/<strong>[^<]*<small>/);
+// A ready generation-bound published lens must not be blanked by a separate
+// endpoint whose raw economic result arrived without its display coordinate.
+fsfflMyTeamState.careerIntrinsic.estimates[0].career_intrinsic_index=null;
+fsfflMyTeamState.valueLenses={league_state_id:'A',publication_generation_id:'g1',players:[{player_id:'p',career_status:'ready',career_intrinsic_index:6789,raw_career_forward_reference:123.45}]};
+assert.match(franchiseNSCareerDisplay({player_id:'p'}),/<strong>6,789<\/strong>/);
+fsfflMyTeamState.valueLenses.publication_generation_id='stale';
+assert.match(franchiseNSCareerDisplay({player_id:'p'}),/Unavailable<\/strong>/);
+fsfflMyTeamState.valueLenses=null;
+fsfflMyTeamState.careerIntrinsic.estimates[0].career_intrinsic_index=6789;
+
 fsfflMyTeamState.careerIntrinsic.estimates[0].career_input_assumption='Low confidence: YTD-only <assumption>';
 assert.match(franchiseNSCareerDisplay({player_id:'p'}),/Low confidence: YTD-only &lt;assumption&gt;/);
 fsfflMyTeamState.careerIntrinsic.player_coverage_failures={q:'No admissible <projection>'};

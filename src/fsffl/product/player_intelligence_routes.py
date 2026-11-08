@@ -24,7 +24,7 @@ from .player_intelligence import (
     PlayerHistoryService,
     build_player_intelligence_overview,
 )
-from .resource_coordinator import HeavyWorkCoordinator
+from .resource_coordinator import HeavyWorkCoordinator, HeavyWorkMemoryAdmissionError
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
 
@@ -51,6 +51,7 @@ class PlayerHistoryBuildStatus(StrEnum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CAPACITY_WAIT = "capacity_wait"
 
 
 @dataclass(frozen=True)
@@ -123,7 +124,12 @@ class PlayerHistoryBackgroundCoordinator:
                 )
             existing = self._records.get(key)
             if existing is not None:
-                return existing
+                if (existing.status != PlayerHistoryBuildStatus.CAPACITY_WAIT
+                        or (now - existing.updated_at).total_seconds() < 2.5):
+                    return existing
+                # Only admission failures retry, with one bounded/coalesced task
+                # after the browser's backoff. Provider/model failures stay terminal.
+                self._records.pop(key, None)
             active_count = sum(
                 1
                 for item in self._records.values()
@@ -144,6 +150,7 @@ class PlayerHistoryBackgroundCoordinator:
                         if item.status in {
                             PlayerHistoryBuildStatus.COMPLETED,
                             PlayerHistoryBuildStatus.FAILED,
+                            PlayerHistoryBuildStatus.CAPACITY_WAIT,
                         }
                     ),
                     key=lambda pair: pair[1].updated_at,
@@ -195,7 +202,11 @@ class PlayerHistoryBackgroundCoordinator:
                     key=f"{key[1]}:{key[2]}",
                 ):
                     build_and_attach_owned()
+        except HeavyWorkMemoryAdmissionError as exc:
+            _logger.warning("FSFFL player history waiting for memory admission: %s", exc)
+            self._update(key, status=PlayerHistoryBuildStatus.CAPACITY_WAIT, error=str(exc))
         except Exception as exc:
+            _logger.exception("FSFFL player history build failed")
             self._update(
                 key,
                 status=PlayerHistoryBuildStatus.FAILED,
@@ -225,6 +236,7 @@ class PlayerHistoryBackgroundCoordinator:
             if status in {
                 PlayerHistoryBuildStatus.COMPLETED,
                 PlayerHistoryBuildStatus.FAILED,
+                PlayerHistoryBuildStatus.CAPACITY_WAIT,
             }:
                 self._futures.pop(key, None)
             return True
@@ -453,6 +465,7 @@ def install_player_intelligence_routes(
         if record.status in {
             PlayerHistoryBuildStatus.QUEUED,
             PlayerHistoryBuildStatus.RUNNING,
+            PlayerHistoryBuildStatus.CAPACITY_WAIT,
         }:
             return JSONResponse(
                 status_code=202,
