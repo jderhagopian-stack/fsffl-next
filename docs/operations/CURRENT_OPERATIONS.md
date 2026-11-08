@@ -1,3 +1,11 @@
+## 2026-11-08 — Historical-actuals scale evaluation accepted; linear display release authorized
+
+User directs proceeding through deployment using historical actuals for display-scale diagnostics. Historical forecast vintages are not a blanket release prerequisite. Preserve accepted raw models and uncertainty; 750/2200 are fixed versioned display benchmarks, not forecast ceilings. Historical test: 1/1623 complete Superflex three-year windows over 750, by at most 0.4853%; 1QB 0/1623. Current 367 players reconcile with accepted raw artifacts and none exceeds either reference. Career tail retains its accepted research/model/holdout authority.
+
+Candidate `feat/intrinsic-linear-display-20261108` from verified `e0e045a4` centralizes supported-format mapping across readers, preserves unsupported-format/historical coordinates and raw economics, adds overflow and percentile-based comparisons, and fixes nested publication stamping. Focused **165 passed**, mapping-only 367-player replay **0.0007054 s** with unchanged raw/input. Review, exact-head CI/Stable and deploy verification remain pending; do not claim deployed. [Release checkpoint](workstreams/INTRINSIC_MAGNITUDE_RELEASE_20261108.md) and [versioned reference decision/evidence](../value/intrinsic-magnitude-presentation-v1.md).
+
+---
+
 ## 2026-11-08 — Unsigned ROS priority and single-source FUMBLES_LOST rule authorized
 
 User explicitly directs that a player verified off an NFL roster gets no ROS projection, retaining YTD actuals, and every admitted single-source fallback goes through the fumbles-lost completion model. This supersedes the October 24 provider-row veto for unsigned players. It does not authorize zero Career, removing fantasy roster identities, or fabricating other missing statistics. Apply generically, with source/State/cutoff provenance and versioned historical compatibility; preserve current saved publications until a new owned refresh publishes the new policy. [Decision, RB evidence and implementation gate](workstreams/POSITION_ROOM_RB_COVERAGE_20261108.md).

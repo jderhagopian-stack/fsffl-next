@@ -64,6 +64,7 @@ jobs:
         run: >-
           pytest -q
           tests/test_career_presentation.py
+          tests/test_intrinsic_magnitude_presentation.py
           tests/test_league_value_lens_routes_static.py
           tests/test_league_value_lenses.py
           tests/test_presentation_continuity.py

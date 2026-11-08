@@ -152,24 +152,25 @@
     return v?.intrinsic_error||v?.intrinsic_status_reason||'Governed 3-Year Intrinsic is unavailable for the current league state.';
   }
   function valueRead(){
-    const v=overview?.value||{},gap=finite(v.intrinsic_value_index)&&finite(v.broad_market_value_index)?v.intrinsic_value_index-v.broad_market_value_index:null;
+    const v=overview?.value||{},gap=finite(v.intrinsic_percentile)&&finite(v.broad_market_percentile)?v.intrinsic_percentile-v.broad_market_percentile:null;
     if(!finite(gap)){const reason=intrinsicReason(v);return reason?`3-Year Intrinsic unavailable: ${reason}`:'Comparison is unavailable until both governed lenses are ready.'}
-    if(Math.abs(gap)<250)return'Broad Market and 3-Year Intrinsic are closely aligned on the shared display ruler.';
+    if(Math.abs(gap)<.025)return'Broad Market and 3-Year Intrinsic are closely ranked within their separate lenses.';
     return gap>0?'3-Year Intrinsic above Broad Market.':'3-Year Intrinsic below Broad Market.';
   }
   function intrinsicDisplay(v){if(finite(v?.intrinsic_value_index))return idx(v.intrinsic_value_index);if(['queued','running'].includes(v?.intrinsic_status))return'Preparing…';return'Unavailable'}
   function valueGauge(value){const ratio=finite(value)?Math.max(0,Math.min(1,value/10000)):0;return `<span class="pi-value-gauge" aria-hidden="true">${[.2,.4,.6,.8,1].map((threshold,index)=>`<i class="${ratio>=threshold-.12?'on':''}" style="height:${8+index*4}px"></i>`).join('')}</span>`}
   function valueCard(label,value,percentile){
-    const shown=finite(value)?idx(value):label==='3-Year Intrinsic'?intrinsicDisplay(overview?.value||{}):'Unavailable';
+    const overflow=label==='Career Intrinsic'?overview?.value?.career_index_overflow:label==='3-Year Intrinsic'?overview?.value?.intrinsic_index_overflow:false;
+    const shown=finite(value)?idx(value)+(overflow?'+':''):label==='3-Year Intrinsic'?intrinsicDisplay(overview?.value||{}):'Unavailable';
     const support=label==='Career Intrinsic'?(finite(overview?.value?.raw_career_forward_reference)?'raw Career '+num(overview.value.raw_career_forward_reference,1):esc(overview?.value?.career_presentation?.reason||'Career evidence unavailable')):finite(percentile)?pct(percentile):label==='3-Year Intrinsic'?esc(intrinsicReason(overview?.value||{})||'Governed value ready'):'—';
-    return `<article class="pi-value-card"><div class="pi-value-card-copy"><small>${esc(label)}</small><strong>${shown}</strong><span>0–10,000 Value Index</span><em>${support}</em></div>${valueGauge(value)}</article>`;
+    return `<article class="pi-value-card"><div class="pi-value-card-copy"><small>${esc(label)}</small><strong>${shown}</strong><span>0–10,000 Value Index</span><em>${support}${overflow?' · above display reference':''}</em></div>${valueGauge(value)}</article>`;
   }
   function valueComparison(){
-    const v=overview?.value||{},market=v.broad_market_value_index,intrinsic=v.intrinsic_value_index;
+    const v=overview?.value||{},market=v.broad_market_percentile,intrinsic=v.intrinsic_percentile;
     if(!finite(market)||!finite(intrinsic))return `<div class="pi-compare-card unavailable"><span class="pi-compare-icon">!</span><div><strong>Value comparison unavailable</strong><p>${esc(intrinsicReason(v)||'Both governed lenses must be ready before comparison.')}</p></div></div>`;
-    const gap=intrinsic-market,relative=Math.abs(gap)/Math.max(1,(intrinsic+market)/2),aligned=relative<.04,up=gap>0;
+    const gap=intrinsic-market,relative=Math.abs(gap),aligned=relative<.025,up=gap>0;
     const headline=aligned?'Broad Market and 3-Year Intrinsic are closely aligned.':`3-Year Intrinsic ${up?'above':'below'} Broad Market.`;
-    return `<div class="pi-compare-card"><span class="pi-compare-icon">${aligned?'↔':up?'↑':'↓'}</span><div><strong>${esc(headline)}</strong><p>Both values use the shared 0–10,000 presentation ruler while remaining separate governed lenses. This is not a buy/sell command.</p></div></div>`;
+    return `<div class="pi-compare-card"><span class="pi-compare-icon">${aligned?'↔':up?'↑':'↓'}</span><div><strong>${esc(headline)}</strong><p>Comparison uses percentile ranks. The 0–10,000 scores have separate references; their difference is not trade value.</p></div></div>`;
   }
   function projectionCard(){
     const row=y1();

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .intrinsic_presentation import reproject_published_intrinsic
+
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -179,6 +181,11 @@ class PresentationContinuityStore:
                 payload = _json_round_trip(raw)
                 del raw  # The isolated JSON copy owns this surface from here.
                 payload["publication_generation_id"] = promotion_id
+                for key, state_key in (("career_intrinsic", "league_state_id"),
+                                       ("fsffl_intrinsic", "source_state_id")):
+                    lens = payload.get(key)
+                    if isinstance(lens, dict) and lens.get(state_key) == state.state_id:
+                        lens["publication_generation_id"] = promotion_id
                 encoded = json.dumps(
                     payload,
                     sort_keys=True,
@@ -756,6 +763,7 @@ class PresentationContinuityStore:
             payload["league_id"] = served_league_id
             payload["publication_generation_id"] = promotion_id
             if mode == "published":
+                payload = reproject_published_intrinsic(payload, current.league.rules)
                 payload["intelligence_freshness"] = {
                     "status": "current",
                     "stale": False,

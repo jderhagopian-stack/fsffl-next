@@ -46,7 +46,7 @@ def test_value_lens_uses_governed_intrinsic_api_and_does_not_rebrand_legacy_valu
 
 def test_value_lens_uses_shared_display_scale_without_collapsing_raw_authority():
     script = _text("intrinsic_value_experience.js")
-    assert "same versioned 0-10,000 Value Index for presentation" in script
+    assert "its own versioned 0-10,000 reference for presentation" in script
     assert "Broad Market and Shapley Intrinsic use different raw units" in script
     assert "Raw Market and raw Shapley quantities are never subtracted" in script
     assert "percentile remains secondary" in script

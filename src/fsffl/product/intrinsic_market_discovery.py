@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .intrinsic_presentation import intrinsic_magnitude_coordinate
+
 from collections import defaultdict
 
 from fsffl.value.shapley_intrinsic_contract import (
@@ -109,6 +111,7 @@ def build_intrinsic_market_discovery(
     market = lens_evidence.market_percentiles
     intrinsic_values = lens_evidence.intrinsic_raw
     intrinsic_ranks = lens_evidence.intrinsic_percentiles
+    magnitude = intrinsic_magnitude_coordinate(state.league.rules, "three_year")
     value_coordinate = lens_evidence.value_coordinate
     assert value_coordinate is not None
     owner_by_player = _ownership(runtime)
@@ -138,10 +141,11 @@ def build_intrinsic_market_discovery(
         intrinsic_percentile = intrinsic_ranks[player_id]
         gap = intrinsic_percentile - market_percentile
         market_index = value_coordinate.index_for_percentile(market_percentile)
-        intrinsic_index = value_coordinate.index_for_percentile(intrinsic_percentile)
+        intrinsic_index = (magnitude.index(intrinsic_values.get(player_id)) if magnitude else
+                           value_coordinate.index_for_percentile(intrinsic_percentile))
         display_gap = (
             intrinsic_index - market_index
-            if market_index is not None and intrinsic_index is not None
+            if magnitude is None and market_index is not None and intrinsic_index is not None
             else None
         )
         if abs(gap) < minimum_percentile_gap:

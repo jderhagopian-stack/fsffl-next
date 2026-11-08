@@ -9,12 +9,18 @@ import json
 from math import isfinite
 from typing import Mapping
 
+from .intrinsic_presentation import IntrinsicMagnitudeCoordinate, intrinsic_magnitude_coordinate
+
 CAREER_PRESENTATION_VERSION = "career-index-v1:active-reference-empirical-midrank"
 
 
 @dataclass(frozen=True)
 class CareerPresentationCoordinate:
     """Exact publication's accepted reference game, independent of roster expansion.
+
+    Supported formats use fixed raw-magnitude references. The reference game
+    still proves coverage; its distribution cannot move that ruler. Legacy
+    unsupported formats retain the original coordinate below.
 
     Equal raw values share their average rank. Distinct anchors interpolate
     linearly between their midranks. Values outside the reference range clamp
@@ -24,6 +30,7 @@ class CareerPresentationCoordinate:
     """
 
     reference: tuple[tuple[str, float], ...]
+    magnitude: IntrinsicMagnitudeCoordinate | None = None
 
     def __post_init__(self):
         if len(self.reference) < 2:
@@ -34,18 +41,22 @@ class CareerPresentationCoordinate:
             raise ValueError("Career display reference values must be finite")
 
     @classmethod
-    def from_reference(cls, raw_values: Mapping[str, float], *, reference_ids: frozenset[str]):
+    def from_reference(cls, raw_values: Mapping[str, float], *, reference_ids: frozenset[str], magnitude=None):
         if not reference_ids.issubset(raw_values):
             raise ValueError("Career display reference is incomplete")
-        return cls(tuple((key, float(raw_values[key])) for key in sorted(reference_ids)))
+        return cls(tuple((key, float(raw_values[key])) for key in sorted(reference_ids)), magnitude)
 
     @property
     def fingerprint(self) -> str:
+        if self.magnitude is not None:
+            return self.magnitude.fingerprint
         return hashlib.sha256(json.dumps(
             [CAREER_PRESENTATION_VERSION, self.reference], separators=(",", ":"), allow_nan=False,
         ).encode()).hexdigest()
 
     def index(self, raw: float | None) -> float | None:
+        if self.magnitude is not None:
+            return self.magnitude.index(raw)
         if raw is None or not isfinite(raw):
             return None
         values = sorted(value for _, value in self.reference)
@@ -76,6 +87,10 @@ class CareerPresentationCoordinate:
             "presentation_only": True, "market_inputs_used": False,
             "economic_gap_subtraction_allowed": False,
             "minimum_index": 0, "maximum_index": 10_000,
+            **({**self.magnitude.summary(),
+                "tie_policy": "equal raw values have equal linear magnitude scores",
+                "outside_reference_policy": "clamp to fixed benchmark, not current reference extrema",
+            } if self.magnitude is not None else {}),
         }
 
 
@@ -93,7 +108,7 @@ def career_reference_ids_from_current(record) -> frozenset[str]:
 
 
 def career_lens_for_publication(record, *, served_state_id: str,
-                                reference_ids: frozenset[str] | None = None) -> tuple[dict, dict]:
+                                reference_ids: frozenset[str] | None = None, rules=None) -> tuple[dict, dict]:
     """Present an already published exact-State authority, never request a build."""
     unavailable = {"status": "unavailable", "label": "Career Intrinsic",
                    "reason": "No completed Career authority matches the served State."}
@@ -108,7 +123,10 @@ def career_lens_for_publication(record, *, served_state_id: str,
     # fails closed rather than silently recalibrating on a smaller universe.
     reference_ids = career_reference_player_ids() if reference_ids is None else reference_ids
     try:
-        coordinate = CareerPresentationCoordinate.from_reference(raw, reference_ids=frozenset(reference_ids))
+        coordinate = CareerPresentationCoordinate.from_reference(
+            raw, reference_ids=frozenset(reference_ids),
+            magnitude=intrinsic_magnitude_coordinate(rules, "career"),
+        )
     except ValueError as exc:
         return {**unavailable, "reason": str(exc)}, {}
     return ({"status": "ready", "label": "Career Intrinsic", "league_state_id": served_state_id,
@@ -119,6 +137,7 @@ def career_lens_for_publication(record, *, served_state_id: str,
              "presentation": coordinate.summary()},
             {pid: {"career_intrinsic_index": coordinate.index(value),
                    "raw_career_forward_reference": value, "career_status": "ready",
+                   "career_index_overflow": bool(coordinate.magnitude and coordinate.magnitude.overflow(value)),
                    "career_input_assumption": getattr(record.contract, "player_input_assumptions", {}).get(pid)}
              for pid, value in raw.items()})
 
@@ -127,14 +146,14 @@ def attach_career_player_lenses(payload: dict, *, record, current_state_id: str,
                                current_generation_id: str | None = None,
                                reference_ids: frozenset[str] | None = None,
                                three_year_rows: Mapping[str, Mapping] | None = None,
-                               three_year_reason: str | None = None) -> dict:
+                               three_year_reason: str | None = None, rules=None) -> dict:
     """Overlay Career and the Career-owned 3-Year lens for one publication."""
     served = (payload.get("presentation_continuity") or {}).get("served_league_state_id") or payload.get("league_state_id")
     served_generation = payload.get("publication_generation_id")
     generation_matches = served_generation is None or served_generation == current_generation_id
     summary, rows = career_lens_for_publication(
         record if served == current_state_id and generation_matches else None,
-        served_state_id=served, reference_ids=reference_ids,
+        served_state_id=served, reference_ids=reference_ids, rules=rules,
     )
     summary["publication_generation_id"] = (
         current_generation_id if served_generation is None else served_generation

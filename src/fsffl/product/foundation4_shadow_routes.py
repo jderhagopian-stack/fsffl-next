@@ -263,10 +263,12 @@ def install_career_intrinsic_routes(
         )
         summary, presentation_rows = career_lens_for_publication(
             record, served_state_id=record.league_state_id, reference_ids=reference_ids,
+            rules=_context.league_state.league.rules,
         )
         payload["career_presentation"] = summary
         for row in payload["estimates"]:
             row["career_intrinsic_index"] = presentation_rows.get(row["player_id"], {}).get("career_intrinsic_index")
+            row["career_index_overflow"] = presentation_rows.get(row["player_id"], {}).get("career_index_overflow", False)
             row["career_input_assumption"] = presentation_rows.get(row["player_id"], {}).get("career_input_assumption")
         payload["capability"] = "career_intrinsic"
         payload["value_label"] = "Career Intrinsic"

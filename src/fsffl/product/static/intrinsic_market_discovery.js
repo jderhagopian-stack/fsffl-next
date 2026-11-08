@@ -57,7 +57,7 @@
   function actionLabel(row){
     return row?.focus_intent==='shop'?'Explore as a shop candidate':'Explore as a target';
   }
-  function rowMarkup(row,index){
+  function rowMarkup(row,rowIndex){
     const tone=row.direction==='intrinsic_higher'?'intrinsic':'market';
     return `<article class="imd-row" data-tone="${tone}">
       <div class="imd-player">
@@ -66,8 +66,8 @@
       </div>
       <div><small>Broad Market</small><strong>${index(row.market_value_index)}</strong><span>${pct(row.market_percentile)}</span></div>
       <div><small>FSFFL Intrinsic</small><strong>${index(row.intrinsic_value_index)}</strong><span>${pct(row.intrinsic_percentile)}</span></div>
-      <div class="imd-gap"><small>Value Index difference</small><strong>${finite(row.value_index_gap)?`${row.value_index_gap>=0?'+':''}${index(row.value_index_gap)}`:'Unavailable'}</strong><span>${esc(directionCopy(row))}</span></div>
-      <button type="button" class="secondary-button" data-imd-focus="${index}">${esc(actionLabel(row))}</button>
+      <div class="imd-gap"><small>Percentile difference</small><strong>${signedPct(row.percentile_gap)}</strong><span>${esc(directionCopy(row))}</span></div>
+      <button type="button" class="secondary-button" data-imd-focus="${rowIndex}">${esc(actionLabel(row))}</button>
     </article>`;
   }
   function unavailableMarkup(payload){

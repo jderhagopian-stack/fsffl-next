@@ -21,7 +21,7 @@ function myTeamCareerEstimate(id){
 }
 function myTeamCareerDisplay(id){
   const estimate=myTeamCareerEstimate(id),index=estimate?.career_intrinsic_index,raw=estimate?.raw_career_forward_reference;
-  if(typeof index==='number'&&Number.isFinite(index))return `${Math.round(index).toLocaleString()}<small>raw Career ${myTeamNum(raw,1)}</small>`;
+  if(typeof index==='number'&&Number.isFinite(index))return `${Math.round(index).toLocaleString()}${estimate?.career_index_overflow?'+':''}<small>raw Career ${myTeamNum(raw,1)}</small>`;
   const reason=fsfflMyTeamState.careerIntrinsic?.player_coverage_failures?.[id]||fsfflMyTeamState.careerIntrinsic?.reason||'Career evidence is unavailable for this player and State.';
   return `<span title="${myTeamEsc(reason)}">${fsfflMyTeamState.careerIntrinsic?.status==='building'?'Preparing…':'Unavailable'}</span><small>${typeof raw==='number'?`raw Career ${myTeamNum(raw,1)}`:'Career index · 0–10,000'}</small>`;
 }
@@ -351,7 +351,7 @@ function franchiseNSLensPercentile(player,lens){
 }
 function franchiseNSMarketDisplay(player){
   const index=myTeamMarketIndex(player),pct=franchiseNSMarketPercentile(player);
-  if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+'</strong><small>'+(pct==null?'Broad Market':Math.round(pct*100)+'th pct')+'</small>';
+  if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+(myTeamLensMap().get(player?.player_id)?.intrinsic_index_overflow?'+':'')+'</strong><small>'+(pct==null?'Broad Market':Math.round(pct*100)+'th pct')+'</small>';
   return '<strong>Unavailable</strong><small>'+(pct==null?'Broad Market index':Math.round(pct*100)+'th pct · index unavailable')+'</small>';
 }
 function franchiseNSIntrinsicReason(){
@@ -361,7 +361,7 @@ function franchiseNSIntrinsicReason(){
 }
 function franchiseNSIntrinsicDisplay(player){
   const index=myTeamIntrinsicIndex(player?.player_id),pct=franchiseNSIntrinsicPercentile(player);
-  if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+'</strong><small>'+(pct==null?'0–10,000 index':Math.round(pct*100)+'th pct')+'</small>';
+  if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+(myTeamLensMap().get(player?.player_id)?.intrinsic_index_overflow?'+':'')+'</strong><small>'+(pct==null?'0–10,000 index':Math.round(pct*100)+'th pct')+'</small>';
   if(fsfflMyTeamState.valueLensLoading)return '<strong>…</strong><small>Intrinsic preparing</small>';
   return '<strong>Unavailable</strong><small title="'+myTeamEsc(franchiseNSIntrinsicReason())+'">'+(pct==null?'3-Year index unavailable':Math.round(pct*100)+'th pct · index unavailable')+'</small>';
 }
@@ -369,7 +369,7 @@ function franchiseNSCareerDisplay(player){
   const estimate=myTeamCareerEstimate(player?.player_id),index=estimate?.career_intrinsic_index,raw=estimate?.raw_career_forward_reference;
   const ready=typeof index==='number'&&Number.isFinite(index);
   const reason=fsfflMyTeamState.careerIntrinsic?.player_coverage_failures?.[player?.player_id]||fsfflMyTeamState.careerIntrinsic?.reason||'Career evidence is unavailable for this player and State.';
-  const label=ready?Math.round(index).toLocaleString():fsfflMyTeamState.careerIntrinsic?.status==='building'?'Preparing…':'Unavailable';
+  const label=ready?Math.round(index).toLocaleString()+(estimate?.career_index_overflow?'+':''):fsfflMyTeamState.careerIntrinsic?.status==='building'?'Preparing…':'Unavailable';
   return '<strong'+(ready?(estimate?.career_input_assumption?' title="'+myTeamEsc(estimate.career_input_assumption)+'"':''):' title="'+myTeamEsc(reason)+'"')+'>'+label+'</strong><small>'+(typeof raw==='number'&&Number.isFinite(raw)?'Raw Career '+myTeamNum(raw,1):'0–10,000 index')+'</small>'+(estimate?.career_input_assumption?'<small class="career-input-assumption">Low confidence · YTD-only Year 1</small>':'');
 }
 function franchiseNSProjectedStarter(player){

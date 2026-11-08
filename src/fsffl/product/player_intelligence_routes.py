@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from .intrinsic_presentation import intrinsic_magnitude_coordinate
+from fsffl.analytics.dynasty_position_room import build_three_year_intrinsic_player_values
+from .value_lens_evidence import percentile_ranks
 from .career_presentation import career_lens_for_publication, career_reference_ids_from_current
 
 from collections.abc import Callable
@@ -323,6 +326,7 @@ def install_player_intelligence_routes(
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+        rules = getattr(getattr(runtime.league_state, "league", None), "rules", None)
         value = dict(payload["value"])
         career_record = career_record_loader(runtime) if career_record_loader is not None else None
         if (career_record is not None and career_publication_validator is not None
@@ -332,6 +336,7 @@ def install_player_intelligence_routes(
             career_record,
             served_state_id=runtime.league_state.state_id,
             reference_ids=career_reference_ids_from_current(intrinsic_record),
+            rules=rules,
         )
         value.update(career_rows.get(player_id, {
             "career_intrinsic_index": None, "raw_career_forward_reference": None,
@@ -398,6 +403,24 @@ def install_player_intelligence_routes(
             value["intrinsic_status"] = "ready"
             value["intrinsic_contract_status"] = intrinsic.status.value
             value["intrinsic_status_reason"] = intrinsic.status_reason
+        magnitude = intrinsic_magnitude_coordinate(rules, "three_year")
+        if magnitude is not None and career_record is not None and career_record.contract is not None:
+            accepted = build_three_year_intrinsic_player_values(
+                runtime.league_state, career_forward=career_record.contract,
+                career_evidence_state_id=career_record.league_state_id,
+            )
+            raw = {row.player_id: row.raw_intrinsic_value for row in accepted}
+            if player_id in raw:
+                value.update({
+                    "intrinsic_value_index": magnitude.index(raw[player_id]),
+                    "three_year_raw_intrinsic_value": raw[player_id],
+                    "raw_shapley_marginal_points": raw[player_id],
+                    "intrinsic_percentile": percentile_ranks(raw.items())[player_id],
+                    "intrinsic_index_overflow": magnitude.overflow(raw[player_id]),
+                    "intrinsic_presentation": magnitude.summary(),
+                    "intrinsic_status": "ready", "intrinsic_error": None,
+                    "three_year_source": "career_current_y1_y3_components",
+                })
         payload["value"] = value
         payload["publication_generation_id"] = getattr(
             runtime,
