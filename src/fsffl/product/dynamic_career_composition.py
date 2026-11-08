@@ -282,6 +282,10 @@ def dynamic_career_fingerprint(
         "projection_history_revisions": ros_revisions,
         "contract": "dynamic-rostered-p0-career-bridge-v4:captured-live-inputs",
     }
+    from .p0_live_candidate_runtime import ros_fallback_policy_version
+    policy = ros_fallback_policy_version(evaluated_at)
+    if policy is not None:
+        payload["ros_fallback_policy"] = policy
     status_receipts = recorded_status_based_zero_ros_evidence(
         context.league_state, as_of=evaluated_at,
     )

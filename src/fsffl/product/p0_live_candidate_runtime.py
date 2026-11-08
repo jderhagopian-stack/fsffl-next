@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Mapping
 
@@ -231,6 +231,35 @@ UNSIGNED_YTD_POLICY_VERSION = "career-ytd-only-v2:universal-catalog-team-null-20
 UNSIGNED_YTD_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=UTC)
 IR_NO_PROJECTION_POLICY_VERSION = "career-ytd-only-v2:exact-state-ir-no-projection-20261024"
 IR_NO_PROJECTION_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=UTC)
+
+# User-directed correction. Earlier publications/replays retain their prior
+# source-policy identity; a subsequent governed capture admits this rule.
+ROS_FALLBACK_POLICY_VERSION = "career-ros-fallback-v3:unsigned-priority-single-source-fumbles"
+ROS_FALLBACK_POLICY_APPROVED_AT = datetime(2026, 11, 8, 13, 13, 56, tzinfo=UTC)
+
+
+def ros_fallback_policy_version(as_of: datetime) -> str | None:
+    if as_of.tzinfo is None:
+        raise ValueError("ROS fallback policy cutoff must be timezone-aware")
+    return (ROS_FALLBACK_POLICY_VERSION
+            if as_of >= ROS_FALLBACK_POLICY_APPROVED_AT else None)
+
+
+def _unsigned_ytd_override(
+    player_id: str, *, roles: Mapping[str, Any],
+    receipts: Mapping[str, YtdOnlyYearOneEvidence], as_of: datetime,
+) -> YtdOnlyYearOneEvidence | None:
+    """Current NFL unsigned evidence owns ROS; a provider row cannot sign a player."""
+    if ros_fallback_policy_version(as_of) is None:
+        return None
+    role = roles.get(player_id)
+    receipt = receipts.get(player_id)
+    if (role is None or role.status != "unsigned" or receipt is None
+            or role.captured_at > as_of or receipt.observed_at > as_of):
+        return None
+    return (receipt if receipt.source_version.endswith(ROS_FALLBACK_POLICY_VERSION)
+            else replace(receipt, source_version=receipt.source_version + ":" + ROS_FALLBACK_POLICY_VERSION))
+
 
 
 def recorded_status_based_zero_ros_evidence(
@@ -698,6 +727,7 @@ def _score_complete_single_source_year_one(
     completed_actuals: tuple[ForecastObservation, ...],
     league_state: LeagueState,
     supplemental_rows: tuple[ForecastObservation, ...] = (),
+    preserve_provider_fumbles: bool = False,
 ) -> tuple[
     tuple[ForecastObservation, ...],
     ForecastObservation | None,
@@ -719,6 +749,8 @@ def _score_complete_single_source_year_one(
         for item in source_rows
     ):
         return None
+    if preserve_provider_fumbles and any(item.metric == ForecastMetric.FUMBLES_LOST for item in source_rows):
+        supplemental_rows = ()
     supplement_keys = {
         (item.player_id, item.position, item.metric, item.period_start, item.period_end)
         for item in source_rows
@@ -875,15 +907,24 @@ def _single_source_fumbles_gap_player_ids(
     league_state: LeagueState,
     candidate_ids: set[str] | frozenset[str],
     source_observations: tuple[ForecastObservation, ...],
+    include_standard_scoring: bool = False,
 ) -> set[str]:
-    """Select roster candidates with one provider complete except FUMBLES_LOST."""
+    """Select providers complete except FUMBLES_LOST in every consumed scoring system."""
     configured_coefficients: dict[ForecastMetric, float] = {}
-    for rule in league_state.league.rules.scoring:
-        metric = _STAT_METRICS.get(rule.stat)
-        if metric is not None:
-            configured_coefficients[metric] = (
-                configured_coefficients.get(metric, 0.0) + float(rule.points)
-            )
+    scoring_systems = (league_state.league.rules.scoring,)
+    if include_standard_scoring:
+        scoring_systems += (FROZEN_I1_STANDARD_SCORING,)
+    for rules in scoring_systems:
+        coefficients: dict[ForecastMetric, float] = {}
+        for rule in rules:
+            metric = _STAT_METRICS.get(rule.stat)
+            if metric is not None:
+                coefficients[metric] = coefficients.get(metric, 0.0) + float(rule.points)
+        # Union required coordinates, rather than cancelling coefficients from
+        # two different scoring systems against each other.
+        for metric, coefficient in coefficients.items():
+            if coefficient != 0.0:
+                configured_coefficients[metric] = coefficient
     if configured_coefficients.get(ForecastMetric.FUMBLES_LOST, 0.0) == 0.0:
         return set()
     metric_domains = (
@@ -1202,10 +1243,12 @@ def build_live_p0_rostered_candidate_forecasts(
     ros_fumbles_lost: tuple[ForecastObservation, ...] = ()
     fumbles_supplement_failure: str | None = None
     available_ros_rows = _all_ros_source_observations(ros_runtime, fallback_ros_observations)
+    fallback_policy = ros_fallback_policy_version(ros_revision_cutoff)
     fumbles_eligible_player_ids = _single_source_fumbles_gap_player_ids(
         league_state=league_state,
         candidate_ids=set(rostered_p0_ids),
         source_observations=available_ros_rows,
+        include_standard_scoring=fallback_policy is not None,
     )
     try:
         ros_for_fumbles = ros_runtime.model_copy(update={
@@ -1304,10 +1347,14 @@ def build_live_p0_rostered_candidate_forecasts(
         league_state, as_of=role_cutoff, verified_roles=role_receipts,
     )
     def admit_ytd_only(player_id):
-        evidence = ytd_only_receipts.get(player_id)
-        # This approval covers projectionless cases, not replacing partial or
-        # malformed provider evidence with a more convenient assumption.
-        if any(row.player_id == player_id for row in available_ros_rows):
+        override = _unsigned_ytd_override(
+            player_id, roles=role_receipts, receipts=ytd_only_receipts,
+            as_of=cutoff,
+        ) if fallback_policy is not None else None
+        evidence = override or ytd_only_receipts.get(player_id)
+        # Verified unsigned takes priority under the newly directed policy.
+        # All other existing YTD-only cases retain the projection-row veto.
+        if override is None and any(row.player_id == player_id for row in available_ros_rows):
             return None
         if evidence is None:
             evidence = recorded_ir_no_projection_year_one_evidence(
@@ -1316,6 +1363,7 @@ def build_live_p0_rostered_candidate_forecasts(
             )
             if evidence is None:
                 return None
+        ytd_only_receipts[player_id] = evidence
         try:
             return _score_ytd_only_year_one(
                 league_state=league_state, evidence=evidence, completed_actuals=completed_raw,
@@ -1333,9 +1381,26 @@ def build_live_p0_rostered_candidate_forecasts(
         if positions[player_id] != current_positions[player_id]:
             failures[player_id] = "canonical position differs between governed and current State"
             continue
+        unsigned_override = _unsigned_ytd_override(
+            player_id, roles=role_receipts, receipts=ytd_only_receipts, as_of=cutoff,
+        ) if fallback_policy is not None else None
+        if unsigned_override is not None:
+            fallback = admit_ytd_only(player_id)
+            if fallback is None:
+                failures.setdefault(player_id, "verified unsigned Year-1 actuals could not be scored")
+                continue
+            source_raw, standard_item, league_item = fallback
+            y1_raw = tuple(item for item in y1_raw if item.player_id != player_id) + source_raw
+            y1_standard[player_id] = standard_item
+            y1_league[player_id] = league_item
+            evidence_modes[player_id] = (
+                "low_confidence_ytd_only:no_additional_production_assumed:"
+                + ytd_only_receipts[player_id].source_version
+            )
+            failures.pop(player_id, None)
         standard_item = y1_standard.get(player_id)
         league_item = y1_league.get(player_id)
-        evidence_mode = "two_source"
+        evidence_mode = evidence_modes.get(player_id, "two_source")
         if standard_item is None or league_item is None:
             status_evidence = fallback_status_evidence.get(player_id)
             if status_evidence is not None:
@@ -1395,6 +1460,7 @@ def build_live_p0_rostered_candidate_forecasts(
                         completed_actuals=completed_raw,
                         league_state=league_state,
                         supplemental_rows=fumbles_rows,
+                        preserve_provider_fumbles=fallback_policy is not None,
                     )
                     if candidate_year_one is None:
                         continue

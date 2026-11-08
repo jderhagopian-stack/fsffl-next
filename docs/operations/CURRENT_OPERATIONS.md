@@ -1,3 +1,9 @@
+## 2026-11-08 — Unsigned ROS priority and single-source FUMBLES_LOST rule authorized
+
+User explicitly directs that a player verified off an NFL roster gets no ROS projection, retaining YTD actuals, and every admitted single-source fallback goes through the fumbles-lost completion model. This supersedes the October 24 provider-row veto for unsigned players. It does not authorize zero Career, removing fantasy roster identities, or fabricating other missing statistics. Apply generically, with source/State/cutoff provenance and versioned historical compatibility; preserve current saved publications until a new owned refresh publishes the new policy. [Decision, RB evidence and implementation gate](workstreams/POSITION_ROOM_RB_COVERAGE_20261108.md).
+
+---
+
 ## 2026-11-08 — Player-card correction deployed; narrow restart validator fix in progress
 
 PR #519 passed CI/clean review and exact-head Stable **2,670 / 5 skipped**, then merged as `7898f79c` and deployed live at **04:35:34 UTC** (`dep-dbnvnd6417fc73esqkog`) on the unchanged Render plan. Roster now consumes exact-generation published Career indexes, the Career endpoint uses retained cohort IDs, compatibility workspaces serialize/reclaim, and history memory admission is retryable. Physical acceptance remains open.

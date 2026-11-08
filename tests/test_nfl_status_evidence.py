@@ -470,3 +470,115 @@ def test_currently_reverified_roles_refresh_only_the_approved_ytd_identities():
     assert recorded_ytd_only_year_one_evidence(
         state, as_of=capture + timedelta(hours=6),
     ) == {}
+
+
+@pytest.mark.parametrize('provider_case', ['absent', 'partial', 'complete'])
+def test_new_unsigned_policy_overrides_provider_ros_and_retains_actuals(monkeypatch, provider_case):
+    result, pid, requested = _run_current_ros_policy_case(monkeypatch, unsigned=True, provider_case=provider_case)
+    assert not result.failures
+    assert result.year_one_league[pid].distribution.mean == pytest.approx(9.)
+    assert result.year_one_standard[pid].distribution.mean == pytest.approx(7.)
+    assert result.year_one_evidence_modes[pid].startswith('low_confidence_ytd_only:')
+    assert 'unsigned-priority-single-source-fumbles' in result.year_one_evidence_modes[pid]
+    assert len(result.future.contract.forecasts) == 2
+
+
+@pytest.mark.parametrize('league_fumbles', [True, False])
+def test_new_single_source_fallback_runs_fumbles_model_before_scoring(monkeypatch, league_fumbles):
+    result, pid, requested = _run_current_ros_policy_case(monkeypatch, unsigned=False, provider_case='partial',league_fumbles=league_fumbles)
+    assert not result.failures
+    assert requested == [{pid}]
+    assert result.year_one_league[pid].distribution.mean > 9.
+    assert result.year_one_evidence_modes[pid].startswith('single_source_low_confidence:')
+    assert '+first_party_fumbles_lost' in result.year_one_evidence_modes[pid]
+
+
+def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=False, earned=True, league_fumbles=True):
+    from fsffl.product import p0_live_candidate_runtime as runtime
+    from fsffl.providers.sleeper_weekly_stats import SleeperNflState, SleeperWeeklyStatLine
+    from fsffl.state.models import ScoringRule
+    pid = 'sleeper:player:8129'
+    capture = runtime.ROS_FALLBACK_POLICY_APPROVED_AT + timedelta(seconds=1)
+    old = _approved_ytd_state()
+    team = None if unsigned else 'HOU'
+    state = old.model_copy(update={
+        'as_of':capture,
+        'league':old.league.model_copy(update={'rules':old.league.rules.model_copy(update={
+            'scoring':(*(rule for rule in runtime.FROZEN_I1_STANDARD_SCORING if league_fumbles or rule.stat!='fum_lost'),ScoringRule(stat='rec',points=1.)),
+        })}),
+        'players':(Player(player_id=pid,full_name='Dameon Pierce',position=Position.RB,nfl_team=team),),
+        'player_states':(PlayerState(player_id=pid,age_years=26.,as_of=capture,nfl_team=team,
+            status='inactive' if unsigned else 'active',
+            provenance=Provenance(source='sleeper:current_player_universe',retrieved_at=capture,effective_at=capture)),),
+        'team_states':(TeamState(team_id='a',roster=(RosterEntry(player_id=pid,slot='IR' if ir else 'BENCH'),)),TeamState(team_id='b',roster=())),
+    })
+    weekly = {week:() for week in range(1,6)}
+    weekly[4] = (SleeperWeeklyStatLine(pid,2026,4,{'rush_yd':20.,'rush_td':1.,'rec':2.,'rec_yd':10.,'fum_lost':1.,'gp':1.},capture),)
+    if not earned: weekly[4]=()
+    stats = SimpleNamespace(fetch_nfl_state=lambda:SleeperNflState(season=2026,week=6,season_type='regular',captured_at=capture),
+                            fetch_season=lambda **_:(), fetch_week=lambda **kw:weekly[kw['week']])
+    snapshot = SimpleNamespace(captured_at=capture,payload={'players':{'8129':{'years_exp':4,'team':team,'depth_chart_order':2}}})
+    monkeypatch.setattr(runtime.SleeperSnapshotNormalizer,'normalize_snapshot',lambda *_,**__:state)
+    evidence = runtime.YtdOnlyYearOneEvidence(player_id=pid,season=2026,source='fixture',source_version='fixture',observed_at=capture)
+    complete = tuple(row.model_copy(update={'source':'razzball','distribution':runtime._constant_distribution(2.)})
+                     for row in runtime._status_based_zero_ros(league_state=state,evidence=evidence,as_of=capture))
+    rows = () if provider_case=='absent' else complete if provider_case=='complete' else tuple(
+        row for row in complete if row.metric.value in {'rush_yards','rush_td','receptions','rec_yards','rec_td'})
+    ensemble = complete if provider_case=='complete' else ()
+    ros = SimpleNamespace(evaluation_as_of=capture,source_observations=rows,raw_ensemble=ensemble,
+                          successful_source_ids=('razzball',),model_copy=lambda **_:SimpleNamespace())
+    monkeypatch.setattr(runtime,'build_in_season_forecasts',lambda *_,**__:ros)
+    requested=[]
+    def supplement(*args,**kwargs):
+        requested.append(set(kwargs['eligible_player_ids']))
+        return tuple(row.model_copy(update={'source':runtime.FIRST_PARTY_FUMBLES_LOST_SOURCE})
+                     for row in complete if row.metric.value=='fumbles_lost' and pid in kwargs['eligible_player_ids'])
+    monkeypatch.setattr('fsffl.forecast.in_season_orchestration.build_current_ros_fumbles_lost_supplement_observations',supplement)
+    result=runtime.build_live_p0_rostered_candidate_forecasts(state,stats_source=stats,
+        sleeper_source=SimpleNamespace(fetch_latest=lambda **_:snapshot),evaluation_as_of=capture,projection_history_as_of=capture)
+    return result,pid,requested
+
+
+@pytest.mark.parametrize('case', ['before_policy', 'signed', 'unknown', 'future_role', 'missing_receipt'])
+def test_unsigned_override_requires_current_verified_role_and_policy(case):
+    from fsffl.product import p0_live_candidate_runtime as runtime
+    pid='sleeper:player:8129'
+    cutoff=runtime.ROS_FALLBACK_POLICY_APPROVED_AT + timedelta(seconds=1)
+    role=SimpleNamespace(status='unsigned',captured_at=cutoff)
+    receipt=runtime.YtdOnlyYearOneEvidence(player_id=pid,season=2026,source='fixture',source_version='fixture',observed_at=cutoff)
+    roles={pid:role};receipts={pid:receipt}
+    if case=='before_policy': cutoff=runtime.ROS_FALLBACK_POLICY_APPROVED_AT-timedelta(seconds=1)
+    if case=='signed': role.status='signed'
+    if case=='unknown': roles={}
+    if case=='future_role': role.captured_at=cutoff+timedelta(seconds=1)
+    if case=='missing_receipt': receipts={}
+    assert runtime._unsigned_ytd_override(pid,roles=roles,receipts=receipts,as_of=cutoff) is None
+
+
+def test_ros_policy_dependency_changes_only_for_subsequent_capture(monkeypatch):
+    from fsffl.product import p0_live_candidate_runtime as runtime
+    from fsffl.product.dynamic_career_composition import dynamic_career_fingerprint
+    context=SimpleNamespace(league_state=_state(),forecast_evidence=None)
+    before=runtime.ROS_FALLBACK_POLICY_APPROVED_AT-timedelta(seconds=1)
+    after=runtime.ROS_FALLBACK_POLICY_APPROVED_AT+timedelta(seconds=1)
+    historical=dynamic_career_fingerprint(context,now=before,include_freshness_epoch=False)
+    current=dynamic_career_fingerprint(context,now=after,include_freshness_epoch=False)
+    monkeypatch.setattr(runtime,'ros_fallback_policy_version',lambda _:None)
+    assert historical==dynamic_career_fingerprint(context,now=before,include_freshness_epoch=False)
+    assert current!=dynamic_career_fingerprint(context,now=after,include_freshness_epoch=False)
+
+
+
+def test_unsigned_with_zero_actuals_still_enters_future_models(monkeypatch):
+    result,pid,_=_run_current_ros_policy_case(monkeypatch,unsigned=True,provider_case='partial',earned=False)
+    assert not result.failures
+    assert result.year_one_league[pid].distribution.mean == 0.
+    assert result.year_one_standard[pid].distribution.mean == 0.
+    assert len(result.future.contract.forecasts) == 2
+
+
+def test_existing_ir_projectionless_fallback_retains_its_receipt_in_live_producer(monkeypatch):
+    result,pid,_=_run_current_ros_policy_case(monkeypatch,unsigned=False,provider_case='absent',ir=True)
+    assert not result.failures
+    assert result.year_one_league[pid].distribution.mean == pytest.approx(9.)
+    assert 'exact-state-ir-no-projection' in result.year_one_evidence_modes[pid]
