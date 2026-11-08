@@ -35,7 +35,7 @@ jobs:
         run: |
           pytest -q tests/test_current_position_depth.py
           pytest -q tests/test_private_beta_shapley_runtime.py -k compatibility
-          pytest -q tests/test_foundation4_career_forward_runtime.py -k 'new_current_receipt or wrong_semantic_key'
+          pytest -q tests/test_foundation4_career_forward_runtime.py -k 'new_current_receipt or wrong_semantic_key or product_career_read'
       - name: Focused 335-player Career composer RSS benchmark
         run: pytest -q -s tests/test_career_forward_intrinsic.py -k career_composer_materializer_peak_rss_below_budget
       - name: Restore sanitized frozen numeric reference fixture

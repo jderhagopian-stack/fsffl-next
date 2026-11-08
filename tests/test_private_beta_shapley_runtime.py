@@ -156,10 +156,13 @@ def test_compatibility_coalescing_keeps_distinct_dependencies_separate(monkeypat
             other = context
         second = pool.submit(loader.intrinsic_input_fingerprint, other)
         try:
-            assert both_entered.wait(5)
+            # Distinct dependencies are still independently checked, but only
+            # one transient scoring workspace is allowed at a time.
+            assert not both_entered.wait(.05)
         finally:
             release.set()
         assert first.result(5) == second.result(5) == "input"
+        assert both_entered.is_set()
     assert len(calls) == 2
     assert loader._compatibility_pending is None
 

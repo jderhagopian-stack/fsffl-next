@@ -11,7 +11,7 @@ from fsffl.analytics.dynasty_position_room import (
     build_three_year_intrinsic_player_values,
 )
 from .foundation4_career_forward_runtime import CareerIntrinsicLoader
-from .career_presentation import career_lens_for_publication, career_reference_ids_from_current
+from .career_presentation import career_lens_for_publication, career_reference_player_ids
 from .career_coverage import (
     build_career_position_depth_refresh,
     select_career_coverage,
@@ -252,8 +252,15 @@ def install_career_intrinsic_routes(
         )
         # The reference game is Current-owned; dynamic roster additions never
         # change its presentation ruler or participate as Market inputs.
-        reference_ids = (career_reference_ids_from_current(current_intrinsic_coordinator.current(_context))
-                         if current_intrinsic_coordinator is not None else None)
+        current_player_ids = (
+            current_intrinsic_coordinator.completed_player_ids_for_state(_context)
+            if current_intrinsic_coordinator is not None else None
+        )
+        reference_ids = (
+            career_reference_player_ids() & current_player_ids
+            if current_player_ids is not None else
+            (frozenset() if current_intrinsic_coordinator is not None else None)
+        )
         summary, presentation_rows = career_lens_for_publication(
             record, served_state_id=record.league_state_id, reference_ids=reference_ids,
         )

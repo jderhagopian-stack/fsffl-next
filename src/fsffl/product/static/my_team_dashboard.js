@@ -14,7 +14,11 @@ function myTeamCareerMatchesView(payload){
   return Boolean(served)&&Boolean(view?.publication_generation_id)&&payload?.league_state_id===served
     &&payload?.publication_generation_id===view.publication_generation_id;
 }
-function myTeamCareerEstimate(id){return myTeamCareerMatchesView(fsfflMyTeamState.careerIntrinsic)?(fsfflMyTeamState.careerIntrinsic.estimates||[]).find(row=>row.player_id===id)||null:null}
+function myTeamCareerEstimate(id){
+  const published=myTeamLensMap().get(id);
+  if(published?.career_status==='ready'&&typeof published.career_intrinsic_index==='number'&&Number.isFinite(published.career_intrinsic_index))return published;
+  return myTeamCareerMatchesView(fsfflMyTeamState.careerIntrinsic)?(fsfflMyTeamState.careerIntrinsic.estimates||[]).find(row=>row.player_id===id)||null:null;
+}
 function myTeamCareerDisplay(id){
   const estimate=myTeamCareerEstimate(id),index=estimate?.career_intrinsic_index,raw=estimate?.raw_career_forward_reference;
   if(typeof index==='number'&&Number.isFinite(index))return `${Math.round(index).toLocaleString()}<small>raw Career ${myTeamNum(raw,1)}</small>`;
