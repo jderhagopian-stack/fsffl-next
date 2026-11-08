@@ -369,8 +369,6 @@ def fumbles_lost_runtime_authority_compatible(
     assessments = tuple(
         getattr(runtime_result, "fumbles_lost_materiality_assessments", ()) or ()
     )
-    if not assessments:
-        return False
     expected_contract = str(
         table.payload["materiality_contract"]["contract_version"]  # type: ignore[index]
     )
@@ -404,7 +402,10 @@ def fumbles_lost_runtime_authority_compatible(
         and row.contract_version == expected_contract
     }
     if not active_fumbles_partial_ids:
-        return True
+        # No partial subject needs consumer-scope materiality authority. An
+        # exact point supplement is sufficient even when no assessments were
+        # needed during the original build. Preserve the assessed legacy path.
+        return supplement_valid or bool(assessments)
     return all(
         player_id in assessment_by_player
         and assessment_by_player[player_id].status

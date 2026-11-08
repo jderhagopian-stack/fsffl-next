@@ -791,3 +791,35 @@ def test_annual_table_cannot_be_reused_for_wrong_target_season() -> None:
     candidate = _annual_candidate()
     with pytest.raises(ValueError, match="target season does not match State"):
         resolve_fumbles_lost_production_table(2028, table=candidate)
+
+
+@pytest.mark.parametrize("slot", [None, RosterSlot.TAXI, RosterSlot.IR])
+def test_exact_supplement_restores_with_only_inactive_partials_and_no_assessments(slot):
+    from fsffl.forecast.fumbles_lost_materiality import fumbles_lost_runtime_authority_compatible
+    from fsffl.forecast.fumbles_lost_first_party import FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION as version
+
+    state = _state(roster_slot=slot)
+    runtime = SimpleNamespace(
+        partial_fantasy_point_forecasts=(_partial(Position.WR),),
+        fumbles_lost_materiality_assessments=(),
+        fumbles_lost_simulation_relevant_player_ids=(),
+        fumbles_lost_supplement_authority_fingerprint="accepted-exact-supplement",
+        fumbles_lost_supplement_model_version=version,
+        fumbles_lost_supplement_league_state_id=state.state_id,
+    )
+    check = lambda st: fumbles_lost_runtime_authority_compatible(st, runtime, expected_supplement_version=version)
+    assert check(state)
+    # A missing/wrong supplement cannot use the new empty-assessment path.
+    runtime.fumbles_lost_supplement_league_state_id = "wrong-state"
+    assert not check(state)
+    runtime.fumbles_lost_supplement_league_state_id = state.state_id
+    runtime.fumbles_lost_supplement_model_version = "wrong-version"
+    assert not check(state)
+    runtime.fumbles_lost_supplement_model_version = version
+    # Moving the partial subject into active scope still needs an assessment,
+    # even when the supplement itself is exact for the new State.
+    active = _state(roster_slot=RosterSlot.WR)
+    runtime.fumbles_lost_supplement_league_state_id = active.state_id
+    assert not check(active)
+    runtime.fumbles_lost_simulation_relevant_player_ids = ("sleeper:player:materiality",)
+    assert not check(active)

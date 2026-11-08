@@ -1,3 +1,11 @@
+## 2026-11-08 — Player-card correction deployed; narrow restart validator fix in progress
+
+PR #519 passed CI/clean review and exact-head Stable **2,670 / 5 skipped**, then merged as `7898f79c` and deployed live at **04:35:34 UTC** (`dep-dbnvnd6417fc73esqkog`) on the unchanged Render plan. Roster now consumes exact-generation published Career indexes, the Career endpoint uses retained cohort IDs, compatibility workspaces serialize/reclaim, and history memory admission is retryable. Physical acceptance remains open.
+
+Startup exposed an independent persisted-Forecast validation bug: one **unrostered** FUMBLES_LOST partial, no active partials, valid exact-State supplement and no required assessments were rejected before scope checking. That suppressed Forecast/Simulation restore and changed Career lookup. Candidate `fix/restart-inactive-partial-20261108` preserves scope/active-player checks and permits this already valid inactive case. Focused tests and actual saved guard-input replay confirm false-before/true-after with no new source acquisition or production write. [Full identity, evidence and remaining gates](workstreams/PLAYER_CARD_CORRECTION_20261108.md). No new intelligence refresh; unsigned Pierce remains legitimately unprojected.
+
+---
+
 ## 2026-11-08 — Physical roster Career/history failures reopened
 
 The user confirms roster Career indexes remain unavailable despite raw totals and ready 3-Year indexes; historical player stats/chart return HTTP 503. Post-refresh page use raised process high-water to **548.81 MiB**, above the earlier refresh-only 489.37 MiB. Current restore admission timeout and overlapping compatibility replays are confirmed in logs. Historical failed-record error was not logged; memory admission is strongly implicated but exact failure remains unproven. Unsigned Dameon Pierce legitimately has no projections.
