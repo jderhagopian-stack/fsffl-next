@@ -125,9 +125,9 @@ function laValueDot(row){
   return '<button type="button" data-player-intelligence-id="'+laEsc(row.player_id)+'" class="league-value-dot pos-'+laEsc(String(row.position||'na').toLowerCase())+'" style="left:'+left.toFixed(1)+'%" title="'+laEsc(row.full_name)+' · '+laEsc(row.position)+' · '+laEsc(detail)+'"></button>';
 }
 function laValuePlayerDetail(row){
-  const market=row.broad_market_value_index,intrinsic=row.intrinsic_value_index,gap=row.value_index_gap;
-  const gapLabel=typeof gap==='number'&&Number.isFinite(gap)?(gap>=0?'+':'')+laValueIndex(gap):'—';
-  return '<button type="button" class="league-value-player" data-player-intelligence-id="'+laEsc(row.player_id)+'"><div><strong>'+laEsc(row.full_name)+'</strong><small>'+laEsc(row.position)+(typeof row.age_years==='number'?' · age '+laNum(row.age_years,1):'')+'</small></div><span><b>'+laValueIndex(market)+'</b><small>Market</small></span><span><b>'+laValueIndex(intrinsic)+'</b><small>Intrinsic</small></span><span><b>'+gapLabel+'</b><small>Difference</small></span></button>';
+  const market=row.broad_market_value_index,intrinsic=row.intrinsic_value_index,gap=row.percentile_gap;
+  const gapLabel=typeof gap==='number'&&Number.isFinite(gap)?(gap>=0?'+':'')+laNum(100*gap,1)+' pct pts':'—';
+  return '<button type="button" class="league-value-player" data-player-intelligence-id="'+laEsc(row.player_id)+'"><div><strong>'+laEsc(row.full_name)+'</strong><small>'+laEsc(row.position)+(typeof row.age_years==='number'?' · age '+laNum(row.age_years,1):'')+'</small></div><span><b>'+laValueIndex(market)+'</b><small>Market</small></span><span><b>'+laValueIndex(intrinsic)+(row.intrinsic_index_overflow?'+':'')+'</b><small>Intrinsic</small></span><span><b>'+gapLabel+'</b><small>Percentile gap</small></span></button>';
 }
 function laValueDetail(teamId){
   const view=fsfflLeagueStructureState.views.find(item=>item.team_id===teamId);if(!view)return'';

@@ -280,9 +280,9 @@ def test_final_density_value_polish_uses_header_dock_compact_cards_and_value_ind
     assert "min-height:58px!important" in css
     assert "broad_market_value_index" in source
     assert "intrinsic_value_index" in source
-    assert "value_index_gap" in source
+    assert "percentile_gap" in source
     assert "Governed 0–10,000 Value Index" in source
-    assert "percentile_gap" not in source[source.index("function laValuePlayerDetail"):source.index("function laValueDetail")]
+    assert "percentile_gap" in source[source.index("function laValuePlayerDetail"):source.index("function laValueDetail")]
 
 
 def test_final_header_dock_keeps_all_labels_visible_and_identity_frozen() -> None:

@@ -351,7 +351,7 @@ function franchiseNSLensPercentile(player,lens){
 }
 function franchiseNSMarketDisplay(player){
   const index=myTeamMarketIndex(player),pct=franchiseNSMarketPercentile(player);
-  if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+(myTeamLensMap().get(player?.player_id)?.intrinsic_index_overflow?'+':'')+'</strong><small>'+(pct==null?'Broad Market':Math.round(pct*100)+'th pct')+'</small>';
+  if(index!=null)return '<strong>'+Math.round(index).toLocaleString()+'</strong><small>'+(pct==null?'Broad Market':Math.round(pct*100)+'th pct')+'</small>';
   return '<strong>Unavailable</strong><small>'+(pct==null?'Broad Market index':Math.round(pct*100)+'th pct · index unavailable')+'</small>';
 }
 function franchiseNSIntrinsicReason(){
