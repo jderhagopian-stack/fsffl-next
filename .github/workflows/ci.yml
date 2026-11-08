@@ -28,7 +28,7 @@ jobs:
       - name: Install dynamic-candidate test dependency
         run: python -m pip install 'pandas>=2.2,<3'
       - name: Focused role-evidence renewal regression
-        run: pytest -q tests/test_role_receipt_renewal_479.py
+        run: pytest -q tests/test_role_receipt_renewal_479.py tests/test_nfl_status_evidence.py
       - name: Focused bounded Career feed and fumbles schema regression
         run: pytest -q tests/test_fumbles_lost_first_party.py tests/test_fumbles_lost_rolling_materiality.py tests/test_persistent_runtime_restore.py tests/test_p0_live_candidate_runtime.py tests/test_sleeper_normalizer.py
       - name: Focused refresh reuse and reader allocation regressions

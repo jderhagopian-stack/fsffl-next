@@ -423,6 +423,31 @@ def test_complete_single_source_year_one_is_labeled_eligible_and_missing_metrics
     assert complete[1] is not None and complete[2] is not None
     assert {item.source for item in complete[0]} == {"fsffl:sleeper-actuals-plus-governed-ros"}
     assert incomplete is None
+    # A single-source row is completed by the governed coordinate, without
+    # double counting when that provider already supplied fumbles lost.
+    supplement = next(row for row in source_rows(include_fumbles=True) if row.metric == ForecastMetric.FUMBLES_LOST)
+    from fsffl.forecast.fumbles_lost_first_party import FIRST_PARTY_FUMBLES_LOST_SOURCE
+    supplement = supplement.model_copy(update={"source":FIRST_PARTY_FUMBLES_LOST_SOURCE})
+    completed = _score_complete_single_source_year_one(player_id=player_id,
+        source_rows=source_rows(include_fumbles=False),completed_actuals=(),league_state=state,
+        supplemental_rows=(supplement,),preserve_provider_fumbles=True)
+    assert completed is not None and completed[1:] == complete[1:]
+    kept = _score_complete_single_source_year_one(player_id=player_id,
+        source_rows=source_rows(include_fumbles=True),completed_actuals=(),league_state=state,
+        supplemental_rows=(supplement.model_copy(update={"distribution":ForecastDistribution(mean=999., stddev=0.)}),),
+        preserve_provider_fumbles=True)
+    assert kept == complete
+    missing_other = tuple(row for row in source_rows(include_fumbles=False) if row.metric != ForecastMetric.REC_TD)
+    assert _score_complete_single_source_year_one(player_id=player_id,
+        source_rows=missing_other,completed_actuals=(),league_state=state,
+        supplemental_rows=(supplement,),preserve_provider_fumbles=True) is None
+    no_league_fumbles = state.model_copy(update={"league":state.league.model_copy(update={
+        "rules":state.league.rules.model_copy(update={"scoring":()})})})
+    assert _single_source_fumbles_gap_player_ids(league_state=no_league_fumbles,
+        candidate_ids={player_id},source_observations=source_rows(include_fumbles=False)) == set()
+    assert _single_source_fumbles_gap_player_ids(league_state=no_league_fumbles,
+        candidate_ids={player_id},source_observations=source_rows(include_fumbles=False),
+        include_standard_scoring=True) == {player_id}
 
 
 def test_retained_roster_ros_rows_enter_fumbles_gap_eligibility():
