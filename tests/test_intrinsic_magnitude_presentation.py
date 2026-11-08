@@ -118,7 +118,8 @@ def test_value_lens_route_uses_same_fixed_rulers_without_market_shape(monkeypatc
     assert all(r["value_index_gap"] is None for r in result["players"])
 
 
-def test_player_card_uses_career_owned_three_year_raw_and_same_career_reference(monkeypatch):
+@pytest.mark.parametrize("career_completed", [True, False])
+def test_player_card_uses_career_owned_three_year_raw_and_same_career_reference(monkeypatch, career_completed):
     from types import SimpleNamespace as N
     from fastapi import FastAPI
     from fsffl.product import player_intelligence_routes as routes
@@ -135,7 +136,8 @@ def test_player_card_uses_career_owned_three_year_raw_and_same_career_reference(
         status=ShapleyIntrinsicAvailability.READY, estimates=(N(player_id="a"), N(player_id="b")),
         status_reason=None,
     ))
-    career = N(status=IntrinsicBuildStatus.COMPLETED, league_state_id="S", contract=N(
+    career = N(status=IntrinsicBuildStatus.COMPLETED if career_completed else IntrinsicBuildStatus.FAILED,
+               league_state_id="S", contract=N(
         player_input_assumptions={}, estimates=(N(player_id="a", raw_career_forward_reference=220.),
                                                N(player_id="b", raw_career_forward_reference=440.)),
     ))
@@ -149,6 +151,11 @@ def test_player_card_uses_career_owned_three_year_raw_and_same_career_reference(
     )
     endpoint = next(route.endpoint for route in app.routes if route.path == "/api/player-intelligence/{player_id}")
     result = endpoint(player_id="a", user_id="u")
+    if not career_completed:
+        assert result["value"]["intrinsic_value_index"] == 888
+        assert result["value"]["career_intrinsic_index"] is None
+        assert "three_year_source" not in result["value"]
+        return
     assert result["value"]["intrinsic_value_index"] == 1000
     assert result["value"]["career_intrinsic_index"] == 1000
     assert result["value"]["three_year_raw_intrinsic_value"] == 75

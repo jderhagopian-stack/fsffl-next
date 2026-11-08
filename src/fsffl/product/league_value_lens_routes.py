@@ -79,10 +79,11 @@ def install_league_value_lens_routes(
                 ranks = percentile_ranks(
                     (row.player_id, row.raw_intrinsic_value) for row in player_values
                 )
+                magnitude = intrinsic_magnitude_coordinate(rules, "three_year")
                 coordinate = None
                 try:
                     evidence = getattr(runtime, "value_evidence", None)
-                    if evidence is not None:
+                    if evidence is not None and magnitude is None:
                         coordinate = build_value_presentation_coordinate(
                             evidence.native_magnitude_observations
                         )
@@ -97,7 +98,6 @@ def install_league_value_lens_routes(
                     percentile = ranks[value.player_id]
                     market_row = market_rows.get(value.player_id, {})
                     market_percentile = market_row.get("broad_market_percentile")
-                    magnitude = intrinsic_magnitude_coordinate(rules, "three_year")
                     intrinsic_index = (
                         magnitude.index(value.raw_intrinsic_value) if magnitude is not None else
                         coordinate.index_for_percentile(percentile)

@@ -404,7 +404,9 @@ def install_player_intelligence_routes(
             value["intrinsic_contract_status"] = intrinsic.status.value
             value["intrinsic_status_reason"] = intrinsic.status_reason
         magnitude = intrinsic_magnitude_coordinate(rules, "three_year")
-        if magnitude is not None and career_record is not None and career_record.contract is not None:
+        if (magnitude is not None and career_record is not None
+                and career_record.status == IntrinsicBuildStatus.COMPLETED
+                and career_record.contract is not None):
             accepted = build_three_year_intrinsic_player_values(
                 runtime.league_state, career_forward=career_record.contract,
                 career_evidence_state_id=career_record.league_state_id,
