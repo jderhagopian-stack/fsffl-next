@@ -1,3 +1,13 @@
+## 2026-11-08 — Unsigned ROS and single-source fumbles rules deployed; one refresh requested
+
+PR #522 exact head `40002d86` passed clean review/CI and Stable **2,688 / 5 skipped**, 831.72 s, before/after head checks. Merge **`e0e045a4`** has the identical tested tree. Render **`dep-dbo7u1psrm7s73b74et0`** is live at **13:55:37 UTC**, unchanged single 0.5 CPU/512 MiB service. Fresh verified unsigned status now has priority over provider ROS rows; retain YTD actuals, assume no added ROS production, and preserve future/Shapley/Career methods. Admitted single-source gaps are completed through the existing FUMBLES_LOST model across both scoring systems; existing provider fumbles is retained and labeled accurately.
+
+At **13:55:56 UTC**, the existing saved publication restored **Forecast/Simulation/Value complete**, product/Intrinsic **full**. Startup RSS **324.91 MiB**, peak **357.51 MiB**, active none/waiters zero. Historical source-policy fingerprints are preserved; the old 11/12 RB-room publication remains intact until a new owned refresh. The user has been asked to start **one** Refresh Intelligence. No agent-triggered refresh or manual production rewrite. [Exact rule/test/deployment evidence and remaining RB gate](workstreams/POSITION_ROOM_RB_COVERAGE_20261108.md).
+
+User previously confirmed card/history/Career recovery, with only the RB columns incomplete. Full new-policy refresh, both RB ranks and page-use memory acceptance remain open; no capacity/coverage claim from startup alone.
+
+---
+
 ## 2026-11-08 — Unsigned ROS priority and single-source FUMBLES_LOST rule authorized
 
 User explicitly directs that a player verified off an NFL roster gets no ROS projection, retaining YTD actuals, and every admitted single-source fallback goes through the fumbles-lost completion model. This supersedes the October 24 provider-row veto for unsigned players. It does not authorize zero Career, removing fantasy roster identities, or fabricating other missing statistics. Apply generically, with source/State/cutoff provenance and versioned historical compatibility; preserve current saved publications until a new owned refresh publishes the new policy. [Decision, RB evidence and implementation gate](workstreams/POSITION_ROOM_RB_COVERAGE_20261108.md).
