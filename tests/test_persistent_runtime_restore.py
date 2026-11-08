@@ -4094,3 +4094,43 @@ def test_persist_runtime_snapshot_reuses_exact_forecast_key_without_reencoding(m
 
     assert reused_keys[persistence_runtime_cache.FORECAST_ARTIFACT_KIND] == forecast_key
     assert len(persistence.artifacts) == before
+
+
+def test_published_restart_keeps_exact_forecast_with_only_unrostered_partial():
+    from fsffl.forecast.league_scoring import PartialFantasyPointForecast
+    persistence = MemoryPersistence()
+    original = _league_state()
+    state = original.model_copy(update={"league": original.league.model_copy(update={
+        "rules": original.league.rules.model_copy(update={
+            "scoring": (ScoringRule(stat="fum_lost", points=-2.0),),
+        }),
+    })})
+    partial = PartialFantasyPointForecast(
+        player_id="unrostered-player", position=Position.RB,
+        horizon=ForecastHorizon.SEASON,
+        period_start=state.as_of, period_end=state.as_of + timedelta(days=100),
+        distribution=ForecastDistribution(mean=81.9805, stddev=13.0276),
+        supported_rule_stats=("rush_yd",), omitted_rule_stats=("fum_lost",),
+        omission_reasons=("uncovered fumbles remain missing",),
+        source="fixture", model_version="fixture", as_of=state.as_of,
+        provenance=Provenance(source="fixture", retrieved_at=state.as_of, effective_at=state.as_of),
+    )
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    runtime = forecast.runtime_result.model_copy(update={
+        "partial_fantasy_point_forecasts": (partial,),
+        "fumbles_lost_materiality_assessments": (),
+        "fumbles_lost_simulation_relevant_player_ids": (),
+        "fumbles_lost_supplement_authority_fingerprint": "exact-accepted-supplement",
+        "fumbles_lost_supplement_model_version": FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+        "fumbles_lost_supplement_league_state_id": state.state_id,
+    })
+    forecast = replace(forecast, runtime_result=runtime)
+    persist_runtime_snapshot(persistence, user_id="jimmy", league_state=state,
+        selected_team_id="t2", forecast_evidence=forecast,
+        value_evidence=_empty_value(state), publication_generation_id="published-generation")
+    restored = restore_runtime_snapshot(persistence, user_id="jimmy")
+    assert restored is not None
+    assert restored.forecast_evidence is not None
+    assert restored.forecast_evidence.runtime_result == runtime
+    assert restored.forecast_evidence.runtime_result.partial_fantasy_point_forecasts == (partial,)
+    assert restored.publication_generation_id == "published-generation"

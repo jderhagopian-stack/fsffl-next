@@ -29,3 +29,20 @@ Focused history/compatibility tests: 9 passed. Career endpoint with the real 335
 Private saved-input four-reader replay uses distinct immutable State objects, the same accepted baseline/fumbles and warmed Future contract, with provider I/O excluded. Before: four overlapping authority reads, **0.558 s / 189,388 KiB peak**. After: four serialized reads, **0.854 s / 180,852 KiB peak**. Every fingerprint is unchanged (`431c56ef5443084de599e3e9cc6e06dcc8f7ff4d47ebcfeea5c4453a0753e929`). This trades ~0.30 s total local replay time for lower overlap/retention, and is not a full hosted memory-capacity proof.
 
 No source/model/scoring/provider/plan/schema/worker change. Historical snapshots and canonical roster coverage are preserved. Hosted normal-page verification must confirm roster indexes, history service/actual chart data, memory, and any newly logged provider error. No second intelligence refresh is needed or authorized merely to test these read-path fixes.
+
+
+## PR #519 deployed; restart guard blocker found
+
+PR #519 exact head `d1dbc34db9f50c039bd04787f13c62e0cff6962c` passed clean automated review at 04:20:56 UTC, CI `42446321694` and Stable `42446330544` / job `128625925767`: **2,670 passed / 5 skipped**, 749.26 s, before/after exact-head checks. Squash merge `7898f79cb7ad6f16bd21686932709d323449b092` has identical tree `a019ec916492e0e20757e2afe8e621feb25324a0`. Render `dep-dbnvnd6417fc73esqkog` became live at **04:35:34.081936 UTC**, event `evt-dbnvo5jhf81s73bd89a0`, unchanged `0.5c-512mb` single service, auto-deploy off. Startup RSS **309,551,104 B**, peak **334,229,504 B**, but Forecast/Simulation restoration was unavailable and Career's compatible lookup missed. Do not claim complete restart/product acceptance.
+
+Read-only hosted artifact inspection identifies a deterministic restart validation bug: exact published Forecast has valid v5 first-party supplement bound to State `703e822c...`, one FUMBLES_LOST partial for **unrostered** `sleeper:player:7528`, zero materiality assessments, and an empty simulation-relevant partial scope. No active subject is affected. `fumbles_lost_runtime_authority_compatible` rejects all empty assessment lists before checking that scope. That drops Forecast, prevents Simulation restore, and changes Career's dependency lookup. This is independent of unsigned Dameon Pierce.
+
+Post-refresh Render 30-second charged-memory samples before the new deployment reached **526,413,820 B (502.03 MiB)** at 04:06:00, remaining around **517,136,400 B (493.18 MiB)** at 04:23. No restart/OOM was recorded. Samples are not instantaneous peaks.
+
+### Narrow restart correction
+
+Branch `fix/restart-inactive-partial-20261108`, base verified current main `7898f79c`. Preserve exact scope matching first. Only when no partial subject is active, permit the already valid exact-State/current-version supplement without manufacturing an irrelevant assessment. Active partials still need the unchanged cutoff/contract/status checks. Missing/wrong supplement metadata with no assessments remains rejected; the previously accepted assessed inactive path remains compatible. No scoring, raw point, source or projection alteration.
+
+Three new unrostered/Taxi/IR cases fail before the fix and pass after; also reject wrong-State/version supplements and newly active partials, with both empty and matching stored scopes. Full focused rolling-materiality/persistence selection: **89 passed**. A real saved-guard replay using the exact production supplement/partial/scope plus all **214 active roster IDs** returns **false before / true after**, with zero provider requests/database writes. This is exact guard-input evidence, not a full decoder/hosted restore claim. A new manifest-bound persistence roundtrip verifies the partial row and raw evidence are preserved across restart.
+
+No additional intelligence refresh was initiated. Hosted restart must restore Forecast/Simulation/Career before physical roster/history acceptance can close.
