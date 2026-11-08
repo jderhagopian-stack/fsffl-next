@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from concurrent.futures import Future
+
 import hashlib
 import json
 import logging
@@ -8,6 +10,7 @@ from threading import RLock
 from typing import Any, Callable
 
 from fsffl.persistence.contracts import ArtifactKey, PersistenceStore, ReusableArtifactRecord, utc_now
+from fsffl.memory_attribution import sample_rss_phase
 
 from fsffl.forecast.future_contract import FutureForecastContract
 from fsffl.forecast.i1_current_facts import CurrentI1FactsArtifact
@@ -323,6 +326,8 @@ class PrivateBetaShapleyContractLoader:
         self._cached_contract: ShapleyIntrinsicContract | None = None
         self._cached_user_id: str | None = None
         self._user_cache_epochs: dict[str, int] = {}
+        self._compatibility_lock = RLock()
+        self._compatibility_pending = None
 
     @property
     def forecast_model_version(self) -> str:
@@ -465,6 +470,50 @@ class PrivateBetaShapleyContractLoader:
 
 
     def _compatibility_identity(
+        self,
+        context: UserRuntimeContext,
+    ) -> tuple[str, str]:
+        """Share concurrent exact-input reads, without caching source freshness.
+
+        Product readers often arrive together. Replaying the preserved authority
+        separately for each reader overlaps full scoring/JSON graphs with Career.
+        Share only an in-flight result for the same immutable inputs and epoch;
+        the next non-overlapping call still rechecks the producer's authority.
+        """
+        with self._lock:
+            epoch = self._user_cache_epochs.get(context.user_id, 0)
+        with self._compatibility_lock:
+            pending = self._compatibility_pending
+            if (pending is not None
+                    and pending[0] == context.user_id and pending[1] == epoch
+                    and pending[2] is context.league_state
+                    and pending[3] is context.forecast_evidence
+                    and pending[4] == context.career_fingerprint_evaluation_as_of):
+                future = pending[5]
+                owner = False
+            else:
+                future = Future()
+                pending = (context.user_id, epoch, context.league_state,
+                           context.forecast_evidence,
+                           context.career_fingerprint_evaluation_as_of, future)
+                self._compatibility_pending = pending
+                owner = True
+        if not owner:
+            return future.result()
+        try:
+            with sample_rss_phase("intrinsic.compatibility_identity"):
+                result = self._resolve_compatibility_identity(context)
+            future.set_result(result)
+            return result
+        except BaseException as exc:
+            future.set_exception(exc)
+            raise
+        finally:
+            with self._compatibility_lock:
+                if self._compatibility_pending is pending:
+                    self._compatibility_pending = None
+
+    def _resolve_compatibility_identity(
         self,
         context: UserRuntimeContext,
     ) -> tuple[str, str]:

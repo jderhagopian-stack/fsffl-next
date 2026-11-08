@@ -31,6 +31,11 @@ jobs:
         run: pytest -q tests/test_role_receipt_renewal_479.py
       - name: Focused bounded Career feed and fumbles schema regression
         run: pytest -q tests/test_fumbles_lost_first_party.py tests/test_p0_live_candidate_runtime.py tests/test_sleeper_normalizer.py
+      - name: Focused refresh reuse and reader allocation regressions
+        run: |
+          pytest -q tests/test_current_position_depth.py
+          pytest -q tests/test_private_beta_shapley_runtime.py -k compatibility
+          pytest -q tests/test_foundation4_career_forward_runtime.py -k 'new_current_receipt or wrong_semantic_key'
       - name: Focused 335-player Career composer RSS benchmark
         run: pytest -q -s tests/test_career_forward_intrinsic.py -k career_composer_materializer_peak_rss_below_budget
       - name: Restore sanitized frozen numeric reference fixture

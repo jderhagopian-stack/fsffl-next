@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import Field
+
 from fsffl.forecast.in_season_orchestration import build_governed_in_season_outlook
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import FrozenModel, LeagueState, Position, RosterSlot
@@ -45,6 +47,7 @@ class CurrentPositionSlotDefinition(FrozenModel):
     eligible_positions: tuple[Position, ...]
     status: Literal["ready", "unavailable"]
     reason: str | None = None
+    incomplete_team_ids: tuple[str, ...] = ()
 
 
 class CurrentPositionSlotStrength(FrozenModel):
@@ -71,6 +74,7 @@ class CurrentPositionPlayerEvidence(FrozenModel):
     season_outlook_model_version: str | None = None
     assigned_slot: RosterSlot | None = None
     assigned_slot_index: int | None = None
+    season_outlook_failure: str | None = None
 
 
 class CurrentPositionDepthContract(FrozenModel):
@@ -86,6 +90,7 @@ class CurrentPositionDepthContract(FrozenModel):
     players: tuple[CurrentPositionPlayerEvidence, ...]
     reason: str | None = None
     model_version: str = CURRENT_POSITION_DEPTH_MODEL_VERSION
+    player_coverage_failures: dict[str, str] = Field(default_factory=dict)
 
 
 def configured_current_slots(
@@ -111,6 +116,7 @@ def _unavailable_contract(
     reason: str,
     evidence_basis: str = "unavailable",
     completed_through_week: int | None = None,
+    season_outlook_failures: dict[str, str] | None = None,
 ) -> CurrentPositionDepthContract:
     configured = configured_current_slots(league_state)
     slots = tuple(
@@ -148,6 +154,7 @@ def _unavailable_contract(
                 if player.player_id == entry.player_id
             ),
             roster_slot=entry.slot,
+            season_outlook_failure=(season_outlook_failures or {}).get(entry.player_id),
         )
         for team_state in sorted(
             league_state.team_states, key=lambda item: item.team_id
@@ -165,6 +172,7 @@ def _unavailable_contract(
         strengths=strengths,
         players=players,
         reason=reason,
+        player_coverage_failures=dict(season_outlook_failures or {}),
     )
 
 
@@ -182,6 +190,7 @@ def build_current_position_depth_from_outlook(
     season_outlook: tuple[ForecastObservation, ...],
     evidence_basis: str,
     completed_through_week: int,
+    season_outlook_failures: dict[str, str] | None = None,
 ) -> CurrentPositionDepthContract:
     """Build Current Position & Depth from governed season-outlook evidence.
 
@@ -211,6 +220,7 @@ def build_current_position_depth_from_outlook(
             reason="Governed completed-actuals + ROS season outlook is unavailable.",
             evidence_basis=evidence_basis,
             completed_through_week=completed_through_week,
+            season_outlook_failures=season_outlook_failures,
         )
 
     forecast_as_of = max(item.as_of for item in outlook)
@@ -270,6 +280,7 @@ def build_current_position_depth_from_outlook(
                     ),
                     status="unavailable",
                     reason=reason,
+                    incomplete_team_ids=incomplete,
                 )
             )
             for team in ordered_teams:
@@ -363,6 +374,7 @@ def build_current_position_depth_from_outlook(
                     player_id=entry.player_id,
                     position=player.position,
                     roster_slot=entry.slot,
+                    season_outlook_failure=(season_outlook_failures or {}).get(entry.player_id),
                     season_outlook_points=(
                         float(observation.distribution.mean)
                         if observation is not None
@@ -407,6 +419,7 @@ def build_current_position_depth_from_outlook(
         players=tuple(
             sorted(player_rows, key=lambda item: (item.team_id, item.player_id))
         ),
+        player_coverage_failures=dict(season_outlook_failures or {}),
         reason=(
             None
             if status == "ready"
@@ -444,4 +457,5 @@ def build_governed_current_position_depth(
         season_outlook=governed.season_outlook,
         evidence_basis=governed.evidence_basis,
         completed_through_week=governed.completed_through_week,
+        season_outlook_failures=getattr(governed, "season_outlook_failures", {}),
     )
