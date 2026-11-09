@@ -83,6 +83,16 @@ def test_unknown_reference_origin_is_not_guessed():
         age_at_forecast_origin(evaluation_season=2026, source_age_years=24, source_age_as_of=None)
 
 
+def test_new_subject_with_DOB_does_not_require_a_legacy_age_date():
+    frame = pd.DataFrame([{"player_id": "new", "historical_gsis_id": "g1",
+                           "position": "WR", "age": 22.}])
+    metadata = pd.DataFrame([{"gsis_id": "g1", "birth_date": "2003-01-20"}])
+    result = MOD.align_board_ages(frame, metadata, evaluation_season=2026)
+    assert result.age.iloc[0] == pytest.approx((date(2026, 9, 1) - date(2003, 1, 20)).days / AGE_YEAR_DAYS)
+    assert result.source_age_as_of.iloc[0] is None  # No invented date for the original age.
+    assert result.source_age_years.iloc[0] == 22.
+
+
 def test_conflicting_birth_dates_and_duplicate_subjects_fail_closed():
     frame = source_board()
     with pytest.raises(ValueError, match="unique"):

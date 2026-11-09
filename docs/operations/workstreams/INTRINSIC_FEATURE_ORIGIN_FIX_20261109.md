@@ -4,7 +4,7 @@
 
 User reviewed the positional/feature-origin audit, asked whether a correction was established, then explicitly directed: **“Ok. Make the fix.”** Scope is the demonstrated age handoff defect. No positional adjustment, model-family/route change, calibration/reference-anchor change, production data write, merge or deployment is authorized by this tranche.
 
-**Draft [PR #526](https://github.com/jderhagopian-stack/fsffl-next/pull/526), not live.** Tested implementation code head `00b98564d1ed18dfd4113623b7bdab1f1af0469f`, tree `dc607dda1301bd3e28abc38015d208840575e57c` (identical to locally tested commit `a06639b9`). CI and Stable promotion gates are not yet claimed. Base main verified `53712984d4a346f587f094877056110138aef02a`; branch `fix/intrinsic-feature-origin-age-20261109`. Existing packaged v1 inputs, accepted source/model code and historical snapshots remain unchanged. Corrected generation has a separate entry point and output identity; it must not silently reuse v1 output identities or replace a saved publication.
+**Draft [PR #526](https://github.com/jderhagopian-stack/fsffl-next/pull/526), not live.** Initial tested implementation code head `00b98564d1ed18dfd4113623b7bdab1f1af0469f`, tree `dc607dda1301bd3e28abc38015d208840575e57c` (identical to local `a06639b9`). Follow-up permits a newly evidenced DOB to resolve a new subject without inventing a date for its original age; 65 focused tests cover the final source. The retained reference calculation is unchanged by that new-subject case. CI and Stable promotion gates are not yet claimed. Base main verified `53712984d4a346f587f094877056110138aef02a`; branch `fix/intrinsic-feature-origin-age-20261109`. Existing packaged v1 inputs, accepted source/model code and historical snapshots remain unchanged. Corrected generation has a separate entry point and output identity; it must not silently reuse v1 output identities or replace a saved publication.
 
 ## Defect and correction
 
@@ -20,7 +20,7 @@ The manual `foundation4-forecast-origin.yml` workflow exposes this corrected pat
 
 ## Validation
 
-- **64 focused tests passed**, 9.99s, one existing pandas warning. Includes 14 new origin tests plus existing frozen inputs, dynamic candidates, materializer memory, Career aggregation, tail, Shapley and long-horizon tests.
+- **65 focused tests passed**, one existing pandas warning. Includes 15 new origin tests plus existing frozen inputs, dynamic candidates, materializer memory, Career aggregation, tail, Shapley and long-horizon tests.
 - Real accepted-input preparation retains **335/335 players**: 300 governed DOBs, 35 governed dated-age fallbacks. All original non-age columns, experience, projections and identity/order are preserved. Source ages remain separate fields. 334 ages advance; the original already-current new identity does not.
 - Actual accepted feature-builder replay: all 335 corrected ages reach inference; 300 DOB-derived ages agree exactly; no fits in that feature gate. 0.49s locally.
 - Additional bounded current Forecast replay used the accepted policy map/69 accepted candidate fits and retained historical calibration. No historical rolling predictions, family selection or route selection were recomputed. Baseline and corrected inputs were evaluated together: **335 players / 5,360 rows per variant**, 57.20s, peak **334,588 KiB**. Baseline versus retained forecasts: max absolute drift **0.00012958**, mean **0.00000347**. Existing documented reproducibility drift remains disclosed; this is not exact bitwise replay.

@@ -60,7 +60,16 @@ def align_board_ages(
         metadata[key] = dob
 
     explicit_dates = "source_age_as_of" in board or "age_as_of" in board or "state_as_of" in board
-    origins = {} if explicit_dates else reference_age_origins(board)
+    origins = {}
+    if not explicit_dates:
+        try:
+            origins = reference_age_origins(board)
+        except ValueError:
+            # A new subject with governed DOB needs no inherited reference
+            # date. An undated age alone still cannot borrow that cohort's date.
+            if not all(str(row.get("historical_gsis_id", "")) in metadata
+                       for row in board.to_dict("records")):
+                raise
     result = board.copy()
     records = []
     for row in board.to_dict("records"):
