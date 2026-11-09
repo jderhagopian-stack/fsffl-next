@@ -1,3 +1,39 @@
+## Public publication explicitly approved — 2026-11-09
+
+User answered **“Yes. I see no downside”** to the explicit request to publish the corrected 335-player forecast/terminal artifacts, their manifest and related code/tests to the existing public `jderhagopian-stack/fsffl-next` repository, then complete merge and deployment. This resolves the automatic-review publication blocker below. Proceed within that scope without requesting the same approval again. No private State, roster or ownership data is included.
+
+The integrated code remains the locally validated `8a69f1b2` implementation; subsequent commits update the release record only. Publish the integrated candidate to PR#526, require exact-head CI/Stable, merge that reviewed head and deploy the existing Render service. Preserve prior artifacts and normal owned-refresh publication semantics.
+
+---
+
+## Release blocked at public PR publication — 2026-11-09
+
+**BLOCKED — automatic approval review requires explicit public-export approval.** User authorized completing merge and deployment, but automatic review rejected creating the GitHub tree containing the integrated corrected reference data and code. Its stated reason: no trusted user message specifically authorizes exporting these exact model payloads to the public destination. Do not bypass through Git push, a workflow or another storage destination.
+
+Local integrated implementation commit `8a69f1b2`, tree `a8860534f8b3455c1142506e6dd4aaf686fead68`, is validated and preserved. Additional local status-only documentation may follow it. Public draft PR #526 remains at `ca48464a37a79e14f10e2e5ee5ca8823a51afae1` and does NOT yet include runtime activation. No merge or deployment occurred. Do not merge the earlier generator-only candidate as if it included this fix.
+
+Completed integrated checks: **203** restoration/publication/current/presentation tests passed in512.59s; **48** package/origin/dynamic/cohort/tail checks passed; separate new-candidate-DOB and old-package-fingerprint invalidation tests passed. Only existing pandas/Starlette warnings. All335 corrected reference identities retained; all33 captured candidate ages have usable dated State evidence. These facts do not claim a newly published367-player production result.
+
+Public-data provenance was checked before retrying: repository visibility is public; the original terminal asset was downloaded without credentials and matched the existing committed bytes. The corrected terminal payload preserves every field except age and provenance text (missing prior NaN values are unchanged); no private State, roster or ownership data appears. Corrected long-horizon rows derive from the same publicly preserved research inputs and accepted methods. Artifact blob uploads were subsequently accepted, but tree/PR publication remained rejected; do not retry without new approval evidence.
+
+Required approval is specifically to publish `foundation4_long_horizon_board_2026_origin_age_v1.json.gz`, `foundation4_terminal_features_2026_origin_age_v1.json.gz`, their manifest and related implementation/tests to the existing public `jderhagopian-stack/fsffl-next` repository, then finish CI/Stable, merge and deployment. After approval, no further release permission should be requested for this scope.
+
+Render target verified: workspace `tea-dae6if9t0dsc73918us0`, existing web service `srv-dae6k7vqj5pc73af7bt0`, branchmain, auto-deployoff, unchanged0.5CPU/512MiB. Render documentation Markdown and HTML both proxy403; connected service metadata is available. Private exact rejection/provenance evidence lives in `/workspace/scratch/intrinsic-feature-origin-release-20261109/`.
+
+---
+
+## Release continuation — user authorization, 2026-11-09
+
+User explicitly directs **“Please move ahead”** in response to completing integration, merge gates and deployment. This supersedes the earlier implementation-only/no-deploy boundary below. Scope remains the demonstrated date correction; no model-family, scoring, Shapley, source-rule, reference-anchor, provider/plan or worker changes.
+
+Release integration now packages all 335 corrected reference Forecast/terminal rows under separate filenames and semantic hashes, retains explicit legacy readers, aligns dynamic-candidate ages and tail inputs to the same origin, and includes the origin version in dynamic cache dependencies. Old saved Career dependencies cannot match the corrected package. All 33 captured appended-player State ages have dated evidence; this is coverage evidence, not an invented forecast or a completed new 367-player publication. A normal owned refresh remains the authority for current candidate acquisition and final publication.
+
+The already measured corrected predictions reuse accepted historical calibration; no additional historical recalibration was launched for packaging. Original compressed artifacts are preserved. Corrected semantic digests: long-horizon `a9a31bdb34e9e3e22ee5213f449e92422520d9bbe9bf44efc0e4d765d8282da1`, terminal `237d7ba3f6f34fe7d9ba9c166060da46dd88b546aee862cc9532976f9d55982a`.
+
+Pending before merge: final focused/full-suite checks on the integrated exact head. Pending after merge: existing Render service deployment, startup/health/source-version verification and a corrected owned-refresh publication. No success is claimed from the prior draft-only checks.
+
+---
+
 # Intrinsic forecast-origin age correction — 2026-11-09
 
 ## Authority and status

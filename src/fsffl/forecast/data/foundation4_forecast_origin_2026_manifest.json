@@ -1,0 +1,34 @@
+{
+  "accepted_parent_artifact_id": 11263913850,
+  "accepted_parent_artifact_sha256": "6a79e2d793403c128c1c34ee3ffb044aba67f873ec92b8c61a702d26c06c1b22",
+  "accepted_parent_run_id": 37096263982,
+  "age_as_of": "2026-09-01",
+  "corrected_input_board_sha256": "4802b4899bebc1d3f63487e3dcf6e6957f4d885c76852eb90764e68ab9394c9c",
+  "evaluation_season": 2026,
+  "feature_origin_version": "forecast-origin-age-v1",
+  "historical_calibration_reused": true,
+  "long_horizon_rows": 5360,
+  "long_horizon_semantic_sha256": "a9a31bdb34e9e3e22ee5213f449e92422520d9bbe9bf44efc0e4d765d8282da1",
+  "players": 335,
+  "policy_map_unchanged": true,
+  "source_non_age_inputs_unchanged": true,
+  "terminal_semantic_sha256": "237d7ba3f6f34fe7d9ba9c166060da46dd88b546aee862cc9532976f9d55982a",
+  "validation": {
+    "accepted_candidate_fits": 69,
+    "baseline_retained_max_abs_forecast_delta": 0.00012957333358087908,
+    "baseline_retained_mean_abs_forecast_delta": 3.464049276914655e-06,
+    "baseline_rows_matched": 5360,
+    "elapsed_seconds": 57.1991632759964,
+    "historical_rolling_validation_recomputations": 0,
+    "model_family_or_policy_selection_changes": 0,
+    "peak_RSS_KiB": 334588,
+    "players_per_variant": {
+      "baseline": 335,
+      "corrected": 335
+    },
+    "rows_per_variant": {
+      "baseline": 5360,
+      "corrected": 5360
+    }
+  }
+}

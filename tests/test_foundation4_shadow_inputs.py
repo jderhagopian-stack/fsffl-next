@@ -47,10 +47,10 @@ def test_frozen_foundation4_current_boards_are_complete_and_semantically_pinned(
         FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256
     )
     assert FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256 == (
-        "3caddc5c33be83088eaca30d8c1ac7031022f08668a031a0a3b08616aed773c2"
+        "a9a31bdb34e9e3e22ee5213f449e92422520d9bbe9bf44efc0e4d765d8282da1"
     )
     assert FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256 == (
-        "ef52ccaaef0749d6d1e5786c351714570c0d0a0ea811cc1cf940fe2adac8c867"
+        "237d7ba3f6f34fe7d9ba9c166060da46dd88b546aee862cc9532976f9d55982a"
     )
 
     grouped: dict[str, list] = {}
@@ -68,7 +68,7 @@ def test_frozen_foundation4_current_boards_are_complete_and_semantically_pinned(
 
 
 def test_frozen_board_known_coordinate_and_terminal_transport_are_exact() -> None:
-    rows = foundation4_long_horizon_rows()
+    rows = foundation4_long_horizon_rows(legacy=True)
     wr_y4 = next(
         row
         for row in rows
@@ -81,7 +81,7 @@ def test_frozen_board_known_coordinate_and_terminal_transport_are_exact() -> Non
     assert wr_y4.absolute_error_90 == pytest.approx(78.2335011086601)
     assert wr_y4.scoring_coordinate == FOUNDATION4_FSFFL_SCORING_COORDINATE
 
-    feature = provide_foundation4_terminal_features()["sleeper:player:10213"]
+    feature = provide_foundation4_terminal_features(legacy=True)["sleeper:player:10213"]
     assert feature.age_years == pytest.approx(24.485102363498225)
     assert feature.experience_years == pytest.approx(3.0)
     assert feature.current_points == pytest.approx(106.353)
@@ -193,3 +193,19 @@ def test_terminal_signature_remains_separate_from_frozen_board_identity() -> Non
     assert CAREER_TAIL_LINEUP_CAPACITY_SIGNATURE == (
         "a4d9a532c477b9fb2114a33009b94adbe15823748efec46d9701bdcddc8f5363"
     )
+
+
+def test_current_reference_uses_forecast_origin_age_and_keeps_old_reference():
+    current = provide_foundation4_terminal_features()
+    old = provide_foundation4_terminal_features(legacy=True)
+    assert set(current) == set(old)
+    assert current["sleeper:player:10213"].age_years == pytest.approx(24.485102363498225 + 365 / 365.2425)
+    assert old["sleeper:player:10213"].age_years == pytest.approx(24.485102363498225)
+    for player_id in old:
+        assert current[player_id].experience_years == old[player_id].experience_years
+        assert current[player_id].current_points == old[player_id].current_points
+        assert current[player_id].prior_points == old[player_id].prior_points
+    active = provide_foundation4_long_horizon_forecast_contract()
+    legacy = provide_foundation4_long_horizon_forecast_contract(legacy=True)
+    assert active.forecast_model_version != legacy.forecast_model_version
+    assert active.provenance["feature_origin_version"] == "forecast-origin-age-v1"

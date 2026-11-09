@@ -157,6 +157,7 @@ def _roster_input(context, player_id: str, *, _state_hash: str | None = None) ->
         "roster_slot": roster[1],
         "age": float(player_state.age_years) if player_state and player_state.age_years is not None else None,
         "state_as_of": state.as_of.isoformat(),
+        "age_as_of": getattr(player_state, "as_of", state.as_of).isoformat(),
     }
 
 

@@ -23,14 +23,23 @@ from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 
 FOUNDATION4_CURRENT_BOARD_RUN_ID = 37096263982
 FOUNDATION4_CURRENT_BOARD_ARTIFACT_ID = 11263913850
-FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256 = (
+LEGACY_FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256 = (
     "3caddc5c33be83088eaca30d8c1ac7031022f08668a031a0a3b08616aed773c2"
 )
-FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256 = (
+LEGACY_FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256 = (
     "ef52ccaaef0749d6d1e5786c351714570c0d0a0ea811cc1cf940fe2adac8c867"
 )
-FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION = (
+LEGACY_FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION = (
     "y4-y7-frozen-policy-fsffl-direct-materialization-v1"
+)
+FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256 = (
+    "a9a31bdb34e9e3e22ee5213f449e92422520d9bbe9bf44efc0e4d765d8282da1"
+)
+FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256 = (
+    "237d7ba3f6f34fe7d9ba9c166060da46dd88b546aee862cc9532976f9d55982a"
+)
+FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION = (
+    LEGACY_FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION + ":forecast-origin-age-v1"
 )
 FOUNDATION4_LONG_HORIZON_FORECAST_SOURCE = (
     "fsffl:frozen_cell_routing_fsffl_scoring_recalibration"
@@ -92,14 +101,15 @@ def _load_gzip_json(package: str, relative_path: str) -> list[dict[str, Any]]:
     return decoded
 
 
-def foundation4_long_horizon_rows() -> tuple[LongHorizonPolicyForecast, ...]:
+def foundation4_long_horizon_rows(*, legacy: bool = False) -> tuple[LongHorizonPolicyForecast, ...]:
     raw_rows = _load_gzip_json(
         "fsffl.forecast",
-        "data/foundation4_long_horizon_board_2026.json.gz",
+        ("data/foundation4_long_horizon_board_2026.json.gz" if legacy else
+         "data/foundation4_long_horizon_board_2026_origin_age_v1.json.gz"),
     )
     if len(raw_rows) != FOUNDATION4_LONG_HORIZON_ROW_COUNT:
         raise ValueError("Foundation 4 long-horizon board row count is not governed")
-    if _canonical_digest(raw_rows) != FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256:
+    if _canonical_digest(raw_rows) != (LEGACY_FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256 if legacy else FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256):
         raise ValueError("Foundation 4 long-horizon board semantic digest mismatch")
     rows = tuple(LongHorizonPolicyForecast.model_validate(row) for row in raw_rows)
     if len({row.player_id for row in rows}) != FOUNDATION4_CURRENT_COHORT_SIZE:
@@ -109,7 +119,7 @@ def foundation4_long_horizon_rows() -> tuple[LongHorizonPolicyForecast, ...]:
     }:
         raise ValueError("Foundation 4 long-horizon board scoring coordinate drifted")
     if {row.model_version for row in rows} != {
-        FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION
+        LEGACY_FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION if legacy else FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION
     }:
         raise ValueError("Foundation 4 long-horizon board model identity drifted")
     if {row.source for row in rows} != {FOUNDATION4_LONG_HORIZON_FORECAST_SOURCE}:
@@ -118,22 +128,26 @@ def foundation4_long_horizon_rows() -> tuple[LongHorizonPolicyForecast, ...]:
 
 
 def provide_foundation4_long_horizon_forecast_contract(
+    *, legacy: bool = False,
 ) -> LongHorizonForecastAuthorityContract:
     """Return the frozen board in the coordinate it was actually materialized in."""
 
-    rows = foundation4_long_horizon_rows()
+    rows = foundation4_long_horizon_rows(legacy=legacy)
     return LongHorizonForecastAuthorityContract(
         evaluation_season=2026,
         scoring_coordinate=FOUNDATION4_FSFFL_SCORING_COORDINATE,
         authority_map_version=LONG_HORIZON_AUTHORITY_MAP_VERSION,
         authority_map_sha256=LONG_HORIZON_AUTHORITY_MAP_SHA256,
-        forecast_model_version=FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION,
+        forecast_model_version=(LEGACY_FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION if legacy else FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION),
         forecast_source=FOUNDATION4_LONG_HORIZON_FORECAST_SOURCE,
         forecasts=rows,
         provenance={
-            "current_board_run_id": FOUNDATION4_CURRENT_BOARD_RUN_ID,
-            "current_board_artifact_id": FOUNDATION4_CURRENT_BOARD_ARTIFACT_ID,
-            "current_board_semantic_sha256": FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256,
+            "current_board_run_id": FOUNDATION4_CURRENT_BOARD_RUN_ID if legacy else None,
+            "accepted_parent_board_run_id": FOUNDATION4_CURRENT_BOARD_RUN_ID,
+            "feature_origin_version": "legacy-source-age" if legacy else "forecast-origin-age-v1",
+            "current_board_artifact_id": FOUNDATION4_CURRENT_BOARD_ARTIFACT_ID if legacy else None,
+            "accepted_parent_board_artifact_id": FOUNDATION4_CURRENT_BOARD_ARTIFACT_ID,
+            "current_board_semantic_sha256": (LEGACY_FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256 if legacy else FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256),
             "rolling_route_run_id": 36271080037,
             "rolling_route_artifact_id": 10916355135,
             "authority_map_sha256": LONG_HORIZON_AUTHORITY_MAP_SHA256,
@@ -266,14 +280,15 @@ def provide_foundation4_long_horizon_forecast_contract_for_rules(
     )
 
 
-def provide_foundation4_terminal_features() -> dict[str, CareerTailFeatures]:
+def provide_foundation4_terminal_features(*, legacy: bool = False) -> dict[str, CareerTailFeatures]:
     raw_rows = _load_gzip_json(
         "fsffl.value",
-        "data/foundation4_terminal_features_2026.json.gz",
+        ("data/foundation4_terminal_features_2026.json.gz" if legacy else
+         "data/foundation4_terminal_features_2026_origin_age_v1.json.gz"),
     )
     if len(raw_rows) != FOUNDATION4_CURRENT_COHORT_SIZE:
         raise ValueError("Foundation 4 terminal feature player count is not governed")
-    if _canonical_digest(raw_rows) != FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256:
+    if _canonical_digest(raw_rows) != (LEGACY_FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256 if legacy else FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256):
         raise ValueError("Foundation 4 terminal feature semantic digest mismatch")
     if {
         str(row.get("current_points_coordinate") or "") for row in raw_rows
