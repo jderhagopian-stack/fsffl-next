@@ -73,7 +73,7 @@ class RazzballSeasonProjectionSource:
 
     provider_name = "razzball"
     source_url = RazzballLiveProjectionSource.source_url
-    source_version = "razzball-season-projections-html-v4:horizon-validated"
+    source_version = "razzball-season-projections-html-v4:horizon-isolated-validated"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
