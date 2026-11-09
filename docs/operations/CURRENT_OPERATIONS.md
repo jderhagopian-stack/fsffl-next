@@ -1,3 +1,9 @@
+## Season-horizon admission correction merged — 2026-11-09
+
+[PR #527](https://github.com/jderhagopian-stack/fsffl-next/pull/527) merged as `1e0c6c78`; exact-head Stable passed **2,742 / 5 skipped**. The fix rejects conflicting season horizons and broad source deflation while preserving historical inputs, accepted fallback and source minimums. Normal owned-refresh numerical acceptance remains separate from merge success. Existing actuals+ROS paths and the remaining main-roster integration boundary are documented in the [public code checkpoint](workstreams/SEASON_HORIZON_ADMISSION_20261109.md); private runtime evidence is retained separately.
+
+---
+
 ## 2026-11-09 — Public artifact publication explicitly approved; age-fix release resumes
 
 User explicitly approves publishing the corrected reference artifacts and related implementation to the existing public repository and completing merge/deployment. The earlier automatic-review export blocker is resolved. Integrated code and local validation are complete; publish PR#526's runtime integration, then exact-head CI/Stable, merge and existing Render deployment. [Authorization and release evidence](workstreams/INTRINSIC_FEATURE_ORIGIN_FIX_20261109.md).
