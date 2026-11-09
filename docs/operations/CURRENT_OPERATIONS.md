@@ -1,3 +1,27 @@
+## 2026-11-09 — Public artifact publication explicitly approved; age-fix release resumes
+
+User explicitly approves publishing the corrected reference artifacts and related implementation to the existing public repository and completing merge/deployment. The earlier automatic-review export blocker is resolved. Integrated code and local validation are complete; publish PR#526's runtime integration, then exact-head CI/Stable, merge and existing Render deployment. [Authorization and release evidence](workstreams/INTRINSIC_FEATURE_ORIGIN_FIX_20261109.md).
+
+---
+
+## 2026-11-09 — Age correction release blocked at public publication approval
+
+Runtime integration and local validation are complete (203 broader tests plus focused package checks). Automatic review rejects updating public PR#526 with the corrected reference artifacts/code until the user explicitly approves that public export. Verified that the reference data already exist publicly and no private State/roster fields are added, but tree publication remained rejected. Preserve local candidate8a69f1b2; public PR remainsca48464a and is not runtime-activated. No merge/deploy occurred. [Exact blocker, payloads, checks and resume action](workstreams/INTRINSIC_FEATURE_ORIGIN_FIX_20261109.md).
+
+---
+
+## 2026-11-09 — Age correction release authorized; production integration in progress
+
+User explicitly authorizes proceeding through integration, merge and deployment. PR #526 now includes corrected packaged reference/terminal inputs, consistent dynamic-candidate age alignment and dependency invalidation; prior v1 artifacts remain available for exact historical replay. All 335 reference identities and age-date evidence for 33 current candidates are retained. Final integrated validation, exact-head Stable, merge and existing Render deployment remain pending. [Release continuation and evidence](workstreams/INTRINSIC_FEATURE_ORIGIN_FIX_20261109.md).
+
+---
+
+## 2026-11-09 — Intrinsic forecast-origin age correction: implementation candidate
+
+User authorizes fixing the demonstrated age handoff defect, not changing positional economics or deploying. Draft [PR #526](https://github.com/jderhagopian-stack/fsffl-next/pull/526) adds a versioned input adapter/materialization entry point preserves source ages, original v1 artifacts and all 335 reference identities; 300 DOB and 35 dated-age inputs align to forecast-origin age. **65 focused tests pass.** Bounded current Forecast and 334-reference-player raw replays retain accepted methods; Career means fall 5–8% across positions, Y1–Y3 unchanged. This is **not live** and not a corrected 367-player publication. [Implementation, exact evidence and remaining release boundary](workstreams/INTRINSIC_FEATURE_ORIGIN_FIX_20261109.md).
+
+---
+
 ## 2026-11-08 — Historical-actuals scale evaluation accepted; linear display release authorized
 
 User directs proceeding through deployment using historical actuals for display-scale diagnostics. Historical forecast vintages are not a blanket release prerequisite. Preserve accepted raw models and uncertainty; 750/2200 are fixed versioned display benchmarks, not forecast ceilings. Historical test: 1/1623 complete Superflex three-year windows over 750, by at most 0.4853%; 1QB 0/1623. Current 367 players reconcile with accepted raw artifacts and none exceeds either reference. Career tail retains its accepted research/model/holdout authority.

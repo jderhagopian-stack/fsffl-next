@@ -281,6 +281,7 @@ def dynamic_career_fingerprint(
         ],
         "projection_history_revisions": ros_revisions,
         "contract": "dynamic-rostered-p0-career-bridge-v4:captured-live-inputs",
+        "feature_origin_version": "forecast-origin-age-v1",
     }
     from .p0_live_candidate_runtime import ros_fallback_policy_version
     policy = ros_fallback_policy_version(evaluated_at)

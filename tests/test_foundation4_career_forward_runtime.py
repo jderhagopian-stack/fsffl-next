@@ -1668,3 +1668,20 @@ def test_bound_base_only_failure_remains_retryable_and_clears_old_dynamic_errors
         loader._persist(context,dependency_fingerprint=loader.intrinsic_input_fingerprint(context),
             component=None,contract=completed,source_manifest=_fixture_source_manifest(context))
         assert loader.restore_compatible(context) == completed
+
+
+def test_age_origin_package_invalidates_pre_correction_career_fingerprint(monkeypatch):
+    import fsffl.product.foundation4_career_forward_runtime as runtime
+    from fsffl.product.foundation4_shadow_inputs import (
+        LEGACY_FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256,
+        LEGACY_FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256,
+    )
+    loader = Foundation4CareerForwardShadowLoader(
+        current_intrinsic_loader=lambda _: None,
+        current_intrinsic_fingerprint_resolver=lambda _: "unchanged-current-inputs",
+    )
+    context = _context()
+    corrected = loader.intrinsic_input_fingerprint(context)
+    monkeypatch.setattr(runtime, "FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256", LEGACY_FOUNDATION4_LONG_HORIZON_BOARD_SEMANTIC_SHA256)
+    monkeypatch.setattr(runtime, "FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256", LEGACY_FOUNDATION4_TERMINAL_FEATURES_SEMANTIC_SHA256)
+    assert loader.intrinsic_input_fingerprint(context) != corrected

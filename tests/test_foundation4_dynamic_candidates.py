@@ -151,7 +151,7 @@ def test_candidate_y1_percentile_uses_frozen_reference():
     ref = pd.DataFrame({"position": ["QB"] * 3, "y1": [10.0, 20.0, 30.0]})
     result = MOD.build_candidate_features(Dev(), candidate, ref, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
     assert result.iloc[0].y1_pct == pytest.approx(0.5)
-    assert result.iloc[0].age == 24
+    assert result.iloc[0].age == pytest.approx(24 + (pd.Timestamp("2026-09-01") - pd.Timestamp(candidate.iloc[0].state_as_of).tz_localize(None)).days / 365.2425)
 
 
 def test_slim_frozen_reference_coordinates_match_accepted_current_transform():
@@ -411,3 +411,24 @@ def test_durable_roster_checkpoint_rejects_candidate_identity_drift(tmp_path):
             y8_plus_rows=pd.DataFrame(),
             failures={},
         )
+
+
+def test_candidate_governed_DOB_overrides_coarse_state_age_at_forecast_origin():
+    class Dev:
+        @staticmethod
+        def merge_lags(frame, raw): return frame.copy()
+        @staticmethod
+        def add_engineered_features(frame, players):
+            result = frame.copy()
+            result["birth_date"] = pd.Timestamp("2003-01-20")
+            result["y1_pct"] = 1.0
+            return result
+        @staticmethod
+        def merge_trajectory(frame, residual, innovation): return frame
+    candidate = pd.DataFrame([row()])
+    original = candidate.copy(deep=True)
+    ref = pd.DataFrame({"position": ["QB"] * 3, "y1": [10., 20., 30.]})
+    result = MOD.build_candidate_features(Dev(), candidate, ref, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
+    assert result.age.iloc[0] == pytest.approx((pd.Timestamp("2026-09-01") - pd.Timestamp("2003-01-20")).days / 365.2425)
+    pd.testing.assert_frame_equal(candidate, original)
+    assert result.experience.iloc[0] == candidate.experience.iloc[0]

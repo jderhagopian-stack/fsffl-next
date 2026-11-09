@@ -1,0 +1,64 @@
+name: Foundation 4 forecast-origin age correction
+
+on:
+  workflow_dispatch:
+    inputs:
+      materialize:
+        description: "Rebuild accepted forecasts too (expensive); false runs only the bounded input gate"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  corrected-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONPATH: src
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MATERIALIZE: ${{ inputs.materialize }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install project and focused test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Verify origin and preserved input contracts
+        run: python -m pytest -q tests/test_forecast_feature_origin.py tests/test_foundation4_shadow_inputs.py
+      - name: Prepare a separate corrected generation from verified accepted inputs
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          from fsffl.product.foundation4_accepted_bundle import restore_accepted_bundle
+
+          manifest = json.loads(Path(restore_accepted_bundle()).read_text())
+          args = [sys.executable, "scripts/materialize_foundation4_forecast_origin.py",
+                  "--board", manifest["reference-board"], "--players", manifest["players"],
+                  "--out-dir", "/tmp/foundation4-forecast-origin-v1"]
+          if os.environ["MATERIALIZE"] == "true":
+              for key in ("development-module", "route-module", "model-a-rows", "qb-results",
+                          "raw-seasons", "residual-states", "innovation-states",
+                          "current-route", "policy-freeze"):
+                  args.extend(("--" + key, manifest[key]))
+              args.extend(("--connected-rules", "artifacts/implementation/forecast_source_coordinate_20260919/CONNECTED_LEAGUE_RULES.json"))
+          else:
+              args.append("--prepare-only")
+          subprocess.run(args, check=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: foundation4-forecast-origin-v1-${{ github.sha }}
+          path: /tmp/foundation4-forecast-origin-v1/
+          if-no-files-found: error
+          retention-days: 30

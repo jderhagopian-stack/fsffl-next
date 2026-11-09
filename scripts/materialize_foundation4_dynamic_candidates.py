@@ -21,6 +21,7 @@ from fsffl.memory_attribution import sample_rss_phase
 from fsffl.product.resource_coordinator import release_unused_process_memory
 from fsffl.product.foundation4_matrix import bounded_feature_matrix
 from fsffl.product.foundation4_history import BoundedHorizonHistory
+from fsffl.forecast.feature_origin import age_at_forecast_origin, age_date
 
 REQUIRED = {
     "player_id", "position", "historical_gsis_id", "age", "experience",
@@ -239,7 +240,8 @@ def build_candidate_features(dev, candidates, reference, raw, players, residual,
     x["sd1"] = np.nan
     x["sd2"] = np.nan
     x["sd3"] = np.nan
-    age, exp = x.age.to_numpy(dtype=float), x.experience.to_numpy(dtype=float)
+    original = x.copy()
+    exp = x.experience.to_numpy(dtype=float)
     x = dev.merge_lags(x, raw)
     x = dev.add_engineered_features(x, players)
     # Preserve the accepted 335 percentile coordinate without making reference
@@ -249,7 +251,17 @@ def build_candidate_features(dev, candidates, reference, raw, players, residual,
         if not len(values):
             raise ValueError(f"frozen percentile reference missing {row.position}")
         x.at[idx, "y1_pct"] = (int(np.sum(values < row.y1)) + 0.5 * int(np.sum(values == row.y1))) / len(values)
-    x["age"], x["experience"] = age, exp
+    # Engineering resolves DOB from the governed metadata. Where that metadata
+    # has no identity, retain the dated State age rather than guess a birthday.
+    ages = []
+    for index, row in enumerate(x.to_dict("records")):
+        subject = original.iloc[index]
+        source_date = age_date(subject.get("age_as_of", subject.get("state_as_of")))
+        ages.append(age_at_forecast_origin(
+            evaluation_season=2026, source_age_years=float(subject.age),
+            source_age_as_of=source_date, birth_date=age_date(row.get("birth_date")),
+        ))
+    x["age"], x["experience"] = ages, exp
     return dev.merge_trajectory(x, residual, innovation)
 
 
@@ -489,6 +501,8 @@ def main():
     route.fit_candidate = lambda dev, long, candidate, origin, horizon, position, evaluation: bounded_candidate_fit(
         accepted_fit, dev, long, candidate, origin, horizon, position, evaluation)
     source = load_module("foundation4_source", str(Path(__file__).with_name("materialize_foundation4_fsffl_coordinate.py")))
+    from fsffl.product.foundation4_shadow_inputs import FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION
+    source.MODEL_VERSION = FOUNDATION4_LONG_HORIZON_FORECAST_MODEL_VERSION
     from fsffl.product.career_coverage import (
         build_career_position_depth_refresh,
         select_career_coverage,
@@ -539,6 +553,7 @@ def main():
         roster_frame,
     )
     current = build_candidate_features(dev, candidates, reference, raw, players, residual, innovation)
+    age_by_player = dict(zip(current.output_player_id.astype(str), current.age, strict=True))
     # Release current-board joins before the full accepted history panel is built.
     del raw, players, residual, innovation, reference_board, reference
     release_unused_process_memory(label="foundation4-current-inputs-released")
@@ -630,7 +645,7 @@ def main():
     for row in candidates.itertuples():
         features = CareerTailFeatures(
             player_id=str(row.player_id), position=Position(str(row.position)),
-            age_years=float(row.age), experience_years=float(row.experience),
+            age_years=float(age_by_player[str(row.player_id)]), experience_years=float(row.experience),
             current_points=float(row.league_y1_points),
             prior_points=previous.get((str(row.historical_gsis_id), 2025)),
             current_points_coordinate=CAREER_TAIL_SCORING_COORDINATE,
