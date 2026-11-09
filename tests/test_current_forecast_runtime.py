@@ -257,7 +257,7 @@ def test_hodor_k_dst_rules_do_not_reject_shared_offensive_source_health_or_raw_e
     }
     assert all(
         event.health_contract_version
-        == "current-projection-health-v4:league-agnostic-offense-scale-integrity"
+        == "current-projection-health-v5:bidirectional-season-scale-integrity"
         for event in result.source_health_events
     )
 

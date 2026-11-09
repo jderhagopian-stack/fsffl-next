@@ -109,6 +109,37 @@ def test_healthy_revision_drift_passes_generalized_gate() -> None:
     assert result.inflated_position_count == 0
 
 
+def test_broad_ros_like_deflation_uses_the_same_empirical_disagreement_factor():
+    result = evaluate_revision_agnostic_scale_health(
+        _fantasy_points(multiplier=0.525), _fantasy_points(multiplier=1),
+        reference_id="governed-season",
+    )
+    assert result.disposition == "quarantined"
+    assert result.deflated_position_count == 4
+    assert result.inflated_position_count == 0
+    assert "deflation" in result.reason
+    reverse = evaluate_revision_agnostic_scale_health(
+        _fantasy_points(multiplier=1), _fantasy_points(multiplier=0.525),
+        reference_id="reverse-coordinate",
+    )
+    assert reverse.disposition == result.disposition
+
+
+def test_small_downward_revisions_and_isolated_position_changes_remain_eligible():
+    reference = _fantasy_points(multiplier=1)
+    assert evaluate_revision_agnostic_scale_health(
+        _fantasy_points(multiplier=0.95), reference, reference_id="reference",
+    ).disposition == "accepted"
+    candidate = tuple(
+        row.model_copy(update={"distribution": row.distribution.model_copy(
+            update={"mean": row.distribution.mean * 0.5})})
+        if row.position == Position.RB else row for row in reference
+    )
+    assert evaluate_revision_agnostic_scale_health(
+        candidate, reference, reference_id="reference",
+    ).disposition == "accepted"
+
+
 def _state() -> LeagueState:
     provenance = Provenance(
         source="fixture",
@@ -348,3 +379,98 @@ def test_production_runtime_accepts_benign_revision_drift_and_metadata_changes()
         event.health_contract_version == CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
         for event in result.source_health_events
     )
+
+
+def _runtime_with_scales(scales, *, reference=True):
+    state = _state()
+    return build_current_live_forecasts(
+        state,
+        fetchers=tuple(NamedCurrentProjectionFetcher(
+            source_id=provider,
+            fetch=lambda _season, p=provider, s=scale: _snapshot(p, scale=s),
+        ) for provider, scale in scales.items()),
+        clock=lambda: state.as_of,
+        reference_raw_forecasts=(normalize_current_projection_snapshot(
+            _snapshot('reference', scale=1), league_state=state, season=2026,
+            evaluation_as_of=state.as_of,
+        ) if reference else None),
+    )
+
+
+def test_runtime_quarantines_deflated_provider_before_ensemble_and_preserves_healthy_rows():
+    result = _runtime_with_scales({'healthy-a': 1, 'healthy-b': 1, 'unknown-low': 0.525})
+    assert result.successful_source_ids == ('healthy-a', 'healthy-b')
+    assert len(result.fantasy_point_forecasts) == 24
+    assert all('unknown-low' not in row.provenance.source for row in result.raw_ensemble)
+    event = next(x for x in result.source_health_events if x.provider == 'unknown-low')
+    assert event.disposition == 'quarantined'
+    assert 'deflation' in event.reason
+    assert result.raw_ensemble == _runtime_with_scales({'healthy-a': 1, 'healthy-b': 1}).raw_ensemble
+
+
+def test_deflated_outlier_is_rejected_against_two_agreeing_peers_without_reference():
+    result = _runtime_with_scales({'healthy-a': 1, 'healthy-b': 1, 'unknown-low': 0.525}, reference=False)
+    assert result.successful_source_ids == ('healthy-a', 'healthy-b')
+
+
+def test_deflated_only_second_source_does_not_lower_authoritative_source_minimum():
+    with pytest.raises(LiveForecastSourceHealthFailure) as error:
+        _runtime_with_scales({'healthy-a': 1, 'unknown-low': 0.525})
+    assert 'at least 2 independent sources; found 1' in str(error.value)
+
+
+@pytest.mark.parametrize('old_health_version', [
+    'current-projection-health-v3:revision-agnostic-scale-integrity',
+    'current-projection-health-v4:league-agnostic-offense-scale-integrity',
+])
+def test_old_one_sided_admission_cannot_restore_as_current_validated_live_evidence(old_health_version):
+    from fsffl.persistence.runtime_cache import decode_forecast_evidence, encode_forecast_evidence
+    from fsffl.product.runtime import LiveForecastEvidence
+    result = _runtime_with_scales({'healthy-a': 1, 'healthy-b': 1})
+    evidence = LiveForecastEvidence(
+        raw_forecasts=result.raw_ensemble, league_scored_forecasts=result.fantasy_point_forecasts,
+        successful_source_ids=result.successful_source_ids, failed_sources=(),
+        uncertainty_ready=True, runtime_result=result,
+    )
+    payload = encode_forecast_evidence(evidence)
+    assert decode_forecast_evidence(payload) == evidence
+    for row in payload['runtime_result']['source_provenance']:
+        row['health_contract_version'] = old_health_version
+    for row in payload['runtime_result']['source_health_events']:
+        row['health_contract_version'] = old_health_version
+    with pytest.raises(ValueError, match='source-health contracts'):
+        decode_forecast_evidence(payload)
+
+
+def test_deflated_live_feed_uses_preserved_multi_source_season_without_relabeling_ros():
+    from fsffl.forecast.preseason_baseline import baseline_from_runtime, preseason_scope_id
+    from fsffl.persistence.runtime_cache import preseason_forecast_baseline_artifact
+    from fsffl.product.forecast_resilience import make_resilient_forecast_loader
+    healthy = _runtime_with_scales({'healthy-a': 1, 'healthy-b': 1})
+    state = _state()
+    baseline = baseline_from_runtime(state, healthy)
+    record = preseason_forecast_baseline_artifact(
+        league_season_scope_id=preseason_scope_id(state), baseline=baseline,
+    )
+
+    class ReadOnlyBaselineStore:
+        def get_latest_reusable_artifact(self, **_kwargs):
+            return record
+
+        def put_artifact(self, _record):
+            raise AssertionError('fallback must not overwrite its historical baseline')
+
+    evidence = make_resilient_forecast_loader(
+        ReadOnlyBaselineStore(),
+        live_loader=lambda _state: _runtime_with_scales({'healthy-a': 1, 'unknown-low': 0.525}),
+    )(state)
+    assert evidence.evidence_basis == 'preseason_baseline'
+    assert evidence.raw_forecasts == baseline.raw_ensemble
+    assert evidence.successful_source_ids == ('healthy-a', 'healthy-b')
+    assert {x.player_id: x.distribution.mean for x in evidence.runtime_result.fantasy_point_forecasts} == {
+        x.player_id: x.distribution.mean for x in healthy.fantasy_point_forecasts
+    }
+    assert evidence.runtime_result.simulation_authority_blockers == ()
+    assert len(evidence.runtime_result.fantasy_point_forecasts) == 24
+    assert any(x.disposition == 'quarantined' and x.provider == 'unknown-low'
+               for x in evidence.runtime_result.source_health_events)

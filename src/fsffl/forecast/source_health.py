@@ -15,11 +15,12 @@ from .season_uncertainty import SEASON_FANTASY_POINT_ERROR_CALIBRATION
 
 
 CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION = (
-    "current-projection-health-v4:league-agnostic-offense-scale-integrity"
+    "current-projection-health-v5:bidirectional-season-scale-integrity"
 )
 LEGACY_COMPATIBLE_PROJECTION_HEALTH_CONTRACT_VERSIONS = frozenset(
     {
-        "current-projection-health-v3:revision-agnostic-scale-integrity",
+        # Older live admissions did not test broad downward shifts. Their
+        # snapshots stay stored, but cannot authorize current live restoration.
         CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
     }
 )
@@ -59,6 +60,10 @@ REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD = 1.0 + max(
     item.relative_rmse
     for item in SEASON_FANTASY_POINT_ERROR_CALIBRATION.values()
 )
+# The same multiplicative disagreement in either direction must have the same
+# disposition. This is the reciprocal of the existing empirical factor, not a
+# new fitted tolerance, a player floor, or an adjustment to provider numbers.
+REVISION_AGNOSTIC_SCALE_RATIO_FLOOR = 1.0 / REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD
 REVISION_AGNOSTIC_MIN_COMPARABLE_PLAYERS = 16
 REVISION_AGNOSTIC_MIN_PLAYERS_PER_POSITION = 4
 REVISION_AGNOSTIC_MIN_POSITIONS = 3
@@ -90,6 +95,7 @@ class RevisionAgnosticScaleHealth:
     position_median_ratios: tuple[tuple[str, float], ...]
     eligible_position_count: int
     inflated_position_count: int
+    deflated_position_count: int = 0
 
 
 def _season_fantasy_point_map(
@@ -115,7 +121,7 @@ def evaluate_revision_agnostic_scale_health(
     *,
     reference_id: str,
 ) -> RevisionAgnosticScaleHealth:
-    """Detect broad unseen projection-scale inflation without player caps.
+    """Detect broad unseen projection-scale disagreement without player caps.
 
     The comparison is provider/dataset level. It uses the median multiplicative
     shift across canonically matched season fantasy-point forecasts and requires
@@ -164,6 +170,10 @@ def evaluate_revision_agnostic_scale_health(
         for _position, value in position_medians
         if value > REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD
     )
+    deflated_positions = sum(
+        1 for _position, value in position_medians
+        if value < REVISION_AGNOSTIC_SCALE_RATIO_FLOOR
+    )
 
     evaluable = (
         comparable >= REVISION_AGNOSTIC_MIN_COMPARABLE_PLAYERS
@@ -172,13 +182,21 @@ def evaluate_revision_agnostic_scale_health(
     quarantined = bool(
         evaluable
         and overall is not None
-        and overall > REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD
-        and inflated_positions >= REVISION_AGNOSTIC_MIN_POSITIONS
+        and (
+            (overall > REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD
+             and inflated_positions >= REVISION_AGNOSTIC_MIN_POSITIONS)
+            or (overall < REVISION_AGNOSTIC_SCALE_RATIO_FLOOR
+                and deflated_positions >= REVISION_AGNOSTIC_MIN_POSITIONS)
+        )
     )
     if quarantined:
         disposition = "quarantined"
+        direction = (
+            "inflation" if overall > REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD
+            else "deflation"
+        )
         reason = (
-            "broad season-projection scale inflation exceeds the governed "
+            f"broad season-projection scale {direction} exceeds the governed "
             "historical-error tolerance across multiple positions"
         )
     elif evaluable:
@@ -203,6 +221,7 @@ def evaluate_revision_agnostic_scale_health(
         position_median_ratios=position_medians,
         eligible_position_count=eligible_positions,
         inflated_position_count=inflated_positions,
+        deflated_position_count=deflated_positions,
     )
 
 
