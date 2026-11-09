@@ -1,6 +1,6 @@
 ## 2026-11-09 — Intrinsic forecast-origin age correction: implementation candidate
 
-User authorizes fixing the demonstrated age handoff defect, not changing positional economics or deploying. New versioned input adapter/materialization entry point preserves source ages, original v1 artifacts and all 335 reference identities; 300 DOB and 35 dated-age inputs align to forecast-origin age. **64 focused tests pass.** Bounded current Forecast and 334-reference-player raw replays retain accepted methods; Career means fall 5–8% across positions, Y1–Y3 unchanged. This is **not live** and not a corrected 367-player publication. [Implementation, exact evidence and remaining release boundary](workstreams/INTRINSIC_FEATURE_ORIGIN_FIX_20261109.md).
+User authorizes fixing the demonstrated age handoff defect, not changing positional economics or deploying. Draft [PR #526](https://github.com/jderhagopian-stack/fsffl-next/pull/526) adds a versioned input adapter/materialization entry point preserves source ages, original v1 artifacts and all 335 reference identities; 300 DOB and 35 dated-age inputs align to forecast-origin age. **64 focused tests pass.** Bounded current Forecast and 334-reference-player raw replays retain accepted methods; Career means fall 5–8% across positions, Y1–Y3 unchanged. This is **not live** and not a corrected 367-player publication. [Implementation, exact evidence and remaining release boundary](workstreams/INTRINSIC_FEATURE_ORIGIN_FIX_20261109.md).
 
 ---
 

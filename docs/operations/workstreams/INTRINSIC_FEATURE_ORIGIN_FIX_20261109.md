@@ -4,7 +4,7 @@
 
 User reviewed the positional/feature-origin audit, asked whether a correction was established, then explicitly directed: **“Ok. Make the fix.”** Scope is the demonstrated age handoff defect. No positional adjustment, model-family/route change, calibration/reference-anchor change, production data write, merge or deployment is authorized by this tranche.
 
-**Implementation candidate, not live.** Base main verified `53712984d4a346f587f094877056110138aef02a`; branch `fix/intrinsic-feature-origin-age-20261109`. Existing packaged v1 inputs, accepted source/model code and historical snapshots remain unchanged. Corrected generation has a separate entry point and output identity; it must not silently reuse v1 output identities or replace a saved publication.
+**Draft [PR #526](https://github.com/jderhagopian-stack/fsffl-next/pull/526), not live.** Tested implementation code head `00b98564d1ed18dfd4113623b7bdab1f1af0469f`, tree `dc607dda1301bd3e28abc38015d208840575e57c` (identical to locally tested commit `a06639b9`). CI and Stable promotion gates are not yet claimed. Base main verified `53712984d4a346f587f094877056110138aef02a`; branch `fix/intrinsic-feature-origin-age-20261109`. Existing packaged v1 inputs, accepted source/model code and historical snapshots remain unchanged. Corrected generation has a separate entry point and output identity; it must not silently reuse v1 output identities or replace a saved publication.
 
 ## Defect and correction
 
