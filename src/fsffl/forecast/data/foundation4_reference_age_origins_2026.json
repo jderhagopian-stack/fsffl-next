@@ -1,0 +1,12 @@
+{
+  "authority_note": "Completed-source builder dates shared identities at source_season=2025; reconciliation new-identity branch dates its added identity at 2026-09-01. These are evidence dates, not player-specific model adjustments.",
+  "original_provenance_manifest_sha256": "aa96c1a2e0a317f2edab5536d540ec0765810b26e298934ae0119aa76882ed21",
+  "original_reconciliation_source_sha256": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a",
+  "schema_version": "foundation4-reference-age-origins-v1",
+  "source_age_as_of_overrides": {
+    "sleeper:player:8800": "2026-09-01"
+  },
+  "source_age_coordinate_sha256": "c8c7eda433403903af44e0a3341f0fea99931248216e8dc6f1bb6304832e4f5a",
+  "source_age_default_as_of": "2025-09-01",
+  "source_player_count": 335
+}

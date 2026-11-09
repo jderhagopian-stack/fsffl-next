@@ -1,3 +1,9 @@
+## 2026-11-09 — Intrinsic forecast-origin age correction: implementation candidate
+
+User authorizes fixing the demonstrated age handoff defect, not changing positional economics or deploying. New versioned input adapter/materialization entry point preserves source ages, original v1 artifacts and all 335 reference identities; 300 DOB and 35 dated-age inputs align to forecast-origin age. **64 focused tests pass.** Bounded current Forecast and 334-reference-player raw replays retain accepted methods; Career means fall 5–8% across positions, Y1–Y3 unchanged. This is **not live** and not a corrected 367-player publication. [Implementation, exact evidence and remaining release boundary](workstreams/INTRINSIC_FEATURE_ORIGIN_FIX_20261109.md).
+
+---
+
 ## 2026-11-08 — Historical-actuals scale evaluation accepted; linear display release authorized
 
 User directs proceeding through deployment using historical actuals for display-scale diagnostics. Historical forecast vintages are not a blanket release prerequisite. Preserve accepted raw models and uncertainty; 750/2200 are fixed versioned display benchmarks, not forecast ceilings. Historical test: 1/1623 complete Superflex three-year windows over 750, by at most 0.4853%; 1QB 0/1623. Current 367 players reconcile with accepted raw artifacts and none exceeds either reference. Career tail retains its accepted research/model/holdout authority.
