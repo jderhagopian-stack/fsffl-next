@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from contextvars import copy_context
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -744,17 +745,20 @@ def build_current_live_forecasts(
                     )
         else:
             for source_id in source_ids:
-                inflated_vs = [
+                outlier_vs = [
                     result
                     for (candidate_id, _peer_id), result in pair_results.items()
                     if candidate_id == source_id
                     and result.disposition == "quarantined"
                 ]
-                if len(inflated_vs) < 2:
+                if len(outlier_vs) < 2:
                     continue
                 worst = max(
-                    inflated_vs,
-                    key=lambda item: item.overall_median_ratio or 0.0,
+                    outlier_vs,
+                    key=lambda item: (
+                        abs(math.log(item.overall_median_ratio))
+                        if item.overall_median_ratio else math.inf
+                    ),
                 )
                 generalized_quarantined.add(source_id)
                 event = _scale_health_event(
@@ -764,7 +768,7 @@ def build_current_live_forecasts(
                     check="revision_agnostic_multi_peer_scale_outlier",
                     disposition="quarantined",
                     reason=(
-                        "provider is broadly inflated against at least two "
+                        "provider has broad scale disagreement against at least two "
                         "independent peer-source datasets"
                     ),
                 )
@@ -817,7 +821,7 @@ def build_current_live_forecasts(
                     disposition="accepted",
                     check="revision_agnostic_peer_scale_cohort",
                     reason=(
-                        "no broad multi-position scale inflation was established "
+                        "no broad multi-position scale disagreement was established "
                         "against the available peer-source cohort"
                     ),
                     health_contract_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,

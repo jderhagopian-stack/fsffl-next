@@ -161,3 +161,25 @@ def test_full_season_razzball_source_never_reads_ros_pages_and_verifies_season()
     )
     assert len(snapshot.rows) == 1
     assert calls == ["https://football.razzball.com/projections/"]
+
+
+@pytest.mark.parametrize("horizon", ["Rest of Season", "Rest-of-Season", "ROS", "Week 10"])
+@pytest.mark.parametrize("tag", ["title", "h1", "h2", "caption"])
+def test_season_source_rejects_conflicting_horizon_even_with_generic_year_title(horizon, tag):
+    html = _table(
+        ["Name", "Pos", "Team", "Pass Yds", "Pass TD", "Int", "Rush Yds", "Run TD", "Rec", "Rec Yds", "Rec TD"],
+        ["Test QB", "QB", "NYG", "2152", "12.7", "4.7", "89", "1.6", "0", "0", "0"],
+        "2026 Fantasy Football Projections",
+    ) + f"<{tag}>2026 Fantasy Football Projections — {horizon}</{tag}>"
+    with pytest.raises(ValueError, match="non-full-season horizon"):
+        RazzballSeasonProjectionSource(http_get_text=lambda _: html, clock=lambda: NOW).fetch_latest(season=2026)
+
+
+def test_season_horizon_guard_does_not_treat_navigation_as_table_authority():
+    html = _table(
+        ["Name", "Pos", "Team", "Pass Yds", "Pass TD", "Int", "Rush Yds", "Run TD", "Rec", "Rec Yds", "Rec TD"],
+        ["Test QB", "QB", "NYG", "4289", "30", "10", "161", "1", "0", "0", "0"],
+        "2026 Fantasy Football Projections",
+    ) + '<nav><a href="/projections-qb-restofseason/">Rest of Season</a><a>Week 10</a></nav>'
+    snapshot = RazzballSeasonProjectionSource(http_get_text=lambda _: html, clock=lambda: NOW).fetch_latest(season=2026)
+    assert snapshot.rows[0]["Pass Yds"] == "4289"
