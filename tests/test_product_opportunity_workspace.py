@@ -262,7 +262,8 @@ def test_readiness_polling_is_memory_only_and_intrinsic_restore_is_staged() -> N
         "def _reconcile_hosted_intrinsic", 1
     )[1].split("# Reuse only exact Decision-owned package economics", 1)[0]
 
-    assert "_shapley_intrinsic_coordinator.current(context)" in readiness
+    assert "_shapley_intrinsic_coordinator.readiness_record_for_state(context)" in readiness
+    assert "_shapley_intrinsic_coordinator.current(context)" not in readiness
     assert "_shapley_intrinsic_coordinator.restore_compatible(context)" not in readiness
     assert "_shapley_intrinsic_coordinator.restore_compatible_staged(context)" not in readiness
     assert "_shapley_intrinsic_coordinator.restore_compatible_staged" in reconcile

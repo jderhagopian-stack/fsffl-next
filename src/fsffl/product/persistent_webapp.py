@@ -394,7 +394,7 @@ def _intrinsic_readiness_from_record(record) -> dict[str, object]:
             "forecast_model_version": record.forecast_coordinate,
             "estimate_count": 0,
         }
-    contract = record.contract
+    contract = record.contract or getattr(record, "completion_summary", None)
     if contract is None:
         return {
             "status": "unavailable",
@@ -403,19 +403,21 @@ def _intrinsic_readiness_from_record(record) -> dict[str, object]:
             "forecast_model_version": record.forecast_coordinate,
             "estimate_count": 0,
         }
-    if contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE or not contract.estimates:
+    estimate_count = (len(contract.estimates) if hasattr(contract, "estimates")
+                      else contract.estimate_count)
+    if contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE or not estimate_count:
         return {
             "status": "unavailable",
             "reason": contract.status_reason or "Governed Intrinsic contract is unavailable.",
             "build_status": record.status.value,
             "contract_status": contract.status.value,
             "forecast_model_version": contract.forecast_model_version,
-            "estimate_count": len(contract.estimates),
+            "estimate_count": estimate_count,
         }
     coverage = contract.coverage
     complete_scope = (
-        len(contract.estimates) > 0
-        and coverage.player_count == len(contract.estimates)
+        estimate_count > 0
+        and coverage.player_count == estimate_count
         and coverage.year_1_forecast_players == coverage.player_count
         and coverage.year_2_i1_players == coverage.player_count
         and coverage.year_3_i1_players == coverage.player_count
@@ -436,7 +438,7 @@ def _intrinsic_readiness_from_record(record) -> dict[str, object]:
         "build_status": record.status.value,
         "contract_status": contract.status.value,
         "forecast_model_version": contract.forecast_model_version,
-        "estimate_count": len(contract.estimates),
+        "estimate_count": estimate_count,
         "target_years": list(contract.target_years),
     }
 
@@ -450,10 +452,9 @@ def _hosted_capability_readiness(
     payload = dict(_webapp._runtime_capability_readiness(context))
     record = None
     if context.league_state is not None:
-        # A weakly released Current contract may be restored from its completed
-        # durable artifact only when the shared heavy-work lane is idle. This is
-        # read-only reuse; it never starts source acquisition or valuation work.
-        record = _shapley_intrinsic_coordinator.current(context)
+        # Read producer-recorded completion facts only. current() resolves inputs
+        # and can restore a released model; neither belongs in readiness polling.
+        record = _shapley_intrinsic_coordinator.readiness_record_for_state(context)
     intrinsic = _intrinsic_readiness_from_record(record)
     payload["intrinsic"] = intrinsic
     required = ("forecast", "simulation", "current_value", "intrinsic")
