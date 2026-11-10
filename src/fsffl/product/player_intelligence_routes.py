@@ -269,6 +269,7 @@ def install_player_intelligence_routes(
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     career_record_loader=None,
     career_publication_validator=None,
+    season_comparison_service=None,
 ) -> None:
     future_forecasts = future_cache or PlayerFutureForecastCache()
 
@@ -322,6 +323,11 @@ def install_player_intelligence_routes(
                 player_id,
                 intrinsic=intrinsic,
                 future_cache=future_forecasts,
+            )
+            payload["season_comparison"] = (
+                season_comparison_service.player(runtime, player_id)
+                if season_comparison_service is not None
+                else {"status": "needs_refresh"}
             )
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
