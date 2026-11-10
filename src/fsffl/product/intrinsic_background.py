@@ -713,12 +713,12 @@ class ShapleyIntrinsicBackgroundCoordinator:
             return record.active_player_ids
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
-        context = self._pin_build_context(context)
-        key = self._key(context)
-        with self._lock:
-            record = self._records.get(key)
-            if record is None or record.contract is not None or record.contract_ref is None:
-                return record
+        # Reuse the producer's exact-State owner before doing any compatibility
+        # work. Resolving the key here allocated outside the restoration gate.
+        # Source ambiguity fails closed; producers still validate input identity.
+        record = self.readiness_record_for_state(context)
+        if record is None or record.contract is not None or record.contract_ref is None:
+            return record
         return self._resolve_released_contract(context, record)
 
     def _resolve_released_contract(

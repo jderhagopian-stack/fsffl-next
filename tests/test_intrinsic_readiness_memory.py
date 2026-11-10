@@ -120,3 +120,48 @@ def test_fresh_background_completion_retains_summary_for_status_reads():
     finally:
         release.set()
         coordinator._executor.shutdown(wait=True)
+
+
+def test_explicit_model_read_reuses_completed_record_without_unguarded_key_resolution():
+    contract=build_shapley_intrinsic_contract(_result())
+    loader=NS(restore_compatible=lambda _:contract)
+    coordinator=ShapleyIntrinsicBackgroundCoordinator(loader,
+        intrinsic_input_fingerprint_resolver=lambda _:'input',forecast_coordinate_resolver=lambda _:'forecast')
+    ctx=context()
+    try:
+        record=coordinator.restore_compatible(ctx)
+        loader.pin_build_context=forbidden
+        coordinator._intrinsic_input_fingerprint_resolver=forbidden
+        assert coordinator.current(ctx) is record
+        assert coordinator.current(context(state='other')) is None
+    finally:
+        coordinator._executor.shutdown(wait=True)
+
+
+def test_expired_model_restore_resolves_inputs_only_after_memory_admission():
+    from fsffl.product.resource_coordinator import HeavyWorkCoordinator
+    gate=HeavyWorkCoordinator()
+    calls=[]
+    def resolve(_):
+        calls.append(gate.snapshot().active_kind)
+        return 'input'
+    def restore(_):
+        assert gate.snapshot().active_kind=='intrinsic_restore'
+        return build_shapley_intrinsic_contract(_result())
+    coordinator=ShapleyIntrinsicBackgroundCoordinator(NS(restore_compatible=restore),
+        intrinsic_input_fingerprint_resolver=resolve,forecast_coordinate_resolver=lambda _:'forecast',
+        heavy_work_coordinator=gate)
+    ctx=context()
+    try:
+        record=coordinator.restore_compatible_staged(ctx)
+        assert coordinator.release_completed_contract(ctx,record.contract)
+        handle=ref(record.contract)
+        del record
+        gc.collect()
+        assert handle() is None
+        calls.clear()
+        restored=coordinator.current(ctx)
+        assert restored.contract is not None
+        assert calls and set(calls)=={'intrinsic_restore'}
+    finally:
+        coordinator._executor.shutdown(wait=True)

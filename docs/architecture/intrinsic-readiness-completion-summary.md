@@ -21,7 +21,11 @@ with identical classification rules. It never substitutes another State's result
 
 This is not a new source-freshness cache or lifecycle controller. Producers still
 pin inputs, validate dependency fingerprints and use staged restoration. Explicit
-model readers retain their existing contract semantics. Presentation publication
+model reads reuse an already-proven exact-State record without resolving its
+inputs again. When its weak handle has expired, staged restoration enters the
+memory gate before pinning, compatibility resolution or artifact decoding. The
+restorer still checks full dependency identity inside that gate. A busy or
+memory-refused lane leaves the retained record available without rebuilding. Presentation publication
 checks, source rules, numerical models and historical snapshots are unchanged.
 
 Regressions exercise fresh build and durable restore, garbage collection of the
