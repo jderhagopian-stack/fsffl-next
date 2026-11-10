@@ -28,6 +28,7 @@ from fsffl.value.models import (
     ValueDistribution,
 )
 
+from .reconciliation_intent import ReconciliationSyncIntent
 from .foreground_pressure import foreground_pressure
 from .background_jobs import (
     IntelligenceJob,
@@ -920,6 +921,7 @@ def create_app(
     reconciliation_lock = RLock()
     reconciliation_league_by_user: dict[str, str] = {}
     reconciliation_generation_by_user: dict[str, int] = {}
+    reconciliation_sync_intents: dict[str, ReconciliationSyncIntent] = {}
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
     base_read_capabilities = capability_readiness_reader or _runtime_capability_readiness
 
@@ -1699,11 +1701,28 @@ def create_app(
             and same_reconciliation_generation
         )
         if can_coalesce_current:
-            return {
-                **_job_payload(active_job),
-                **runtime_context_payload(user_id),
-                "coalesced": True,
-            }
+            with reconciliation_lock:
+                current = jobs.current(user_id)
+                can_coalesce_current = bool(
+                    current is not None and current.job_id == active_job.job_id
+                    and current.status in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}
+                    and reconciliation_league_by_user.get(user_id) == starting_league_id
+                    and reconciliation_generation_by_user.get(user_id) == expected_generation
+                )
+                if can_coalesce_current and sync_state:
+                    intent = reconciliation_sync_intents.get(user_id)
+                    if intent is None or not intent.request_sync():
+                        raise HTTPException(
+                            status_code=503,
+                            detail="Current reconciliation is finishing; retry State sync shortly.",
+                            headers={"Retry-After": "1"},
+                        )
+            if can_coalesce_current:
+                return {
+                    **_job_payload(current),
+                    **runtime_context_payload(user_id),
+                    "coalesced": True,
+                }
 
         def published_generation_fully_current(context) -> bool:
             evidence = context.forecast_evidence
@@ -1796,11 +1815,12 @@ def create_app(
                 )
 
         retry_optional_after_reuse = False
+        sync_intent = ReconciliationSyncIntent(sync_state)
 
         def reconcile(progress) -> str | None:
             nonlocal retry_optional_after_reuse
             log_reconciliation_memory(user_id, "job_start")
-            if sync_state:
+            if sync_intent.begin_pass():
                 progress(
                     IntelligenceJobPhase.REFRESHING_STATE,
                     "Syncing canonical Sleeper State into an unpublished working generation.",
@@ -2116,18 +2136,23 @@ def create_app(
 
         def work(progress) -> str | None:
             try:
-                message = reconcile(progress)
-                if retry_optional_after_reuse:
+                while True:
+                    message = reconcile(progress)
+                    if retry_optional_after_reuse:
+                        require_active_league_identity()
+                        preparer = getattr(application.state, "presentation_retry_preparer", None)
+                        if preparer is None:
+                            preparer = getattr(application.state, "presentation_preparer", None)
+                        if callable(preparer):
+                            try:
+                                preparer(user_id, store.get(user_id))
+                            except Exception:
+                                _logger.exception("Optional explicit-refresh preparation failed")
+                    if not sync_intent.finish_pass():
+                        return message
+                    # A manual tap joined an automatic non-sync pass. Honor its
+                    # stronger intent in this same worker after prior frames return.
                     require_active_league_identity()
-                    preparer = getattr(application.state, "presentation_retry_preparer", None)
-                    if preparer is None:
-                        preparer = getattr(application.state, "presentation_preparer", None)
-                    if callable(preparer):
-                        try:
-                            preparer(user_id, store.get(user_id))
-                        except Exception:
-                            _logger.exception("Optional explicit-refresh preparation failed")
-                return message
             except BaseException as exc:
                 log_reconciliation_memory(user_id, "job_aborted")
                 logging.getLogger("uvicorn.error").info(
@@ -2147,6 +2172,10 @@ def create_app(
                 )
                 raise
             finally:
+                sync_intent.close()
+                with reconciliation_lock:
+                    if reconciliation_sync_intents.get(user_id) is sync_intent:
+                        reconciliation_sync_intents.pop(user_id, None)
                 # Successful publication removes the working generation itself. An
                 # interrupted older job may finish after a newer lifecycle starts, so
                 # cleanup is ownership-aware and can never erase replacement work.
@@ -2177,6 +2206,13 @@ def create_app(
                 == expected_generation
             )
             if current_same_owner:
+                intent = reconciliation_sync_intents.get(user_id)
+                if sync_state and (intent is None or not intent.request_sync()):
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Current reconciliation is finishing; retry State sync shortly.",
+                        headers={"Retry-After": "1"},
+                    )
                 return {
                     **_job_payload(current_job),
                     **runtime_context_payload(user_id),
@@ -2198,6 +2234,7 @@ def create_app(
                     detail=str(exc),
                     headers={"Retry-After": "5"},
                 ) from exc
+            reconciliation_sync_intents[user_id] = sync_intent
             reconciliation_league_by_user[user_id] = starting_league_id
             reconciliation_generation_by_user[user_id] = expected_generation
         return {

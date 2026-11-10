@@ -18,7 +18,9 @@ jobs:
     name: full-suite
     if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The existing suite can take over 14 minutes; leave bounded time for
+    # dependency installation, exact-head verification and checkout cleanup.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
