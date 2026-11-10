@@ -67,3 +67,20 @@ A synthetic 875-player/nine-week composition measured approximately 1.16 seconds
 This excludes network acquisition and model fitting and is not a hosted refresh
 measurement. Production numerical acceptance requires a normal authenticated
 refresh after deployment.
+
+## Shared participation exceptions
+
+`forecast/participation.py` owns the unchanged accepted receipt eligibility
+previously housed in the Intrinsic live candidate integration. Both consumers
+use the same functions; existing Intrinsic imports remain compatible. Confirmed
+season unavailability, approved roster-role assumptions and exact-State IR with
+no source rows can yield actuals plus zero ROS. Ordinary missing evidence, IR
+with source rows, and generic bench/taxi membership cannot independently create
+zero projections. Complete current projections keep existing precedence; unsigned
+status retains its accepted priority. The UI labels verified unavailability
+separately from an actuals-only assumption and retains source/version/capture
+provenance. Role evidence keeps its existing freshness fence. A real owned live
+refresh may use the same bounded official reserve/left-squad acquisition as
+Intrinsic (at most four roster pages, five-second request timeout); injected
+or historical evaluations do not acquire newer role facts. No new source rule,
+valuation formula, preseason rewrite or GET-time acquisition is introduced.
