@@ -177,3 +177,99 @@ def recorded_ir_no_projection_year_one_evidence(
     )
 
 
+
+
+# User-directed universal fallback, effective only for subsequent captures.
+SPARSE_PRODUCTION_POLICY_VERSION = "sparse-production-no-ros-v1:4w-5opp-50yd-0td"
+SPARSE_PRODUCTION_POLICY_APPROVED_AT = datetime(2026, 11, 10, 13, 12, 49, tzinfo=UTC)
+
+
+def sparse_production_policy_version(as_of: datetime) -> str | None:
+    if as_of.tzinfo is None:
+        raise ValueError("sparse-production cutoff must be timezone-aware")
+    return (SPARSE_PRODUCTION_POLICY_VERSION
+            if as_of >= SPARSE_PRODUCTION_POLICY_APPROVED_AT else None)
+
+
+class SparseProductionEvidence:
+    """Bounded counters from already acquired full weekly cohorts; no raw copies.
+
+    Missing player rows can support an explicit assumption only when every
+    completed week has a nonempty, identity/cutoff-valid source response.
+    Empty/failed feeds never establish absence. Counts are scoring-independent.
+    """
+    _keys = ("pass_att", "rush_att", "rec_tgt", "rec", "pass_yd", "rush_yd",
+             "rec_yd", "pass_td", "rush_td", "rec_td")
+
+    def __init__(self, state: LeagueState):
+        self.state = state
+        self.weeks: set[int] = set()
+        self.totals: dict[str, dict[str, float]] = {}
+        self.captured_at: datetime | None = None
+        self.valid = True
+        self.player_ids = {p.player_id for p in state.players}
+
+    def add_week(self, week: int, lines) -> None:
+        import math
+        if not lines or week in self.weeks:
+            self.valid = False
+        self.weeks.add(week)
+        for line in lines:
+            if (line.season != self.state.league.season or line.week != week
+                    or line.captured_at.tzinfo is None):
+                self.valid = False
+                continue
+            self.captured_at = max(self.captured_at or line.captured_at, line.captured_at)
+            if line.player_id not in self.player_ids:
+                continue
+            totals = self.totals.setdefault(line.player_id, dict.fromkeys(self._keys, 0.0))
+            for key in self._keys:
+                try:
+                    value = float(line.stats.get(key, 0.0))
+                except (TypeError, ValueError):
+                    self.valid = False
+                    continue
+                if not math.isfinite(value):
+                    self.valid = False
+                # Avoid cancellation from negative corrections hiding participation.
+                totals[key] += abs(value)
+
+    def receipts(self, *, as_of: datetime, available_projection_rows,
+                 source_ready: bool) -> dict[str, YtdOnlyYearOneEvidence]:
+        import hashlib
+        import json
+        version = sparse_production_policy_version(as_of)
+        completed = self.state.completed_through_week
+        if (version is None or not source_ready or not self.valid
+                or completed is None or not 4 <= completed < 18
+                or self.weeks != set(range(1, completed + 1))
+                or self.captured_at is None or self.captured_at > as_of
+                or self.state.as_of > as_of):
+            return {}
+        projected = {r.player_id for r in available_projection_rows}
+        statuses = {p.player_id: p for p in self.state.player_states}
+        state_id = self.state.state_id
+        result = {}
+        for player in self.state.players:
+            status = statuses.get(player.player_id)
+            if (player.position.value not in {"QB", "RB", "WR", "TE"}
+                    or not player.nfl_team or player.nfl_team.upper() in {"FA", "N/A", "NONE"}
+                    or player.player_id in projected or status is None
+                    or status.as_of > as_of or status.status.value not in {"active", "inactive", "practice_squad"}):
+                continue
+            t = self.totals.get(player.player_id, {})
+            # Receptions also bound participation if a feed omits target counts.
+            opportunities = t.get("pass_att", 0) + t.get("rush_att", 0) + max(t.get("rec_tgt", 0), t.get("rec", 0))
+            yards = sum(t.get(k, 0) for k in ("pass_yd", "rush_yd", "rec_yd"))
+            touchdowns = sum(t.get(k, 0) for k in ("pass_td", "rush_td", "rec_td"))
+            if opportunities > 5 or yards > 50 or touchdowns != 0:
+                continue
+            identity = {"state": state_id, "player": player.player_id,
+                        "week": completed, "totals": t, "captured_at": self.captured_at.isoformat()}
+            digest = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+            result[player.player_id] = YtdOnlyYearOneEvidence(
+                player_id=player.player_id, season=self.state.league.season,
+                source="fsffl:completed-week-sparse-production-no-projection",
+                source_version=f"{version}:{digest}", observed_at=self.captured_at,
+            )
+        return result

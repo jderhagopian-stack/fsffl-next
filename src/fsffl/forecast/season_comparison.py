@@ -17,7 +17,7 @@ from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, Forec
 from .projection_history import career_ros_projection_selector
 from .season_rollforward import compose_completed_actuals_with_ros_per_player
 
-SEASON_COMPARISON_VERSION = "season-comparison-v3:shared-participation-exceptions"
+SEASON_COMPARISON_VERSION = "season-comparison-v4:sparse-production-no-projection"
 POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
 
 
@@ -26,6 +26,8 @@ class StateBoundStats:
     def __init__(self, state, source):
         self.state, self.source = state, source
         self.latest_actuals_capture = None
+        from .participation import SparseProductionEvidence
+        self.sparse_production = SparseProductionEvidence(state)
 
     def fetch_nfl_state(self):
         current = self.source.fetch_nfl_state()
@@ -38,6 +40,8 @@ class StateBoundStats:
         if season != self.state.league.season or not 1 <= week <= self.state.completed_through_week:
             raise ValueError("season comparison cannot acquire future or different-season actuals")
         lines = self.source.fetch_week(season=season, week=week)
+        if week not in self.sparse_production.weeks:
+            self.sparse_production.add_week(week, lines)
         captured = max((line.captured_at for line in lines), default=None)
         if captured is not None:
             self.latest_actuals_capture = max(
@@ -105,7 +109,7 @@ def complete_comparison_ros(state, runtime, *, stats_source, completed, as_of):
     })
 
 
-def apply_participation_exceptions(state, result, *, as_of, verified_roles=None):
+def apply_participation_exceptions(state, result, *, as_of, verified_roles=None, sparse_production=None):
     """Reuse Intrinsic's accepted eligibility, without importing product code."""
     from .participation import (
         recorded_status_based_zero_ros_evidence, recorded_ytd_only_year_one_evidence,
@@ -122,6 +126,10 @@ def apply_participation_exceptions(state, result, *, as_of, verified_roles=None)
         row.player_id for row in runtime.fantasy_point_forecasts
         if row.source != "fsffl:single-source-ros-with-first-party-fumbles"
     } if runtime else set()
+    sparse = sparse_production.receipts(
+        as_of=as_of, available_projection_rows=available,
+        source_ready=bool(getattr(runtime, "successful_source_ids", ())),
+    ) if sparse_production is not None else {}
     projected_ids = {row.player_id for row in available}
     forward = {row.player_id: row for row in result.forward_forecasts}
     explanations = {}
@@ -151,11 +159,16 @@ def apply_participation_exceptions(state, result, *, as_of, verified_roles=None)
             receipt = ytd.get(pid) or recorded_ir_no_projection_year_one_evidence(
                 state, player_id=pid, as_of=as_of, available_projection_rows=available,
             )
+            receipt = receipt or sparse.get(pid)
             if receipt is None:
                 continue
             receipt.validate()
             kind = "ir_no_projection" if receipt.source == "fsffl:exact-state-ir-no-projection" else "approved_role"
-            message = ("IR with no projection: actuals only; no additional production assumed."
+            if receipt.source == "fsffl:completed-week-sparse-production-no-projection":
+                kind = "sparse_production"
+            message = ("Little or no production and no projection: actuals only; no additional production assumed."
+                       if kind == "sparse_production" else
+                       "IR with no projection: actuals only; no additional production assumed."
                        if kind == "ir_no_projection" else
                        "Approved roster-status fallback: actuals only; no additional production assumed.")
             assumption = True
@@ -231,6 +244,7 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
                 participation_cutoff = max(participation_cutoff, *(r.captured_at for r in verified_roles.values()))
         participation = apply_participation_exceptions(
             state, result, as_of=participation_cutoff, verified_roles=verified_roles,
+            sparse_production=stats.sparse_production,
         )
         result.season_outlook, result.season_outlook_failures = compose_completed_actuals_with_ros_per_player(
             completed_actuals=result.completed_actuals, ros_forecasts=result.forward_forecasts,

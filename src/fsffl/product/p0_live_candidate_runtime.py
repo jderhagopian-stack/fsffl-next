@@ -206,6 +206,7 @@ def valid_live_source_manifest(manifest) -> bool:
 from fsffl.forecast.participation import (
     StatusBasedZeroRosEvidence,
     YtdOnlyYearOneEvidence,
+    SparseProductionEvidence,
     STATUS_BASED_YEAR_ONE_SCORING_VERSION,
     UNSIGNED_YTD_POLICY_VERSION,
     UNSIGNED_YTD_POLICY_APPROVED_AT,
@@ -1007,6 +1008,7 @@ def build_live_p0_rostered_candidate_forecasts(
     # Sleeper's stats responses cover the NFL, while this Career extension
     # consumes only rostered candidates. Fingerprint and validate the complete
     # responses, then retain only rows used by this exact-State build.
+    sparse_production = SparseProductionEvidence(league_state)
     weekly: dict[int, tuple[SleeperWeeklyStatLine, ...]] = {}
     supplement_weekly: dict[int, tuple[SleeperWeeklyStatLine, ...]] = {}
     weekly_digests: dict[str, str] = {}
@@ -1016,6 +1018,7 @@ def build_live_p0_rostered_candidate_forecasts(
         for line in fetched_week:
             if line.season != league_state.league.season or line.week != week:
                 raise ValueError("Sleeper weekly stat line does not match its requested window")
+        sparse_production.add_week(week, fetched_week)
         weekly_digests[str(week)] = _rows_digest(fetched_week)
         weekly_capture_times.extend(line.captured_at for line in fetched_week)
         weekly[week] = tuple(
@@ -1197,6 +1200,10 @@ def build_live_p0_rostered_candidate_forecasts(
     ytd_only_receipts = recorded_ytd_only_year_one_evidence(
         league_state, as_of=role_cutoff, verified_roles=role_receipts,
     )
+    sparse_receipts = sparse_production.receipts(
+        as_of=cutoff, available_projection_rows=available_ros_rows,
+        source_ready=bool(ros_runtime.successful_source_ids),
+    )
     def admit_ytd_only(player_id):
         override = _unsigned_ytd_override(
             player_id, roles=role_receipts, receipts=ytd_only_receipts,
@@ -1212,6 +1219,7 @@ def build_live_p0_rostered_candidate_forecasts(
                 league_state, player_id=player_id, as_of=cutoff,
                 available_projection_rows=available_ros_rows,
             )
+            evidence = evidence or sparse_receipts.get(player_id)
             if evidence is None:
                 return None
         ytd_only_receipts[player_id] = evidence
