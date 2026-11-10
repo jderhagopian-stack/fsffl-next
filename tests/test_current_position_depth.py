@@ -327,11 +327,11 @@ def test_governed_current_builder_consumes_existing_in_season_outlook(monkeypatc
 
     def fake_outlook(league_state, **kwargs):
         calls.append((league_state.state_id, kwargs))
-        return governed
+        return governed, {}, NOW
 
     monkeypatch.setattr(
         current_position_depth,
-        "build_governed_in_season_outlook",
+        "build_participation_adjusted_outlook",
         fake_outlook,
     )
 
@@ -352,9 +352,10 @@ def test_governed_current_builder_consumes_existing_in_season_outlook(monkeypatc
         (
             state.state_id,
             {
-                "preseason_season_forecasts": (),
-                "history_writer": "history-writer",
-                "allow_governed_fumbles_ros_gap": True,
+                "preseason_forecasts": (),
+                "history_store": "history-writer",
+                "stats_source": None,
+                "clock": None,
             },
         )
     ]

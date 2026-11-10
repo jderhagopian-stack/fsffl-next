@@ -1,4 +1,4 @@
-"""Read-only season comparison built by Forecast during an owned refresh."""
+"""Shared governed season outlook preparation and read-only card comparison."""
 from __future__ import annotations
 
 from collections import defaultdict
@@ -33,7 +33,7 @@ class StateBoundStats:
         current = self.source.fetch_nfl_state()
         if (current.season != self.state.league.season
                 or current.completed_through_week != self.state.completed_through_week):
-            raise ValueError("season comparison requires the exact State completed-week boundary")
+            raise ValueError("season outlook requires the exact State completed-week boundary")
         return current
 
     def fetch_week(self, *, season, week):
@@ -188,10 +188,14 @@ def apply_participation_exceptions(state, result, *, as_of, verified_roles=None,
     return explanations
 
 
-def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
-                            stats_source=None, history_store=None, clock=None,
-                            fallback_forecasts=None, preseason_basis="original_published_preseason"):
-    """Build small player rows; keep actuals and remaining uncertainty separate."""
+def build_participation_adjusted_outlook(state, *, preseason_forecasts,
+                                        stats_source=None, history_store=None,
+                                        clock=None, fallback_forecasts=None):
+    """One Forecast preparation path for cards and Current lineup consumers.
+
+    Return typed governed observations, explanatory participation metadata and
+    evaluation time. No display rows, persistence cache or new acquisition owner.
+    """
     live_clock = clock or (lambda: datetime.now(UTC))
     now = live_clock()
     stats = StateBoundStats(state, stats_source or SleeperWeeklyStatsSource())
@@ -204,8 +208,9 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
 
     def ros_builder(league_state, **kwargs):
         evaluation_cutoff = kwargs["clock"]()
-        if history_store is not None:
-            kwargs["source_revisions"] = history_store.latest_revisions(
+        history_reader = getattr(history_store, "latest_revisions", None)
+        if callable(history_reader):
+            kwargs["source_revisions"] = history_reader(
                 career_ros_projection_selector(
                     season=state.league.season, completed_through_week=state.completed_through_week,
                     as_of=evaluation_cutoff,
@@ -255,6 +260,26 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
                 if entry.player_id in players_by_id and players_by_id[entry.player_id].position in POSITIONS
             },
         )
+    return result, participation, now
+
+
+def outlook_evidence_labels(ros, evidence_basis, participation=None):
+    """Explain an accepted input without changing its quantitative authority."""
+    labels = participation or {}
+    basis = ros.source if ros is not None else evidence_basis
+    return {**labels, "ros_basis": basis,
+            "low_confidence": bool(labels.get("participation_assumption"))
+            or "single-source" in basis or "prior" in basis or "no-nfl-team" in basis}
+
+
+def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
+                            stats_source=None, history_store=None, clock=None,
+                            fallback_forecasts=None, preseason_basis="original_published_preseason"):
+    """Build small player rows; keep actuals and remaining uncertainty separate."""
+    result, participation, now = build_participation_adjusted_outlook(
+        state, preseason_forecasts=preseason_forecasts, stats_source=stats_source,
+        history_store=history_store, clock=clock, fallback_forecasts=fallback_forecasts,
+    )
     baseline = {row.player_id: row for row in preseason_forecasts
                 if row.horizon == ForecastHorizon.SEASON and row.metric == ForecastMetric.FANTASY_POINTS}
     forward = {row.player_id: row for row in result.forward_forecasts}
@@ -281,9 +306,8 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
             for week in range(1, result.completed_through_week + 1):
                 cumulative += points_by_week.get(week, 0.0)
                 weekly.append({"week": week, "points": cumulative})
-        basis = ros.source if ros is not None else result.evidence_basis
         players[pid] = {
-            **participation.get(pid, {}),
+            **outlook_evidence_labels(ros, result.evidence_basis, participation.get(pid)),
             "status": "ready" if total_points is not None else "partial",
             "preseason_points": prior_points, "actual_points": earned,
             "ros_points": ros_points, "outlook_points": total_points,
@@ -291,8 +315,7 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
             "preseason_as_of": preseason_as_of or (prior.as_of.isoformat() if prior is not None else None),
             "preseason_basis": preseason_basis,
             "completed_through_week": result.completed_through_week,
-            "weekly_actuals": weekly, "ros_basis": basis,
-            "low_confidence": bool(participation.get(pid, {}).get("participation_assumption")) or "single-source" in basis or "prior" in basis or "no-nfl-team" in basis,
+            "weekly_actuals": weekly,
             "ros_p10": ros.distribution.p10 if ros is not None else None,
             "ros_p90": ros.distribution.p90 if ros is not None else None,
             "reason": result.season_outlook_failures.get(pid),
