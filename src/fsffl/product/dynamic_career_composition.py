@@ -287,6 +287,10 @@ def dynamic_career_fingerprint(
     policy = ros_fallback_policy_version(evaluated_at)
     if policy is not None:
         payload["ros_fallback_policy"] = policy
+    from fsffl.forecast.participation import sparse_production_policy_version
+    sparse_policy = sparse_production_policy_version(evaluated_at)
+    if sparse_policy is not None:
+        payload["sparse_production_policy"] = sparse_policy
     status_receipts = recorded_status_based_zero_ros_evidence(
         context.league_state, as_of=evaluated_at,
     )

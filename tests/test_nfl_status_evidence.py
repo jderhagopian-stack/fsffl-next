@@ -493,16 +493,20 @@ def test_new_single_source_fallback_runs_fumbles_model_before_scoring(monkeypatc
     assert '+first_party_fumbles_lost' in result.year_one_evidence_modes[pid]
 
 
-def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=False, earned=True, league_fumbles=True):
+def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=False, earned=True, league_fumbles=True, sparse_case=False):
     from fsffl.product import p0_live_candidate_runtime as runtime
     from fsffl.providers.sleeper_weekly_stats import SleeperNflState, SleeperWeeklyStatLine
     from fsffl.state.models import ScoringRule
     pid = 'sleeper:player:8129'
     capture = runtime.ROS_FALLBACK_POLICY_APPROVED_AT + timedelta(seconds=1)
+    if sparse_case:
+        from fsffl.forecast.participation import SPARSE_PRODUCTION_POLICY_APPROVED_AT
+        capture = SPARSE_PRODUCTION_POLICY_APPROVED_AT + timedelta(seconds=1)
     old = _approved_ytd_state()
     team = None if unsigned else 'HOU'
     state = old.model_copy(update={
         'as_of':capture,
+        'completed_through_week':5,
         'league':old.league.model_copy(update={'rules':old.league.rules.model_copy(update={
             'scoring':(*(rule for rule in runtime.FROZEN_I1_STANDARD_SCORING if league_fumbles or rule.stat!='fum_lost'),ScoringRule(stat='rec',points=1.)),
         })}),
@@ -515,6 +519,9 @@ def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=Fal
     weekly = {week:() for week in range(1,6)}
     weekly[4] = (SleeperWeeklyStatLine(pid,2026,4,{'rush_yd':20.,'rush_td':1.,'rec':2.,'rec_yd':10.,'fum_lost':1.,'gp':1.},capture),)
     if not earned: weekly[4]=()
+    if sparse_case:
+        weekly = {week:(SleeperWeeklyStatLine(pid,2026,week,
+            {'rush_att':1.,'rush_yd':2.,'gp':1.},capture),) for week in range(1,6)}
     stats = SimpleNamespace(fetch_nfl_state=lambda:SleeperNflState(season=2026,week=6,season_type='regular',captured_at=capture),
                             fetch_season=lambda **_:(), fetch_week=lambda **kw:weekly[kw['week']])
     snapshot = SimpleNamespace(captured_at=capture,payload={'players':{'8129':{'years_exp':4,'team':team,'depth_chart_order':2}}})
