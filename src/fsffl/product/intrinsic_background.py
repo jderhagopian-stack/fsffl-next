@@ -10,7 +10,9 @@ from time import monotonic, sleep
 from typing import Callable
 from weakref import ReferenceType, ref
 
-from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
+from fsffl.value.shapley_intrinsic_contract import (
+    ShapleyIntrinsicContract, ShapleyIntrinsicCoverage, ShapleyIntrinsicAvailability,
+)
 
 from .resource_coordinator import HeavyWorkCoordinator
 from .runtime import UserRuntimeContext
@@ -56,6 +58,17 @@ class IntrinsicBuildStatus(StrEnum):
 
 
 @dataclass(frozen=True)
+class IntrinsicCompletionSummary:
+    """Producer-owned readiness facts, without estimates or model/input graphs."""
+    status: ShapleyIntrinsicAvailability
+    status_reason: str | None
+    forecast_model_version: str
+    coverage: ShapleyIntrinsicCoverage
+    estimate_count: int
+    target_years: tuple[int, ...]
+
+
+@dataclass(frozen=True)
 class IntrinsicBuildRecord:
     user_id: str
     league_state_id: str
@@ -69,6 +82,18 @@ class IntrinsicBuildRecord:
     contract_ref: ReferenceType[ShapleyIntrinsicContract] | None = None
     error: str | None = None
     active_player_ids: frozenset[str] | None = None
+    completion_summary: IntrinsicCompletionSummary | None = None
+
+    def __post_init__(self) -> None:
+        if (self.status == IntrinsicBuildStatus.COMPLETED
+                and isinstance(self.contract, ShapleyIntrinsicContract)):
+            contract = self.contract
+            object.__setattr__(self, "completion_summary", IntrinsicCompletionSummary(
+                status=contract.status, status_reason=contract.status_reason,
+                forecast_model_version=contract.forecast_model_version,
+                coverage=contract.coverage, estimate_count=len(contract.estimates),
+                target_years=contract.target_years,
+            ))
 
 
 class ShapleyIntrinsicBackgroundCoordinator:
@@ -619,6 +644,27 @@ class ShapleyIntrinsicBackgroundCoordinator:
             record = self.request(context, expected_epoch=expected_epoch)
         return record
 
+    def readiness_record_for_state(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
+        """Inspect the existing bounded lifecycle owner without resolving inputs.
+
+        Status requests must never pin a build, hash Forecast inputs, invoke a
+        loader/restorer, or acquire a heavy-work lane. Completion metadata survives
+        weak contract release. Ambiguous source attempts fail closed.
+        """
+        if context.league_state is None:
+            return None
+        state_id = context.league_state.state_id
+        # Preserve the generic coordinator's existing _key() scope fallback.
+        # Production LeagueState always supplies a league; minimal callers may
+        # use only an immutable State identity.
+        league = getattr(context.league_state, "league", None)
+        league_id = str(getattr(league, "league_id", None) or state_id)
+        with self._lock:
+            matches = [record for key, record in self._records.items()
+                       if key[0] == context.user_id and key[1] == league_id
+                       and record.league_state_id == state_id]
+            return matches[0] if len(matches) == 1 else None
+
     def completed_for_state(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
         """Memory-only exact-State read for publication composition or a GET.
 
@@ -671,12 +717,12 @@ class ShapleyIntrinsicBackgroundCoordinator:
             return record.active_player_ids
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
-        context = self._pin_build_context(context)
-        key = self._key(context)
-        with self._lock:
-            record = self._records.get(key)
-            if record is None or record.contract is not None or record.contract_ref is None:
-                return record
+        # Reuse the producer's exact-State owner before doing any compatibility
+        # work. Resolving the key here allocated outside the restoration gate.
+        # Source ambiguity fails closed; producers still validate input identity.
+        record = self.readiness_record_for_state(context)
+        if record is None or record.contract is not None or record.contract_ref is None:
+            return record
         return self._resolve_released_contract(context, record)
 
     def _resolve_released_contract(

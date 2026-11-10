@@ -69,7 +69,8 @@ def test_hosted_readiness_does_not_restore_intrinsic_from_foreground_reads() -> 
         "# Reuse only exact Decision-owned package economics", 1
     )[0]
 
-    assert "_shapley_intrinsic_coordinator.current(context)" in readiness
+    assert "_shapley_intrinsic_coordinator.readiness_record_for_state(context)" in readiness
+    assert "_shapley_intrinsic_coordinator.current(context)" not in readiness
     assert "restore_compatible(" not in readiness
     assert "restore_compatible_staged" in reconcile
     assert "wait_for_terminal(context)" in reconcile
