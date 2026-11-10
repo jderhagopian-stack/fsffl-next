@@ -11,7 +11,10 @@ through progressive disclosure. Intrinsic economics and Simulation are unchanged
 `forecast/season_comparison.py` consumes the existing governed in-season
 orchestration and league scoring. Weekly actuals must agree with the canonical
 State's season and completed-week boundary; future weeks cannot enter actuals.
-Actuals and ROS describe disjoint periods. The terminal season uses actuals only.
+Actuals and ROS describe disjoint periods. The live ROS evaluation cutoff is
+established after actual acquisition and includes their capture time; provider
+provenance keeps its original timestamps. This preserves the roll-forward guard
+against evidence that postdates its evaluation cutoff. The terminal season uses actuals only.
 Source facts reuse the existing projection-history owner at provider/horizon/week
 scope; league-scored results remain State-scoped.
 
