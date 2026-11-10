@@ -118,7 +118,10 @@ def apply_participation_exceptions(state, result, *, as_of, verified_roles=None)
     ytd = recorded_ytd_only_year_one_evidence(state, as_of=as_of, verified_roles=roles)
     runtime = result.current_runtime
     available = tuple(runtime.source_observations) if runtime is not None else ()
-    current_ids = {row.player_id for row in runtime.fantasy_point_forecasts} if runtime else set()
+    current_ids = {
+        row.player_id for row in runtime.fantasy_point_forecasts
+        if row.source != "fsffl:single-source-ros-with-first-party-fumbles"
+    } if runtime else set()
     projected_ids = {row.player_id for row in available}
     forward = {row.player_id: row for row in result.forward_forecasts}
     explanations = {}

@@ -311,3 +311,18 @@ def test_comparison_and_intrinsic_share_identical_eligibility_functions():
     for name in ['recorded_status_based_zero_ros_evidence','recorded_ytd_only_year_one_evidence',
                  'recorded_ir_no_projection_year_one_evidence','_unsigned_ytd_override']:
         assert getattr(intrinsic,name) is getattr(policy,name)
+
+
+def test_official_unavailability_precedes_single_source_fallback_like_intrinsic(monkeypatch):
+    import fsffl.forecast.participation as policy
+    from fsffl.forecast.season_comparison import apply_participation_exceptions
+    state = _state().model_copy(update={'completed_through_week':2})
+    receipt = policy.StatusBasedZeroRosEvidence(PID,'out_for_season','https://example.test/official',
+        'recorded-official-v1',NOW,True,season=2026)
+    monkeypatch.setattr(policy,'recorded_status_based_zero_ros_evidence',lambda *args,**kwargs:{PID:receipt})
+    result = participation_result(state,projected=True,complete=True)
+    one = result.forward_forecasts[0].model_copy(update={'source':'fsffl:single-source-ros-with-first-party-fumbles'})
+    result.forward_forecasts = result.current_runtime.fantasy_point_forecasts = (one,)
+    explanation = apply_participation_exceptions(state,result,as_of=NOW)
+    assert explanation[PID]['participation_basis']=='verified_unavailable'
+    assert result.forward_forecasts[0].distribution.mean==0
