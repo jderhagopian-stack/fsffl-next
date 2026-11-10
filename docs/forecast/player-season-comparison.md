@@ -5,8 +5,9 @@ projection, finalized actual points, remaining-season projection, and their
 combined season outlook. Overview uses that same saved outlook when available.
 The career trajectory and annual model baselines continue directly below season
 progress in the normal card scroll, using the same panel style and readable
-typography. Mobile forecast years stack vertically rather than clipping into
-a horizontal row; long career histories retain an internal chart scroll. Intrinsic economics and Simulation are unchanged.
+typography. Forecast years remain compact in a horizontal strip. Career histories scroll
+horizontally while a separate, fixed point-scale column remains visible on the
+left; both SVGs use identical vertical coordinates and scale bounds. Intrinsic economics and Simulation are unchanged.
 
 ## Authority and provenance
 

@@ -149,19 +149,26 @@ body.pi-open{overflow:hidden}#player-intelligence-root{position:fixed;inset:0;z-
 .pi-career-continuation .pi-career-caption{font-size:13px;line-height:1.5;color:#91a9bd;margin:-6px 0 18px}
 .pi-career-continuation .pi-trajectory-frame{border:0;border-radius:0;background:transparent;box-shadow:none;padding:0}
 .pi-career-continuation .pi-trajectory-scroll{background:transparent;border-radius:0;border-bottom:0}
-.pi-career-continuation .pi-trajectory-fit .pi-trajectory-svg{min-width:0!important;width:100%;height:auto}
 .pi-career-continuation .pi-axis-label,.pi-career-continuation .pi-season-label{font-size:18px}
 .pi-career-continuation .pi-phase-label-svg{font-size:16px;letter-spacing:.06em}
 .pi-career-continuation .pi-chart-key{font-size:12px;line-height:1.5;gap:10px 16px;margin-top:16px}
 .pi-career-continuation .pi-chart-key i{width:18px;margin-right:6px}
-.pi-career-continuation .pi-forecast-list{grid-template-columns:1fr;gap:14px;overflow:visible;padding:0}
-.pi-career-continuation .pi-forecast-list article{min-width:0;padding:18px;border-radius:14px;border:1px solid rgba(93,183,221,.25);background:rgba(7,25,39,.55)}
-.pi-career-continuation .pi-forecast-card-head{gap:5px;padding-bottom:14px}
-.pi-career-continuation .pi-forecast-card-head>small{font-size:15px;line-height:1.4;color:#dcecf5}
-.pi-career-continuation .pi-forecast-card-head>strong{font-size:28px;line-height:1.2}
-.pi-career-continuation .pi-forecast-card-head>span,.pi-career-continuation .pi-forecast-card-head>em{font-size:12px;line-height:1.5;color:#91a9bd}
-.pi-career-continuation .pi-forecast-metrics{margin-top:8px;overflow:visible;grid-template-columns:1fr}
-.pi-career-continuation .pi-forecast-metrics span{grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:11px 0}
-.pi-career-continuation .pi-forecast-metrics small{font-size:12px;line-height:1.5}
-.pi-career-continuation .pi-forecast-metrics b{font-size:15px;line-height:1.5}
-@media(min-width:640px){.pi-career-continuation .pi-forecast-list{grid-template-columns:repeat(3,minmax(0,1fr))}.pi-career-continuation .pi-forecast-list article{padding:14px}.pi-career-continuation .pi-forecast-metrics span{gap:8px}}
+/* A separate scale column shares SVG Y coordinates with the scrolling plot. */
+.pi-career-continuation .pi-career-plot{--pi-career-chart-height:260px;display:flex;align-items:stretch;min-width:0}
+.pi-career-continuation .pi-career-plot .pi-trajectory-svg{height:var(--pi-career-chart-height)}
+.pi-career-continuation .pi-career-point-scale{position:relative;flex:0 0 44px;min-width:44px;height:var(--pi-career-chart-height)}
+.pi-career-continuation .pi-career-point-scale svg{position:absolute;inset:0;display:block;width:100%;height:100%;overflow:visible}
+.pi-career-axis-label{fill:#91a9bd;font-size:14px;font-family:inherit}
+.pi-career-continuation .pi-career-plot>.pi-trajectory-scroll{flex:1;min-width:0}
+.pi-career-continuation .pi-forecast-list{grid-template-columns:repeat(3,minmax(126px,1fr));gap:8px;overflow-x:auto;padding:0 0 4px}
+.pi-career-continuation .pi-forecast-list article{min-width:126px;padding:11px;border-radius:14px;border:1px solid rgba(93,183,221,.25);background:rgba(7,25,39,.55)}
+.pi-career-continuation .pi-forecast-card-head{gap:3px;padding-bottom:8px}
+.pi-career-continuation .pi-forecast-card-head>small{font-size:12px;line-height:1.4;color:#dcecf5}
+.pi-career-continuation .pi-forecast-card-head>strong{font-size:18px;line-height:1.2}
+.pi-career-continuation .pi-forecast-card-head>span,.pi-career-continuation .pi-forecast-card-head>em{font-size:10px;line-height:1.4;color:#91a9bd}
+.pi-career-continuation .pi-forecast-metrics{margin-top:4px;overflow:visible;grid-template-columns:1fr}
+.pi-career-continuation .pi-forecast-metrics span{grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:7px 0}
+.pi-career-continuation .pi-forecast-metrics small{font-size:10px;line-height:1.4}
+.pi-career-continuation .pi-forecast-metrics b{font-size:11px;line-height:1.4}
+
+@media(max-width:640px){.pi-career-continuation .pi-career-plot{--pi-career-chart-height:240px}}
