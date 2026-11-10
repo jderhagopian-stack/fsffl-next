@@ -41,6 +41,45 @@ _logger = logging.getLogger("fsffl.product.forecast")
 ForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
 
 
+def make_preseason_comparison_loader(persistence_store):
+    """Retrieve the actual captured projection; never add today's model output."""
+    from fsffl.forecast.models import ForecastObservation, ForecastHorizon, ForecastMetric
+    from fsffl.forecast.league_scoring import derive_league_scoring_result
+    from fsffl.state.models import LeagueRules
+
+    def load(state):
+        baseline = (_preseason_baseline_read_through.load(persistence_store, state)
+                    if persistence_store is not None else None)
+        if baseline is None:
+            return {"forecasts": (), "as_of": None, "basis": "not_captured"}
+        reader = getattr(persistence_store, "get_forecast_archive", None)
+        source_id = baseline.source_artifact_id
+        if callable(reader) and source_id and str(source_id).isdigit():
+            archive = reader(artifact_id=int(source_id), league_id=state.league.league_id,
+                             season=state.league.season)
+            if archive:
+                original_raw = tuple(ForecastObservation.model_validate(row)
+                                     for row in archive.get("raw_forecasts") or ())
+                original_rules = LeagueRules.model_validate(archive["rules"])
+                scoring = lambda rules: sorted((rule.stat, rule.points) for rule in rules.scoring)
+                if original_raw == baseline.raw_ensemble and scoring(original_rules) == scoring(state.league.rules):
+                    rows = tuple(ForecastObservation.model_validate(row)
+                                 for row in archive.get("league_scored_forecasts") or ())
+                    return {"forecasts": tuple(row for row in rows
+                                if row.horizon == ForecastHorizon.SEASON
+                                and row.metric == ForecastMetric.FANTASY_POINTS),
+                            "as_of": baseline.evaluation_as_of.isoformat(),
+                            "basis": "original_published_preseason"}
+        # Re-scoring captured raw statistics is valid only when all active rule
+        # coordinates exist. Missing fumbles/other stats stay unavailable here;
+        # today's supplement is for the live outlook, not historical invention.
+        scored = derive_league_scoring_result(baseline.raw_ensemble, rules=state.league.rules)
+        return {"forecasts": scored.authoritative_forecasts,
+                "as_of": baseline.evaluation_as_of.isoformat(),
+                "basis": "captured_preseason_inputs_current_scoring"}
+    return load
+
+
 class _PreseasonBaselineReadThrough:
     """Tiny short-lived decoded immutable authority reuse, never scored State output.
 

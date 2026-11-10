@@ -32,7 +32,9 @@ from .foreground_pressure import install_foreground_pressure
 from .forecast_resilience import (
     make_preseason_baseline_authority_loader,
     make_resilient_forecast_loader,
+    make_preseason_comparison_loader,
 )
+from .season_comparison_runtime import SeasonComparisonService
 from .foundation4_career_forward_runtime import (
     CareerIntrinsicLoader,
     validate_foundation4_expanded_acceptance_cohort,
@@ -252,6 +254,17 @@ _full_refresh_seconds = max(
 )
 _forecast_loader = make_resilient_forecast_loader(_persistence_store)
 _preseason_forecast_loader = make_preseason_baseline_authority_loader(_persistence_store)
+_season_comparison_service = SeasonComparisonService(
+    persistence_store=_persistence_store,
+    baseline_loader=_preseason_forecast_loader,
+    frozen_baseline_loader=make_preseason_comparison_loader(_persistence_store),
+    history_store=_projection_history_store,
+    heavy_work=_heavy_work_coordinator,
+    ownership_validator=lambda context: (
+        _runtime_store.get(context.user_id).league_state is not None
+        and _runtime_store.get(context.user_id).league_state.state_id == context.league_state.state_id
+    ),
+)
 _shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
     year_one_loader=_preseason_forecast_loader,
     persistence_store=_persistence_store,
@@ -1793,6 +1806,7 @@ install_league_value_lens_routes(
 )
 install_player_intelligence_routes(
     app,
+    season_comparison_service=_season_comparison_service,
     career_record_loader=_career_intrinsic_coordinator.current,
     career_publication_validator=_presentation_continuity.career_publication_matches,
     runtime_store=_runtime_store,
@@ -1847,6 +1861,10 @@ def _prepare_presentation_for_user(user_id: str, context, *, retry_incomplete: b
     """Kick Dynasty preparation without putting it on the core publication path."""
     if context.league_state is None:
         return
+    try:
+        _season_comparison_service.prepare(context, force=retry_incomplete)
+    except Exception:
+        logging.getLogger("uvicorn.error").exception("Optional season comparison preparation failed")
     current = _shapley_intrinsic_coordinator.current(context)
     if (current is None or current.status != IntrinsicBuildStatus.COMPLETED
             or current.contract is None):

@@ -442,6 +442,7 @@ class GovernedInSeasonResult:
         current_runtime: InSeasonForecastRuntimeResult | None,
         current_failure: str | None,
         season_outlook_failures: dict[str, str] | None = None,
+        completed_actuals: tuple[RealizedOutcome, ...] = (),
     ) -> None:
         self.completed_through_week = completed_through_week
         self.season_outlook = season_outlook
@@ -450,6 +451,7 @@ class GovernedInSeasonResult:
         self.current_runtime = current_runtime
         self.current_failure = current_failure
         self.season_outlook_failures = dict(season_outlook_failures or {})
+        self.completed_actuals = completed_actuals
 
 
 def build_governed_in_season_outlook(
@@ -460,6 +462,7 @@ def build_governed_in_season_outlook(
     history_writer: ProjectionHistoryWriter | None = None,
     clock: callable | None = None,
     allow_governed_fumbles_ros_gap: bool = False,
+    runtime_builder=None,
 ) -> GovernedInSeasonResult:
     """Compose finalized actual weeks with current ROS, or a legitimate prior fallback."""
 
@@ -489,6 +492,7 @@ def build_governed_in_season_outlook(
             evidence_basis="completed_actuals_only",
             current_runtime=None,
             current_failure=None,
+            completed_actuals=actuals,
         )
 
     next_week = completed + 1
@@ -501,7 +505,7 @@ def build_governed_in_season_outlook(
     current_runtime: InSeasonForecastRuntimeResult | None = None
     current_failure: str | None = None
     try:
-        current_runtime = build_in_season_forecasts(
+        current_runtime = (runtime_builder or build_in_season_forecasts)(
             league_state,
             horizon=ForecastHorizon.REST_OF_SEASON,
             period_start=period_start,
@@ -573,4 +577,5 @@ def build_governed_in_season_outlook(
         current_runtime=current_runtime,
         current_failure=current_failure,
         season_outlook_failures=season_outlook_failures,
+        completed_actuals=actuals,
     )

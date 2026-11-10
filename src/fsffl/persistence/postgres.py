@@ -466,6 +466,27 @@ class PostgresPersistenceStore(PersistenceStore):
             row = cursor.fetchone()
         return self._artifact_from_row(row) if row else None
 
+    @trace_persistence_read("get_forecast_archive")
+    def get_forecast_archive(self, *, artifact_id: int, league_id: str, season: int):
+        """Read one baseline-linked historical source, with its original rules.
+
+        Exact ID and tenant/season joins bound this historical read. It does not
+        promote an old runtime model into current Forecast authority.
+        """
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """select a.payload->'raw_forecasts' as raw_forecasts,
+                          a.payload->'league_scored_forecasts' as league_scored_forecasts,
+                          s.payload->'league'->'rules' as rules
+                   from fsffl.derived_artifact a
+                   join fsffl.state_snapshot_history s on s.state_hash=a.scope_id
+                   where a.id=%s and a.artifact_kind='current_forecast_evidence'
+                     and a.scope_kind='league_state' and a.invalidated_at is null
+                     and s.league_id=%s and s.season=%s limit 1""",
+                (int(artifact_id), league_id, season),
+            )
+            return cursor.fetchone()
+
     def put_artifact(self, record: ReusableArtifactRecord) -> None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(

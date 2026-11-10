@@ -1,0 +1,66 @@
+# Player season comparison
+
+Player Intelligence's Career & Forecast tab compares the captured preseason
+projection, finalized actual points, remaining-season projection, and their
+combined season outlook. Overview uses that same saved outlook when available.
+The existing career trajectory and annual model baselines remain available
+through progressive disclosure. Intrinsic economics and Simulation are unchanged.
+
+## Authority and provenance
+
+`forecast/season_comparison.py` consumes the existing governed in-season
+orchestration and league scoring. Weekly actuals must agree with the canonical
+State's season and completed-week boundary; future weeks cannot enter actuals.
+Actuals and ROS describe disjoint periods. The terminal season uses actuals only.
+Source facts reuse the existing projection-history owner at provider/horizon/week
+scope; league-scored results remain State-scoped.
+
+The original preseason benchmark is read through its immutable baseline's exact
+linked historical artifact, with league/season isolation, matching raw inputs,
+and identical scoring rules. This is a comparison with what was actually saved,
+not a backdated projection reconstructed with today's fumbles model. If the
+original scored snapshot cannot be verified, only complete captured statistics
+may be scored under current rules, explicitly labeled. Missing coordinates remain
+unavailable. No archive is overwritten or synthesized.
+
+ROS preserves the shared ensemble first. Explicitly qualified single-source
+fallbacks must pass the accepted first-party fumbles-lost projection. The shared
+ensemble's source minimum is unchanged. A player without an NFL team has zero
+remaining projection and retains earned actuals. Acquisition-wide failure can
+use the existing labeled preserved remaining prior; this is not described as a
+fresh provider projection. Missing evidence and partial coverage remain visible.
+
+## Refresh, reads and resources
+
+`product/season_comparison_runtime.py` prepares one compact artifact through the
+existing owned refresh callback and heavy-work coordinator. It does not add a
+worker, thread pool, lifecycle controller, startup fitting, or GET-time acquisition.
+Producers are serialized; readers do not wait on provider work. State ownership
+is checked before and after preparation. The artifact is keyed by exact State
+and model version; a two-State in-process cache bounds retention. Explicit retry
+can update the same State. A database miss requests a normal refresh.
+
+One baseline-linked historical read selects only the required fields using the
+existing bounded pooled PostgreSQL owner. One comparison artifact is persisted
+per preparation, rather than one artifact per player. Player requests return only
+one row. Optional comparison failure does not invalidate core intelligence.
+The refresh phase is instrumented as `forecast.season_comparison` for production
+runtime/RSS evidence. No schema, hosting, or compute-plan change is needed.
+
+## Chart semantics and validation
+
+The cumulative actual line represents finalized weekly scores. The preseason
+line is a reference pace, and the ROS connector illustrates the remaining total;
+neither is a saved weekly forecast. Only existing governed ROS quantiles create
+an uncertainty band. Missing totals and signed fantasy points remain explicit.
+
+Focused tests protect actuals-plus-ROS arithmetic, snapshot preservation,
+completed-week mismatch, unsigned players, mandatory fumbles completion,
+season completion, bounded cache, restart reads, no GET-time production,
+State-switch ownership and pooled archive reads. Synthetic responsive Chromium
+checks cover 320, 375, 390 and 768 pixel widths with no horizontal overflow.
+A synthetic 875-player/nine-week composition measured approximately 1.16 seconds,
+541 KB serialized output and 30 MiB incremental process high-water memory.
+This excludes network acquisition and model fitting and is not a hosted refresh
+measurement. Production numerical acceptance requires a normal authenticated
+refresh after deployment.

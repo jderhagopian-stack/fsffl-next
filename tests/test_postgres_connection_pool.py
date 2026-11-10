@@ -283,3 +283,14 @@ def test_invalid_mode_rejected_without_database_activity(monkeypatch):
     monkeypatch.setenv("FSFFL_PERSISTENCE_CONNECTION_MODE", "transaction-pool")
     with pytest.raises(ValueError, match="pool or legacy"):
         PostgresPersistenceStore("postgresql://unused")
+
+
+def test_baseline_linked_archive_read_is_bounded_tenant_scoped_and_uses_existing_pool(pooled):
+    assert pooled.get_forecast_archive(artifact_id=12, league_id='private-league', season=2026) is None
+    assert pooled.get_forecast_archive(artifact_id=12, league_id='private-league', season=2026) is None
+    pool = FakePool.instances[0]
+    assert pool.created == 1
+    sql, params = pool.backend['committed'][0]
+    assert params == (12, 'private-league', 2026)
+    assert 'a.id=%s' in sql and 's.league_id=%s' in sql and 's.season=%s' in sql
+    assert 'limit 1' in sql and "a.artifact_kind='current_forecast_evidence'" in sql
