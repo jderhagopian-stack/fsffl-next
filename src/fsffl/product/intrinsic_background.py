@@ -654,7 +654,11 @@ class ShapleyIntrinsicBackgroundCoordinator:
         if context.league_state is None:
             return None
         state_id = context.league_state.state_id
-        league_id = context.league_state.league.league_id
+        # Preserve the generic coordinator's existing _key() scope fallback.
+        # Production LeagueState always supplies a league; minimal callers may
+        # use only an immutable State identity.
+        league = getattr(context.league_state, "league", None)
+        league_id = str(getattr(league, "league_id", None) or state_id)
         with self._lock:
             matches = [record for key, record in self._records.items()
                        if key[0] == context.user_id and key[1] == league_id
