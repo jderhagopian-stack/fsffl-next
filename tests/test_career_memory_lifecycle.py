@@ -1,5 +1,6 @@
 """Execute hosted lifecycle functions with bounded, synthetic dependencies."""
 import ast
+import logging
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from threading import Event, Thread
@@ -14,6 +15,9 @@ def function(path, name, namespace):
     from fsffl.product.intrinsic_presentation import (
         intrinsic_magnitude_coordinate, reproject_published_intrinsic,
     )
+    namespace.setdefault("season_comparison_service", None)
+    namespace.setdefault("_season_comparison_service", NS(prepare=lambda *args, **kwargs: None))
+    namespace.setdefault("logging", logging)
     namespace.setdefault("intrinsic_magnitude_coordinate", intrinsic_magnitude_coordinate)
     namespace.setdefault("reproject_published_intrinsic", reproject_published_intrinsic)
     tree = ast.parse(Path(path).read_text())
@@ -563,3 +567,22 @@ def test_retry_classification_uses_batch_error_boundary_not_numeric_membership(r
         expanded_career_contract_loader=lambda *args:None,
         expanded_career_contract_fingerprint_resolver=lambda ctx:'fixture-expansion')
     assert loader.retryable_incomplete_contract(NS(player_coverage_failures={'fixture':reason})) is retryable
+
+
+@pytest.mark.parametrize('comparison_fails', [False, True])
+def test_refresh_prepares_comparison_before_optional_career_readiness(comparison_fails, caplog):
+    context = NS(league_state=NS(state_id='fixture-state'))
+    calls = []
+    def prepare(ctx, *, force):
+        assert ctx is context and force is True
+        calls.append('comparison')
+        if comparison_fails:
+            raise ValueError('synthetic unavailable comparison')
+    namespace = dict(
+        _season_comparison_service=NS(prepare=prepare),
+        _shapley_intrinsic_coordinator=NS(current=lambda ctx: calls.append('current') or None),
+    )
+    run = function('src/fsffl/product/persistent_webapp.py', '_prepare_presentation_for_user', namespace)
+    run('fixture-user', context, retry_incomplete=True)
+    assert calls == ['comparison', 'current']
+    assert ('Optional season comparison preparation failed' in caplog.text) is comparison_fails
