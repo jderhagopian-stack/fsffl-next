@@ -3,8 +3,10 @@
 Player Intelligence's Career & Forecast tab compares the captured preseason
 projection, finalized actual points, remaining-season projection, and their
 combined season outlook. Overview uses that same saved outlook when available.
-The existing career trajectory and annual model baselines remain available
-through progressive disclosure. Intrinsic economics and Simulation are unchanged.
+The career trajectory and annual model baselines continue directly below season
+progress in the normal card scroll, using the same panel style and readable
+typography. Mobile forecast years stack vertically rather than clipping into
+a horizontal row; long career histories retain an internal chart scroll. Intrinsic economics and Simulation are unchanged.
 
 ## Authority and provenance
 
