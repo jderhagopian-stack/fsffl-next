@@ -162,13 +162,4 @@ body.pi-open{overflow:hidden}#player-intelligence-root{position:fixed;inset:0;z-
 .pi-career-continuation .pi-career-plot>.pi-trajectory-scroll{flex:1;min-width:0}
 .pi-career-continuation .pi-forecast-list{grid-template-columns:repeat(3,minmax(126px,1fr));gap:8px;overflow-x:auto;padding:0 0 4px}
 .pi-career-continuation .pi-forecast-list article{min-width:126px;padding:11px;border-radius:14px;border:1px solid rgba(93,183,221,.25);background:rgba(7,25,39,.55)}
-.pi-career-continuation .pi-forecast-card-head{gap:3px;padding-bottom:8px}
-.pi-career-continuation .pi-forecast-card-head>small{font-size:12px;line-height:1.4;color:#dcecf5}
-.pi-career-continuation .pi-forecast-card-head>strong{font-size:18px;line-height:1.2}
-.pi-career-continuation .pi-forecast-card-head>span,.pi-career-continuation .pi-forecast-card-head>em{font-size:10px;line-height:1.4;color:#91a9bd}
-.pi-career-continuation .pi-forecast-metrics{margin-top:4px;overflow:visible;grid-template-columns:1fr}
-.pi-career-continuation .pi-forecast-metrics span{grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:7px 0}
-.pi-career-continuation .pi-forecast-metrics small{font-size:10px;line-height:1.4}
-.pi-career-continuation .pi-forecast-metrics b{font-size:11px;line-height:1.4}
-
 @media(max-width:640px){.pi-career-continuation .pi-career-plot{--pi-career-chart-height:240px}}
