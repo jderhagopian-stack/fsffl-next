@@ -3,7 +3,7 @@ import ast
 import logging
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
-from threading import Event, Thread
+from threading import Event, Thread, RLock
 from types import SimpleNamespace as NS
 
 import pytest
@@ -15,6 +15,10 @@ def function(path, name, namespace):
     from fsffl.product.intrinsic_presentation import (
         intrinsic_magnitude_coordinate, reproject_published_intrinsic,
     )
+    from fsffl.product.reconciliation_intent import ReconciliationSyncIntent
+    namespace.setdefault("sync_intent", ReconciliationSyncIntent())
+    namespace.setdefault("reconciliation_lock", RLock())
+    namespace.setdefault("reconciliation_sync_intents", {})
     namespace.setdefault("season_comparison_service", None)
     namespace.setdefault("_season_comparison_service", NS(prepare=lambda *args, **kwargs: None))
     namespace.setdefault("logging", logging)
