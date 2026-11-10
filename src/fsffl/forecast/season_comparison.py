@@ -17,7 +17,7 @@ from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, Forec
 from .projection_history import career_ros_projection_selector
 from .season_rollforward import compose_completed_actuals_with_ros_per_player
 
-SEASON_COMPARISON_VERSION = "season-comparison-v1:preseason-actuals-ros"
+SEASON_COMPARISON_VERSION = "season-comparison-v2:post-actuals-evaluation-cutoff"
 POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
 
 
@@ -25,6 +25,7 @@ class StateBoundStats:
     """The completed-week boundary must agree with canonical State."""
     def __init__(self, state, source):
         self.state, self.source = state, source
+        self.latest_actuals_capture = None
 
     def fetch_nfl_state(self):
         current = self.source.fetch_nfl_state()
@@ -36,7 +37,13 @@ class StateBoundStats:
     def fetch_week(self, *, season, week):
         if season != self.state.league.season or not 1 <= week <= self.state.completed_through_week:
             raise ValueError("season comparison cannot acquire future or different-season actuals")
-        return self.source.fetch_week(season=season, week=week)
+        lines = self.source.fetch_week(season=season, week=week)
+        captured = max((line.captured_at for line in lines), default=None)
+        if captured is not None:
+            self.latest_actuals_capture = max(
+                captured, self.latest_actuals_capture or captured,
+            )
+        return lines
 
     def fetch_season(self, *, season):
         # The accepted fumbles model consumes prior-season factual production.
@@ -118,15 +125,23 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
                             stats_source=None, history_store=None, clock=None,
                             fallback_forecasts=None, preseason_basis="original_published_preseason"):
     """Build small player rows; keep actuals and remaining uncertainty separate."""
-    now = (clock or (lambda: datetime.now(UTC)))()
+    live_clock = clock or (lambda: datetime.now(UTC))
+    now = live_clock()
     stats = StateBoundStats(state, stats_source or SleeperWeeklyStatsSource())
 
+    def evaluation_clock():
+        # Actuals are acquired before the ROS runtime. Its evaluation cutoff
+        # must include those observed facts; original provider timestamps stay
+        # in provenance. Never freeze the cutoff before network acquisition.
+        return max(live_clock(), now, stats.latest_actuals_capture or now)
+
     def ros_builder(league_state, **kwargs):
+        evaluation_cutoff = kwargs["clock"]()
         if history_store is not None:
             kwargs["source_revisions"] = history_store.latest_revisions(
                 career_ros_projection_selector(
                     season=state.league.season, completed_through_week=state.completed_through_week,
-                    as_of=now,
+                    as_of=evaluation_cutoff,
                 )
             )
             kwargs["supplement_missing_sources"] = True
@@ -136,13 +151,13 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
             raise ValueError("no current ROS source evidence; use the labeled preserved prior")
         return complete_comparison_ros(
             state, runtime, stats_source=stats, completed=state.completed_through_week,
-            as_of=max(now, runtime.evaluation_as_of),
+            as_of=max(evaluation_cutoff, runtime.evaluation_as_of),
         )
 
     result = build_governed_in_season_outlook(
         state, preseason_season_forecasts=tuple(
             fallback_forecasts if fallback_forecasts is not None else preseason_forecasts),
-        stats_source=stats, clock=lambda: now, runtime_builder=ros_builder,
+        stats_source=stats, clock=evaluation_clock, runtime_builder=ros_builder,
         history_writer=history_store,
     )
     # An acquisition-wide prior fallback must obey the same unsigned-player

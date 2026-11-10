@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import timedelta
 from types import SimpleNamespace
 from threading import Event, Thread
@@ -7,6 +8,7 @@ import pytest
 from tests.test_in_season_hosted_orchestration import _state, _preseason_forecast, NOW
 from fsffl.forecast.season_comparison import build_season_comparison, SEASON_COMPARISON_VERSION
 from fsffl.forecast.models import ForecastDistribution, ForecastHorizon
+from fsffl.forecast.in_season_runtime import InSeasonForecastRuntimeResult
 from fsffl.providers.sleeper_weekly_stats import SleeperNflState, SleeperWeeklyStatLine
 from fsffl.product.season_comparison_runtime import SeasonComparisonService
 
@@ -157,7 +159,6 @@ def test_missing_preseason_fumbles_cannot_be_invented_for_historical_comparison(
 
 
 def test_single_source_ros_requires_first_party_fumbles_completion(monkeypatch):
-    from fsffl.forecast.in_season_runtime import InSeasonForecastRuntimeResult
     from fsffl.forecast.live_ensemble import LiveEnsembleCoverage
     from fsffl.forecast.season_comparison import complete_comparison_ros
     from fsffl.forecast.models import ForecastMetric
@@ -207,3 +208,36 @@ def test_finished_season_has_actuals_only_and_never_acquires_ros(monkeypatch):
     assert row['actual_points'] == row['outlook_points'] == 180
     assert row['ros_points'] == 0
     assert row['weekly_actuals'][-1] == {'week': 18, 'points': 180}
+
+
+def test_ros_evaluation_cutoff_follows_actual_acquisition_without_changing_source_provenance(monkeypatch):
+    import fsffl.forecast.season_comparison as module
+    state = _state().model_copy(update={'completed_through_week': 2})
+    actual_capture = NOW + timedelta(seconds=3)
+    provider_capture = NOW - timedelta(hours=1)
+    class LaterStats(Stats):
+        def fetch_week(self, **kwargs):
+            return tuple(replace(line, captured_at=actual_capture)
+                         for line in super().fetch_week(**kwargs))
+    cutoffs = []
+    def runtime(league_state, **kwargs):
+        cutoff = kwargs['clock']()
+        cutoffs.append(cutoff)
+        row = ros_runtime(state).fantasy_point_forecasts[0].model_copy(update={
+            'as_of': cutoff,
+            'provenance': _preseason_forecast().provenance.model_copy(update={
+                'retrieved_at': provider_capture, 'effective_at': provider_capture,
+            }),
+        })
+        return SimpleNamespace(source_observations=(row,), evaluation_as_of=cutoff,
+                               fantasy_point_forecasts=(row,), partial_fantasy_point_forecasts=())
+    monkeypatch.setattr(module, 'build_in_season_forecasts', runtime)
+    monkeypatch.setattr(module, 'complete_comparison_ros', lambda state, result, **kwargs: result)
+    packet = build_season_comparison(state, preseason_forecasts=(_preseason_forecast(),),
+        stats_source=LaterStats(), clock=lambda: NOW)
+    row = packet['players'][PID]
+    assert cutoffs == [actual_capture]
+    assert row['status'] == 'ready'
+    assert row['actual_points'] == 40 and row['outlook_points'] == 200
+    assert row['preseason_as_of'] == _preseason_forecast().as_of.isoformat()
+    assert packet['as_of'] == actual_capture.isoformat()
