@@ -241,3 +241,73 @@ def test_ros_evaluation_cutoff_follows_actual_acquisition_without_changing_sourc
     assert row['actual_points'] == 40 and row['outlook_points'] == 200
     assert row['preseason_as_of'] == _preseason_forecast().as_of.isoformat()
     assert packet['as_of'] == actual_capture.isoformat()
+
+
+def participation_result(state, *, projected=False, complete=False):
+    row = ros_runtime(state).fantasy_point_forecasts[0]
+    runtime = SimpleNamespace(source_observations=(row,) if projected else (),
+                              fantasy_point_forecasts=(row,) if complete else ())
+    return SimpleNamespace(current_runtime=runtime, completed_through_week=2,
+                           forward_forecasts=(row,) if complete else ())
+
+
+def ir_state():
+    state = _state().model_copy(update={'completed_through_week': 2})
+    team = state.team_states[0]
+    from fsffl.state.models import RosterEntry, RosterSlot
+    roster = (RosterEntry(player_id=PID, slot=RosterSlot.IR),)
+    return state.model_copy(update={'team_states': (team.model_copy(update={'roster': roster}),)})
+
+
+@pytest.mark.parametrize('projected,complete,expected', [(False,False,True),(True,False,False),(True,True,False)])
+def test_ir_exception_matches_intrinsic_projection_veto(projected,complete,expected):
+    from fsffl.forecast.season_comparison import apply_participation_exceptions
+    from fsffl.forecast.participation import IR_NO_PROJECTION_POLICY_APPROVED_AT
+    state = ir_state(); result = participation_result(state, projected=projected, complete=complete)
+    cutoff = IR_NO_PROJECTION_POLICY_APPROVED_AT + timedelta(seconds=1)
+    explanation = apply_participation_exceptions(state, result, as_of=cutoff)
+    assert (PID in explanation) is expected
+    if expected:
+        assert explanation[PID]['participation_basis'] == 'ir_no_projection'
+        assert explanation[PID]['participation_assumption'] is True
+        assert result.forward_forecasts[0].distribution.mean == 0
+        assert result.forward_forecasts[0].provenance.source == 'fsffl:exact-state-ir-no-projection'
+
+
+def test_ir_exception_is_not_applied_before_acceptance_or_to_ordinary_bench():
+    from fsffl.forecast.season_comparison import apply_participation_exceptions
+    from fsffl.forecast.participation import IR_NO_PROJECTION_POLICY_APPROVED_AT
+    for state, cutoff in [(ir_state(),IR_NO_PROJECTION_POLICY_APPROVED_AT-timedelta(seconds=1)),
+                          (_state(),IR_NO_PROJECTION_POLICY_APPROVED_AT+timedelta(seconds=1))]:
+        result = participation_result(state)
+        assert not apply_participation_exceptions(state,result,as_of=cutoff)
+        assert not result.forward_forecasts
+
+
+def test_verified_season_unavailability_keeps_actuals_and_original_preseason(monkeypatch):
+    import fsffl.forecast.participation as policy
+    import fsffl.forecast.season_comparison as module
+    state = _state().model_copy(update={'completed_through_week':2})
+    receipt = policy.StatusBasedZeroRosEvidence(PID,'out_for_season','https://example.test/official',
+        'recorded-official-v1',NOW,True,season=2026)
+    monkeypatch.setattr(policy,'recorded_status_based_zero_ros_evidence',lambda *args,**kwargs:{PID:receipt})
+    monkeypatch.setattr(module,'build_in_season_forecasts',lambda *args,**kwargs: (_ for _ in ()).throw(ValueError('no source')))
+    row = build_season_comparison(state,preseason_forecasts=(_preseason_forecast(),),
+        stats_source=Stats(),clock=lambda:NOW)['players'][PID]
+    assert row['status']=='ready' and row['actual_points']==40
+    assert row['ros_points']==0 and row['outlook_points']==40 and row['preseason_points']==170
+    assert row['participation_basis']=='verified_unavailable'
+    assert row['participation_assumption'] is False
+    assert row['participation_source']==receipt.source
+    assert row['participation_observed_at']==NOW.isoformat()
+    complete = participation_result(state, projected=True, complete=True)
+    assert not module.apply_participation_exceptions(state,complete,as_of=NOW)
+    assert complete.forward_forecasts[0].distribution.mean==160
+
+
+def test_comparison_and_intrinsic_share_identical_eligibility_functions():
+    import fsffl.forecast.participation as policy
+    import fsffl.product.p0_live_candidate_runtime as intrinsic
+    for name in ['recorded_status_based_zero_ros_evidence','recorded_ytd_only_year_one_evidence',
+                 'recorded_ir_no_projection_year_one_evidence','_unsigned_ytd_override']:
+        assert getattr(intrinsic,name) is getattr(policy,name)

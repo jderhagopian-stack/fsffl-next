@@ -17,7 +17,7 @@ from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, Forec
 from .projection_history import career_ros_projection_selector
 from .season_rollforward import compose_completed_actuals_with_ros_per_player
 
-SEASON_COMPARISON_VERSION = "season-comparison-v2:post-actuals-evaluation-cutoff"
+SEASON_COMPARISON_VERSION = "season-comparison-v3:shared-participation-exceptions"
 POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
 
 
@@ -97,28 +97,79 @@ def complete_comparison_ros(state, runtime, *, stats_source, completed, as_of):
             )
             if scored.authoritative_forecasts:
                 ready[pid] = scored.authoritative_forecasts[0]
-    start, _ = canonical_week_window(state.league.season, completed + 1)
-    _, end = canonical_week_window(state.league.season, 18)
-    for player in state.players:
-        if player.position not in POSITIONS:
-            continue
-        if not player.nfl_team or player.nfl_team.upper() in {"FA", "N/A", "NONE"}:
-            # Explicit accepted off-NFL-roster rule, not missing evidence => zero.
-            ready[player.player_id] = ForecastObservation(
-                player_id=player.player_id, position=player.position,
-                horizon=ForecastHorizon.REST_OF_SEASON, metric=ForecastMetric.FANTASY_POINTS,
-                period_start=start, period_end=end, as_of=as_of,
-                distribution=ForecastDistribution(mean=0, stddev=0, p10=0, p50=0, p90=0),
-                source="fsffl:no-nfl-team-no-ros", model_version=SEASON_COMPARISON_VERSION,
-                provenance=Provenance(source="canonical-state:no-nfl-team", retrieved_at=state.as_of,
-                                      effective_at=state.as_of, source_version=SEASON_COMPARISON_VERSION),
-            )
     return runtime.model_copy(update={
         "fantasy_point_forecasts": tuple(ready[pid] for pid in sorted(ready)),
         "partial_fantasy_point_forecasts": tuple(
             row for row in runtime.partial_fantasy_point_forecasts if row.player_id not in ready
         ),
     })
+
+
+def apply_participation_exceptions(state, result, *, as_of, verified_roles=None):
+    """Reuse Intrinsic's accepted eligibility, without importing product code."""
+    from .participation import (
+        recorded_status_based_zero_ros_evidence, recorded_ytd_only_year_one_evidence,
+        recorded_ir_no_projection_year_one_evidence, _unsigned_ytd_override,
+    )
+    from fsffl.providers.nfl_status_evidence import recorded_nfl_role_receipts
+    official = recorded_status_based_zero_ros_evidence(state, as_of=as_of)
+    roles = recorded_nfl_role_receipts(state, as_of=as_of)
+    roles.update({pid: row for pid, row in (verified_roles or {}).items() if row.captured_at <= as_of})
+    ytd = recorded_ytd_only_year_one_evidence(state, as_of=as_of, verified_roles=roles)
+    runtime = result.current_runtime
+    available = tuple(runtime.source_observations) if runtime is not None else ()
+    current_ids = {row.player_id for row in runtime.fantasy_point_forecasts} if runtime else set()
+    projected_ids = {row.player_id for row in available}
+    forward = {row.player_id: row for row in result.forward_forecasts}
+    explanations = {}
+    start = canonical_week_window(state.league.season, result.completed_through_week + 1)[0]
+    end = canonical_week_window(state.league.season, 18)[1]
+    for player in state.players:
+        if player.position not in POSITIONS:
+            continue
+        pid = player.player_id
+        receipt = _unsigned_ytd_override(pid, roles=roles, receipts=ytd, as_of=as_of)
+        unsigned = not player.nfl_team or player.nfl_team.upper() in {"FA", "N/A", "NONE"}
+        if unsigned or receipt is not None:
+            kind, message, assumption = "unsigned", "No additional production assumed while off an NFL roster.", True
+            source = receipt.source if receipt else "canonical-state:no-nfl-team"
+            version = receipt.source_version if receipt else SEASON_COMPARISON_VERSION
+            observed = receipt.observed_at if receipt else state.as_of
+        elif pid in current_ids:
+            continue  # Keep complete current projections, as Intrinsic does.
+        elif pid in official:
+            receipt = official[pid]
+            receipt.validate()
+            kind, message, assumption = "verified_unavailable", "Recorded season unavailability: no remaining production expected.", False
+            source, version, observed = receipt.source, receipt.source_version, receipt.observed_at
+        else:
+            if pid in projected_ids:
+                continue  # IR/role assumptions cannot override available source rows.
+            receipt = ytd.get(pid) or recorded_ir_no_projection_year_one_evidence(
+                state, player_id=pid, as_of=as_of, available_projection_rows=available,
+            )
+            if receipt is None:
+                continue
+            receipt.validate()
+            kind = "ir_no_projection" if receipt.source == "fsffl:exact-state-ir-no-projection" else "approved_role"
+            message = ("IR with no projection: actuals only; no additional production assumed."
+                       if kind == "ir_no_projection" else
+                       "Approved roster-status fallback: actuals only; no additional production assumed.")
+            assumption = True
+            source, version, observed = receipt.source, receipt.source_version, receipt.observed_at
+        forward[pid] = ForecastObservation(
+            player_id=pid, position=player.position, horizon=ForecastHorizon.REST_OF_SEASON,
+            metric=ForecastMetric.FANTASY_POINTS, period_start=start, period_end=end,
+            as_of=as_of, distribution=ForecastDistribution(mean=0, stddev=0, p10=0, p50=0, p90=0),
+            source="fsffl:no-nfl-team-no-ros" if kind == "unsigned" else f"fsffl:participation-zero-ros:{kind}",
+            model_version=version,
+            provenance=Provenance(source=source, retrieved_at=observed, effective_at=observed, source_version=version),
+        )
+        explanations[pid] = {"participation_basis": kind, "participation_reason": message,
+            "participation_assumption": assumption, "participation_source": source,
+            "participation_source_version": version, "participation_observed_at": observed.isoformat()}
+    result.forward_forecasts = tuple(forward[pid] for pid in sorted(forward))
+    return explanations
 
 
 def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
@@ -160,20 +211,24 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
         stats_source=stats, clock=evaluation_clock, runtime_builder=ros_builder,
         history_writer=history_store,
     )
-    # An acquisition-wide prior fallback must obey the same unsigned-player
-    # rule as a live one-source fallback. Keep earned actuals; assume no ROS.
+    participation = {}
     if result.completed_through_week < 18:
         players_by_id = {player.player_id: player for player in state.players}
-        adjusted = []
-        for row in result.forward_forecasts:
-            player = players_by_id[row.player_id]
-            if not player.nfl_team or player.nfl_team.upper() in {"FA", "N/A", "NONE"}:
-                row = row.model_copy(update={
-                    "distribution": ForecastDistribution(mean=0, stddev=0, p10=0, p50=0, p90=0),
-                    "source": "fsffl:no-nfl-team-no-ros",
-                })
-            adjusted.append(row)
-        result.forward_forecasts = tuple(adjusted)
+        participation_cutoff = max(evaluation_clock(), result.current_runtime.evaluation_as_of
+                                   if result.current_runtime is not None else now)
+        verified_roles = {}
+        # Match the existing live Intrinsic producer's bounded official RLS
+        # verification. Historical/injected runs never fetch newer role facts.
+        if stats_source is None and clock is None:
+            from fsffl.providers.nfl_status_evidence import acquire_official_reserve_role_receipts
+            verified_roles = acquire_official_reserve_role_receipts(
+                state, evaluation_cutoff=participation_cutoff, allow_current_capture=True,
+            )
+            if verified_roles:
+                participation_cutoff = max(participation_cutoff, *(r.captured_at for r in verified_roles.values()))
+        participation = apply_participation_exceptions(
+            state, result, as_of=participation_cutoff, verified_roles=verified_roles,
+        )
         result.season_outlook, result.season_outlook_failures = compose_completed_actuals_with_ros_per_player(
             completed_actuals=result.completed_actuals, ros_forecasts=result.forward_forecasts,
             season_start=canonical_week_window(state.league.season, 1)[0],
@@ -211,6 +266,7 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
                 weekly.append({"week": week, "points": cumulative})
         basis = ros.source if ros is not None else result.evidence_basis
         players[pid] = {
+            **participation.get(pid, {}),
             "status": "ready" if total_points is not None else "partial",
             "preseason_points": prior_points, "actual_points": earned,
             "ros_points": ros_points, "outlook_points": total_points,
@@ -219,7 +275,7 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
             "preseason_basis": preseason_basis,
             "completed_through_week": result.completed_through_week,
             "weekly_actuals": weekly, "ros_basis": basis,
-            "low_confidence": "single-source" in basis or "prior" in basis or "no-nfl-team" in basis,
+            "low_confidence": bool(participation.get(pid, {}).get("participation_assumption")) or "single-source" in basis or "prior" in basis or "no-nfl-team" in basis,
             "ros_p10": ros.distribution.p10 if ros is not None else None,
             "ros_p90": ros.distribution.p90 if ros is not None else None,
             "reason": result.season_outlook_failures.get(pid),
