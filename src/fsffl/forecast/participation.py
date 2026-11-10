@@ -182,11 +182,15 @@ def recorded_ir_no_projection_year_one_evidence(
 # User-directed universal fallback, effective only for subsequent captures.
 SPARSE_PRODUCTION_POLICY_VERSION = "sparse-production-no-ros-v1:4w-5opp-50yd-0td"
 SPARSE_PRODUCTION_POLICY_APPROVED_AT = datetime(2026, 11, 10, 13, 12, 49, tzinfo=UTC)
+SPARSE_PRODUCTION_INJURY_POLICY_VERSION = "sparse-production-no-ros-v2:4w-5opp-50yd-0td:coarse-injury-flag"
+SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT = datetime(2026, 11, 10, 15, 41, 53, tzinfo=UTC)
 
 
 def sparse_production_policy_version(as_of: datetime) -> str | None:
     if as_of.tzinfo is None:
         raise ValueError("sparse-production cutoff must be timezone-aware")
+    if as_of >= SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT:
+        return SPARSE_PRODUCTION_INJURY_POLICY_VERSION
     return (SPARSE_PRODUCTION_POLICY_VERSION
             if as_of >= SPARSE_PRODUCTION_POLICY_APPROVED_AT else None)
 
@@ -246,6 +250,14 @@ class SparseProductionEvidence:
                 or self.captured_at is None or self.captured_at > as_of
                 or self.state.as_of > as_of):
             return {}
+        allowed_statuses = {"active", "inactive", "practice_squad"}
+        policy_admitted_at = SPARSE_PRODUCTION_POLICY_APPROVED_AT
+        if as_of >= SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT:
+            # Coarse injury flags do not quantify future participation. Under
+            # the same sparse-production/no-source evidence, retain the explicit
+            # low-confidence assumption instead of treating this flag as a veto.
+            allowed_statuses.update({"injured", "pup"})
+            policy_admitted_at = SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT
         projected = {r.player_id for r in available_projection_rows}
         statuses = {p.player_id: p for p in self.state.player_states}
         state_id = self.state.state_id
@@ -255,7 +267,7 @@ class SparseProductionEvidence:
             if (player.position.value not in {"QB", "RB", "WR", "TE"}
                     or not player.nfl_team or player.nfl_team.upper() in {"FA", "N/A", "NONE"}
                     or player.player_id in projected or status is None
-                    or status.as_of > as_of or status.status.value not in {"active", "inactive", "practice_squad"}):
+                    or status.as_of > as_of or status.status.value not in allowed_statuses):
                 continue
             t = self.totals.get(player.player_id, {})
             # Receptions also bound participation if a feed omits target counts.
@@ -270,6 +282,7 @@ class SparseProductionEvidence:
             result[player.player_id] = YtdOnlyYearOneEvidence(
                 player_id=player.player_id, season=self.state.league.season,
                 source="fsffl:completed-week-sparse-production-no-projection",
-                source_version=f"{version}:{digest}", observed_at=self.captured_at,
+                source_version=f"{version}:{digest}",
+                observed_at=max(self.captured_at, policy_admitted_at),
             )
         return result
