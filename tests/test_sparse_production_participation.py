@@ -150,3 +150,39 @@ def test_four_week_minimum_and_no_unknown_status_or_unsigned_reclassification():
     state=state_for()
     state=state.model_copy(update={'players':(state.players[0].model_copy(update={'nfl_team':None}),)})
     assert not receipts(measured(state))
+
+
+@pytest.mark.parametrize('status',['injured','pup'])
+def test_coarse_injury_flag_is_not_a_veto_after_v2_and_never_backdates_policy(status):
+    from fsffl.forecast.participation import (
+        SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT, SPARSE_PRODUCTION_INJURY_POLICY_VERSION,
+    )
+    state=state_for(status=status)
+    evidence=measured(state)
+    before=SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT-timedelta(microseconds=1)
+    assert not receipts(evidence,now=before) # Original v1 remains reproducible.
+    receipt=receipts(evidence,now=SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT)[PID]
+    assert receipt.source_version.startswith(SPARSE_PRODUCTION_INJURY_POLICY_VERSION)
+    assert receipt.observed_at==SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT
+    assert receipt.status=='low_confidence_ytd_only_no_additional_production_assumed'
+    assert state.player_states[0].status.value==status # No provider-fact rewrite.
+    assert not receipts(evidence,now=SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT,rows=(NS(player_id=PID),))
+    assert not receipts(measured(state,{'rush_att':6}),now=SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT)
+
+
+def test_injury_admission_does_not_turn_unknown_retired_or_suspended_into_zero():
+    from fsffl.forecast.participation import SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT
+    for status in ('unknown','retired','suspended'):
+        assert not receipts(measured(state_for(status=status)),now=SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT)
+
+
+@pytest.mark.parametrize('status',['injured','pup'])
+def test_v2_real_year_one_preserves_earned_points_and_future_contract(monkeypatch,status):
+    from tests.test_nfl_status_evidence import _run_current_ros_policy_case
+    result,pid,_=_run_current_ros_policy_case(monkeypatch,unsigned=False,provider_case='absent',
+        sparse_case=True,sparse_status=status)
+    assert not result.failures
+    assert result.year_one_league[pid].distribution.mean==pytest.approx(1.)
+    assert 'sparse-production-no-ros-v2' in result.year_one_evidence_modes[pid]
+    assert len(result.future.contract.forecasts)==2
+    assert all(row.central_expectation>0 for row in result.future.contract.forecasts)

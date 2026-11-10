@@ -17,7 +17,7 @@ from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, Forec
 from .projection_history import career_ros_projection_selector
 from .season_rollforward import compose_completed_actuals_with_ros_per_player
 
-SEASON_COMPARISON_VERSION = "season-comparison-v4:sparse-production-no-projection"
+SEASON_COMPARISON_VERSION = "season-comparison-v5:sparse-production-coarse-injury-flag"
 POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
 
 

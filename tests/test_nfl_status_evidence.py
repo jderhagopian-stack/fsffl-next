@@ -493,7 +493,7 @@ def test_new_single_source_fallback_runs_fumbles_model_before_scoring(monkeypatc
     assert '+first_party_fumbles_lost' in result.year_one_evidence_modes[pid]
 
 
-def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=False, earned=True, league_fumbles=True, sparse_case=False):
+def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=False, earned=True, league_fumbles=True, sparse_case=False, sparse_status=None):
     from fsffl.product import p0_live_candidate_runtime as runtime
     from fsffl.providers.sleeper_weekly_stats import SleeperNflState, SleeperWeeklyStatLine
     from fsffl.state.models import ScoringRule
@@ -502,6 +502,9 @@ def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=Fal
     if sparse_case:
         from fsffl.forecast.participation import SPARSE_PRODUCTION_POLICY_APPROVED_AT
         capture = SPARSE_PRODUCTION_POLICY_APPROVED_AT + timedelta(seconds=1)
+        if sparse_status is not None:
+            from fsffl.forecast.participation import SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT
+            capture = SPARSE_PRODUCTION_INJURY_POLICY_APPROVED_AT + timedelta(seconds=1)
     old = _approved_ytd_state()
     team = None if unsigned else 'HOU'
     state = old.model_copy(update={
@@ -512,7 +515,7 @@ def _run_current_ros_policy_case(monkeypatch, *, unsigned, provider_case, ir=Fal
         })}),
         'players':(Player(player_id=pid,full_name='Dameon Pierce',position=Position.RB,nfl_team=team),),
         'player_states':(PlayerState(player_id=pid,age_years=26.,as_of=capture,nfl_team=team,
-            status='inactive' if unsigned else 'active',
+            status=sparse_status or ('inactive' if unsigned else 'active'),
             provenance=Provenance(source='sleeper:current_player_universe',retrieved_at=capture,effective_at=capture)),),
         'team_states':(TeamState(team_id='a',roster=(RosterEntry(player_id=pid,slot='IR' if ir else 'BENCH'),)),TeamState(team_id='b',roster=())),
     })

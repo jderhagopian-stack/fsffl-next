@@ -4,8 +4,9 @@ A missing ROS row is expected for many developmental and depth players. The
 Forecast participation owner now supports a general, scoring-independent
 fallback instead of adding player names to an exception list.
 
-The versioned policy applies to evaluations on or after November 10, 2026 at
-13:12:49 UTC. It requires all of the following:
+Version 1 applies from November 10, 2026 at 13:12:49 UTC. Version 2 applies
+from 15:41:53 UTC on that date, with the coarse-injury admission described below.
+The policy requires all of the following:
 
 - At least four completed regular-season weeks, with remaining weeks to play.
 - A successfully acquired, nonempty full stats response for every completed
@@ -14,8 +15,12 @@ The versioned policy applies to evaluations on or after November 10, 2026 at
 - No raw ROS projection rows for the player. Even a partial provider row vetoes
   this fallback; accepted single-source/fumbles completion retains precedence.
 - A signed NFL team and known active, inactive, or practice-squad status.
-  Injured, PUP, suspended, retired and unknown statuses do not qualify through
-  this rule. Existing official absence, unsigned and IR policies remain intact.
+  Version 2 also admits injured/PUP statuses under the same usage and source
+  conditions: a coarse injury flag is not a quantitative projection and does not
+  veto a transparent low-confidence assumption. Version 1's injury/PUP veto
+  remains in earlier replay cutoffs. Suspended, retired and unknown statuses do
+  not qualify automatically. Existing official absence, unsigned and IR policies
+  remain intact; raw injury status is never rewritten as healthy/inactive.
 - No more than five combined passing attempts, rushing attempts and targets
   (or receptions if greater than reported targets), no more than 50 combined
   passing/rushing/receiving yards, and zero offensive touchdowns to date.
@@ -26,6 +31,8 @@ not an empirically fitted prediction of season-long inactivity. Missing player
 rows in successful weekly cohorts can support the **assumption** of no additional
 production; they are not relabeled as observed zero stat rows. Empty/failed feeds,
 insufficient weeks, or an overall ROS outage cannot establish eligibility.
+Assumption receipt time is at least the applicable policy admission time; original
+stat acquisition timestamps are retained in its evidence identity.
 
 Both season comparison and live Intrinsic Year-1 preparation consume the same
 helper. They retain earned actuals and label the remainder as low confidence:
@@ -39,7 +46,7 @@ unchanged. Supplying the newly admitted Year-1 input can affect their outputs
 through their existing dependencies; future contribution is not forced to zero.
 Historical source/capture fences, preseason snapshots, scoring and named older
 policies are preserved. The policy enters Career dependency identity; comparison
-uses version 4 so old saved output is not reused as current-policy output.
+uses version 5 so old saved output is not reused as current-policy output.
 
 The helper retains only bounded per-player counters, seen weeks and capture
 metadata from acquisitions already owned by the refresh. It adds no provider
