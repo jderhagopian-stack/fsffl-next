@@ -218,3 +218,15 @@ The horizon-specific Intrinsic program should make temporal value structure obse
 Player Intelligence / Analytics should eventually be able to show how a player's rank and value change across horizons. League-wide analysis should show how each position's value distribution changes as the horizon extends, including top-end share, dispersion, age effects, uncertainty and crossover players.
 
 The purpose is explanatory and decision-useful: reveal when short-window production and durable dynasty value disagree, and let Market/Trade/Franchise surfaces use that disagreement as governed evidence. The system must not force QB/RB/WR/TE distributions toward a predetermined shape.
+
+
+## Explore strategic trade discovery
+
+Explore should proactively explain useful franchise-specific opportunities using
+evidence-based inferred owner priorities by default. Users retain clear controls
+to direct the search with their own priorities and constraints, with an obvious
+return to automatic inference. Show why a priority was inferred and distinguish
+it from a stated owner preference. Each trade exposes exact give/get assets,
+both-team benefits/sacrifices, current and long-term consequences, uncertainty and
+evaluation status. The underlying development and authority contract is
+[strategic trade discovery](opportunity/strategic-trade-discovery.md).

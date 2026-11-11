@@ -160,6 +160,21 @@ def posture_payload(
         "calculated_competitive_state": calculated.value,
         "requested_posture": requested.value,
         "effective_posture": effective.value,
+        "priority_resolution": {
+            "mode": "automatic" if requested is OwnerStrategicPosture.DEFAULT_CALCULATED else "user_directed",
+            "source": (
+                "unknown_state_balanced_fallback"
+                if requested is OwnerStrategicPosture.DEFAULT_CALCULATED and calculated is CalculatedCompetitiveState.UNKNOWN
+                else "calculated_competitive_state_hypothesis"
+                if requested is OwnerStrategicPosture.DEFAULT_CALCULATED
+                else "explicit_search_instruction"
+            ),
+            "inferred_posture": default_posture_for_state(calculated).value,
+            "user_instruction_overrides_inference": requested is not OwnerStrategicPosture.DEFAULT_CALCULATED,
+            "owner_behavior_used": False,
+            "durable_owner_preference_claimed": False,
+            "interpretation": "Search direction only; calculated team state and economic consequences remain unchanged",
+        },
         "label": _POSTURE_LABELS[requested],
         "available_postures": [
             {"value": posture.value, "label": _POSTURE_LABELS[posture]}

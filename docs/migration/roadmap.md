@@ -113,3 +113,20 @@ These run throughout rather than waiting for a single phase:
 ## Development rule
 
 Do not mechanically port an old module because the roadmap reaches a similarly named phase. Re-derive the responsibility and only retain legacy concepts that earn their place under the charter.
+
+
+## Strategic trade discovery development priority
+
+The current product extension across NEXT-4/5/6/7/8 follows
+[Strategic trade discovery and optimization](../opportunity/strategic-trade-discovery.md).
+Infer owner priorities from team state and supported behavioral evidence by
+default; let the managed user direct searches with explicit priorities and
+constraints. Keep inference, stated preference, search instruction and calculated
+consequences distinct. Explicit search direction takes precedence for that search.
+
+Sequence: verify existing economic inputs and close horizon-specific Intrinsic
+consumer gaps → make inferred/user-directed objectives auditable → bounded
+multi-objective single-trade discovery and broader packages → reviewed Explore
+and Trade Center journey → stronger evidence-backed negotiation intelligence →
+contingent multi-transaction strategy. Reuse existing authorities/runtime; no
+parallel valuation model, hidden master score or new infrastructure by default.

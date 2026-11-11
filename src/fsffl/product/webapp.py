@@ -99,6 +99,7 @@ _logger = logging.getLogger("fsffl.product.forecast")
 LeagueViewProvider = Callable[[], LeagueAnalyticsView | None]
 StateLoader = Callable[[str], LeagueState]
 TradeEvaluator = Callable[[LeagueState, BilateralTradeProposal, str], dict[str, object]]
+TradeIntrinsicProvider = Callable[[UserRuntimeContext, BilateralTradeProposal], dict[str, object]]
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
 CapabilityReadinessReader = Callable[[object], dict[str, object]]
 ProductCapabilityReconciler = Callable[[object], dict[str, object]]
@@ -905,6 +906,7 @@ def create_app(
     simulation_loader: SimulationLoader = _default_simulation_loader,
     value_loader: LiveValueLoader = default_live_value_loader,
     trade_evaluator: TradeEvaluator | None = None,
+    trade_intrinsic_provider: TradeIntrinsicProvider | None = None,
     behavioral_coordinator: BehavioralRuntimeCoordinator | None = None,
     capability_readiness_reader: CapabilityReadinessReader | None = None,
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
@@ -2798,6 +2800,19 @@ def create_app(
             raise HTTPException(status_code=409, detail="No managed team is selected")
         return build_trade_center_browser_view(runtime.league_state, focal_team_id=runtime.selected_team_id).model_dump(mode="json")
 
+    def with_trade_intrinsic(runtime, proposal, result):
+        if trade_intrinsic_provider is None:
+            return result
+        try:
+            evidence = trade_intrinsic_provider(runtime, proposal)
+        except Exception as exc:
+            # This optional evidence channel must not blank existing roster,
+            # market or Simulation results, nor trigger a rebuild on failure.
+            from .trade_intrinsic_evidence import unavailable_trade_intrinsic
+            _logger.warning("Trade raw horizon evidence unavailable error_type=%s", type(exc).__name__)
+            evidence = unavailable_trade_intrinsic("Published raw horizon evidence is temporarily unavailable")
+        return {**result, "horizon_asset_economics": evidence}
+
     @application.post("/api/trade-center/analyze")
     def analyze_trade(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
@@ -2812,11 +2827,12 @@ def create_app(
         if trade_evaluator is not None:
             return trade_evaluator(runtime.league_state, proposal, runtime.selected_team_id)
         try:
-            return build_private_beta_trade_analysis(
+            result = build_private_beta_trade_analysis(
                 runtime,
                 proposal,
                 focal_team_id=runtime.selected_team_id,
             )
+            return with_trade_intrinsic(runtime, proposal, result)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -2849,13 +2865,14 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         try:
-            return build_post_trade_simulation_comparison(
+            result = build_post_trade_simulation_comparison(
                 runtime,
                 proposal,
                 focal_team_id=runtime.selected_team_id,
                 simulation_loader=simulation_loader,
                 scenario_stage=request.scenario_stage,
             )
+            return with_trade_intrinsic(runtime, proposal, result)
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 

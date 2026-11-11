@@ -744,8 +744,25 @@ def _presentation_payload_loader(user_id: str, context, surface: str):
     )
 
 
+def _published_trade_intrinsic_provider(context, proposal):
+    """Read the existing producer and memory-only publication proof, never restore.
+
+    Trade requests do not build or fetch large Intrinsic artifacts. A released,
+    ambiguous, incomplete or unpublished source remains explicitly unavailable.
+    """
+    from .trade_intrinsic_evidence import build_trade_intrinsic_evidence
+
+    return build_trade_intrinsic_evidence(
+        context,
+        proposal,
+        record=_career_intrinsic_coordinator.readiness_record_for_state(context),
+        publication_validator=_presentation_continuity.career_generation_hint_matches,
+    )
+
+
 app = _webapp.create_app(
     runtime_store=_runtime_store,
+    trade_intrinsic_provider=_published_trade_intrinsic_provider,
     behavioral_coordinator=_behavioral_coordinator,
     state_loader=_load_sleeper_state_under_heavy_claim,
     forecast_loader=_forecast_loader,
