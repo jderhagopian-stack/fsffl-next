@@ -53,7 +53,8 @@ def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
     return view.utility
 
 
-def _projected_starter_map(league_state, forecasts, team_ids: tuple[str, ...]):
+def _projected_starter_map(league_state, forecasts, team_ids: tuple[str, ...], *,
+                           horizon=ForecastHorizon.SEASON, forecast_as_of=None):
     protected: dict[str, frozenset[str]] = {}
     for team_id in team_ids:
         try:
@@ -61,8 +62,8 @@ def _projected_starter_map(league_state, forecasts, team_ids: tuple[str, ...]):
                 league_state,
                 forecasts,
                 team_id=team_id,
-                as_of=league_state.as_of,
-                horizon=ForecastHorizon.SEASON,
+                as_of=forecast_as_of or league_state.as_of,
+                horizon=horizon,
                 allow_unfilled_slots=True,
                 model_version=f"{_PRODUCT_MODEL_VERSION}:cut-protection-lineup",
             )
@@ -101,6 +102,8 @@ def build_post_trade_simulation_comparison(
     if baseline is None:
         raise ValueError("post-trade simulation requires a current NEXT-4 baseline simulation")
 
+    from .simulation_forecasts import require_forward_simulation_evidence
+    require_forward_simulation_evidence(league_state, forecast_evidence, baseline)
     scenario = apply_bilateral_trade(league_state, proposal)
     side_a_id = proposal.side_a.team_id
     side_b_id = proposal.side_b.team_id
@@ -108,7 +111,8 @@ def build_post_trade_simulation_comparison(
         raise ValueError("focal team must be one side of the trade")
     counterparty_team_id = side_b_id if focal_team_id == side_a_id else side_a_id
 
-    forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
+    from .simulation_forecasts import simulation_forecasts
+    forecasts = simulation_forecasts(forecast_evidence)
     cardinal_profiles = cardinal_market_profiles(runtime.value_evidence)
     market_values = {
         asset_id: profile.market_price.distribution.mean
@@ -118,7 +122,9 @@ def build_post_trade_simulation_comparison(
     if not cardinal_profiles:
         raise ValueError("post-trade disposition requires authoritative FSFFL cardinal Value")
 
-    protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id))
+    protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id),
+        horizon=(ForecastHorizon.REST_OF_SEASON if forecast_evidence.simulation_forward_forecasts is not None else ForecastHorizon.SEASON),
+        forecast_as_of=forecast_evidence.simulation_evaluation_as_of)
     roster_resolution = resolve_mandatory_roster_cuts(
         scenario.after,
         protected_player_ids_by_team=protected,
@@ -304,6 +310,12 @@ def build_post_trade_simulation_comparison(
         "state_id_before": scenario.before.state_id,
         "state_id_after_trade": scenario.after.state_id,
         "state_id_after": legal_after.state_id,
+        "forecast_input": {
+            "basis": forecast_evidence.simulation_basis or forecast_evidence.evidence_basis,
+            "source_state_id": forecast_evidence.simulation_source_state_id,
+            "horizon": "rest_of_season" if forecast_evidence.simulation_forward_forecasts is not None else "season",
+            "evaluation_as_of": forecast_evidence.simulation_evaluation_as_of.isoformat() if forecast_evidence.simulation_evaluation_as_of else league_state.as_of.isoformat(),
+        },
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "scenario_cache_hit": cache_hit,

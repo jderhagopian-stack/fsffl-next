@@ -40,51 +40,51 @@ def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
     return TeamUtilityVector(team_id=team_id, as_of=as_of, model_version=f"{_PRODUCT_MODEL_VERSION}:{reason}")
 
 
-def _assemble_resilience_vector(league_state, forecasts, *, team_id: str):
+def _assemble_resilience_vector(league_state, forecasts, *, team_id: str, horizon=ForecastHorizon.SEASON, forecast_as_of=None):
     try:
         return assemble_team_utility_vector(
             league_state,
             forecasts,
             team_id=team_id,
-            as_of=league_state.as_of,
-            horizon=ForecastHorizon.SEASON,
+            as_of=forecast_as_of or league_state.as_of,
+            horizon=horizon,
             model_version=f"{_PRODUCT_MODEL_VERSION}:roster-consequences",
         ), None
     except ValueError as exc:
         return _fallback_vector(team_id, as_of=league_state.as_of, reason="roster-consequences-unavailable"), str(exc)
 
 
-def _optimized_lineup(league_state, forecasts, *, team_id: str, purpose: str):
+def _optimized_lineup(league_state, forecasts, *, team_id: str, purpose: str, horizon=ForecastHorizon.SEASON, forecast_as_of=None):
     return optimize_team_lineup(
         league_state,
         forecasts,
         team_id=team_id,
-        as_of=league_state.as_of,
-        horizon=ForecastHorizon.SEASON,
+        as_of=forecast_as_of or league_state.as_of,
+        horizon=horizon,
         allow_unfilled_slots=True,
         model_version=f"{_PRODUCT_MODEL_VERSION}:{purpose}",
     )
 
 
-def _projected_starter_map(league_state, forecasts, team_ids: tuple[str, ...]):
+def _projected_starter_map(league_state, forecasts, team_ids: tuple[str, ...], **coordinates):
     protected: dict[str, frozenset[str]] = {}
     if not forecasts:
         return protected
     for team_id in team_ids:
         try:
-            lineup = _optimized_lineup(league_state, forecasts, team_id=team_id, purpose="cut-protection-lineup")
+            lineup = _optimized_lineup(league_state, forecasts, team_id=team_id, purpose="cut-protection-lineup", **coordinates)
         except ValueError:
             continue
         protected[team_id] = frozenset(item.player_id for item in lineup.assignments)
     return protected
 
 
-def _position_strength_comparison(before_state, after_state, forecasts, *, team_id: str):
+def _position_strength_comparison(before_state, after_state, forecasts, *, team_id: str, **coordinates):
     if not forecasts:
         return None
     try:
-        before = _optimized_lineup(before_state, forecasts, team_id=team_id, purpose="position-strength-before")
-        after = _optimized_lineup(after_state, forecasts, team_id=team_id, purpose="position-strength-after")
+        before = _optimized_lineup(before_state, forecasts, team_id=team_id, purpose="position-strength-before", **coordinates)
+        after = _optimized_lineup(after_state, forecasts, team_id=team_id, purpose="position-strength-after", **coordinates)
     except ValueError:
         return None
     return compare_position_strengths(before, after)
@@ -115,8 +115,11 @@ def build_private_beta_trade_analysis(
 
     forecast_evidence = runtime.forecast_evidence
     forecasts = ()
+    coordinates = {}
     if forecast_evidence is not None:
-        forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
+        from .simulation_forecasts import current_forecast_coordinates
+        forecasts, horizon, cutoff = current_forecast_coordinates(league_state, forecast_evidence)
+        coordinates = {"horizon": horizon, "forecast_as_of": cutoff}
     value_evidence = runtime.value_evidence
     cardinal_profiles = cardinal_market_profiles(value_evidence)
     market_values = {
@@ -133,7 +136,7 @@ def build_private_beta_trade_analysis(
         )
     package_ready = monotonic()
 
-    protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id))
+    protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id), **coordinates)
     roster_resolution = resolve_mandatory_roster_cuts(
         scenario.after,
         protected_player_ids_by_team=protected,
@@ -141,14 +144,14 @@ def build_private_beta_trade_analysis(
     )
     legal_after = roster_resolution.league_state
     trade_team_resolutions = tuple(item for item in roster_resolution.resolutions if item.team_id in {side_a_id, side_b_id})
-    position_strength = _position_strength_comparison(scenario.before, legal_after, forecasts, team_id=focal_team_id)
+    position_strength = _position_strength_comparison(scenario.before, legal_after, forecasts, team_id=focal_team_id, **coordinates)
     lineup_ready = monotonic()
 
     if forecasts:
-        before_a, error_before_a = _assemble_resilience_vector(scenario.before, forecasts, team_id=side_a_id)
-        after_a, error_after_a = _assemble_resilience_vector(legal_after, forecasts, team_id=side_a_id)
-        before_b, error_before_b = _assemble_resilience_vector(scenario.before, forecasts, team_id=side_b_id)
-        after_b, error_after_b = _assemble_resilience_vector(legal_after, forecasts, team_id=side_b_id)
+        before_a, error_before_a = _assemble_resilience_vector(scenario.before, forecasts, team_id=side_a_id, **coordinates)
+        after_a, error_after_a = _assemble_resilience_vector(legal_after, forecasts, team_id=side_a_id, **coordinates)
+        before_b, error_before_b = _assemble_resilience_vector(scenario.before, forecasts, team_id=side_b_id, **coordinates)
+        after_b, error_after_b = _assemble_resilience_vector(legal_after, forecasts, team_id=side_b_id, **coordinates)
         for label, error in (("side A baseline", error_before_a), ("side A scenario", error_after_a), ("side B baseline", error_before_b), ("side B scenario", error_after_b)):
             if error:
                 warnings.append(f"Roster consequence evidence unavailable for {label}: {error}")
@@ -231,7 +234,9 @@ def build_private_beta_trade_analysis(
         scenario.before.state_id,
     )
 
+    from .simulation_forecasts import current_forecast_identity
     return {
+        "forecast_input": current_forecast_identity(league_state, forecast_evidence) if forecast_evidence is not None else None,
         "proposal": proposal.model_dump(mode="json"),
         "focal_team_id": focal_team_id,
         "counterparty_team_id": counterparty_team_id,

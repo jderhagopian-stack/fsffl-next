@@ -59,8 +59,8 @@ def _scenario_dependency_fingerprint(*parts: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-LIVE_SIMULATION_MODEL_VERSION = "next18-live-simulation-analytics-v18:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
-EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next18-live-simulation-analytics-v18:numpy-pcg64-batched-gauss-v1:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+LIVE_SIMULATION_MODEL_VERSION = "next18-live-simulation-analytics-v19:native-participation-ros:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next18-live-simulation-analytics-v19:native-participation-ros:numpy-pcg64-batched-gauss-v1:progressive-selective-scenarios-v1:replayable-multiverse-v1:governed-standard-draft-order-fallback:team-origin-pick-slots:common-world-counterfactual-coordinate:finish-seed-bye-outputs:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
 
 
 def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
@@ -275,6 +275,9 @@ def build_live_simulation_analytics(
     *,
     forecasts: tuple[ForecastObservation, ...],
     forecast_model_version: str,
+    forecast_horizon: ForecastHorizon = ForecastHorizon.SEASON,
+    forecast_as_of: datetime | None = None,
+    display_forecasts: tuple[ForecastObservation, ...] = (),
     simulation_count: int = 50_000,
     seed: int = 20260905,
     rng_protocol: Literal[
@@ -303,22 +306,40 @@ def build_live_simulation_analytics(
     forecast-compression calibration can target the earliest authoritative cause.
     """
 
-    if any(item.as_of > league_state.as_of for item in forecasts):
+    evaluation_as_of = forecast_as_of or league_state.as_of
+    if evaluation_as_of.tzinfo is None or evaluation_as_of < league_state.as_of:
+        raise ValueError("Simulation evaluation cutoff cannot precede canonical State")
+    if forecast_horizon not in (ForecastHorizon.SEASON, ForecastHorizon.REST_OF_SEASON):
+        raise ValueError("unsupported Simulation forecast horizon")
+    if forecast_horizon == ForecastHorizon.REST_OF_SEASON:
+        if league_state.completed_through_week is None or not 0 <= league_state.completed_through_week < 18:
+            raise ValueError("ROS Simulation requires a known, incomplete NFL season boundary")
+        from fsffl.forecast.in_season_orchestration import canonical_week_window
+        from fsffl.forecast.models import ForecastMetric
+        start = canonical_week_window(league_state.league.season, league_state.completed_through_week + 1)[0]
+        end = canonical_week_window(league_state.league.season, 18)[1]
+        rostered = {r.player_id for t in league_state.team_states for r in t.roster
+                    if r.slot.value not in ("IR", "TAXI")}
+        covered = {f.player_id for f in forecasts}
+        if rostered - covered:
+            raise ValueError(f"ROS Simulation coverage missing for {len(rostered - covered)} rostered players")
+        if any(f.horizon != forecast_horizon or f.metric != ForecastMetric.FANTASY_POINTS
+               or f.period_start != start or f.period_end != end for f in forecasts):
+            raise ValueError("ROS Simulation requires exact completed-week forward coordinates")
+    if any(item.as_of > evaluation_as_of for item in forecasts):
         raise ValueError("simulation forecast evidence cannot postdate LeagueState")
     if not league_state.nfl_team_byes:
         raise ValueError("canonical NFL bye-week state is required for live simulation")
     generated = generated_at or datetime.now(UTC)
     if generated.tzinfo is None:
         raise ValueError("generated_at must be timezone-aware")
-    generated = max(generated, league_state.as_of)
+    generated = max(generated, evaluation_as_of)
 
     with sample_rss_phase("simulation.forecast_attachment"):
-        effective_forecasts = attach_provisional_position_floor_forecasts(
-            league_state,
-            forecasts,
-            as_of=league_state.as_of,
-            horizon=ForecastHorizon.SEASON,
-        )
+        effective_forecasts = (forecasts if forecast_horizon == ForecastHorizon.REST_OF_SEASON else
+            attach_provisional_position_floor_forecasts(
+                league_state, forecasts, as_of=evaluation_as_of, horizon=forecast_horizon,
+            ))
     fallback_ids = {
         item.player_id
         for item in effective_forecasts
@@ -377,8 +398,8 @@ def build_live_simulation_analytics(
                     league_state,
                     effective_forecasts,
                     team_id=team.team_id,
-                    as_of=league_state.as_of,
-                    horizon=ForecastHorizon.SEASON,
+                    as_of=evaluation_as_of,
+                    horizon=forecast_horizon,
                     allow_unfilled_slots=True,
                 )
             lineups[team.team_id] = lineup
@@ -405,7 +426,8 @@ def build_live_simulation_analytics(
                 effective_forecasts,
                 team_ids=ordered_team_ids,
                 weeks=scoring_panel_weeks,
-                as_of=league_state.as_of,
+                as_of=evaluation_as_of,
+                horizon=forecast_horizon,
                 baseline_lineups=lineups,
             )
         else:
@@ -424,7 +446,8 @@ def build_live_simulation_analytics(
                         team_id for team_id in ordered_team_ids if team_id in affected
                     ),
                     weeks=scoring_panel_weeks,
-                    as_of=league_state.as_of,
+                    as_of=evaluation_as_of,
+                    horizon=forecast_horizon,
                     baseline_lineups=lineups,
                 )
                 if affected
@@ -547,8 +570,11 @@ def build_live_simulation_analytics(
             code="weekly_mean_decomposition_provisional",
             message=(
                 "Simulation is bye-aware and re-optimizes each roster whenever weekly availability changes. "
-                "Identical availability states reuse the same optimized lineup. Player season means are currently "
-                "converted to equal active-NFL-game means until direct multi-source weekly NEXT-2 forecast means "
+                "Identical availability states reuse the same optimized lineup. "
+                + ("Participation-adjusted ROS means are distributed over remaining eligible NFL games. "
+                   if forecast_horizon == ForecastHorizon.REST_OF_SEASON else
+                   "Player season means are converted to equal active-NFL-game means. ")
+                + "This remains a provisional weekly bridge until direct multi-source weekly NEXT-2 forecast means "
                 "are promoted. Weekly scoring volatility is independently calibrated from actual historical weekly "
                 "outcomes and is not derived from season forecast uncertainty."
             ),
@@ -633,6 +659,7 @@ def build_live_simulation_analytics(
         league_state_id=league_state.state_id,
         as_of=league_state.as_of,
         generated_at=generated,
+        forecast_evaluation_as_of=(evaluation_as_of if forecast_horizon == ForecastHorizon.REST_OF_SEASON else None),
         lineage=(
             ModelLineageEntry(component="state", model_version=league_state.schema_version),
             ModelLineageEntry(component="forecast", model_version=forecast_model_version),
@@ -675,8 +702,8 @@ def build_live_simulation_analytics(
                     league_state,
                     effective_forecasts,
                     team_id=team.team_id,
-                    as_of=league_state.as_of,
-                    horizon=ForecastHorizon.SEASON,
+                    as_of=evaluation_as_of,
+                    horizon=forecast_horizon,
                     competitive_outcome=outcomes[team.team_id],
                     competitive_state_policy=competitive_state_policy,
                     model_version="next4-live-team-utility-v5:resilience-driver-identity",
@@ -704,7 +731,7 @@ def build_live_simulation_analytics(
                     league_state,
                     context=context,
                     team_id=team.team_id,
-                    forecasts=forecasts,
+                    forecasts=display_forecasts + forecasts,
                     optimized_lineup=lineups[team.team_id],
                     position_strengths=position_strengths_by_team[team.team_id],
                     utility=utility,

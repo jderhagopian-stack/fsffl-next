@@ -514,11 +514,13 @@ def _latest_season_forecast_means(runtime: UserRuntimeContext) -> dict[str, floa
     if state is None or evidence is None:
         return {}
     latest: dict[str, object] = {}
-    for observation in evidence.league_scored_forecasts:
+    from .simulation_forecasts import current_forecast_coordinates
+    forecasts, horizon, cutoff = current_forecast_coordinates(state, evidence)
+    for observation in forecasts:
         if (
             observation.metric != ForecastMetric.FANTASY_POINTS
-            or observation.horizon != ForecastHorizon.SEASON
-            or observation.as_of > state.as_of
+            or observation.horizon != horizon
+            or observation.as_of > cutoff
         ):
             continue
         current = latest.get(observation.player_id)

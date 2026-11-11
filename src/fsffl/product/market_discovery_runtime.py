@@ -652,17 +652,12 @@ def evaluate_candidate_path(
     forecast_evidence = runtime.forecast_evidence
     if forecast_evidence is None:
         raise ValueError("preliminary bilateral screen requires current Forecast evidence")
+    from .simulation_forecasts import current_forecast_coordinates
+    forecasts, horizon, cutoff = current_forecast_coordinates(league_state, forecast_evidence)
     if effective_forecasts is None:
-        forecasts = (
-            forecast_evidence.raw_forecasts
-            + forecast_evidence.league_scored_forecasts
-        )
-        effective_forecasts = attach_provisional_position_floor_forecasts(
-            league_state,
-            forecasts,
-            as_of=league_state.as_of,
-            horizon=ForecastHorizon.SEASON,
-        )
+        effective_forecasts = (forecasts if horizon == ForecastHorizon.REST_OF_SEASON else
+            attach_provisional_position_floor_forecasts(
+                league_state, forecasts, as_of=cutoff, horizon=horizon))
     proposal = _proposal_from_row(
         runtime,
         row,
@@ -692,8 +687,8 @@ def evaluate_candidate_path(
             state,
             effective_forecasts,
             team_id=team_id,
-            as_of=state.as_of,
-            horizon=ForecastHorizon.SEASON,
+            as_of=cutoff,
+            horizon=horizon,
             allow_unfilled_slots=True,
             model_version="market-preliminary-screen-lineup-v1",
         )
@@ -794,8 +789,10 @@ def evaluate_candidate_path(
     )
     completed = monotonic()
 
+    from .simulation_forecasts import current_forecast_identity
     return {
         **row,
+        "forecast_input": current_forecast_identity(league_state, forecast_evidence),
         "preliminary_decision_screen_evaluated": True,
         "bilateral_decision_evaluated": True,
         "decision_shape": screen.shape.value,
@@ -1548,16 +1545,11 @@ def build_market_discovery(
         and runtime.forecast_evidence is not None
     ):
         try:
-            forecasts = (
-                runtime.forecast_evidence.raw_forecasts
-                + runtime.forecast_evidence.league_scored_forecasts
-            )
-            effective_forecasts = attach_provisional_position_floor_forecasts(
-                runtime.league_state,
-                forecasts,
-                as_of=runtime.league_state.as_of,
-                horizon=ForecastHorizon.SEASON,
-            )
+            from .simulation_forecasts import current_forecast_coordinates
+            forecasts, horizon, cutoff = current_forecast_coordinates(runtime.league_state, runtime.forecast_evidence)
+            effective_forecasts = (forecasts if horizon == ForecastHorizon.REST_OF_SEASON else
+                attach_provisional_position_floor_forecasts(
+                    runtime.league_state, forecasts, as_of=cutoff, horizon=horizon))
             simulation = runtime.simulation_analytics
             baseline_by_team = {
                 view.team_id: view.optimized_lineup

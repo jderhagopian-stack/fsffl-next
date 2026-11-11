@@ -147,6 +147,7 @@ def build_team_analytics_view(
     if context.as_of != league_state.as_of:
         raise ValueError("analytics context as_of must match LeagueState")
 
+    forecast_cutoff = context.forecast_evaluation_as_of or context.as_of
     team = next((item for item in league_state.teams if item.team_id == team_id), None)
     team_state = next((item for item in league_state.team_states if item.team_id == team_id), None)
     if team is None or team_state is None:
@@ -155,14 +156,14 @@ def build_team_analytics_view(
     if optimized_lineup is not None:
         if optimized_lineup.team_id != team_id:
             raise ValueError("optimized lineup must describe team")
-        if optimized_lineup.as_of > context.as_of:
+        if optimized_lineup.as_of > forecast_cutoff:
             raise ValueError("optimized lineup cannot postdate analytics context")
     if any(row.team_id != team_id for row in position_strengths):
         raise ValueError("position strengths must describe team")
     if utility is not None:
         if utility.team_id != team_id:
             raise ValueError("team utility must describe team")
-        if utility.as_of > context.as_of:
+        if utility.as_of > forecast_cutoff:
             raise ValueError("team utility cannot postdate analytics context")
 
     profiles = value_profiles or {}
@@ -175,7 +176,7 @@ def build_team_analytics_view(
 
     forecasts_by_player: dict[str, list[ForecastObservation]] = {}
     for observation in forecasts:
-        if observation.as_of > context.as_of:
+        if observation.as_of > forecast_cutoff:
             continue
         forecasts_by_player.setdefault(observation.player_id, []).append(observation)
 

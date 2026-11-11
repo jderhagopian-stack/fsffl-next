@@ -107,7 +107,7 @@ SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationA
 CapabilityReadinessReader = Callable[[object], dict[str, object]]
 ProductCapabilityReconciler = Callable[[object], dict[str, object]]
 PresentationPayloadLoader = Callable[[str, UserRuntimeContext, str], dict[str, object] | None]
-CurrentPositionDepthProvider = Callable[[LeagueState], CurrentPositionDepthContract]
+CurrentPositionDepthProvider = Callable[[LeagueState, LiveForecastEvidence | None], CurrentPositionDepthContract]
 RuntimeMemoryReclaimer = Callable[[str], object]
 StateResourceBoundaryHandler = Callable[[ResourceTransition], object]
 
@@ -787,10 +787,18 @@ def _build_default_simulation(
     affected_team_ids: frozenset[str] | None = None,
     reuse_simulation_result=None,
 ) -> LiveSimulationAnalyticsResult:
+    from fsffl.forecast.models import ForecastHorizon
+    from .simulation_forecasts import simulation_forecasts, require_forward_simulation_evidence
+    require_forward_simulation_evidence(league_state, evidence, changed_state=True)
     rng_protocol, rng_batch_size = configured_simulation_rng()
     return build_live_simulation_analytics(
         league_state,
-        forecasts=evidence.league_scored_forecasts,
+        forecasts=simulation_forecasts(evidence),
+        forecast_horizon=(ForecastHorizon.REST_OF_SEASON
+            if getattr(evidence, "simulation_forward_forecasts", None) is not None else ForecastHorizon.SEASON),
+        forecast_as_of=getattr(evidence, "simulation_evaluation_as_of", None),
+        display_forecasts=(evidence.league_scored_forecasts
+            if getattr(evidence, "simulation_forward_forecasts", None) is not None else ()),
         forecast_model_version=evidence.model_version,
         simulation_count=simulation_count,
         rng_protocol=rng_protocol,
@@ -922,6 +930,7 @@ def create_app(
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     presentation_payload_loader: PresentationPayloadLoader | None = None,
     current_position_depth_provider: CurrentPositionDepthProvider | None = None,
+    simulation_forecast_preparer: Callable | None = None,
     state_resource_boundary: StateResourceBoundaryHandler | None = None,
     state_transition_reclaimer: RuntimeMemoryReclaimer | None = None,
     phase_memory_reclaimer: RuntimeMemoryReclaimer | None = None,
@@ -1992,6 +2001,10 @@ def create_app(
                         f"{user_id}:{working_state.state_id}:before_forecast"
                     )
                     evidence = forecast_loader(working_state)
+                    if simulation_forecast_preparer is not None and (working_state.completed_through_week or 0) > 0:
+                        require_active_league_identity()
+                        evidence = simulation_forecast_preparer(store.working_context(user_id), evidence)
+                        require_active_league_identity()
                     log_reconciliation_memory(user_id, "forecast_build_complete")
                     with store.lifecycle_operation(user_id):
                         require_active_league_identity()
@@ -2014,6 +2027,15 @@ def create_app(
                 IntelligenceJobPhase.RUNNING_SIMULATION,
                 "Evaluating governed NEXT-4 simulation authority in the working generation.",
             )
+            if (simulation_forecast_preparer is not None and (working_state.completed_through_week or 0) > 0
+                    and evidence.simulation_forward_forecasts is None and evidence.uncertainty_ready):
+                with heavy_claim("forecast", f"{user_id}:{working_state.state_id}:forward"):
+                    require_heavy_phase_ownership("forecast", expected_state_id=working_state.state_id)
+                    evidence = simulation_forecast_preparer(store.working_context(user_id), evidence)
+                    with store.lifecycle_operation(user_id):
+                        require_active_league_identity()
+                        store.set_forecast_evidence(user_id, evidence,
+                            refreshed_league_state=working_state, require_working_generation=True)
             simulation_ready = evidence.uncertainty_ready
             current = store.working_context(user_id)
             simulation = current.simulation_analytics
@@ -2575,7 +2597,7 @@ def create_app(
             )
         else:
             try:
-                current_position_depth = current_position_depth_provider(league_state)
+                current_position_depth = current_position_depth_provider(league_state, runtime.forecast_evidence)
             except Exception as exc:
                 current_position_depth = unavailable_current_position_depth(
                     league_state,

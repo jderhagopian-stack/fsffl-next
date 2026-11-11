@@ -17,7 +17,7 @@ from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, Forec
 from .projection_history import career_ros_projection_selector
 from .season_rollforward import compose_completed_actuals_with_ros_per_player
 
-SEASON_COMPARISON_VERSION = "season-comparison-v5:sparse-production-coarse-injury-flag"
+SEASON_COMPARISON_VERSION = "season-comparison-v6:typed-participation-adjusted-forward-evidence"
 POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
 
 
@@ -324,4 +324,8 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
                           + [row.as_of for row in result.forward_forecasts])
     return {"version": SEASON_COMPARISON_VERSION, "league_state_id": state.state_id,
             "season": state.league.season, "as_of": measured_as_of.isoformat(),
-            "completed_through_week": result.completed_through_week, "players": players}
+            "completed_through_week": result.completed_through_week, "players": players,
+            "forward_forecasts": [row.model_dump(mode="json") for row in result.forward_forecasts],
+            "evidence_basis": result.evidence_basis,
+            "season_outlook": [row.model_dump(mode="json") for row in result.season_outlook],
+            "season_outlook_failures": dict(result.season_outlook_failures)}

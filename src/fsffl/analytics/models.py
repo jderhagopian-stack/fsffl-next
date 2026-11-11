@@ -55,6 +55,9 @@ class AnalyticsContext(FrozenModel):
     generated_at: datetime
     lineage: tuple[ModelLineageEntry, ...]
     warnings: tuple[AnalyticsWarning, ...] = ()
+    # State capture and subsequently observed Forecast evidence are distinct.
+    # Absence preserves the original strict State-time cutoff.
+    forecast_evaluation_as_of: datetime | None = None
 
     @field_validator("as_of", "generated_at")
     @classmethod
@@ -77,6 +80,11 @@ class AnalyticsContext(FrozenModel):
         warning_keys = [(warning.kind, warning.code) for warning in self.warnings]
         if len(warning_keys) != len(set(warning_keys)):
             raise ValueError("duplicate analytics warnings are not allowed")
+        if self.forecast_evaluation_as_of is not None:
+            if (self.forecast_evaluation_as_of.tzinfo is None
+                    or self.forecast_evaluation_as_of < self.as_of
+                    or self.forecast_evaluation_as_of > self.generated_at):
+                raise ValueError("Forecast evaluation cutoff must be timezone-aware and between State and generation")
         if self.generated_at < self.as_of:
             raise ValueError("analytics generated_at cannot precede evidence as_of")
         return self

@@ -40,11 +40,24 @@ _value_adapter = TypeAdapter(CurrentMarketValueRuntimeResult)
 
 
 def encode_forecast_evidence(evidence: LiveForecastEvidence) -> dict[str, object]:
-    return _forecast_adapter.dump_python(evidence, mode="json")
+    payload = _forecast_adapter.dump_python(evidence, mode="json")
+    # Preserve exact fingerprints for legacy full-season evidence. New forward
+    # coordinates participate in the existing artifact identity when present.
+    for key in ("simulation_forward_forecasts", "simulation_evaluation_as_of",
+                "simulation_source_state_id", "simulation_basis"):
+        if payload.get(key) is None:
+            payload.pop(key, None)
+    return payload
 
 
 def decode_forecast_evidence(payload: dict[str, object]) -> LiveForecastEvidence:
     evidence = _forecast_adapter.validate_python(payload)
+    if evidence.simulation_forward_forecasts is not None and (
+        evidence.simulation_evaluation_as_of is None
+        or evidence.simulation_evaluation_as_of.tzinfo is None
+        or not evidence.simulation_source_state_id or not evidence.simulation_basis
+    ):
+        raise ValueError("stored Simulation forward evidence lacks its exact source coordinates")
     if evidence.model_version != FORECAST_MODEL_VERSION:
         raise ValueError("stored forecast evidence model version is stale")
     if not isinstance(evidence.runtime_result, LiveForecastRuntimeResult):

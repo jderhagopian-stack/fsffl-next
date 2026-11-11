@@ -67,19 +67,26 @@ class SeasonComparisonService:
         self._remember(key, payload)
         return payload
 
-    def prepare(self, context, *, force=False):
+    def prepare(self, context, *, force=False, already_admitted=False):
         """Called only by the existing owned refresh, never a player GET/startup."""
         state = context.league_state
         if state is None or (self.owned is not None and not self.owned(context)):
             return
-        # Serialize duplicate producers and cold persisted reads; cache is bounded.
-        with self._build_lock:
+        # All producers acquire heavy admission before the build lock. The
+        # owned refresh already holds admission; reverse ordering can deadlock
+        # it against a standalone preparation waiting for the same admission.
+        with self._lock:
+            if not force and self._read(state) is not None:
+                return
+        claim = (self.heavy_work.claim(kind="forecast", key=f"season-comparison:{state.state_id}")
+                 if self.heavy_work is not None and not already_admitted else nullcontext())
+        with claim, self._build_lock:
+            if self.owned is not None and not self.owned(context):
+                return
             with self._lock:
                 if not force and self._read(state) is not None:
                     return
-            claim = (self.heavy_work.claim(kind="forecast", key=f"season-comparison:{state.state_id}")
-                     if self.heavy_work is not None else nullcontext())
-            with self._preparing(state), claim, sample_rss_phase("forecast.season_comparison"):
+            with self._preparing(state), sample_rss_phase("forecast.season_comparison"):
                 baseline = None
                 if self.baseline_loader is not None:
                     try:
@@ -105,6 +112,61 @@ class SeasonComparisonService:
                     ))
                 with self._lock:
                     self._remember(self.key(state), payload)
+
+    def current_position_depth(self, state, evidence=None):
+        """Reuse the same governed outlook prepared for this State, if available."""
+        from fsffl.forecast.models import ForecastObservation
+        from .current_position_depth import build_current_position_depth_from_outlook, unavailable_current_position_depth
+        with self._lock:
+            payload = self._read(state)
+            bound = getattr(evidence, "simulation_forward_forecasts", None)
+            if bound is not None and (payload is None
+                    or datetime.fromisoformat(payload["as_of"]) != evidence.simulation_evaluation_as_of
+                    or evidence.simulation_source_state_id != state.state_id
+                    or tuple(ForecastObservation.model_validate(row) for row in payload.get("forward_forecasts", ())) != bound):
+                return unavailable_current_position_depth(state,
+                    reason="Current outlook does not match the published Simulation cohort; Refresh Intelligence")
+            if payload is None or "season_outlook" not in payload:
+                return None
+            outlook = tuple(ForecastObservation.model_validate(row) for row in payload["season_outlook"])
+            metadata = {pid: {key: value for key, value in row.items()
+                if key.startswith("participation_") or key in ("ros_basis", "low_confidence")}
+                for pid, row in payload.get("players", {}).items()}
+            for row in payload.get("forward_forecasts", ()):
+                metadata.setdefault(row["player_id"], {}).update({
+                    "ros_model_version": row["model_version"], "ros_as_of": row["as_of"]})
+            basis, completed = payload["evidence_basis"], payload["completed_through_week"]
+            failures = dict(payload.get("season_outlook_failures", {}))
+        return build_current_position_depth_from_outlook(state, season_outlook=outlook,
+            evidence_basis=basis, completed_through_week=completed,
+            season_outlook_failures=failures, player_outlook_evidence=metadata)
+
+    def simulation_evidence(self, context, evidence):
+        """Read the existing producer; no acquisition from Simulation or player GETs."""
+        from dataclasses import replace
+        from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
+        state = context.league_state
+        with self._lock:
+            payload = self._read(state)
+            if payload is None or payload.get("completed_through_week") != state.completed_through_week:
+                raise ValueError("Current participation-adjusted ROS evidence requires Refresh Intelligence")
+            rows = tuple(ForecastObservation.model_validate(row) for row in payload.get("forward_forecasts", ()))
+            cutoff = datetime.fromisoformat(payload["as_of"])
+            if state.completed_through_week == 18:
+                return replace(evidence, uncertainty_ready=False,
+                    simulation_forward_forecasts=(), simulation_evaluation_as_of=cutoff,
+                    simulation_source_state_id=state.state_id, simulation_basis="completed_actuals_only")
+            if not rows or cutoff.tzinfo is None or cutoff < state.as_of:
+                raise ValueError("Current participation-adjusted ROS evidence is unavailable")
+            if any(row.horizon != ForecastHorizon.REST_OF_SEASON
+                   or row.metric != ForecastMetric.FANTASY_POINTS or row.as_of > cutoff for row in rows):
+                raise ValueError("Invalid Simulation forward evidence coordinates")
+            return replace(evidence,
+                           uncertainty_ready=(evidence.uncertainty_ready and payload.get("evidence_basis") != "preseason_remaining_prior"),
+                           simulation_forward_forecasts=rows,
+                           simulation_evaluation_as_of=cutoff,
+                           simulation_source_state_id=state.state_id,
+                           simulation_basis=payload.get("evidence_basis", "governed_ros"))
 
     def player(self, context, player_id):
         state = context.league_state

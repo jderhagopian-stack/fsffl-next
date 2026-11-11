@@ -96,7 +96,7 @@ def test_real_team_views_api_exposes_completed_wr_column_and_input_labels(monkey
     state,Stats=fixture(monkeypatch)
     store=PrivateBetaRuntimeStore()
     store.set_league_state('local-beta-user',state)
-    app=create_app(runtime_store=store,current_position_depth_provider=lambda current:
+    app=create_app(runtime_store=store,current_position_depth_provider=lambda current, _evidence:
         build_governed_current_position_depth(current,preseason_season_forecasts=(),
             stats_source=Stats(),clock=lambda:NOW))
     with TestClient(app) as client:

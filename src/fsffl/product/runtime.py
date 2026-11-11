@@ -259,6 +259,11 @@ class LiveForecastEvidence:
     runtime_result: LiveForecastRuntimeResult
     evidence_basis: str = "live_full_season"
     model_version: str = "next8-live-forecast-evidence-v7:rolling-fumbles-lost-materiality"
+    # Separate forward authority: never overwrite/relabel the frozen season rows.
+    simulation_forward_forecasts: tuple[ForecastObservation, ...] | None = None
+    simulation_evaluation_as_of: datetime | None = None
+    simulation_source_state_id: str | None = None
+    simulation_basis: str | None = None
 
 
 LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
