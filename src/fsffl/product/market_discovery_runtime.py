@@ -519,6 +519,7 @@ def evaluate_candidate_economics(
     profiles=None,
     market_values: Mapping[str, float] | None = None,
     asset_index: Mapping[tuple[str, str], object] | None = None,
+    proposal=None,
 ) -> dict[str, object]:
     """Attach cheap Decision-owned economics before Search family pruning.
 
@@ -545,12 +546,21 @@ def evaluate_candidate_economics(
             "cheap_economic_screen_complete": False,
         }
 
-    proposal = _proposal_from_row(
-        runtime,
-        row,
-        prefix="market-economic",
-        asset_index=asset_index,
-    )
+    if proposal is None:
+        proposal = _proposal_from_row(runtime, row, prefix="market-economic", asset_index=asset_index)
+    else:
+        # Bounded NEXT6 callers already hold canonical owned-package proposals.
+        # Preserve exact bilateral identity rather than rebuilding State hashes.
+        def owned(team_id, items):
+            return tuple((asset_index or {}).get((team_id,str(item["asset_ref"])))
+                or resolve_owned_asset_ref(league_state,team_id=team_id,asset_ref=str(item["asset_ref"]))
+                for item in items)
+        if (proposal.as_of != league_state.as_of
+            or proposal.side_a.team_id != runtime.selected_team_id
+            or proposal.side_b.team_id != str(row.get("counterparty_team_id") or "")
+            or proposal.side_a.sends != owned(proposal.side_a.team_id,row.get("send", ()))
+            or proposal.side_b.sends != owned(proposal.side_b.team_id,row.get("receive", ()))):
+            raise ValueError("Canonical proposal does not match the candidate row")
     economics = summarize_bilateral_trade_economics(
         proposal,
         profiles,
