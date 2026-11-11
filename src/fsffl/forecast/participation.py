@@ -44,6 +44,18 @@ IR_NO_PROJECTION_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=
 ROS_FALLBACK_POLICY_VERSION = "career-ros-fallback-v3:unsigned-priority-single-source-fumbles"
 ROS_FALLBACK_POLICY_APPROVED_AT = datetime(2026, 11, 8, 13, 13, 56, tzinfo=UTC)
 
+# Correct the remaining Career-only backup-role restriction on the accepted
+# single-source completion rule. Earlier replay/capture identities stay intact.
+SINGLE_SOURCE_COMPLETION_VERSION = "single-source-completion-v1:role-independent-strict-scoring"
+SINGLE_SOURCE_COMPLETION_EFFECTIVE_AT = datetime(2026, 11, 11, 1, 10, 39, tzinfo=UTC)
+
+
+def single_source_completion_policy_version(as_of: datetime) -> str | None:
+    if as_of.tzinfo is None:
+        raise ValueError("single-source completion cutoff must be timezone-aware")
+    return (SINGLE_SOURCE_COMPLETION_VERSION
+            if as_of >= SINGLE_SOURCE_COMPLETION_EFFECTIVE_AT else None)
+
 
 def ros_fallback_policy_version(as_of: datetime) -> str | None:
     if as_of.tzinfo is None:
