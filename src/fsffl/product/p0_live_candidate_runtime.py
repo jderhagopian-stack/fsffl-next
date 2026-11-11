@@ -215,6 +215,7 @@ from fsffl.forecast.participation import (
     ROS_FALLBACK_POLICY_VERSION,
     ROS_FALLBACK_POLICY_APPROVED_AT,
     ros_fallback_policy_version,
+    single_source_completion_policy_version,
     _unsigned_ytd_override,
     recorded_status_based_zero_ros_evidence,
     recorded_ytd_only_year_one_evidence,
@@ -1098,6 +1099,7 @@ def build_live_p0_rostered_candidate_forecasts(
     fumbles_supplement_failure: str | None = None
     available_ros_rows = _all_ros_source_observations(ros_runtime, fallback_ros_observations)
     fallback_policy = ros_fallback_policy_version(ros_revision_cutoff)
+    single_source_policy = single_source_completion_policy_version(ros_revision_cutoff)
     fumbles_eligible_player_ids = _single_source_fumbles_gap_player_ids(
         league_state=league_state,
         candidate_ids=set(rostered_p0_ids),
@@ -1303,7 +1305,9 @@ def build_live_p0_rostered_candidate_forecasts(
                 except ValueError as exc:
                     failures[player_id] = f"status-based Year-1 fallback rejected: {exc}"
                     continue
-            elif player_id in active_backup_ids:
+            elif single_source_policy is not None or player_id in active_backup_ids:
+                # A complete provider row is projection evidence regardless of
+                # NFL depth rank. Preserve the older role gate for pinned replays.
                 accepted = False
                 for (source_player, source_id), source_rows in sorted(one_source_rows.items()):
                     if source_player != player_id:
@@ -1360,7 +1364,8 @@ def build_live_p0_rostered_candidate_forecasts(
                     standard_missing = y1_standard_partial.get(player_id)
                     league_missing = y1_league_partial.get(player_id)
                     failures[player_id] = (
-                        "active backup lacks a complete single-source Year-1 projection; "
+                        f"{'candidate' if single_source_policy is not None else 'active backup'} "
+                        "lacks a complete single-source Year-1 projection; "
                         "admissible_provider_row_counts="
                         f"{ {source_id: len(rows) for (pid, source_id), rows in one_source_rows.items() if pid == player_id} }; "
                         f"standard_missing_rule_stats={list(standard_missing.omitted_rule_stats) if standard_missing else []}; "
