@@ -209,3 +209,16 @@ def test_large_source_only_projects_selected_rows_and_preserves_cohort(monkeypat
     assert result['source']['selected_player_count'] == 2
     assert result['source']['input_fingerprint'] == record.contract.input_fingerprint
     assert len(record.contract.estimates) == 335
+
+
+def test_source_scoring_qualifications_and_input_assumptions_survive():
+    runtime, record, proposal = fixture()
+    record.contract = record.contract.model_copy(update={
+        'scoring_coordinate_limitation': 'Source qualification retained',
+        'ignored_long_term_residual_rule_stats': ('qualified-stat',),
+        'player_input_assumptions': {'a1': 'Accepted sparse Current evidence', 'outside': 'Not in this trade'},
+    })
+    result = build(runtime, record, proposal)
+    assert result['source']['scoring_coordinate_limitation'] == 'Source qualification retained'
+    assert result['source']['ignored_long_term_residual_rule_stats'] == ['qualified-stat']
+    assert result['input_assumptions'] == {'a1': 'Accepted sparse Current evidence'}

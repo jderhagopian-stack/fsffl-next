@@ -27,7 +27,10 @@ package cannot expose a fabricated complete net. Package uncertainty remains
 unavailable because covariance and a whole-Career outcome interval are not
 provided by these authorities. Internal typed adapters pass only the existing
 point reference into mean-only aggregation; they do not assert zero economic
-uncertainty. Source model uncertainty remains separate.
+uncertainty. Source model uncertainty remains separate. Source scoring-coordinate limitations,
+ignored residual-rule qualifications and selected-player input assumptions remain
+explicit in the evidence packet. Complete mean arithmetic is not a claim of
+unqualified model accuracy.
 
 The result explicitly says `evidence_only_no_disposition_change` and identifies
 these as raw asset-contribution ledgers. Both-team lineup/competitive effects,

@@ -158,6 +158,8 @@ def build_trade_intrinsic_evidence(
             "lineup_capacity_signature": contract.lineup_capacity_signature,
             "three_year_basis": "career_current_y1_y3_components_with_canonical_discount",
             "career_basis": contract.aggregation,
+            "scoring_coordinate_limitation": contract.scoring_coordinate_limitation,
+            "ignored_long_term_residual_rule_stats": list(contract.ignored_long_term_residual_rule_stats),
         },
         "input_assumptions": {pid: contract.player_input_assumptions[pid] for pid in selected if pid in contract.player_input_assumptions},
         "semantics": "raw_asset_contribution_ledger_not_team_specific_utility_or_market_discount",
