@@ -51,3 +51,8 @@ horizons, missing assets, zero/negative/nonfinite contributions, source immutabi
 no hidden source work, ownership-before-evidence ordering, optional-channel
 failure isolation and automatic/user-directed mode semantics. Hosted/browser and
 real-league economic usefulness require their own targeted acceptance evidence.
+
+The next backend tranche adds optional `roster_adjusted` evidence inside each
+horizon using the existing authoritative required-cut resolution. Original raw
+sent/received totals remain unchanged. See [objective assessment](objective-assessment.md)
+for request-scoped goals, both-team directional interpretation and limitations.

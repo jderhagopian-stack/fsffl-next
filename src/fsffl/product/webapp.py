@@ -88,6 +88,7 @@ from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
 from .trade_opportunity_runtime import build_trade_opportunity_evaluation
+from .trade_objectives import TradeSearchInstructions, build_trade_objective_assessment, validate_search_instructions
 from .trade_simulation_runtime import build_post_trade_simulation_comparison
 from .waiver_action_runtime import build_actionable_waiver_comparison
 from .what_if_runtime import build_player_unavailable_scenario
@@ -100,6 +101,7 @@ LeagueViewProvider = Callable[[], LeagueAnalyticsView | None]
 StateLoader = Callable[[str], LeagueState]
 TradeEvaluator = Callable[[LeagueState, BilateralTradeProposal, str], dict[str, object]]
 TradeIntrinsicProvider = Callable[[UserRuntimeContext, BilateralTradeProposal], dict[str, object]]
+TradeHorizonEvidenceProvider = Callable[[UserRuntimeContext, BilateralTradeProposal, dict[str, object]], dict[str, object]]
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
 CapabilityReadinessReader = Callable[[object], dict[str, object]]
 ProductCapabilityReconciler = Callable[[object], dict[str, object]]
@@ -122,6 +124,10 @@ class AnalyzeTradeRequest(FrozenModel):
     focal_asset_refs: tuple[str, ...]
     counterparty_asset_refs: tuple[str, ...]
     scenario_stage: ScenarioComputationStage = ScenarioComputationStage.CONFIRMATION
+
+
+class EvaluateTradeRequest(AnalyzeTradeRequest):
+    search_instructions: TradeSearchInstructions | None = None
 
 
 class EvaluateWaiverRequest(FrozenModel):
@@ -907,6 +913,7 @@ def create_app(
     value_loader: LiveValueLoader = default_live_value_loader,
     trade_evaluator: TradeEvaluator | None = None,
     trade_intrinsic_provider: TradeIntrinsicProvider | None = None,
+    trade_horizon_evidence_provider: TradeHorizonEvidenceProvider | None = None,
     behavioral_coordinator: BehavioralRuntimeCoordinator | None = None,
     capability_readiness_reader: CapabilityReadinessReader | None = None,
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
@@ -2801,10 +2808,12 @@ def create_app(
         return build_trade_center_browser_view(runtime.league_state, focal_team_id=runtime.selected_team_id).model_dump(mode="json")
 
     def with_trade_intrinsic(runtime, proposal, result):
-        if trade_intrinsic_provider is None:
+        if trade_intrinsic_provider is None and trade_horizon_evidence_provider is None:
             return result
         try:
-            evidence = trade_intrinsic_provider(runtime, proposal)
+            evidence = (trade_horizon_evidence_provider(runtime, proposal, result)
+                        if trade_horizon_evidence_provider is not None
+                        else trade_intrinsic_provider(runtime, proposal))
         except Exception as exc:
             # This optional evidence channel must not blank existing roster,
             # market or Simulation results, nor trigger a rebuild on failure.
@@ -2813,8 +2822,16 @@ def create_app(
             evidence = unavailable_trade_intrinsic("Published raw horizon evidence is temporarily unavailable")
         return {**result, "horizon_asset_economics": evidence}
 
+    def with_trade_objectives(runtime, proposal, result, instructions):
+        try:
+            assessment = build_trade_objective_assessment(runtime, proposal, result, instructions)
+        except Exception as exc:
+            _logger.warning("Trade objective assessment unavailable error_type=%s", type(exc).__name__)
+            assessment = {"status": "unavailable", "decision_effect": "no_disposition_change"}
+        return {**result, "objective_assessment": assessment}
+
     @application.post("/api/trade-center/analyze")
-    def analyze_trade(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+    def analyze_trade(request: EvaluateTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
@@ -2822,9 +2839,12 @@ def create_app(
             raise HTTPException(status_code=409, detail="No managed team is selected")
         try:
             proposal = _proposal_from_request(runtime, request, draft_prefix="product")
+            validate_search_instructions(runtime, proposal, request.search_instructions)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         if trade_evaluator is not None:
+            if request.search_instructions is not None:
+                raise HTTPException(status_code=422, detail="Search instructions are unsupported by the custom evaluator")
             return trade_evaluator(runtime.league_state, proposal, runtime.selected_team_id)
         try:
             result = build_private_beta_trade_analysis(
@@ -2832,7 +2852,8 @@ def create_app(
                 proposal,
                 focal_team_id=runtime.selected_team_id,
             )
-            return with_trade_intrinsic(runtime, proposal, result)
+            result = with_trade_intrinsic(runtime, proposal, result)
+            return with_trade_objectives(runtime, proposal, result, request.search_instructions)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -2854,7 +2875,7 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @application.post("/api/trade-center/simulate")
-    def simulate_trade(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+    def simulate_trade(request: EvaluateTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
         try:
             proposal = _proposal_from_request(
@@ -2862,6 +2883,7 @@ def create_app(
                 request,
                 draft_prefix="product-simulation",
             )
+            validate_search_instructions(runtime, proposal, request.search_instructions)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         try:
@@ -2872,7 +2894,8 @@ def create_app(
                 simulation_loader=simulation_loader,
                 scenario_stage=request.scenario_stage,
             )
-            return with_trade_intrinsic(runtime, proposal, result)
+            result = with_trade_intrinsic(runtime, proposal, result)
+            return with_trade_objectives(runtime, proposal, result, request.search_instructions)
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 

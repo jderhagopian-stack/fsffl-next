@@ -105,3 +105,8 @@ league-agnostic rules and authority boundaries. Follow focused regression,
 reviewed exact-head CI/full-suite and targeted hosted/browser acceptance for each
 release. Merge/startup alone does not certify strategic usefulness or physical
 journey completion.
+
+The backend objective contract is specified in
+[directional trade objective assessment](../trade-decision/objective-assessment.md).
+It supports automatic hypothesis context and explicit request-scoped goals while
+leaving discovery ordering, final action authority and the UI rollout separate.

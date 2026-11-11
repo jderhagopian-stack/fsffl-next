@@ -14,6 +14,8 @@ from fsffl.state.models import FaabAsset, PickAsset, PlayerAsset
 from fsffl.trade_decision import calculate_bilateral_economic_net, summarize_bilateral_trade_economics
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.trade_decision.economics import EconomicConcept
+from fsffl.trade_decision.intrinsic_roster_economics import adjust_bilateral_intrinsic_net_for_mandatory_cuts
+from fsffl.trade_decision.roster_legality import TeamRosterLegalityResolution
 from fsffl.value.career_forward_intrinsic import CareerForwardIntrinsicShadowContract
 from fsffl.value.models import AssetValueProfile, IntrinsicDynastyValueEstimate, ValueDistribution, ValueScale
 
@@ -41,6 +43,7 @@ def build_trade_intrinsic_evidence(
     *,
     record,
     publication_validator: PublicationValidator,
+    roster_resolutions: tuple[TeamRosterLegalityResolution, ...] | None = None,
 ) -> dict[str, object]:
     """Bind same-publication raw asset economics, separately for each horizon.
 
@@ -78,6 +81,10 @@ def build_trade_intrinsic_evidence(
         for asset in leg.sends
         if isinstance(asset, PlayerAsset)
     }
+    # Required cuts come from the existing Decision result, not a second roster
+    # resolution. Include their source rows in this same bounded read.
+    if roster_resolutions is not None:
+        selected.update(cut.player_id for resolution in roster_resolutions for cut in resolution.cuts)
     non_player_ids = {
         asset.pick_id if isinstance(asset, PickAsset) else f"faab:{asset.amount}"
         for leg in (proposal.side_a, proposal.side_b)
@@ -138,10 +145,16 @@ def build_trade_intrinsic_evidence(
         economics = summarize_bilateral_trade_economics(proposal, profiles)
         net = calculate_bilateral_economic_net(economics)
         sides = (net.side_a.intrinsic, net.side_b.intrinsic)
+        adjusted = None
+        if roster_resolutions is not None:
+            adjusted = adjust_bilateral_intrinsic_net_for_mandatory_cuts(
+                net, roster_resolutions, cut_values=values, scale=scale,
+            ).model_dump(mode="json")
         return {
             "status": "complete" if all(side.status.value == "complete" for side in sides) else "incomplete",
             "side_a": net.side_a.intrinsic.model_dump(mode="json"),
             "side_b": net.side_b.intrinsic.model_dump(mode="json"),
+            "roster_adjusted": adjusted,
             "missing_evidence": {
                 "side_a": [item.model_dump(mode="json") for item in economics.side_a.missing_evidence if item.concept is EconomicConcept.INTRINSIC_VALUE],
                 "side_b": [item.model_dump(mode="json") for item in economics.side_b.missing_evidence if item.concept is EconomicConcept.INTRINSIC_VALUE],
