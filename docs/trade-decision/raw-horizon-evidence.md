@@ -56,3 +56,10 @@ The next backend tranche adds optional `roster_adjusted` evidence inside each
 horizon using the existing authoritative required-cut resolution. Original raw
 sent/received totals remain unchanged. See [objective assessment](objective-assessment.md)
 for request-scoped goals, both-team directional interpretation and limitations.
+
+Bounded discovery separates the same reader from transaction binding: one
+publication-validated, request-local native-value projection can serve many
+packages. An immutable snapshot weak reference avoids repeating full-State
+serialization and prevents cross-snapshot reuse without retaining the State or
+source contract. Each package retains exact generation/source/horizon identity;
+this introduces no model recalculation or durable cache.

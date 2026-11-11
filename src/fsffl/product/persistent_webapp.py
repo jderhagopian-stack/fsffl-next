@@ -766,9 +766,21 @@ def _published_trade_intrinsic_provider(context, proposal, result=None):
     )
 
 
+def _published_discovery_horizon_provider(context, player_ids):
+    """One request-local projection from the existing memory/publication owners."""
+    from .trade_intrinsic_evidence import read_published_trade_horizon_values
+
+    return read_published_trade_horizon_values(
+        context, player_ids=player_ids,
+        record=_career_intrinsic_coordinator.readiness_record_for_state(context),
+        publication_validator=_presentation_continuity.career_generation_hint_matches,
+    )
+
+
 app = _webapp.create_app(
     runtime_store=_runtime_store,
     trade_horizon_evidence_provider=_published_trade_intrinsic_provider,
+    discovery_horizon_provider=_published_discovery_horizon_provider,
     behavioral_coordinator=_behavioral_coordinator,
     state_loader=_load_sleeper_state_under_heavy_claim,
     forecast_loader=_forecast_loader,

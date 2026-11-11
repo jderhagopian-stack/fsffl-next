@@ -110,3 +110,8 @@ The backend objective contract is specified in
 [directional trade objective assessment](../trade-decision/objective-assessment.md).
 It supports automatic hypothesis context and explicit request-scoped goals while
 leaving discovery ordering, final action authority and the UI rollout separate.
+
+The opt-in [bounded discovery backend](bounded-strategic-discovery.md) reuses
+canonical packages, cheap Decision economics and both-team objective evidence.
+Its package/visit/screen budgets and remaining acceptance gates are explicit;
+existing Explore/ForYou activation remains a separate reviewed step.

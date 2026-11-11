@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from contextlib import nullcontext
+from contextlib import nullcontext, ExitStack
 import os
 import secrets
 from pathlib import Path
@@ -89,6 +89,7 @@ from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
 from .trade_opportunity_runtime import build_trade_opportunity_evaluation
 from .trade_objectives import TradeSearchInstructions, build_trade_objective_assessment, validate_search_instructions
+from .strategic_discovery import StrategicDiscoveryRequest, prepare_discovery, build_strategic_discovery
 from .trade_simulation_runtime import build_post_trade_simulation_comparison
 from .waiver_action_runtime import build_actionable_waiver_comparison
 from .what_if_runtime import build_player_unavailable_scenario
@@ -914,6 +915,7 @@ def create_app(
     trade_evaluator: TradeEvaluator | None = None,
     trade_intrinsic_provider: TradeIntrinsicProvider | None = None,
     trade_horizon_evidence_provider: TradeHorizonEvidenceProvider | None = None,
+    discovery_horizon_provider: Callable | None = None,
     behavioral_coordinator: BehavioralRuntimeCoordinator | None = None,
     capability_readiness_reader: CapabilityReadinessReader | None = None,
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
@@ -2829,6 +2831,35 @@ def create_app(
             _logger.warning("Trade objective assessment unavailable error_type=%s", type(exc).__name__)
             assessment = {"status": "unavailable", "decision_effect": "no_disposition_change"}
         return {**result, "objective_assessment": assessment}
+
+    @application.post("/api/opportunities/strategic-discover")
+    def discover_strategic_trades(request: StrategicDiscoveryRequest, user_id: str = Depends(require_beta_user)):
+        # Validate instructions before admission/source work, then re-read after
+        # admission so a waiting request cannot consume a superseded publication.
+        try:
+            prepare_discovery(store.get(user_id), request)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        with ExitStack() as stack:
+            try:
+                stack.enter_context(heavy_work_coordinator.claim(kind="strategic_discovery",
+                    key=f"{user_id}:strategic-discovery", timeout_seconds=0.05)
+                    if heavy_work_coordinator is not None else nullcontext())
+            except (TimeoutError, RuntimeError, MemoryError) as exc:
+                raise HTTPException(status_code=409, detail="Intelligence work is busy; retry discovery shortly") from exc
+            runtime = store.get(user_id)
+            try:
+                prepare_discovery(runtime, request)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            read = None
+            if discovery_horizon_provider is not None:
+                player_ids = frozenset(entry.player_id for team in runtime.league_state.team_states for entry in team.roster)
+                try:
+                    read = discovery_horizon_provider(runtime, player_ids)
+                except Exception as exc:
+                    _logger.warning("Discovery raw horizons unavailable error_type=%s", type(exc).__name__)
+            return build_strategic_discovery(runtime, request, read=read)
 
     @application.post("/api/trade-center/analyze")
     def analyze_trade(request: EvaluateTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
