@@ -558,12 +558,13 @@ def build_dynamic_rostered_career_contract(
         failures={},
     )
     _reclaim_career_stage("career-before-expanded-shapley")
-    _, _, composition_failures, expanded_current = _merge_candidate_inputs(
-        base_year_one=base_year_one,
-        base_future=base_future,
-        candidate=composition_candidate,
-        rules=state.league.rules,
-    )
+    with sample_rss_phase("career.expanded_current_shapley"):
+        _, _, composition_failures, expanded_current = _merge_candidate_inputs(
+            base_year_one=base_year_one,
+            base_future=base_future,
+            candidate=composition_candidate,
+            rules=state.league.rules,
+        )
     if composition_failures or expanded_current is None:
         raise ValueError(
             "complete dynamic Career inputs failed full-cohort Shapley composition: "
@@ -575,12 +576,13 @@ def build_dynamic_rostered_career_contract(
         failures={},
     )
     _reclaim_career_stage("career-before-final-composition")
-    expanded, component_failures = _compose_dynamic_career_contract(
-        context=context,
-        frozen_reference=frozen_reference,
-        expanded_current=expanded_current,
-        candidate_ids=tuple(sorted(complete)),
-        components=complete_components,
-    )
+    with sample_rss_phase("career.expanded_long_horizon_composition"):
+        expanded, component_failures = _compose_dynamic_career_contract(
+            context=context,
+            frozen_reference=frozen_reference,
+            expanded_current=expanded_current,
+            candidate_ids=tuple(sorted(complete)),
+            components=complete_components,
+        )
     failures.update(component_failures)
     return result(contract=expanded, failures=failures)

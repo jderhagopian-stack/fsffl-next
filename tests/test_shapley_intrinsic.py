@@ -3,6 +3,8 @@ from __future__ import annotations
 import math
 import random
 
+import pytest
+
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot
 from fsffl.value.shapley_intrinsic import (
     FROZEN_INTRINSIC_DISCOUNT,
@@ -149,6 +151,38 @@ def test_scenario_plan_optimization_is_bit_for_bit_equivalent_to_frozen_loop() -
     assert optimized.standard_errors == legacy.standard_errors
     assert optimized.full_value == legacy.full_value
     assert optimized.efficiency_residual == legacy.efficiency_residual
+
+
+@pytest.mark.parametrize("team_count", [2, 8, 12, 16])
+@pytest.mark.parametrize("superflex", [False, True])
+def test_prepared_scenarios_match_frozen_loop_across_formats_and_ties(team_count, superflex):
+    rules = _rules().model_copy(update={
+        "team_count": team_count,
+        "lineup": tuple(r for r in _rules().lineup
+                        if superflex or r.slot != RosterSlot.SUPERFLEX),
+    })
+    # More candidates than slots forces replacements, including equal weights,
+    # dummy/negative production and either side of the accepted 1e-12 threshold.
+    values = (-10.0, 0.0, 1e-13, 1.0, 1.0 + 5e-13, 1.0 + 2e-12, 10.0, 37.5)
+    players = [(f"p{i:03}", ("QB", "RB", "WR", "TE")[i % 4], values[(i // 4) % len(values)])
+               for i in range(team_count * 12)]
+    scenarios = {
+        pid: ((weight,) if i % 3 == 0 else (weight, -1.0, 0.0, 1e-13, 1.0, 1.0 + 2e-12, 40.0))
+        for i, (pid, _, weight) in enumerate(players)
+    }
+    caps = subset_caps_from_rules(rules)
+    expected = _legacy_scenario_loop(players, scenarios, caps, permutations=64, seed=73)
+    assert monte_carlo_shapley_scenarios(players, scenarios, caps, permutations=64, seed=73) == expected
+
+
+@pytest.mark.parametrize("permutations", [1, 64])
+def test_no_feasible_slot_and_empty_cohort_preserve_frozen_statistics(permutations):
+    caps = subset_caps_from_rules(_rules().model_copy(update={"lineup": ()}))
+    players = [("a", "QB", 10.0), ("b", "WR", -1.0)]
+    scenarios = {"a": (10.0, 0.0, 50.0), "b": (-1.0, 10.0, 0.0)}
+    for cohort, weights in ((players, scenarios), ([], {})):
+        expected = _legacy_scenario_loop(cohort, weights, caps, permutations=permutations, seed=73)
+        assert monte_carlo_shapley_scenarios(cohort, weights, caps, permutations=permutations, seed=73) == expected
 
 
 def test_future_rights_are_discounted_without_holding_cost() -> None:

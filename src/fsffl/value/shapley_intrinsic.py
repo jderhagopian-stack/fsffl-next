@@ -248,16 +248,37 @@ def monte_carlo_shapley_scenarios(
     by_id = {player_id: (position, float(weight)) for player_id, position, weight in players}
     sums = {player_id: [0.0] * len(scenario_values[player_id]) for player_id in player_ids}
     sums_sq = {player_id: [0.0] * len(scenario_values[player_id]) for player_id in player_ids}
+    # Scenario weights are invariant across permutations. Keep the same float
+    # conversion/clamp as marginal_from_plan, once per input instead of once
+    # per permutation. These bounded rows live only for this calculation.
+    weights = {
+        player_id: tuple(max(0.0, float(value)) for value in scenario_values[player_id])
+        for player_id in player_ids
+    }
 
     for _ in range(permutations):
         order = player_ids[:]; rng.shuffle(order); basis = _Basis(caps)
         for player_id in order:
             position, baseline = by_id[player_id]
             plan = basis.replacement_plan(position)
-            for index, scenario in enumerate(scenario_values[player_id]):
-                marginal, _ = basis.marginal_from_plan(scenario, plan)
-                sums[player_id][index] += marginal
-                sums_sq[player_id][index] += marginal * marginal
+            if plan is None:
+                # Every scenario and the baseline have a zero marginal. Adding
+                # zero cannot change these nonnegative accumulators or basis.
+                continue
+            totals = sums[player_id]
+            squares = sums_sq[player_id]
+            if plan[0] is None:
+                for index, marginal in enumerate(weights[player_id]):
+                    totals[index] += marginal
+                    squares[index] += marginal * marginal
+            else:
+                old_weight = plan[1]
+                assert old_weight is not None
+                threshold = old_weight + 1e-12
+                for index, weight in enumerate(weights[player_id]):
+                    marginal = weight - old_weight if weight > threshold else 0.0
+                    totals[index] += marginal
+                    squares[index] += marginal * marginal
             basis.add_with_plan(player_id, position, baseline, plan)
 
     estimates = {
