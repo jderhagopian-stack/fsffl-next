@@ -11,7 +11,7 @@ from fsffl.product.intrinsic_background import IntrinsicBuildStatus
 from fsffl.product.runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 from fsffl.product.trade_intrinsic_evidence import build_trade_intrinsic_evidence
 from fsffl.product.webapp import create_app
-from fsffl.state.models import PlayerAsset, PickAsset
+from fsffl.state.models import FaabAsset, PlayerAsset, PickAsset
 from fsffl.trade_decision.models import BilateralTradeProposal, TradeLeg
 from fsffl.value.shapley_intrinsic_contract import discounted_three_year_shapley_value
 
@@ -222,3 +222,18 @@ def test_source_scoring_qualifications_and_input_assumptions_survive():
     assert result['source']['scoring_coordinate_limitation'] == 'Source qualification retained'
     assert result['source']['ignored_long_term_residual_rule_stats'] == ['qualified-stat']
     assert result['input_assumptions'] == {'a1': 'Accepted sparse Current evidence'}
+
+
+@pytest.mark.parametrize('kind', ['pick', 'faab'])
+def test_cross_kind_identity_cannot_borrow_player_intrinsic(kind):
+    runtime, record, proposal = fixture()
+    player_id = 'a1' if kind == 'pick' else 'faab:10'
+    other_asset = PickAsset(pick_id=player_id) if kind == 'pick' else FaabAsset(amount=10)
+    proposal = proposal.model_copy(update={
+        'side_a': TradeLeg(team_id='alpha', sends=(PlayerAsset(player_id=player_id),)),
+        'side_b': TradeLeg(team_id='beta', sends=(other_asset,)),
+    })
+    result = build(runtime, record, proposal)
+    assert result['status'] == 'unavailable'
+    assert 'ambiguous' in result['reason']
+    assert result['three_year'] is None and result['career'] is None

@@ -10,7 +10,7 @@ from collections.abc import Callable
 from math import isfinite
 
 from fsffl.analytics.dynasty_position_room import build_three_year_intrinsic_player_values
-from fsffl.state.models import PlayerAsset
+from fsffl.state.models import FaabAsset, PickAsset, PlayerAsset
 from fsffl.trade_decision import calculate_bilateral_economic_net, summarize_bilateral_trade_economics
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.trade_decision.economics import EconomicConcept
@@ -78,6 +78,16 @@ def build_trade_intrinsic_evidence(
         for asset in leg.sends
         if isinstance(asset, PlayerAsset)
     }
+    non_player_ids = {
+        asset.pick_id if isinstance(asset, PickAsset) else f"faab:{asset.amount}"
+        for leg in (proposal.side_a, proposal.side_b)
+        for asset in leg.sends
+        if isinstance(asset, (PickAsset, FaabAsset))
+    }
+    # The existing mean binder indexes profiles by asset ID. Do not let an
+    # identifier shared across kinds lend a player's evidence to a pick/FAAB.
+    if selected & non_player_ids:
+        return unavailable_trade_intrinsic("Asset identifiers are ambiguous across asset kinds")
     source_rows = tuple(row for row in contract.estimates if row.player_id in selected)
     if contract.player_count != len(contract.estimates) or len({r.player_id for r in contract.estimates}) != len(contract.estimates):
         return unavailable_trade_intrinsic("The raw source cohort identity is inconsistent")
