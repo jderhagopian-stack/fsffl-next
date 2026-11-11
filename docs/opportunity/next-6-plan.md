@@ -179,3 +179,14 @@ NEXT-6 may search and surface candidates under these conditions, but must preser
 Build the common **candidate lifecycle and action-authority contract** first.
 
 This is the key architectural guardrail that lets the Opportunity Engine explore aggressively without presenting every theoretical candidate as a realistic recommendation.
+
+
+## Strategic discovery extension
+
+The active product direction is specified in
+[strategic-trade-discovery.md](strategic-trade-discovery.md). Default discovery
+uses evidence-based inferred owner priorities; explicit managed-user search
+priorities/constraints override that inference for the search while leaving
+upstream facts and economics intact. Counterparty assumptions remain labelled
+as inferred or hypothetical. Extend existing multi-objective/package contracts
+and validate economic consumer coverage before widening the production search.

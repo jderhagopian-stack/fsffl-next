@@ -77,3 +77,31 @@ def test_posture_ui_selects_only_server_owned_views() -> None:
     assert '"posture_views": posture_views' in workspace
     assert '"owner_strategic_posture_is_search_lens_only": True' in workspace
     assert '"browser_selects_server_owned_posture_views_only": True' in workspace
+
+
+def test_priority_resolution_distinguishes_automatic_inference_and_user_instruction(monkeypatch):
+    import fsffl.product.opportunity_posture as module
+    marker = object()
+    monkeypatch.setattr(module, "calculated_competitive_state", lambda context: CalculatedCompetitiveState.CONTENDER)
+    automatic = module.posture_payload(marker, OwnerStrategicPosture.DEFAULT_CALCULATED)
+    directed = module.posture_payload(marker, OwnerStrategicPosture.REBUILD)
+    assert automatic["effective_posture"] == "win_now"
+    assert automatic["priority_resolution"]["source"] == "calculated_competitive_state_hypothesis"
+    assert directed["effective_posture"] == "rebuild"
+    assert directed["priority_resolution"]["source"] == "explicit_search_instruction"
+    assert directed["priority_resolution"]["inferred_posture"] == "win_now"
+    assert directed["priority_resolution"]["user_instruction_overrides_inference"] is True
+    assert automatic["calculated_competitive_state"] == directed["calculated_competitive_state"] == "contender"
+    for result in (automatic, directed):
+        assert result["priority_resolution"]["owner_behavior_used"] is False
+        assert result["priority_resolution"]["durable_owner_preference_claimed"] is False
+    restored = module.posture_payload(marker, OwnerStrategicPosture.DEFAULT_CALCULATED)
+    assert restored == automatic  # A temporary override does not mutate inference.
+
+
+def test_unknown_state_default_is_labelled_as_fallback(monkeypatch):
+    import fsffl.product.opportunity_posture as module
+    monkeypatch.setattr(module, "calculated_competitive_state", lambda context: CalculatedCompetitiveState.UNKNOWN)
+    result = module.posture_payload(object(), OwnerStrategicPosture.DEFAULT_CALCULATED)
+    assert result["effective_posture"] == "balanced"
+    assert result["priority_resolution"]["source"] == "unknown_state_balanced_fallback"
