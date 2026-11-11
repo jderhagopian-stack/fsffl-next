@@ -7,19 +7,20 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '../../src/fsffl/product/static');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 function fixture() {
+  const listeners = {};
   const nodes = new Map();
   const node = () => ({innerHTML: '', textContent: '', disabled: false,
     addEventListener() {}, querySelector() { return null; }, querySelectorAll() { return []; },
-    appendChild() {}, remove() {}, setAttribute() {}, classList: {add() {}}});
+    dataset: {}, appendChild() {}, remove() {}, setAttribute() {}, classList: {add() {}}});
   for (const id of ['#analyze-trade', '#simulate-trade', '#explore-price',
     '#trade-analysis-empty', '#trade-simulation-result', '#trade-frontier-result', '#focal-assets']) nodes.set(id, node());
-  const calls = [], renders = [];
-  const c = vm.createContext({console, Set, Promise, setTimeout, clearTimeout,
+  const calls = [], renders = [], observers = [];
+  const c = vm.createContext({console, Set, Promise, setTimeout, clearTimeout, setInterval: () => 1, clearInterval() {}, addEventListener: (event, callback) => {listeners[event] = callback;},
     state: {context: {league_id: 'l', team_id: 'a', state_id: 's1', publication_generation_id: 'g1'}, route: 'trade_center'},
     qs: s => nodes.get(s) || null, qsa: () => [], escapeHtml: String,
     document: {querySelector: s => nodes.get(s) || null, querySelectorAll: () => [],
       createElement: node, addEventListener() {}, head: node(), documentElement: node()},
-    MutationObserver: class {observe() {}}, requestAnimationFrame() {},
+    MutationObserver: class {constructor(callback) {observers.push(callback);} observe() {} disconnect() {}}, requestAnimationFrame() {},
     api: (url, options) => new Promise((resolve, reject) => calls.push({url, options, resolve, reject})),
   });
   nodes.get('#trade-analysis-empty').querySelector = selector => ['#trade-simulation-result', ':scope > div'].includes(selector) ? node() : null;
@@ -34,7 +35,7 @@ function fixture() {
   c.renderTradeFrontierResult = r => renders.push(['frontier', r.tag]);
   for (const name of ['ensureTradeFilters', 'renderTradeCounterparties', 'renderTradeDraftSide', 'renderTradeAssetList']) c[name] = () => {};
   const result = tag => ({tag, state_id_before: 's1', focal_team_id: 'a', counterparty_team_id: 'b', scenario_simulation_count: 50000});
-  return {c, run, load, nodes, calls, renders, result};
+  return {c, run, load, nodes, calls, renders, result, observers, listeners};
 }
 async function requests() {
   for (const action of ['simulateTradeDraft', 'analyzeTradeDraft', 'exploreTradeFrontier']) {
@@ -124,8 +125,50 @@ async function handoffs() {
   assert.deepEqual(adopted, ['carried'], 'fresh Trade Center reuses the exact simulation once');
   assert.equal(g.run("tradeUiState.focalSelected.has('p1')"), true, 'obsolete handoff cannot clear new draft');
   assert.equal(g.calls.filter(c => c.url.includes('simulate')).length, 0);
+  const stale = g.c.fsfflOpenOpportunityInTradeCenter({...row, send: [{asset_ref: 'not-owned'}]});
+  await flush();
+  g.calls.filter(c => c.url === '/api/trade-center/browser').at(-1).resolve({state_id: 's1', focal_team: {team_id: 'a', assets: [{asset_ref: 'p1'}]}, counterparties: [{team_id: 'b', assets: [{asset_ref: 'p2'}]}]});
+  await stale;
+  assert.equal(g.run('tradeUiState.focalSelected.size'), 0, 'unowned assets are rejected');
+  assert.deepEqual(adopted, ['carried'], 'unowned package cannot reuse evidence');
+}
+async function partialAnalysisSurvives() {
+  const f = fixture(), messages = [];
+  const host = f.nodes.get('#trade-analysis-empty');
+  host.appendChild = node => messages.push(node);
+  f.c.renderTradeAnalysis = () => {host.innerHTML = '<section>Roster evidence retained</section>';};
+  f.load('progressive_delivery.js');
+  const button = f.nodes.get('#analyze-trade');
+  const pending = f.listeners.click({target: {closest: selector => selector === '#analyze-trade' ? button : null}, preventDefault() {}, stopImmediatePropagation() {}});
+  f.calls[0].resolve(f.result('quick')); await flush();
+  f.calls[1].resolve(f.result('analysis')); await flush();
+  f.calls[2].reject(new Error('Forecast unavailable')); await pending;
+  assert.match(host.innerHTML, /Roster evidence retained/);
+  assert.match(messages.at(-1).textContent, /Season impact could not finish.*Forecast unavailable/);
+  assert.equal(messages.at(-1).dataset.kind, 'error');
+}
+function lazyBindings() {
+  const f = fixture();
+  f.load('opportunity_spotlights.js'); // Must not require the not-yet-loaded screen.
+  f.load('trade_workflow_handoff.js');
+  assert.equal(f.run("typeof renderOppBody"), 'undefined');
+  const listeners = [];
+  const script = {tagName: 'SCRIPT', src: '/static/opportunities.js?v=test',
+    addEventListener: (event, callback) => {if (event === 'load') listeners.push(callback);}};
+  for (const observer of f.observers) observer([{addedNodes: [script]}]);
+  f.load('opportunities.js');
+  f.run("renderOppBody=()=> 'base-render'");
+  const original = f.c.renderOppBody, originalSpotlights = f.c.oppInjectSpotlights;
+  for (const callback of listeners) callback();
+  assert.notEqual(f.c.renderOppBody, original, 'late-loaded opportunity render receives enhancements');
+  assert.notEqual(f.c.oppInjectSpotlights, originalSpotlights, 'late spotlights receive handoff controls');
+  assert.equal(f.c.renderOppBody(), 'base-render');
+  const installed = f.c.renderOppBody;
+  for (const callback of listeners) callback();
+  assert.equal(f.c.renderOppBody, installed, 'bindings install once');
 }
 (async () => {
+  lazyBindings(); await partialAnalysisSurvives();
   await requests(); await counters(); await browsers(); await handoffs();
   console.log('trade evidence lifecycle: passed');
 })().catch(error => {console.error(error); process.exitCode = 1;});

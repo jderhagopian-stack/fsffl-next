@@ -48,6 +48,7 @@
     const generation=++tradeGeneration;activeTradeKey=key;
     button.disabled=true;button.textContent='Checking trade…';
     try{if(typeof invalidateTradeScenario==='function')invalidateTradeScenario()}catch(_){}
+    let rosterAnalysisReady=false;
     const host=document.querySelector('#trade-analysis-empty');if(host)host.innerHTML='<div class="fsffl-progressive-loading"><p class="eyebrow">Checking this trade</p><h3>Building the quick governed view…</h3></div>';
     try{
       const quick=await request('/api/trade-center/quick',{method:'POST',body:JSON.stringify(payload)});
@@ -60,7 +61,7 @@
       const analysis=await request('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
       if(!responseMatchesState(analysis,flowStateId))throw new Error('League data changed during roster analysis. The earlier quick view remains scoped to the prior state; run this trade again.');
-      if(typeof renderTradeAnalysis==='function')renderTradeAnalysis(analysis);
+      if(typeof renderTradeAnalysis==='function'){renderTradeAnalysis(analysis);rosterAnalysisReady=true;}
       ['#simulate-trade','#explore-price'].forEach(selector=>{const action=document.querySelector(selector);if(action)action.disabled=false});
       appendProgress('Roster analysis ready. Full 50,000-run season simulation running…');
       button.textContent='Full simulation running…';
@@ -72,7 +73,8 @@
       appendProgress(simulation.scenario_cache_hit?'Full analysis ready · exact Simulation result reused.':'Full analysis ready · 50,000-run simulation complete.','ready');
     }catch(error){
       if(!currentTrade(generation,key))return;
-      if(document.querySelector('.fsffl-progressive-answer'))appendProgress(`Deeper analysis could not finish: ${error.message}. The quick package evidence above remains valid for its stated scope.`,'error');
+      if(rosterAnalysisReady)appendProgress(`Season impact could not finish: ${error.message}. The roster analysis above remains available for its stated league snapshot.`,'error');
+      else if(document.querySelector('.fsffl-progressive-answer'))appendProgress(`Deeper analysis could not finish: ${error.message}. The quick package evidence above remains valid for its stated scope.`,'error');
       else if(host)host.innerHTML=`<div class="chart-empty"><p>Trade analysis is unavailable: ${esc(error.message)}</p></div>`;
     }finally{
       if(generation===tradeGeneration){activeTradeKey=null;button.textContent='Analyze Trade';try{if(typeof updateAnalyzeTradeState==='function')updateAnalyzeTradeState()}catch(_){button.disabled=false}}

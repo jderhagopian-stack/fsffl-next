@@ -33,6 +33,12 @@ Regression evidence:
   remains unavailable; all four POST routes reject incorrectly owned assets;
   the canonical State remains unchanged.
 
+Opportunity enhancements install when the lazy Opportunity module loads, rather
+than assuming its globals exist at initial page load. The served classic-script
+syntax regression covers the shell and Opportunity module, including the corrected
+player-stat row builder. A failure of the final Simulation step preserves the
+completed roster analysis and explains which stage could not finish.
+
 These bounded tests do not certify an authenticated hosted browser session or
 full production economic outcomes. They preserve those existing authorities and
 cover the presentation boundary changed here. No scoring, forecasts, intrinsic
