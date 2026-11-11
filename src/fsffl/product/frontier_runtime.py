@@ -223,6 +223,7 @@ def build_negotiation_frontier(
 
     return {
         "seed_point_id": result.seed_point_id,
+        "state_id_before": league_state.state_id,
         "focal_team_id": focal_team_id,
         "counterparty_team_id": counter_leg.team_id,
         "evaluated_count": len(result.evaluated),

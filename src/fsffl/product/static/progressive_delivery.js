@@ -11,11 +11,11 @@
 
   function productState(){try{return typeof state!=='undefined'?state:null}catch(_){return null}}
   function opportunityStore(){try{return typeof fsfflOpportunityState!=='undefined'?fsfflOpportunityState:null}catch(_){return null}}
-  function contextKey(){const c=productState()?.context||{};return`${c.league_id||''}|${c.team_id||''}|${c.state_id||''}`}
+  function contextKey(){if(typeof tradeContextKey==='function')return tradeContextKey();const c=productState()?.context||{};return`${c.league_id||''}|${c.team_id||''}|${c.state_id||''}`}
   function stableDraft(){try{if(typeof tradeDraftPayload!=='function')return null;const p=tradeDraftPayload();return{counterparty_team_id:p.counterparty_team_id,focal_asset_refs:[...(p.focal_asset_refs||[])].sort(),counterparty_asset_refs:[...(p.counterparty_asset_refs||[])].sort()}}catch(_){return null}}
-  function draftKey(){const p=stableDraft();return p?`${contextKey()}|${p.counterparty_team_id}|${p.focal_asset_refs.join(',')}|${p.counterparty_asset_refs.join(',')}`:null}
+  function draftKey(){if(typeof tradeScopeKey==='function')return tradeScopeKey();const p=stableDraft();return p?`${contextKey()}|${p.counterparty_team_id}|${p.focal_asset_refs.join(',')}|${p.counterparty_asset_refs.join(',')}`:null}
   function currentTrade(generation,key){return generation===tradeGeneration&&key===draftKey()}
-  function responseMatchesState(result,expectedStateId){return !expectedStateId||result?.state_id_before===expectedStateId}
+  function responseMatchesState(result,expectedStateId){return(!expectedStateId||result?.state_id_before===expectedStateId)&&(typeof tradeResultMatchesContext!=='function'||tradeResultMatchesContext(result))}
   function currentStateId(){return productState()?.context?.state_id||null}
   function esc(value){try{return typeof escapeHtml==='function'?escapeHtml(value):String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}catch(_){return String(value??'')}}
   function request(path,options){return api(path,options)}
@@ -43,11 +43,13 @@
   async function runProgressiveTrade(event){
     const button=event.target?.closest?.('#analyze-trade');if(!button||button.disabled)return;
     event.preventDefault();event.stopImmediatePropagation();
-    const key=draftKey(),payload=stableDraft(),startingStateId=currentStateId();if(!key||!payload)return;
+    let key=draftKey();const payload=stableDraft(),startingStateId=currentStateId();if(!key||!payload)return;
     if(activeTradeKey===key)return;
+    try{if(typeof invalidateTradeScenario==='function')invalidateTradeScenario()}catch(_){}
+    key=draftKey();
     const generation=++tradeGeneration;activeTradeKey=key;
     button.disabled=true;button.textContent='Checking trade…';
-    try{if(typeof invalidateTradeScenario==='function')invalidateTradeScenario()}catch(_){}
+    let rosterAnalysisReady=false;
     const host=document.querySelector('#trade-analysis-empty');if(host)host.innerHTML='<div class="fsffl-progressive-loading"><p class="eyebrow">Checking this trade</p><h3>Building the quick governed view…</h3></div>';
     try{
       const quick=await request('/api/trade-center/quick',{method:'POST',body:JSON.stringify(payload)});
@@ -60,7 +62,7 @@
       const analysis=await request('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
       if(!responseMatchesState(analysis,flowStateId))throw new Error('League data changed during roster analysis. The earlier quick view remains scoped to the prior state; run this trade again.');
-      if(typeof renderTradeAnalysis==='function')renderTradeAnalysis(analysis);
+      if(typeof renderTradeAnalysis==='function'){renderTradeAnalysis(analysis);rosterAnalysisReady=true;}
       ['#simulate-trade','#explore-price'].forEach(selector=>{const action=document.querySelector(selector);if(action)action.disabled=false});
       appendProgress('Roster analysis ready. Full 50,000-run season simulation running…');
       button.textContent='Full simulation running…';
@@ -72,7 +74,8 @@
       appendProgress(simulation.scenario_cache_hit?'Full analysis ready · exact Simulation result reused.':'Full analysis ready · 50,000-run simulation complete.','ready');
     }catch(error){
       if(!currentTrade(generation,key))return;
-      if(document.querySelector('.fsffl-progressive-answer'))appendProgress(`Deeper analysis could not finish: ${error.message}. The quick package evidence above remains valid for its stated scope.`,'error');
+      if(rosterAnalysisReady)appendProgress(`Season impact could not finish: ${error.message}. The roster analysis above remains available for its stated league snapshot.`,'error');
+      else if(document.querySelector('.fsffl-progressive-answer'))appendProgress(`Deeper analysis could not finish: ${error.message}. The quick package evidence above remains valid for its stated scope.`,'error');
       else if(host)host.innerHTML=`<div class="chart-empty"><p>Trade analysis is unavailable: ${esc(error.message)}</p></div>`;
     }finally{
       if(generation===tradeGeneration){activeTradeKey=null;button.textContent='Analyze Trade';try{if(typeof updateAnalyzeTradeState==='function')updateAnalyzeTradeState()}catch(_){button.disabled=false}}
