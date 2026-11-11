@@ -1,4 +1,13 @@
-const tradeUiState={browser:null,counterpartyTeamId:'',focalSelected:new Set(),counterpartySelected:new Set(),loading:false,valueLenses:null};
+const tradeUiState={browser:null,counterpartyTeamId:'',focalSelected:new Set(),counterpartySelected:new Set(),loading:false,valueLenses:null,draftRevision:0,requests:{},loadSequence:0,loadPromise:null,loadContextKey:null,browserContextKey:null};
+
+function tradeContextKey(){const c=state?.context||{};return JSON.stringify([c.league_id||null,c.team_id||null,c.state_id||null,c.capability_readiness?.publication?.generation_id||c.publication_generation_id||null])}
+function tradeScopeKey(){const p=tradeDraftPayload();return JSON.stringify([tradeContextKey(),tradeUiState.draftRevision,p.counterparty_team_id,[...p.focal_asset_refs].sort(),[...p.counterparty_asset_refs].sort()])}
+function tradeBeginRequest(kind){const id=(tradeUiState.requests[kind]||0)+1;tradeUiState.requests[kind]=id;return{kind,id,key:tradeScopeKey()}}
+function tradeScopeIsCurrent(request){return Boolean(request&&request.key===tradeScopeKey())}
+function tradeRequestIsCurrent(request){return tradeScopeIsCurrent(request)&&tradeUiState.requests[request.kind]===request.id}
+function tradeResultMatchesContext(result,counterpartyTeamId=tradeUiState.counterpartyTeamId){return Boolean(result&&result.state_id_before===state?.context?.state_id&&result.focal_team_id===state?.context?.team_id&&result.counterparty_team_id===counterpartyTeamId)}
+function tradeEvidenceMatchesCurrent(result){return tradeResultMatchesContext(result)&&tradeUiState.browser?.state_id===state?.context?.state_id&&tradeUiState.browser?.focal_team?.team_id===state?.context?.team_id&&(!tradeUiState.browserContextKey||tradeUiState.browserContextKey===tradeContextKey())}
+function tradeRequireCurrentEvidence(result){if(!tradeEvidenceMatchesCurrent(result))throw new Error('League data changed. Reload Trade Center and run this package again')}
 
 function tradeMarketEstimate(option){
   const assetId=option?.player_id||option?.pick_id;
@@ -78,8 +87,8 @@ function renderTradeAssetList(side){
   assets.forEach(option=>{const button=document.createElement('button');button.type='button';button.className=`asset-option${selected.has(option.asset_ref)?' selected':''}`;button.innerHTML=`<span><strong ${option.player_id?`data-player-intelligence-id="${escapeHtml(option.player_id)}"`:''}>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.detail||option.asset_kind)}</small></span>${tradeValueMarkup(option)}`;button.addEventListener('click',()=>toggleTradeAsset(side,option.asset_ref));container.appendChild(button)})
 }
 
-function updateAnalyzeTradeState(){const button=qs('#analyze-trade');if(!button)return;button.disabled=!(tradeUiState.counterpartyTeamId&&tradeUiState.focalSelected.size&&tradeUiState.counterpartySelected.size)}
-function invalidateTradeScenario(){['#simulate-trade','#explore-price'].forEach(selector=>{const button=qs(selector);if(button)button.disabled=true});['#trade-simulation-result','#trade-frontier-result'].forEach(selector=>{const target=qs(selector);if(target)target.innerHTML=''})}
+function updateAnalyzeTradeState(){const button=qs('#analyze-trade');if(!button)return;button.textContent='Analyze Trade';button.disabled=!(tradeUiState.browser?.state_id===state?.context?.state_id&&tradeUiState.browser?.focal_team?.team_id===state?.context?.team_id&&(!tradeUiState.browserContextKey||tradeUiState.browserContextKey===tradeContextKey())&&tradeUiState.counterpartyTeamId&&tradeUiState.focalSelected.size&&tradeUiState.counterpartySelected.size)}
+function invalidateTradeScenario(){tradeUiState.draftRevision+=1;window.fsfflLastQuickFrontier=null;['#simulate-trade','#explore-price'].forEach(selector=>{const button=qs(selector);if(button){button.disabled=true;button.textContent=selector==='#simulate-trade'?'Simulate impact':'Explore price frontier'}});['#trade-simulation-result','#trade-frontier-result'].forEach(selector=>{const target=qs(selector);if(target)target.innerHTML=''})}
 function toggleTradeAsset(side,assetRef){const selected=selectedRefs(side);selected.has(assetRef)?selected.delete(assetRef):selected.add(assetRef);invalidateTradeScenario();renderTradeDraftSide(side);renderTradeAssetList(side);updateAnalyzeTradeState();renderTradeAnalysisNotice()}
 
 function renderTradeCounterparties(){
@@ -173,34 +182,45 @@ function chooseTradeCounterparty(teamId){tradeUiState.counterpartyTeamId=teamId;
 
 async function analyzeTradeDraft(){
   const button=qs('#analyze-trade');if(button){button.disabled=true;button.textContent='Analyzing…'}invalidateTradeScenario();renderTradeAnalysisNotice('Building governed bilateral consequences…');
-  try{const result=await api('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(tradeDraftPayload())});renderTradeAnalysis(result);['#simulate-trade','#explore-price'].forEach(selector=>{const action=qs(selector);if(action)action.disabled=false})}
-  catch(error){renderTradeAnalysisNotice(`Trade analysis is unavailable for this draft: ${error.message}. Your visual draft is preserved.`)}finally{if(button){button.textContent='Analyze Trade';updateAnalyzeTradeState()}}
+  const request=tradeBeginRequest('analysis');
+  try{const result=await api('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(tradeDraftPayload())});if(!tradeRequestIsCurrent(request))return;tradeRequireCurrentEvidence(result);renderTradeAnalysis(result);['#simulate-trade','#explore-price'].forEach(selector=>{const action=qs(selector);if(action)action.disabled=false})}
+  catch(error){if(tradeRequestIsCurrent(request))renderTradeAnalysisNotice(`Trade analysis is unavailable for this draft: ${error.message}. Your visual draft is preserved.`)}finally{if(button&&tradeRequestIsCurrent(request)){button.textContent='Analyze Trade';updateAnalyzeTradeState()}}
 }
 
 async function simulateTradeDraft(){
+  const request=tradeBeginRequest('simulation');
   const button=qs('#simulate-trade');if(button){button.disabled=true;button.textContent='Simulating…'}const target=qs('#trade-simulation-result');if(target)target.innerHTML='<div class="chart-empty"><p>Running the changed roster through governed NEXT-4 simulation…</p></div>';
-  try{const result=await api('/api/trade-center/simulate',{method:'POST',body:JSON.stringify(tradeDraftPayload())});renderTradeSimulationResult(result)}
-  catch(error){const node=qs('#trade-simulation-result');if(node)node.innerHTML=`<div class="chart-empty"><p>Post-trade simulation is unavailable: ${escapeHtml(error.message)}</p></div>`}
-  finally{if(button){button.disabled=false;button.textContent='Simulate impact'}}
+  try{const result=await api('/api/trade-center/simulate',{method:'POST',body:JSON.stringify(tradeDraftPayload())});if(!tradeRequestIsCurrent(request))return;tradeRequireCurrentEvidence(result);renderTradeSimulationResult(result)}
+  catch(error){const node=qs('#trade-simulation-result');if(node&&tradeRequestIsCurrent(request))node.innerHTML=`<div class="chart-empty"><p>Post-trade simulation is unavailable: ${escapeHtml(error.message)}</p></div>`}
+  finally{if(button&&tradeRequestIsCurrent(request)){button.disabled=false;button.textContent='Simulate impact'}}
 }
 
 async function exploreTradeFrontier(){
+  const request=tradeBeginRequest('frontier');
   const button=qs('#explore-price');if(button){button.disabled=true;button.textContent='Exploring…'}const target=qs('#trade-frontier-result');if(target)target.innerHTML='<div class="chart-empty"><p>Walking the governed NEXT-6 negotiation frontier…</p></div>';
-  try{const result=await api('/api/trade-center/frontier',{method:'POST',body:JSON.stringify(tradeDraftPayload())});renderTradeFrontierResult(result)}
-  catch(error){const node=qs('#trade-frontier-result');if(node)node.innerHTML=`<div class="chart-empty"><p>Price frontier is unavailable: ${escapeHtml(error.message)}</p></div>`}
-  finally{if(button){button.disabled=false;button.textContent='Explore price frontier'}}
+  try{const result=await api('/api/trade-center/frontier',{method:'POST',body:JSON.stringify(tradeDraftPayload())});if(!tradeRequestIsCurrent(request))return;tradeRequireCurrentEvidence(result);renderTradeFrontierResult(result)}
+  catch(error){const node=qs('#trade-frontier-result');if(node&&tradeRequestIsCurrent(request))node.innerHTML=`<div class="chart-empty"><p>Price frontier is unavailable: ${escapeHtml(error.message)}</p></div>`}
+  finally{if(button&&tradeRequestIsCurrent(request)){button.disabled=false;button.textContent='Explore price frontier'}}
 }
 
-async function loadTradeCenter(){
-  if(!state.context?.team_id||tradeUiState.loading)return;tradeUiState.loading=true;const focalAssets=qs('#focal-assets');if(focalAssets)focalAssets.innerHTML='<p class="trade-empty">Loading canonical assets…</p>';
-  try{const browserPromise=api('/api/trade-center/browser');const valuesPromise=state.valueCatalog?Promise.resolve(state.valueCatalog):(state.context?.value_ready?api('/api/values').catch(()=>null):Promise.resolve(null));const[browser,values]=await Promise.all([browserPromise,valuesPromise]);tradeUiState.browser=browser;
+function loadTradeCenter(){
+  if(!state.context?.team_id)return Promise.resolve();
+  const contextKey=tradeContextKey(),teamId=state.context.team_id,stateId=state.context.state_id;
+  if(tradeUiState.loadPromise&&tradeUiState.loadContextKey===contextKey)return tradeUiState.loadPromise;
+  const sequence=++tradeUiState.loadSequence;
+  const current=()=>sequence===tradeUiState.loadSequence&&contextKey===tradeContextKey();
+  tradeUiState.loadContextKey=contextKey;tradeUiState.loading=true;
+  const focalAssets=qs('#focal-assets');if(focalAssets)focalAssets.innerHTML='<p class="trade-empty">Loading canonical assets…</p>';
+  const pending=Promise.resolve().then(async()=>{
+  try{const browserPromise=api('/api/trade-center/browser');const valuesPromise=state.valueCatalog?Promise.resolve(state.valueCatalog):(state.context?.value_ready?api('/api/values').catch(()=>null):Promise.resolve(null));const[browser,values]=await Promise.all([browserPromise,valuesPromise]);if(!current())return;if(browser.state_id!==stateId||browser.focal_team?.team_id!==teamId)throw new Error('League data changed. Reopen Trade Center for the current roster');tradeUiState.browser=browser;tradeUiState.browserContextKey=contextKey;
     tradeUiState.valueLenses=null;
     void api('/api/league/value-lenses').then(payload=>{
-      if(tradeUiState.browser!==browser||state?.route!=='trade_center'||state.context?.state_id!==browser.state_id||payload?.league_state_id!==browser.state_id)return;
+      if(!current()||tradeUiState.browser!==browser||state?.route!=='trade_center'||state.context?.state_id!==browser.state_id||payload?.league_state_id!==browser.state_id)return;
       tradeUiState.valueLenses=payload;renderTradeAssetList('focal');renderTradeAssetList('counterparty');
     }).catch(()=>{});
     if(values)state.valueCatalog=values;if(tradeUiState.counterpartyTeamId&&!browser.counterparties.some(team=>team.team_id===tradeUiState.counterpartyTeamId))tradeUiState.counterpartyTeamId='';tradeUiState.focalSelected=new Set([...tradeUiState.focalSelected].filter(ref=>browser.focal_team.assets.some(item=>item.asset_ref===ref)));const counterparty=currentCounterparty();tradeUiState.counterpartySelected=new Set([...tradeUiState.counterpartySelected].filter(ref=>counterparty?.assets.some(item=>item.asset_ref===ref)));ensureTradeFilters('focal');ensureTradeFilters('counterparty');renderTradeCounterparties();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();invalidateTradeScenario();renderTradeAnalysisNotice();const label=qs('#trade-state-label span:last-child');if(label)label.textContent=`Canonical ownership · ${String(browser.state_id).slice(0,12)}…`}
-  catch(error){if(focalAssets)focalAssets.innerHTML=`<p class="trade-empty">Unable to load Trade Center: ${escapeHtml(error.message)}</p>`}finally{tradeUiState.loading=false}
+  catch(error){if(current()&&focalAssets)focalAssets.innerHTML=`<p class="trade-empty">Unable to load Trade Center: ${escapeHtml(error.message)}</p>`}finally{if(sequence===tradeUiState.loadSequence){tradeUiState.loading=false;tradeUiState.loadPromise=null}}
+  });tradeUiState.loadPromise=pending;return pending;
 }
 
 function wireTradeCenter(){
