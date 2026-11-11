@@ -132,6 +132,18 @@ async function handoffs() {
   assert.equal(g.run('tradeUiState.focalSelected.size'), 0, 'unowned assets are rejected');
   assert.deepEqual(adopted, ['carried'], 'unowned package cannot reuse evidence');
 }
+async function progressiveIdentity() {
+  for (const failure of ['wrong-team', 'edit-away-back']) {
+    const f = fixture(); f.load('progressive_delivery.js');
+    const button = f.nodes.get('#analyze-trade');
+    const pending = f.listeners.click({target: {closest: selector => selector === '#analyze-trade' ? button : null}, preventDefault() {}, stopImmediatePropagation() {}});
+    f.calls[0].resolve(f.result('quick')); await flush();
+    if (failure === 'edit-away-back') f.run("tradeUiState.counterpartySelected=new Set(['p3']);invalidateTradeScenario();tradeUiState.counterpartySelected=new Set(['p2']);invalidateTradeScenario()");
+    f.calls[1].resolve({...f.result('analysis'), focal_team_id: failure === 'wrong-team' ? 'other-team' : 'a'}); await pending;
+    assert.deepEqual(f.renders, [], `progressive ${failure} cannot render roster analysis`);
+    assert.equal(f.calls.length, 2, 'no Simulation started for rejected roster analysis');
+  }
+}
 async function partialAnalysisSurvives() {
   const f = fixture(), messages = [];
   const host = f.nodes.get('#trade-analysis-empty');
@@ -168,7 +180,7 @@ function lazyBindings() {
   assert.equal(f.c.renderOppBody, installed, 'bindings install once');
 }
 (async () => {
-  lazyBindings(); await partialAnalysisSurvives();
+  lazyBindings(); await progressiveIdentity(); await partialAnalysisSurvives();
   await requests(); await counters(); await browsers(); await handoffs();
   console.log('trade evidence lifecycle: passed');
 })().catch(error => {console.error(error); process.exitCode = 1;});

@@ -10,8 +10,8 @@ requests may still complete independently for the same unchanged draft.
 
 The existing Trade UI state owns these request markers. They do not cancel server
 computation, create an economic cache, or alter Decision/Simulation authority.
-The progressive Analyze sequence retains its own existing stage checks and uses
-the shared context identity. Counter responses now expose `state_id_before`, as
+The progressive Analyze sequence retains its existing stage checks and uses
+the shared draft revision, context identity and response team checks. Counter responses now expose `state_id_before`, as
 analysis and Simulation already do. The browser requires matching State and team
 identities before presenting those results.
 
