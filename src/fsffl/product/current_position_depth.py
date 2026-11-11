@@ -4,7 +4,9 @@ from typing import Literal
 
 from pydantic import Field
 
-from fsffl.forecast.in_season_orchestration import build_governed_in_season_outlook
+from fsffl.forecast.season_comparison import (
+    build_participation_adjusted_outlook, outlook_evidence_labels,
+)
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import FrozenModel, LeagueState, Position, RosterSlot
 from fsffl.team_utility.lineup import optimize_team_lineup
@@ -12,7 +14,7 @@ from fsffl.team_utility.models import LineupAssignment
 
 
 CURRENT_POSITION_DEPTH_MODEL_VERSION = (
-    "league-atlas-current-position-depth-v2:"
+    "league-atlas-current-position-depth-v3:shared-participation-outlook:"
     "completed-actuals-plus-ros:configured-slot-attribution"
 )
 
@@ -75,6 +77,16 @@ class CurrentPositionPlayerEvidence(FrozenModel):
     assigned_slot: RosterSlot | None = None
     assigned_slot_index: int | None = None
     season_outlook_failure: str | None = None
+    ros_basis: str | None = None
+    low_confidence: bool = False
+    participation_basis: str | None = None
+    participation_assumption: bool = False
+    participation_reason: str | None = None
+    participation_source: str | None = None
+    participation_source_version: str | None = None
+    participation_observed_at: str | None = None
+    ros_model_version: str | None = None
+    ros_as_of: str | None = None
 
 
 class CurrentPositionDepthContract(FrozenModel):
@@ -191,6 +203,7 @@ def build_current_position_depth_from_outlook(
     evidence_basis: str,
     completed_through_week: int,
     season_outlook_failures: dict[str, str] | None = None,
+    player_outlook_evidence: dict[str, dict[str, object]] | None = None,
 ) -> CurrentPositionDepthContract:
     """Build Current Position & Depth from governed season-outlook evidence.
 
@@ -374,6 +387,11 @@ def build_current_position_depth_from_outlook(
                     player_id=entry.player_id,
                     position=player.position,
                     roster_slot=entry.slot,
+                    **{key: value for key, value in (player_outlook_evidence or {}).get(entry.player_id, {}).items()
+                       if key in {"ros_basis", "low_confidence", "participation_basis",
+                                  "participation_assumption", "participation_reason", "participation_source",
+                                  "participation_source_version", "participation_observed_at",
+                                  "ros_model_version", "ros_as_of"}},
                     season_outlook_failure=(season_outlook_failures or {}).get(entry.player_id),
                     season_outlook_points=(
                         float(observation.distribution.mean)
@@ -433,15 +451,17 @@ def build_governed_current_position_depth(
     *,
     preseason_season_forecasts: tuple[ForecastObservation, ...],
     history_writer=None,
+    stats_source=None,
+    clock=None,
 ) -> CurrentPositionDepthContract:
     """Resolve the accepted governed Current authority and build slot strength."""
 
     try:
-        governed = build_governed_in_season_outlook(
+        governed, participation, _ = build_participation_adjusted_outlook(
             league_state,
-            preseason_season_forecasts=preseason_season_forecasts,
-            history_writer=history_writer,
-            allow_governed_fumbles_ros_gap=True,
+            preseason_forecasts=preseason_season_forecasts,
+            history_store=history_writer,
+            stats_source=stats_source, clock=clock,
         )
     except Exception as exc:
         return _unavailable_contract(
@@ -458,4 +478,12 @@ def build_governed_current_position_depth(
         evidence_basis=governed.evidence_basis,
         completed_through_week=governed.completed_through_week,
         season_outlook_failures=getattr(governed, "season_outlook_failures", {}),
+        player_outlook_evidence={
+            row.player_id: {
+                **outlook_evidence_labels(row, governed.evidence_basis, participation.get(row.player_id)),
+                "ros_model_version": row.model_version,
+                "ros_as_of": row.as_of.isoformat(),
+            }
+            for row in getattr(governed, "forward_forecasts", ())
+        },
     )
