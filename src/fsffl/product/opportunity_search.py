@@ -515,7 +515,10 @@ def _latest_season_forecast_means(runtime: UserRuntimeContext) -> dict[str, floa
         return {}
     latest: dict[str, object] = {}
     from .simulation_forecasts import current_forecast_coordinates
-    forecasts, horizon, cutoff = current_forecast_coordinates(state, evidence)
+    try:
+        forecasts, horizon, cutoff = current_forecast_coordinates(state, evidence)
+    except ValueError:
+        return {}
     for observation in forecasts:
         if (
             observation.metric != ForecastMetric.FANTASY_POINTS

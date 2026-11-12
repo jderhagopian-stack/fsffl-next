@@ -156,13 +156,18 @@ class SeasonComparisonService:
                 return replace(evidence, uncertainty_ready=False,
                     simulation_forward_forecasts=(), simulation_evaluation_as_of=cutoff,
                     simulation_source_state_id=state.state_id, simulation_basis="completed_actuals_only")
-            if not rows or cutoff.tzinfo is None or cutoff < state.as_of:
+            if cutoff.tzinfo is None or cutoff < state.as_of:
                 raise ValueError("Current participation-adjusted ROS evidence is unavailable")
             if any(row.horizon != ForecastHorizon.REST_OF_SEASON
                    or row.metric != ForecastMetric.FANTASY_POINTS or row.as_of > cutoff for row in rows):
                 raise ValueError("Invalid Simulation forward evidence coordinates")
+            active = {r.player_id for team in state.team_states for r in team.roster
+                      if r.slot.value not in ("IR", "TAXI")}
+            missing = tuple(sorted(active - {r.player_id for r in rows}))
             return replace(evidence,
-                           uncertainty_ready=(evidence.uncertainty_ready and payload.get("evidence_basis") != "preseason_remaining_prior"),
+                           uncertainty_ready=(evidence.uncertainty_ready and not missing
+                               and payload.get("evidence_basis") != "preseason_remaining_prior"),
+                           simulation_missing_player_ids=missing,
                            simulation_forward_forecasts=rows,
                            simulation_evaluation_as_of=cutoff,
                            simulation_source_state_id=state.state_id,

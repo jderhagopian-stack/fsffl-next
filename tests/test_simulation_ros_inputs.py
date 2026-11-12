@@ -202,7 +202,8 @@ def test_native_ros_preserves_completed_standings_and_has_no_actual_points_in_fo
     assert {row.week for row in result.scenario_preparation.forward_weekly_scoring} == {3, 4}
 
 
-def test_refresh_prepares_forward_evidence_before_simulation_and_publishes_it(monkeypatch):
+@pytest.mark.parametrize("complete", [True, False])
+def test_refresh_prepares_forward_evidence_before_simulation_and_publishes_it(monkeypatch, complete):
     from fastapi.testclient import TestClient
     from fsffl.product.webapp import create_app
     from fsffl.product.runtime import PrivateBetaRuntimeStore
@@ -210,6 +211,9 @@ def test_refresh_prepares_forward_evidence_before_simulation_and_publishes_it(mo
     from time import monotonic, sleep
     monkeypatch.setenv('FSFFL_BETA_AUTH', '0')
     state, prepared = fixture()
+    if not complete:
+        prepared = replace(prepared, uncertainty_ready=False, simulation_missing_player_ids=('opp',),
+            simulation_forward_forecasts=prepared.simulation_forward_forecasts[:-1])
     store = PrivateBetaRuntimeStore()
     steps = []
     def prepare(context, evidence):
@@ -236,7 +240,7 @@ def test_refresh_prepares_forward_evidence_before_simulation_and_publishes_it(mo
             break
         sleep(.01)
     assert job['status'] == 'completed', job
-    assert steps == ['forward', 'simulation']
+    assert steps == (['forward', 'simulation'] if complete else ['forward'])
     assert store.get('local-beta-user').forecast_evidence.simulation_forward_forecasts is not None
 
 
@@ -366,3 +370,38 @@ def test_current_outlook_rejects_another_cohort_even_when_state_matches():
     result = service.current_position_depth(state, evidence)
     assert result.status == 'unavailable'
     assert 'published Simulation cohort' in result.reason
+
+
+def test_missing_ros_withholds_only_simulation_and_keeps_known_rows_and_market_analysis():
+    from fsffl.product.runtime import UserRuntimeContext
+    from fsffl.product.trade_analysis_runtime import build_private_beta_trade_analysis
+    from fsffl.trade_decision.models import BilateralTradeProposal, TradeLeg
+    from fsffl.state.models import PlayerAsset
+    state, evidence = fixture()
+    known = evidence.simulation_forward_forecasts[:-1]
+    def builder(s, **kwargs):
+        return {'version': SEASON_COMPARISON_VERSION,'league_state_id':s.state_id,'season':2026,
+            'completed_through_week':4,'as_of':evidence.simulation_evaluation_as_of.isoformat(),
+            'players':{},'forward_forecasts':[r.model_dump(mode='json') for r in known],
+            'evidence_basis':'current_rest_of_season'}
+    service = SeasonComparisonService(builder=builder)
+    context = SimpleNamespace(league_state=state)
+    service.prepare(context)
+    partial = service.simulation_evidence(context, evidence)
+    assert partial.simulation_missing_player_ids == ('opp',)
+    assert not partial.uncertainty_ready
+    assert partial.simulation_forward_forecasts == known
+    assert partial.league_scored_forecasts == evidence.league_scored_forecasts
+    with pytest.raises(ValueError,match='coverage is incomplete'):
+        require_forward_simulation_evidence(state,partial)
+    with pytest.raises(ValueError,match='coverage is incomplete'):
+        _build_default_simulation(state,partial,simulation_count=100)
+    runtime = UserRuntimeContext(user_id='u',league_state=state,selected_team_id='a',
+        forecast_evidence=partial,value_evidence=market(state))
+    proposal = BilateralTradeProposal(proposal_id='missing-forward',as_of=state.as_of,
+        side_a=TradeLeg(team_id='a',sends=(PlayerAsset(player_id='starter'),)),
+        side_b=TradeLeg(team_id='b',sends=(PlayerAsset(player_id='opp'),)))
+    result = build_private_beta_trade_analysis(runtime,proposal,focal_team_id='a')
+    assert result['economic_net'] is not None
+    assert result['position_strength'] is None
+    assert result['forecast_input']['missing_player_ids'] == ['opp']

@@ -18,7 +18,9 @@ def test_live_market_values_are_joined_into_my_team_view() -> None:
 def test_simulation_floor_forecasts_do_not_masquerade_as_direct_player_projection() -> None:
     source = Path("src/fsffl/product/simulation_runtime.py").read_text(encoding="utf-8")
     analytics_join = source.split("team_views: list[TeamAnalyticsView] = []", 1)[1]
-    assert "forecasts=forecasts" in analytics_join
+    assert "forecasts=display_forecasts + forecasts" in analytics_join
+    # Preserved direct season observations are separate from the native ROS
+    # scoring inputs. Neither presentation path may expose provisional floors.
     assert "forecasts=effective_forecasts" not in analytics_join
 
 

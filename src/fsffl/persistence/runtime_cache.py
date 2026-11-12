@@ -47,6 +47,8 @@ def encode_forecast_evidence(evidence: LiveForecastEvidence) -> dict[str, object
                 "simulation_source_state_id", "simulation_basis"):
         if payload.get(key) is None:
             payload.pop(key, None)
+    if not payload.get("simulation_missing_player_ids"):
+        payload.pop("simulation_missing_player_ids", None)
     return payload
 
 

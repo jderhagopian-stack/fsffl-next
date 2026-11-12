@@ -118,8 +118,11 @@ def build_private_beta_trade_analysis(
     coordinates = {}
     if forecast_evidence is not None:
         from .simulation_forecasts import current_forecast_coordinates
-        forecasts, horizon, cutoff = current_forecast_coordinates(league_state, forecast_evidence)
-        coordinates = {"horizon": horizon, "forecast_as_of": cutoff}
+        try:
+            forecasts, horizon, cutoff = current_forecast_coordinates(league_state, forecast_evidence)
+            coordinates = {"horizon": horizon, "forecast_as_of": cutoff}
+        except ValueError as exc:
+            warnings.append(str(exc))
     value_evidence = runtime.value_evidence
     cardinal_profiles = cardinal_market_profiles(value_evidence)
     market_values = {

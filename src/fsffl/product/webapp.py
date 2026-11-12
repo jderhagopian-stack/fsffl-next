@@ -492,6 +492,8 @@ def _runtime_context_payload(
             if evidence is not None
             else []
         ),
+        "simulation_forecast_basis": getattr(evidence, "simulation_basis", None) if evidence is not None else None,
+        "simulation_missing_player_ids": list(getattr(evidence, "simulation_missing_player_ids", ())) if evidence is not None else [],
         "simulation_ready": simulation is not None,
         "simulation_count": simulation.simulation_result.simulation_count if simulation is not None else None,
         "value_ready": value_evidence is not None and bool(value_evidence.estimates),
@@ -2029,7 +2031,10 @@ def create_app(
             )
             if (simulation_forecast_preparer is not None and (working_state.completed_through_week or 0) > 0
                     and evidence.simulation_forward_forecasts is None and evidence.uncertainty_ready):
-                with heavy_claim("forecast", f"{user_id}:{working_state.state_id}:forward"):
+                with heavy_claim(
+                    "forecast",
+                    f"{user_id}:{working_state.state_id}:forward",
+                ):
                     require_heavy_phase_ownership("forecast", expected_state_id=working_state.state_id)
                     evidence = simulation_forecast_preparer(store.working_context(user_id), evidence)
                     with store.lifecycle_operation(user_id):

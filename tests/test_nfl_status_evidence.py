@@ -19,7 +19,7 @@ from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 
 
 def _state():
-    receipts = SEASON_UNAVAILABILITY_RECEIPTS
+    receipts = tuple(row for row in SEASON_UNAVAILABILITY_RECEIPTS if row.first_unavailable_week == 1)
     # Synthetic league/teams; only the public receipt player identities are real.
     return LeagueState(
         league=League(league_id='fixture',name='Fixture',season=2026,
@@ -48,8 +48,10 @@ def test_official_receipts_are_not_backdated_into_october_13_state():
     capture = SEASON_UNAVAILABILITY_RECEIPTS[0].captured_at
     assert recorded_status_based_zero_ros_evidence(state,as_of=capture-timedelta(microseconds=1)) == {}
     admitted = recorded_status_based_zero_ros_evidence(state,as_of=capture)
-    assert set(admitted) == {row.player_id for row in SEASON_UNAVAILABILITY_RECEIPTS}
+    assert set(admitted) == {row.player_id for row in SEASON_UNAVAILABILITY_RECEIPTS if row.captured_at <= capture and row.first_unavailable_week == 1}
     for row in SEASON_UNAVAILABILITY_RECEIPTS:
+        if row.player_id not in admitted:
+            continue
         evidence = admitted[row.player_id]
         assert evidence.observed_at == row.captured_at
         assert evidence.source == row.source_url
@@ -175,7 +177,7 @@ def test_hosted_candidate_default_consumes_receipts_without_overriding_provider_
     assert not hasattr(result.ros_runtime, 'raw_ensemble')
     assert not hasattr(result.ros_runtime, 'source_observations')
     assert result.ros_runtime.successful_source_ids == ('cbs','razzball')
-    assert set(result.year_one_league) == {row.player_id for row in SEASON_UNAVAILABILITY_RECEIPTS}
+    assert set(result.year_one_league) == {row.player_id for row in SEASON_UNAVAILABILITY_RECEIPTS if row.captured_at <= capture and row.first_unavailable_week == 1}
     assert all(row.distribution.mean == 0 for row in result.year_one_league.values())
     assert all(mode.startswith('status_based_zero_ros:out_for_season:official-season-unavailability-v1:')
                for mode in result.year_one_evidence_modes.values())
@@ -672,3 +674,32 @@ def test_new_completion_gate_preserves_unsigned_priority_and_no_source_failure(m
         provider_case='absent',position=Position.QB,depth_order=None,
         capture_override=SINGLE_SOURCE_COMPLETION_EFFECTIVE_AT)
     assert pid in missing.failures and pid not in missing.year_one_league
+
+
+def test_forward_season_ending_fact_is_not_whole_season_absence_or_backdated():
+    fact = next(row for row in SEASON_UNAVAILABILITY_RECEIPTS if row.first_unavailable_week > 1)
+    base = _state()
+    player = Player(player_id=fact.player_id, full_name=fact.player_name, position=fact.position)
+    status = base.player_states[0].model_copy(update={'player_id':fact.player_id})
+    state = base.model_copy(update={'completed_through_week':fact.first_unavailable_week-1,
+        'players':(player,), 'player_states':(status,), 'team_states':(
+            base.team_states[0].model_copy(update={'roster':(RosterEntry(player_id=fact.player_id,slot='BENCH'),)}),
+            base.team_states[1])})
+    assert fact.player_id not in recorded_status_based_zero_ros_evidence(state,
+        as_of=fact.captured_at-timedelta(microseconds=1))
+    admitted = recorded_status_based_zero_ros_evidence(state,as_of=fact.captured_at)[fact.player_id]
+    assert not admitted.entire_season_unavailable  # earned actuals/residuals are not erased
+    assert admitted.status == 'out_for_season'
+    earlier = state.model_copy(update={'completed_through_week':fact.first_unavailable_week-2})
+    assert fact.player_id not in recorded_status_based_zero_ros_evidence(earlier,as_of=fact.captured_at)
+
+
+def test_legacy_whole_season_receipt_fingerprints_remain_exact():
+    import hashlib,json
+    for row in SEASON_UNAVAILABILITY_RECEIPTS:
+        if row.first_unavailable_week != 1:
+            continue
+        legacy = asdict(row)
+        legacy.pop('first_unavailable_week')
+        legacy.update(captured_at=row.captured_at.isoformat(), fact='officially_reported_out_for_entire_season')
+        assert row.fingerprint == hashlib.sha256(json.dumps(legacy,sort_keys=True).encode()).hexdigest()

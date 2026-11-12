@@ -65,3 +65,12 @@ new cache/worker/queue or new persistence connection owner. Reusing the cohort
 removes the formerly separate Current Position & Depth acquisition during
 publication. Hosted peak memory and whole-refresh duration still require normal
 run measurements; local fixtures do not establish those numbers.
+
+Expected coverage gaps withhold only current Simulation authority. Their player
+identities are exposed explicitly; the owned refresh can still publish coherent
+Forecast, Value and Intrinsic evidence. Fast trade analysis retains Market
+accounting while current roster consequences stay unavailable, and broad search
+can retain structural/future hypotheses without inventing missing current points.
+Confirmed season-ending facts distinguish full-season absence from absence after
+a specified completed week, preserving earned actuals and the historical capture
+fence. A practice-squad role is not automatically a new zero-production policy.

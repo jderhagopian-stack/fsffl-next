@@ -8,6 +8,8 @@ def simulation_forecasts(evidence):
 
 
 def require_forward_simulation_evidence(state, evidence, baseline=None, *, changed_state=False):
+    if getattr(evidence, "simulation_missing_player_ids", ()):
+        raise ValueError("Current ROS coverage is incomplete; no confirmed competitive outcomes are available")
     if getattr(evidence, "simulation_forward_forecasts", None) is not None and (
         getattr(evidence, "simulation_evaluation_as_of", None) is None
         or not getattr(evidence, "simulation_source_state_id", None)
@@ -36,6 +38,8 @@ def require_forward_simulation_evidence(state, evidence, baseline=None, *, chang
 def current_forecast_coordinates(state, evidence):
     """Shared current roster context; preserved full-season evidence stays separate."""
     from fsffl.forecast.models import ForecastHorizon
+    if getattr(evidence, "simulation_missing_player_ids", ()):
+        raise ValueError("Current ROS coverage is incomplete; current roster consequences are unavailable")
     forward = getattr(evidence, "simulation_forward_forecasts", None)
     if forward is not None:
         return forward, ForecastHorizon.REST_OF_SEASON, evidence.simulation_evaluation_as_of
@@ -44,7 +48,9 @@ def current_forecast_coordinates(state, evidence):
 
 
 def current_forecast_identity(state, evidence):
-    _, horizon, cutoff = current_forecast_coordinates(state, evidence)
-    return {'basis': getattr(evidence, 'simulation_basis', None) or evidence.evidence_basis,
+    from fsffl.forecast.models import ForecastHorizon
+    horizon = (ForecastHorizon.REST_OF_SEASON if getattr(evidence, "simulation_forward_forecasts", None) is not None else ForecastHorizon.SEASON)
+    cutoff = getattr(evidence, "simulation_evaluation_as_of", None) or state.as_of
+    return {'missing_player_ids': list(getattr(evidence, 'simulation_missing_player_ids', ())),'basis': getattr(evidence, 'simulation_basis', None) or evidence.evidence_basis,
             'horizon': horizon.value, 'evaluation_as_of': cutoff.isoformat(),
             'source_state_id': getattr(evidence, 'simulation_source_state_id', None)}

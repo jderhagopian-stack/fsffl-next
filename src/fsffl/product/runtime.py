@@ -264,6 +264,7 @@ class LiveForecastEvidence:
     simulation_evaluation_as_of: datetime | None = None
     simulation_source_state_id: str | None = None
     simulation_basis: str | None = None
+    simulation_missing_player_ids: tuple[str, ...] = ()
 
 
 LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]

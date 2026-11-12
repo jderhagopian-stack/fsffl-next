@@ -1,6 +1,6 @@
 """Recorded official NFL facts, acquired independently of product requests.
 
-Season-unavailability receipts establish whole-season absence; separate current
+Season-unavailability receipts establish whole or remaining-season absence; separate current
 role receipts only fence active-role eligibility. Neither supplies a player
 projection, injury multiplier, signing probability or inferred return date.
 Capture time deliberately fences historical replay.
@@ -19,12 +19,17 @@ class SeasonUnavailabilityReceipt:
     season: int
     source_url: str
     captured_at: datetime
+    first_unavailable_week: int = 1
 
     @property
     def fingerprint(self) -> str:
         # Hash the normalized recorded fact, not a claimed HTML byte capture.
         payload = {**asdict(self), "captured_at": self.captured_at.isoformat(),
                    "fact": "officially_reported_out_for_entire_season"}
+        if self.first_unavailable_week == 1:
+            payload.pop("first_unavailable_week")  # exact legacy identity
+        else:
+            payload["fact"] = "officially_reported_out_for_remaining_season"
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
@@ -46,6 +51,13 @@ SEASON_UNAVAILABILITY_RECEIPTS = (
         "sleeper:player:13353", "Chris Brazzell", "WR", 2026,
         "https://www.panthers.com/news/rookie-wide-receiver-chris-brazzell-to-miss-the-entire-2026-season",
         _CAPTURED_AT,
+    ),
+    # Official club report read 2026-11-12. Capture is never backdated to
+    # publication. This is forward absence after W9, not zero earned actuals.
+    SeasonUnavailabilityReceipt(
+        "sleeper:player:10232", "Michael Wilson", "WR", 2026,
+        "https://www.azcardinals.com/news/michael-wilson-sidelined-for-season-with-neck-injury",
+        datetime(2026, 11, 12, 2, 8, 24, tzinfo=UTC), first_unavailable_week=10,
     ),
 )
 

@@ -102,10 +102,11 @@ def recorded_status_based_zero_ros_evidence(
             source_version=f"official-season-unavailability-v1:{receipt.fingerprint}",
             observed_at=receipt.captured_at,
             no_expected_2026_participation=True, season=receipt.season,
-            entire_season_unavailable=True,
+            entire_season_unavailable=receipt.first_unavailable_week == 1,
         )
         for receipt in SEASON_UNAVAILABILITY_RECEIPTS
         if receipt.season == league_state.league.season
+        and 1 <= receipt.first_unavailable_week <= (league_state.completed_through_week or 0) + 1
         and receipt.captured_at <= as_of.astimezone(UTC)
         and receipt.player_id in roster_ids
         and receipt.player_id in players
