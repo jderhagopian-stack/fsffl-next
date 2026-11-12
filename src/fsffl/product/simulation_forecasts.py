@@ -8,6 +8,8 @@ def simulation_forecasts(evidence):
 
 
 def require_forward_simulation_evidence(state, evidence, baseline=None, *, changed_state=False):
+    if getattr(evidence, "simulation_basis", None) == "completed_postseason_requires_factual_bracket":
+        raise ValueError("Current postseason Simulation requires factual completed-bracket evidence")
     if getattr(evidence, "simulation_missing_player_ids", ()):
         raise ValueError("Current ROS coverage is incomplete; no confirmed competitive outcomes are available")
     if getattr(evidence, "simulation_forward_forecasts", None) is not None and (
@@ -54,3 +56,10 @@ def current_forecast_identity(state, evidence):
     return {'missing_player_ids': list(getattr(evidence, 'simulation_missing_player_ids', ())),'basis': getattr(evidence, 'simulation_basis', None) or evidence.evidence_basis,
             'horizon': horizon.value, 'evaluation_as_of': cutoff.isoformat(),
             'source_state_id': getattr(evidence, 'simulation_source_state_id', None)}
+
+
+def forward_evidence_needs_preparation(state, evidence):
+    """Full-season reuse does not establish an exact-State forward cohort."""
+    return bool((state.completed_through_week or 0) > 0 and (
+        evidence.simulation_forward_forecasts is None
+        or evidence.simulation_source_state_id != state.state_id))

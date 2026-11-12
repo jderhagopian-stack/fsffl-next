@@ -405,3 +405,64 @@ def test_missing_ros_withholds_only_simulation_and_keeps_known_rows_and_market_a
     assert result['economic_net'] is not None
     assert result['position_strength'] is None
     assert result['forecast_input']['missing_player_ids'] == ['opp']
+
+
+def test_completed_postseason_withholds_simulation_without_failing_outlook():
+    from fsffl.team_utility import resolved_playoff_rules_from_league_state
+    state, evidence = fixture()
+    rules = state.league.rules.model_copy(update={'playoff_team_count':2, 'playoff_start_week':15})
+    start = canonical_week_window(2026,16)[0]
+    state = state.model_copy(update={'league':state.league.model_copy(update={'rules':rules}),
+        'completed_through_week':15, 'as_of':start})
+    assert resolved_playoff_rules_from_league_state(state).round_weeks == (15,)
+    rows = tuple(r.model_copy(update={'period_start':start,'as_of':start}) for r in evidence.simulation_forward_forecasts)
+    service = SeasonComparisonService(builder=lambda s,**kw:{
+        'version':SEASON_COMPARISON_VERSION,'league_state_id':s.state_id,'season':2026,
+        'as_of':start.isoformat(),'completed_through_week':15,'players':{},
+        'evidence_basis':'current_rest_of_season',
+        'forward_forecasts':[r.model_dump(mode='json') for r in rows]})
+    context=SimpleNamespace(league_state=state)
+    service.prepare(context)
+    bound=service.simulation_evidence(context,evidence)
+    assert not bound.uncertainty_ready
+    assert bound.simulation_forward_forecasts == rows
+    assert bound.league_scored_forecasts == evidence.league_scored_forecasts
+    with pytest.raises(ValueError,match='factual completed-bracket'):
+        require_forward_simulation_evidence(state,bound)
+
+
+def test_owned_refresh_rebinds_reused_season_evidence_to_new_state(monkeypatch):
+    from fastapi.testclient import TestClient
+    from fsffl.product.webapp import create_app
+    from fsffl.product.runtime import PrivateBetaRuntimeStore
+    from time import monotonic,sleep
+    monkeypatch.setenv('FSFFL_BETA_AUTH','0')
+    state,old=fixture()
+    changed=state.model_copy(update={'as_of':state.as_of+timedelta(minutes=2)})
+    store=PrivateBetaRuntimeStore()
+    store.set_league_state('local-beta-user',state)
+    store.set_forecast_evidence('local-beta-user',old)
+    store.select_team('local-beta-user','a')
+    prepared=[]
+    def prepare(context,evidence):
+        assert evidence.league_scored_forecasts == old.league_scored_forecasts
+        prepared.append(context.league_state.state_id)
+        rows=tuple(r.model_copy(update={'as_of':changed.as_of}) for r in old.simulation_forward_forecasts)
+        return replace(evidence,simulation_source_state_id=changed.state_id,
+            simulation_evaluation_as_of=changed.as_of,simulation_forward_forecasts=rows)
+    app=create_app(runtime_store=store,state_loader=lambda _:changed,
+        forecast_loader=lambda _:pytest.fail('compatible preseason cohort should be reused'),
+        simulation_forecast_preparer=prepare,
+        simulation_loader=lambda s,e:_build_default_simulation(s,e,simulation_count=50),
+        value_loader=lambda _:market(changed))
+    client=TestClient(app)
+    response=client.post('/api/intelligence/jobs',json={})
+    assert response.status_code==200,response.text
+    deadline=monotonic()+5
+    while monotonic()<deadline:
+        job=client.get('/api/intelligence/jobs/current').json()
+        if job['status'] in ('completed','failed','interrupted'):break
+        sleep(.01)
+    assert job['status']=='completed',job
+    assert prepared==[changed.state_id]
+    assert store.get('local-beta-user').forecast_evidence.simulation_source_state_id==changed.state_id

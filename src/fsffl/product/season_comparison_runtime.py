@@ -156,6 +156,17 @@ class SeasonComparisonService:
                 return replace(evidence, uncertainty_ready=False,
                     simulation_forward_forecasts=(), simulation_evaluation_as_of=cutoff,
                     simulation_source_state_id=state.state_id, simulation_basis="completed_actuals_only")
+            from fsffl.team_utility import resolved_playoff_rules_from_league_state
+            playoff_rules = resolved_playoff_rules_from_league_state(state)
+            if (playoff_rules is not None and playoff_rules.round_weeks
+                    and min(playoff_rules.round_weeks) <= (state.completed_through_week or 0)):
+                # No accepted factual postseason bracket continuation exists.
+                # Withhold Simulation instead of resampling a completed round or
+                # failing the whole Forecast/Value/Intrinsic publication.
+                return replace(evidence, uncertainty_ready=False,
+                    simulation_forward_forecasts=rows, simulation_evaluation_as_of=cutoff,
+                    simulation_source_state_id=state.state_id,
+                    simulation_basis="completed_postseason_requires_factual_bracket")
             if cutoff.tzinfo is None or cutoff < state.as_of:
                 raise ValueError("Current participation-adjusted ROS evidence is unavailable")
             if any(row.horizon != ForecastHorizon.REST_OF_SEASON

@@ -87,3 +87,12 @@ the existing bounded producer-owned roster check; readers never fetch rosters.
 Earned actuals, frozen preseason comparisons and accepted future-year forecasts
 remain intact. Historical evaluations before policy admission retain their prior
 policy identity and cannot acquire later role facts.
+
+Compatible full-season evidence may be reused across States; the forward cohort
+must be prepared again whenever its source State changes, including a same-week
+roster change. Previous missing-ROS readiness does not become sticky in the new
+State. Completed postseason rounds require factual bracket continuation evidence
+that the current kernel does not yet accept. Such refreshes publish the outlook
+and other intelligence while explicitly withholding current Simulation, rather
+than resampling completed rounds or failing the whole publication. This is a
+known postseason capability limit, not a fabricated championship outcome.

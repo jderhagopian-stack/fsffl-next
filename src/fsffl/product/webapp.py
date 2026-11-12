@@ -1939,7 +1939,15 @@ def create_app(
             evidence = context.forecast_evidence
             simulation = context.simulation_analytics
             values = context.value_evidence
+            from .simulation_forecasts import forward_evidence_needs_preparation
+            stale_forward = (evidence is not None and simulation_forecast_preparer is not None
+                and forward_evidence_needs_preparation(working_state, evidence))
+            # Prior missing-ROS readiness must not become sticky in a new State.
+            if stale_forward and not evidence.uncertainty_ready:
+                evidence = None
             terminal_reuse = bool(
+                not stale_forward
+                and
                 evidence is not None
                 and values is not None
                 and (
@@ -2030,7 +2038,7 @@ def create_app(
                 "Evaluating governed NEXT-4 simulation authority in the working generation.",
             )
             if (simulation_forecast_preparer is not None and (working_state.completed_through_week or 0) > 0
-                    and evidence.simulation_forward_forecasts is None and evidence.uncertainty_ready):
+                    and forward_evidence_needs_preparation(working_state, evidence) and evidence.uncertainty_ready):
                 with heavy_claim(
                     "forecast",
                     f"{user_id}:{working_state.state_id}:forward",
