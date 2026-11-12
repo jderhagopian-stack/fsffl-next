@@ -286,8 +286,11 @@ def test_current_official_role_fences_backup_path_without_inventing_zero_or_back
 
 
 def _approved_ytd_state():
-    from fsffl.providers.nfl_status_evidence import NFL_ROLE_RECEIPTS
-    rows = tuple({row.player_id:row for row in sorted(NFL_ROLE_RECEIPTS, key=lambda row:row.captured_at)}.values())
+    from fsffl.providers.nfl_status_evidence import NFL_ROLE_RECEIPTS, YTD_ONLY_APPROVED_ROLES
+    # This fixture is the original three-role historical policy, not every
+    # future public fact appended to the provider's role ledger.
+    rows = tuple({row.player_id:row for row in sorted(NFL_ROLE_RECEIPTS, key=lambda row:row.captured_at)
+                  if YTD_ONLY_APPROVED_ROLES.get(row.player_id) == row.status}.values())
     capture = max(row.captured_at for row in rows)
     base = _state()
     return base.model_copy(update={

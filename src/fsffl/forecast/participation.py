@@ -5,7 +5,7 @@ Intrinsic Year-1 integration. No acquisition or fantasy-point calculation.
 """
 from __future__ import annotations
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Mapping
 from fsffl.state.models import LeagueState
 
@@ -38,6 +38,24 @@ UNSIGNED_YTD_POLICY_VERSION = "career-ytd-only-v2:universal-catalog-team-null-20
 UNSIGNED_YTD_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=UTC)
 IR_NO_PROJECTION_POLICY_VERSION = "career-ytd-only-v2:exact-state-ir-no-projection-20261024"
 IR_NO_PROJECTION_POLICY_APPROVED_AT = datetime(2026, 10, 24, 20, 19, 21, tzinfo=UTC)
+PRACTICE_SQUAD_POLICY_VERSION = "practice-squad-no-ros-v1:verified-role-no-provider-rows"
+PRACTICE_SQUAD_POLICY_APPROVED_AT = datetime(2026, 11, 12, 5, 27, 51, tzinfo=UTC)
+
+
+def practice_squad_policy_version(as_of: datetime) -> str | None:
+    if as_of.tzinfo is None:
+        raise ValueError("practice-squad cutoff must be timezone-aware")
+    return PRACTICE_SQUAD_POLICY_VERSION if as_of >= PRACTICE_SQUAD_POLICY_APPROVED_AT else None
+
+
+def practice_squad_no_projection_receipt(player_id, *, receipts, available_projection_rows, source_ready):
+    """A missing row in a healthy cohort, not a source outage or partial row."""
+    receipt = receipts.get(player_id)
+    if (receipt is None or not receipt.source_version.startswith(PRACTICE_SQUAD_POLICY_VERSION)
+            or not source_ready or not available_projection_rows
+            or any(row.player_id == player_id for row in available_projection_rows)):
+        return None
+    return receipt
 
 # User-directed correction. Earlier publications/replays retain their prior
 # source-policy identity; a subsequent governed capture admits this rule.
@@ -142,8 +160,20 @@ def recorded_ytd_only_year_one_evidence(
     # Preserve the pinned historical receipt read for deterministic replay and
     # dependency accounting; fresh acquired receipts are an additive override.
     roles = dict(recorded_nfl_role_receipts(league_state, as_of=as_of))
+    ps_policy = practice_squad_policy_version(as_of)
+    if ps_policy is not None:
+        from fsffl.providers.nfl_status_evidence import canonical_practice_squad_role_receipts
+        for pid, row in canonical_practice_squad_role_receipts(league_state, as_of=as_of).items():
+            if pid not in roles or row.captured_at >= roles[pid].captured_at:
+                roles[pid] = row
     if verified_roles is not None:
-        roles.update(verified_roles)
+        for pid, row in verified_roles.items():
+            old = roles.get(pid)
+            if (ps_policy is not None and old is not None
+                    and "practice_squad" in (old.status, row.status)
+                    and row.captured_at < old.captured_at):
+                continue
+            roles[pid] = row
     if as_of < YTD_ONLY_POLICY_APPROVED_AT:
         return {}
     result = {}
@@ -154,6 +184,15 @@ def recorded_ytd_only_year_one_evidence(
             if as_of < UNSIGNED_YTD_POLICY_APPROVED_AT:
                 continue
             version, approved_at = UNSIGNED_YTD_POLICY_VERSION, UNSIGNED_YTD_POLICY_APPROVED_AT
+        elif row.status == "practice_squad":
+            player = next((p for p in league_state.players if p.player_id == pid), None)
+            owned = any(r.player_id == pid for team in league_state.team_states for r in team.roster)
+            if (ps_policy is None or not owned or player is None or not row.nfl_team
+                    or player.nfl_team != row.nfl_team or player.position.value != row.position
+                    or league_state.league.season != row.season
+                    or not row.captured_at <= as_of < row.captured_at + timedelta(hours=6)):
+                continue
+            version, approved_at = ps_policy, PRACTICE_SQUAD_POLICY_APPROVED_AT
         elif YTD_ONLY_APPROVED_ROLES.get(pid) == row.status:
             version, approved_at = YTD_ONLY_POLICY_VERSION, YTD_ONLY_POLICY_APPROVED_AT
         else:

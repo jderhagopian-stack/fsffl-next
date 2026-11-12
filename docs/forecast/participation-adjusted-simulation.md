@@ -73,4 +73,17 @@ accounting while current roster consequences stay unavailable, and broad search
 can retain structural/future hypotheses without inventing missing current points.
 Confirmed season-ending facts distinguish full-season absence from absence after
 a specified completed week, preserving earned actuals and the historical capture
-fence. A practice-squad role is not automatically a new zero-production policy.
+fence.
+
+From the November 12 policy admission, fresh, explicit NFL practice-squad evidence
+supports a labeled low-confidence zero-ROS assumption when a healthy, nonempty
+provider cohort has no raw projection row for the player. Any player row,
+including an incomplete projection, vetoes this exception. This rule applies to
+all offensive positions and does not require low prior production or a named
+player exception. Fantasy TAXI placement alone is insufficient. Match canonical
+identity, NFL club, position, season and evaluation cutoff; role evidence expires
+after six hours, and a newer verified promotion revokes it. Acquisition reuses
+the existing bounded producer-owned roster check; readers never fetch rosters.
+Earned actuals, frozen preseason comparisons and accepted future-year forecasts
+remain intact. Historical evaluations before policy admission retain their prior
+policy identity and cannot acquire later role facts.
