@@ -577,8 +577,10 @@ def test_retry_classification_uses_batch_error_boundary_not_numeric_membership(r
 def test_refresh_prepares_comparison_before_optional_career_readiness(comparison_fails, caplog):
     context = NS(league_state=NS(state_id='fixture-state'))
     calls = []
-    def prepare(ctx, *, force):
-        assert ctx is context and force is True
+    def prepare(ctx, *, force=False):
+        # The owned forecast phase already selected the common cohort. A late
+        # presentation retry may reuse it but must not independently recapture.
+        assert ctx is context and force is False
         calls.append('comparison')
         if comparison_fails:
             raise ValueError('synthetic unavailable comparison')

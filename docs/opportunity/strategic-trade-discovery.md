@@ -115,3 +115,10 @@ The opt-in [bounded discovery backend](bounded-strategic-discovery.md) reuses
 canonical packages, cheap Decision economics and both-team objective evidence.
 Its package/visit/screen budgets and remaining acceptance gates are explicit;
 existing Explore/ForYou activation remains a separate reviewed step.
+
+
+Current competitive evaluation must consume the existing
+[participation-adjusted ROS authority](../forecast/participation-adjusted-simulation.md).
+Keep preseason comparisons and future-horizon economics separate, preserve earned
+results, and compare baseline/scenario outcomes on identical forward evidence.
+A coherent saved State alone does not establish current injury-adjusted inputs.

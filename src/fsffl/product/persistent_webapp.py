@@ -142,14 +142,17 @@ _startup_restore_complete = Event()
 _startup_restore_state: dict[str, object] = {"status": "idle"}
 _heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
 
-def _current_position_depth_provider(league_state):
-    """Build Current from fresh governed evidence for each presentation build.
+def _current_position_depth_provider(league_state, forecast_evidence=None):
+    """Reuse the owned refresh's governed outlook for coherent Current consumers.
 
-    ROS and completed-week evidence can advance while canonical LeagueState identity
-    remains unchanged. Do not cache this consumer by State alone. Exact published
-    presentation surfaces already provide the reusable read cache after composition.
+    The comparison producer prepares the common cohort before Simulation. Legacy
+    compositions without that artifact retain their governed preparation path.
+    Published surfaces remain the reusable presentation cache.
     """
 
+    prepared = _season_comparison_service.current_position_depth(league_state, forecast_evidence)
+    if prepared is not None:
+        return prepared
     baseline = (
         load_preseason_season_forecasts(_persistence_store, league_state)
         if _persistence_store is not None
@@ -252,6 +255,13 @@ _full_refresh_seconds = max(
     1,
     int(os.getenv("FSFFL_FULL_PROVIDER_REFRESH_SECONDS", "3600")),
 )
+def _prepare_simulation_forecasts(context, evidence):
+    # Called by the owned refresh under the existing heavy-work claim. The same
+    # artifact is subsequently reused by cards; trade requests never acquire it.
+    _season_comparison_service.prepare(context, already_admitted=True)
+    return _season_comparison_service.simulation_evidence(context, evidence)
+
+
 _forecast_loader = make_resilient_forecast_loader(_persistence_store)
 _preseason_forecast_loader = make_preseason_baseline_authority_loader(_persistence_store)
 _season_comparison_service = SeasonComparisonService(
@@ -261,8 +271,8 @@ _season_comparison_service = SeasonComparisonService(
     history_store=_projection_history_store,
     heavy_work=_heavy_work_coordinator,
     ownership_validator=lambda context: (
-        _runtime_store.get(context.user_id).league_state is not None
-        and _runtime_store.get(context.user_id).league_state.state_id == context.league_state.state_id
+        _runtime_store.working_context(context.user_id).league_state is not None
+        and _runtime_store.working_context(context.user_id).league_state.state_id == context.league_state.state_id
     ),
 )
 _shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
@@ -792,6 +802,7 @@ app = _webapp.create_app(
     heavy_work_coordinator=_heavy_work_coordinator,
     presentation_payload_loader=_presentation_payload_loader,
     current_position_depth_provider=_current_position_depth_provider,
+    simulation_forecast_preparer=_prepare_simulation_forecasts,
     state_resource_boundary=_apply_runtime_resource_boundary,
     phase_memory_reclaimer=_reclaim_runtime_phase_memory,
 )
@@ -1898,7 +1909,9 @@ def _prepare_presentation_for_user(user_id: str, context, *, retry_incomplete: b
     if context.league_state is None:
         return
     try:
-        _season_comparison_service.prepare(context, force=retry_incomplete)
+        # A prepared forward cohort is already bound to the core Simulation.
+        # Late presentation retries must not independently advance its sources.
+        _season_comparison_service.prepare(context)
     except Exception:
         logging.getLogger("uvicorn.error").exception("Optional season comparison preparation failed")
     current = _shapley_intrinsic_coordinator.current(context)

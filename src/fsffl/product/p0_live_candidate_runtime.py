@@ -984,6 +984,9 @@ def build_live_p0_rostered_candidate_forecasts(
         league_state, as_of=cutoff, captured_at=latest_snapshot.captured_at,
         catalog=catalog,
     )
+    from fsffl.forecast.participation import practice_squad_policy_version
+    if practice_squad_policy_version(cutoff) is None:
+        catalog_roles = {pid: row for pid, row in catalog_roles.items() if row.status != "practice_squad"}
     corroborated_roles.update(catalog_roles)
     from fsffl.providers.nfl_status_evidence import acquire_official_reserve_role_receipts
     # Only the real producer-owned acquisition fetches remote NFL roster
@@ -1202,16 +1205,30 @@ def build_live_p0_rostered_candidate_forecasts(
     ytd_only_receipts = recorded_ytd_only_year_one_evidence(
         league_state, as_of=role_cutoff, verified_roles=role_receipts,
     )
+    from fsffl.forecast.participation import PRACTICE_SQUAD_POLICY_VERSION, practice_squad_no_projection_receipt
+    # A real live acquisition has its own observed-fact cutoff, distinct from
+    # provider-revision selection. Explicit historical evaluations retain the
+    # original pinned role boundary; never renew their evidence from the future.
+    if evaluation_as_of is None and practice_squad_policy_version(cutoff) is not None:
+        live_receipts = recorded_ytd_only_year_one_evidence(
+            league_state, as_of=cutoff, verified_roles=role_receipts)
+        ytd_only_receipts.update({pid: row for pid, row in live_receipts.items()
+            if row.source_version.startswith(PRACTICE_SQUAD_POLICY_VERSION)})
     sparse_receipts = sparse_production.receipts(
         as_of=cutoff, available_projection_rows=available_ros_rows,
         source_ready=bool(ros_runtime.successful_source_ids),
     )
+    def ps_receipt(player_id):
+        return practice_squad_no_projection_receipt(player_id, receipts=ytd_only_receipts,
+            available_projection_rows=available_ros_rows, source_ready=bool(ros_runtime.successful_source_ids))
     def admit_ytd_only(player_id):
         override = _unsigned_ytd_override(
             player_id, roles=role_receipts, receipts=ytd_only_receipts,
             as_of=cutoff,
         ) if fallback_policy is not None else None
         evidence = override or ytd_only_receipts.get(player_id)
+        if evidence is not None and evidence.source_version.startswith(PRACTICE_SQUAD_POLICY_VERSION):
+            evidence = ps_receipt(player_id)
         # Verified unsigned takes priority under the newly directed policy.
         # All other existing YTD-only cases retain the projection-row veto.
         if override is None and any(row.player_id == player_id for row in available_ros_rows):
@@ -1245,7 +1262,7 @@ def build_live_p0_rostered_candidate_forecasts(
         unsigned_override = _unsigned_ytd_override(
             player_id, roles=role_receipts, receipts=ytd_only_receipts, as_of=cutoff,
         ) if fallback_policy is not None else None
-        if unsigned_override is not None:
+        if unsigned_override is not None or ps_receipt(player_id) is not None:
             fallback = admit_ytd_only(player_id)
             if fallback is None:
                 failures.setdefault(player_id, "verified unsigned Year-1 actuals could not be scored")

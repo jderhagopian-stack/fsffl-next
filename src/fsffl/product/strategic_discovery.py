@@ -234,15 +234,16 @@ def build_strategic_discovery(runtime, request, *, read=None):
     shared_error=None
     if selected and runtime.forecast_evidence is not None:
         try:
-            forecasts=runtime.forecast_evidence.raw_forecasts+runtime.forecast_evidence.league_scored_forecasts
-            effective_forecasts=attach_provisional_position_floor_forecasts(runtime.league_state,forecasts,
-                as_of=runtime.league_state.as_of,horizon=ForecastHorizon.SEASON)
+            from .simulation_forecasts import current_forecast_coordinates
+            forecasts,horizon,cutoff=current_forecast_coordinates(runtime.league_state,runtime.forecast_evidence)
+            effective_forecasts=(forecasts if horizon==ForecastHorizon.REST_OF_SEASON else
+                attach_provisional_position_floor_forecasts(runtime.league_state,forecasts,as_of=cutoff,horizon=horizon))
             simulation=runtime.simulation_analytics
             baseline_by_team={v.team_id:v.optimized_lineup for v in (simulation.team_views if simulation is not None else ()) if v.optimized_lineup is not None}
             needed={runtime.selected_team_id,*(rows[i]['counterparty_team_id'] for i in selected)}
             for team_id in sorted(needed-set(baseline_by_team)):
                 baseline_by_team[team_id]=optimize_team_lineup(runtime.league_state,effective_forecasts,
-                    team_id=team_id,as_of=runtime.league_state.as_of,horizon=ForecastHorizon.SEASON,
+                    team_id=team_id,as_of=cutoff,horizon=horizon,
                     allow_unfilled_slots=True,model_version='market-preliminary-screen-lineup-v1')
         except ValueError as exc:
             shared_error=exc
@@ -260,7 +261,7 @@ def build_strategic_discovery(runtime, request, *, read=None):
             cuts=tuple(TeamRosterLegalityResolution.model_validate(r) for r in result['roster_legality'])
             evidence=bind_trade_intrinsic_values(runtime,proposal,read,roster_resolutions=cuts) if read is not None else unavailable_trade_intrinsic('Published native horizon evidence unavailable')
             result={**result,'horizon_asset_economics':evidence}
-            row.update({'evidence_status':'pre_simulation_screened','preliminary_decision_screen':result.get('preliminary_bilateral_screen'),
+            row.update({'forecast_input':result.get('forecast_input'),'evidence_status':'pre_simulation_screened','preliminary_decision_screen':result.get('preliminary_bilateral_screen'),
                 'roster_legality':result['roster_legality'],'position_strength_comparisons':result.get('position_strength_comparisons'),
                 'horizon_asset_economics':evidence,'roster_adjusted_market_net':result.get('roster_adjusted_market_net'),
                 'objective_assessment':build_trade_objective_assessment(runtime,proposal,result,request.search_instructions),

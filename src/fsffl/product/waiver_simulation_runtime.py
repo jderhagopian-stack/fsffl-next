@@ -55,6 +55,8 @@ def build_waiver_simulation_comparison(
     if baseline is None:
         raise ValueError("waiver simulation requires a current NEXT-4 baseline simulation")
 
+    from .simulation_forecasts import require_forward_simulation_evidence
+    require_forward_simulation_evidence(league_state, forecast_evidence, baseline)
     changed_state = apply_waiver_move(league_state, move=move)
     changed, cache_hit, computation = run_progressive_scenario_simulation(
         league_state,

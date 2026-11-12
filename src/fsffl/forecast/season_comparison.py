@@ -17,7 +17,7 @@ from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, Forec
 from .projection_history import career_ros_projection_selector
 from .season_rollforward import compose_completed_actuals_with_ros_per_player
 
-SEASON_COMPARISON_VERSION = "season-comparison-v5:sparse-production-coarse-injury-flag"
+SEASON_COMPARISON_VERSION = "season-comparison-v7:practice-squad-no-projection"
 POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
 
 
@@ -156,7 +156,13 @@ def apply_participation_exceptions(state, result, *, as_of, verified_roles=None,
         else:
             if pid in projected_ids:
                 continue  # IR/role assumptions cannot override available source rows.
-            receipt = ytd.get(pid) or recorded_ir_no_projection_year_one_evidence(
+            from .participation import PRACTICE_SQUAD_POLICY_VERSION, practice_squad_no_projection_receipt
+            receipt = ytd.get(pid)
+            if receipt is not None and receipt.source_version.startswith(PRACTICE_SQUAD_POLICY_VERSION):
+                receipt = practice_squad_no_projection_receipt(pid, receipts=ytd,
+                    available_projection_rows=available,
+                    source_ready=bool(getattr(runtime, "successful_source_ids", ())))
+            receipt = receipt or recorded_ir_no_projection_year_one_evidence(
                 state, player_id=pid, as_of=as_of, available_projection_rows=available,
             )
             receipt = receipt or sparse.get(pid)
@@ -164,9 +170,13 @@ def apply_participation_exceptions(state, result, *, as_of, verified_roles=None,
                 continue
             receipt.validate()
             kind = "ir_no_projection" if receipt.source == "fsffl:exact-state-ir-no-projection" else "approved_role"
+            if receipt.source_version.startswith(PRACTICE_SQUAD_POLICY_VERSION):
+                kind = "practice_squad_no_projection"
             if receipt.source == "fsffl:completed-week-sparse-production-no-projection":
                 kind = "sparse_production"
-            message = ("Little or no production and no projection: actuals only; no additional production assumed."
+            message = ("Verified practice squad with no projection: actuals only; no additional production assumed."
+                       if kind == "practice_squad_no_projection" else
+                       "Little or no production and no projection: actuals only; no additional production assumed."
                        if kind == "sparse_production" else
                        "IR with no projection: actuals only; no additional production assumed."
                        if kind == "ir_no_projection" else
@@ -324,4 +334,8 @@ def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
                           + [row.as_of for row in result.forward_forecasts])
     return {"version": SEASON_COMPARISON_VERSION, "league_state_id": state.state_id,
             "season": state.league.season, "as_of": measured_as_of.isoformat(),
-            "completed_through_week": result.completed_through_week, "players": players}
+            "completed_through_week": result.completed_through_week, "players": players,
+            "forward_forecasts": [row.model_dump(mode="json") for row in result.forward_forecasts],
+            "evidence_basis": result.evidence_basis,
+            "season_outlook": [row.model_dump(mode="json") for row in result.season_outlook],
+            "season_outlook_failures": dict(result.season_outlook_failures)}

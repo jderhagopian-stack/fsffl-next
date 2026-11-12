@@ -1,6 +1,6 @@
 """Recorded official NFL facts, acquired independently of product requests.
 
-Season-unavailability receipts establish whole-season absence; separate current
+Season-unavailability receipts establish whole or remaining-season absence; separate current
 role receipts only fence active-role eligibility. Neither supplies a player
 projection, injury multiplier, signing probability or inferred return date.
 Capture time deliberately fences historical replay.
@@ -19,12 +19,17 @@ class SeasonUnavailabilityReceipt:
     season: int
     source_url: str
     captured_at: datetime
+    first_unavailable_week: int = 1
 
     @property
     def fingerprint(self) -> str:
         # Hash the normalized recorded fact, not a claimed HTML byte capture.
         payload = {**asdict(self), "captured_at": self.captured_at.isoformat(),
                    "fact": "officially_reported_out_for_entire_season"}
+        if self.first_unavailable_week == 1:
+            payload.pop("first_unavailable_week")  # exact legacy identity
+        else:
+            payload["fact"] = "officially_reported_out_for_remaining_season"
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
@@ -47,6 +52,13 @@ SEASON_UNAVAILABILITY_RECEIPTS = (
         "https://www.panthers.com/news/rookie-wide-receiver-chris-brazzell-to-miss-the-entire-2026-season",
         _CAPTURED_AT,
     ),
+    # Official club report read 2026-11-12. Capture is never backdated to
+    # publication. This is forward absence after W9, not zero earned actuals.
+    SeasonUnavailabilityReceipt(
+        "sleeper:player:10232", "Michael Wilson", "WR", 2026,
+        "https://www.azcardinals.com/news/michael-wilson-sidelined-for-season-with-neck-injury",
+        datetime(2026, 11, 12, 2, 8, 24, tzinfo=UTC), first_unavailable_week=10,
+    ),
 )
 
 
@@ -60,10 +72,14 @@ class NflRoleReceipt:
     status: str
     source_url: str
     captured_at: datetime
+    nfl_team: str | None = None
 
     @property
     def fingerprint(self) -> str:
-        return hashlib.sha256(json.dumps(asdict(self), sort_keys=True, default=str).encode()).hexdigest()
+        payload = asdict(self)
+        if self.nfl_team is None:
+            payload.pop("nfl_team")  # exact legacy role identity
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
 
 
 # Independently re-read official pages at this instant. These are current-role
@@ -104,6 +120,11 @@ NFL_ROLE_RECEIPTS = (
     NflRoleReceipt("sleeper:player:13268", "WR", 2026, "developmental_depth",
         "https://www.baltimoreravens.com/team/depth-chart",
         datetime(2026, 10, 20, 19, 55, 28, tzinfo=UTC)),
+    # Public NFL roster read now, corroborated by the official club's Nov11
+    # practice-squad announcement. A captured fact, never a named policy exception.
+    NflRoleReceipt("sleeper:player:9757", "RB", 2026, "practice_squad",
+        "https://www.nfl.com/teams/dallas-cowboys/roster",
+        datetime(2026, 11, 12, 5, 31, 38, tzinfo=UTC), nfl_team="DAL"),
 )
 
 # Management explicitly approved this input assumption in the Career #405
@@ -134,6 +155,7 @@ def recorded_nfl_role_receipts(league_state, *, as_of: datetime) -> dict[str, Nf
             if row.player_id in rostered and row.player_id in players
             and players[row.player_id].position.value == row.position
             and league_state.league.season == row.season
+            and (row.nfl_team is None or players[row.player_id].nfl_team == row.nfl_team)
             and row.captured_at <= as_of < row.captured_at + timedelta(hours=6)}
 
 
@@ -180,11 +202,13 @@ def corroborated_current_role_receipts(
             (old.status == "unsigned" and not team and status not in {"active", "practice_squad"})
             or (old.status == "reserve_left_squad" and status in {"rls", "reserve_left_squad", "reserve/left_squad"})
             or (old.status == "developmental_depth" and bool(team) and depth is not None and depth >= 3)
+            or (old.status == "practice_squad" and team == old.nfl_team and status == "practice_squad")
         )
         if corroborated:
             renewed[player_id] = NflRoleReceipt(
                 player_id, old.position, old.season, old.status,
                 "https://api.sleeper.app/v1/players/nfl", captured_at,
+                nfl_team=old.nfl_team,
             )
     return renewed
 
@@ -224,6 +248,9 @@ def current_catalog_role_receipts(
             team = item.get("team")
             if team is None or not str(team).strip():
                 status = "unsigned"
+            elif (str(item.get("status") or "").lower().replace("-", "_").replace(" ", "_") == "practice_squad"
+                  and item.get("position") == player.position.value):
+                status = "practice_squad"
             elif latest_status.get(pid) == "unsigned":
                 status = "signed"
             else:
@@ -231,6 +258,7 @@ def current_catalog_role_receipts(
             result[pid] = NflRoleReceipt(
                 pid, player.position.value, league_state.league.season, status,
                 "https://api.sleeper.app/v1/players/nfl", captured_at,
+                nfl_team=str(team).strip() if status == "practice_squad" else None,
             )
     return result
 
@@ -255,16 +283,28 @@ def acquire_official_reserve_role_receipts(
         def __init__(self):
             super().__init__()
             self.rows = []
+            self.cells = []
             self.current = None
+            self.cell = None
+            self.row_cells = []
         def handle_starttag(self, tag, attrs):
             if tag == "tr":
                 self.current = []
+                self.row_cells = []
+            elif tag == "td" and self.current is not None:
+                self.cell = []
         def handle_data(self, data):
             if self.current is not None:
                 self.current.append(data)
+            if self.cell is not None:
+                self.cell.append(data)
         def handle_endtag(self, tag):
+            if tag == "td" and self.cell is not None:
+                self.row_cells.append(" ".join(" ".join(self.cell).split()))
+                self.cell = None
             if tag == "tr" and self.current is not None:
                 self.rows.append(" ".join(self.current))
+                self.cells.append(tuple(self.row_cells))
                 self.current = None
 
     def fetch(url):
@@ -282,15 +322,16 @@ def acquire_official_reserve_role_receipts(
             verified[row.player_id] = row
     candidates = {
         row.source_url: [] for pid, row in verified.items()
-        if pid in rostered and row.status == "reserve_left_squad"
+        if pid in rostered and row.status in {"reserve_left_squad", "practice_squad"}
         and league_state.league.season == row.season
         and players.get(pid) is not None
         and players[pid].position.value == row.position
+        and (row.nfl_team is None or players[pid].nfl_team == row.nfl_team)
         and row.source_url.startswith("https://www.nfl.com/teams/")
         and row.source_url.endswith("/roster")
     }
     for pid, row in verified.items():
-        if row.source_url in candidates and pid in rostered and row.status == "reserve_left_squad":
+        if row.source_url in candidates and pid in rostered and row.status in {"reserve_left_squad", "practice_squad"}:
             candidates[row.source_url].append(row)
     output = {}
     for url, rows in list(candidates.items())[:4]:
@@ -306,16 +347,53 @@ def acquire_official_reserve_role_receipts(
             for row in rows:
                 player = players[row.player_id]
                 matched = [
-                    line for line in parser.rows
+                    (line, cells) for line, cells in zip(parser.rows, parser.cells)
                     if re.search(r"\b" + re.escape(player.full_name) + r"\b", line, flags=re.I)
                 ]
                 if len(matched) != 1:
                     continue
-                if not re.search(r"\bRLS\b", matched[0], flags=re.I):
+                status = row.status
+                line, cells = matched[0]
+                if row.status == "practice_squad":
+                    positions = [i for i, cell in enumerate(cells) if cell.upper() == row.position]
+                    if len(positions) != 1 or positions[0] + 1 >= len(cells):
+                        continue
+                    code = cells[positions[0] + 1].upper()
+                    # Read the status cell, never tokens in a player's name.
+                    if code in {"DEV", "PS", "PRACTICE SQUAD"}:
+                        status = "practice_squad"
+                    elif code in {"ACT", "RES", "RLS", "TRD", "TRC", "TRT", "CUT", "RSR"}:
+                        status = "not_practice_squad"
+                    else:
+                        continue
+                elif not re.search(r"\bRLS\b", line, flags=re.I):
                     continue
                 output[row.player_id] = NflRoleReceipt(
-                    row.player_id, row.position, row.season, row.status, url, captured,
+                    row.player_id, row.position, row.season, status, url, captured,
+                    nfl_team=row.nfl_team,
                 )
         except (OSError, ValueError, UnicodeError):
             continue
     return output
+
+
+def canonical_practice_squad_role_receipts(league_state, *, as_of: datetime):
+    """Fresh explicit canonical NFL role, never a fantasy TAXI/bench inference."""
+    if as_of.tzinfo is None:
+        raise ValueError("practice-squad cutoff must be timezone-aware")
+    rostered = {r.player_id for team in league_state.team_states for r in team.roster}
+    players = {p.player_id: p for p in league_state.players}
+    result = {}
+    for status in league_state.player_states:
+        player = players.get(status.player_id)
+        captured = max(status.as_of, status.provenance.retrieved_at, status.provenance.effective_at)
+        if (status.player_id not in rostered or player is None or not player.nfl_team
+                or status.nfl_team != player.nfl_team
+                or player.position.value not in {"QB", "RB", "WR", "TE"}
+                or status.status.value != "practice_squad"
+                or not captured <= as_of < captured + timedelta(hours=6)):
+            continue
+        result[player.player_id] = NflRoleReceipt(player.player_id, player.position.value,
+            league_state.league.season, "practice_squad", status.provenance.source,
+            captured, nfl_team=player.nfl_team)
+    return result

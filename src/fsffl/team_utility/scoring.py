@@ -120,6 +120,7 @@ def _weekly_distribution_from_lineup(
     week: int,
     latest: dict[str, ForecastObservation],
     model_version: str,
+    active_games_by_player: dict[str, int] | None = None,
 ) -> WeeklyTeamScoringDistribution:
     starter_ids = {assignment.player_id for assignment in lineup.assignments}
     missing = starter_ids - set(latest)
@@ -133,7 +134,8 @@ def _weekly_distribution_from_lineup(
         mean, stddev = active_game_distribution(
             season_mean=observation.distribution.mean,
             position=observation.position,
-            games_per_team=_NFL_REGULAR_SEASON_GAMES_PER_TEAM,
+            games_per_team=(active_games_by_player[player_id]
+                if active_games_by_player is not None else _NFL_REGULAR_SEASON_GAMES_PER_TEAM),
         )
         mean_points += mean
         variance += stddev**2
@@ -161,6 +163,7 @@ def build_bye_aware_weekly_team_scoring_panel(
     as_of: datetime,
     baseline_lineups: dict[str, OptimizedTeamLineup] | None = None,
     model_version: str = "next4-weekly-team-scoring-v4",
+    horizon: ForecastHorizon = ForecastHorizon.SEASON,
 ) -> tuple[WeeklyTeamScoringDistribution, ...]:
     """Build a league/week scoring panel from exact availability and legal lineups.
 
@@ -198,8 +201,29 @@ def build_bye_aware_weekly_team_scoring_panel(
         forecasts,
         player_ids=all_roster_ids,
         as_of=as_of,
-        horizon=ForecastHorizon.SEASON,
+        horizon=horizon,
     )
+
+    if horizon not in (ForecastHorizon.SEASON, ForecastHorizon.REST_OF_SEASON):
+        raise ValueError("weekly scoring requires SEASON or REST_OF_SEASON evidence")
+    active_games_by_player = None
+    if horizon == ForecastHorizon.REST_OF_SEASON:
+        # Conserve each player's ROS total over remaining eligible NFL games,
+        # including weeks outside the league's regular fantasy schedule.
+        active_games_by_player = {}
+        for pid, observation in latest.items():
+            player = players_by_id[pid]
+            eligible_weeks = set(range(league_state.completed_through_week + 1, 19))
+            eligible_weeks -= {b.week for b in league_state.nfl_team_byes
+                              if b.season == league_state.league.season and b.nfl_team == player.nfl_team}
+            eligible_weeks -= {a.week for a in league_state.player_week_availability
+                              if a.player_id == pid and a.status == WeeklyAvailabilityStatus.UNAVAILABLE}
+            if not eligible_weeks and observation.distribution.mean != 0:
+                raise ValueError("positive ROS projection has no remaining eligible NFL games")
+            active_games_by_player[pid] = max(1, len(eligible_weeks))
+        if any(w <= league_state.completed_through_week for w in weeks):
+            raise ValueError("ROS scoring cannot simulate completed weeks")
+        model_version += ":native-ros-remaining-active-games-v1"
 
     bye_teams_by_week: dict[int, frozenset[str]] = {}
     for week in weeks:
@@ -229,7 +253,7 @@ def build_bye_aware_weekly_team_scoring_panel(
     }
 
     cache: dict[tuple[str, frozenset[str]], OptimizedTeamLineup] = {}
-    if baseline_lineups:
+    if baseline_lineups and horizon == ForecastHorizon.SEASON:
         for team_id, lineup in baseline_lineups.items():
             if team_id in roster_ids_by_team:
                 cache[(team_id, frozenset())] = lineup
@@ -257,12 +281,27 @@ def build_bye_aware_weekly_team_scoring_panel(
             key = (team_id, excluded)
             lineup = cache.get(key)
             if lineup is None:
+                lineup_forecasts, lineup_horizon = forecasts, horizon
+                if active_games_by_player is not None:
+                    from fsffl.forecast.in_season_orchestration import canonical_week_window
+                    from fsffl.forecast.models import ForecastDistribution
+                    start, end = canonical_week_window(league_state.league.season, week)
+                    # Rank legal weekly starters by this derived per-active-game
+                    # mean, not by ROS totals across unequal remaining schedules.
+                    lineup_forecasts = tuple(observation.model_copy(update={
+                        "horizon": ForecastHorizon.WEEK, "period_start": start, "period_end": end,
+                        "distribution": ForecastDistribution(
+                            mean=observation.distribution.mean / active_games_by_player[pid], stddev=0),
+                        "source": "fsffl:ros-active-game-lineup-bridge",
+                        "model_version": "native-ros-remaining-active-games-v1",
+                    }) for pid, observation in latest.items())
+                    lineup_horizon = ForecastHorizon.WEEK
                 lineup = optimize_team_lineup(
                     league_state,
-                    forecasts,
+                    lineup_forecasts,
                     team_id=team_id,
                     as_of=as_of,
-                    horizon=ForecastHorizon.SEASON,
+                    horizon=lineup_horizon,
                     excluded_player_ids=excluded,
                     allow_unfilled_slots=True,
                     model_version="next4-lineup-v3:bye-aware",
@@ -276,6 +315,7 @@ def build_bye_aware_weekly_team_scoring_panel(
                     lineup,
                     week=week,
                     latest=latest,
+                    active_games_by_player=active_games_by_player,
                     model_version=(
                         f"{model_version}:state_weekly_availability"
                         if team_week_has_availability_fact

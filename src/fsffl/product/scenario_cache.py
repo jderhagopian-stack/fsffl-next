@@ -105,6 +105,9 @@ def configure_scenario_cache_persistence(store: PersistenceStore | None) -> None
         _persistence = store
 
 
+from .simulation_forecasts import simulation_forecasts
+
+
 def _forecast_fingerprint(evidence: LiveForecastEvidence) -> str:
     """Hash the exact Simulation-facing forecast evidence, not merely its version."""
 
@@ -115,7 +118,8 @@ def _forecast_fingerprint(evidence: LiveForecastEvidence) -> str:
         digest.update(source_id.encode("utf-8"))
         digest.update(b"\0")
     observations = sorted(
-        evidence.league_scored_forecasts,
+        evidence.league_scored_forecasts + (
+            getattr(evidence, "simulation_forward_forecasts", None) or ()),
         key=lambda item: (
             item.player_id,
             item.horizon.value,
@@ -230,7 +234,7 @@ def build_scenario_dependency_plan(
 
     changed_structure = simulation_structure_dependency_fingerprint(changed_state)
     changed_forecast = simulation_forecast_dependency_fingerprint(
-        evidence.league_scored_forecasts,
+        simulation_forecasts(evidence),
         forecast_model_version=evidence.model_version,
     )
     baseline_rosters = _roster_fingerprint_by_team(baseline_state)

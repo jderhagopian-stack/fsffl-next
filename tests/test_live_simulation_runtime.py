@@ -243,6 +243,7 @@ def _deterministic_regular_and_playoff_panel(
     as_of,
     baseline_lineups=None,
     model_version="test-forward-panel",
+    horizon=ForecastHorizon.SEASON,
 ):
     del league_state, forecasts, as_of, baseline_lineups
     rows = []

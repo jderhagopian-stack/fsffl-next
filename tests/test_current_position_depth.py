@@ -223,7 +223,7 @@ def test_league_team_views_exposes_current_position_depth_without_replacing_team
     store.set_league_state("local-beta-user", state)
     app = create_app(
         runtime_store=store,
-        current_position_depth_provider=lambda _state: contract,
+        current_position_depth_provider=lambda _state, _evidence: contract,
     )
 
     response = TestClient(app).get("/api/league/team-views")
@@ -363,12 +363,13 @@ def test_governed_current_builder_consumes_existing_in_season_outlook(monkeypatc
     assert contract.completed_through_week == 4
 
 
-def test_hosted_current_provider_does_not_cache_by_state_only() -> None:
+def test_hosted_current_provider_reuses_owned_forecast_cohort_without_another_cache() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
 
     assert "_current_position_depth_cache" not in source
     assert "_current_position_depth_lock" not in source
-    assert "ROS and completed-week evidence can advance while canonical LeagueState identity" in source
+    assert "_season_comparison_service.current_position_depth(league_state, forecast_evidence)" in source
+    assert "_season_comparison_service.prepare(context)" in source
     assert "return build_governed_current_position_depth(" in source
 
 
