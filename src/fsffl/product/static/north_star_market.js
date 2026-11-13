@@ -298,6 +298,7 @@
     return unavailable("No paths match this view","The submitted Search may have results outside the current advanced filters.");
   }
   function renderTradeFinder(body,payload){
+    if(window.fsfflStrategicExplore)return window.fsfflStrategicExplore.render(body,payload,{directed:true});
     if(market.pathKey)return renderCandidatePathDetail(body,payload);
     if(!payload||payload.status!=="ready"){body.innerHTML=loading("Loading Trade Finder","Server-owned Search is preparing the current candidate workspace.");return}
     if(!market.playerLoaded&&!market.playerLoading)void ensurePlayerUniverse();

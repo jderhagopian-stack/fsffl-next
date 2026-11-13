@@ -90,6 +90,7 @@ from .trade_center_view import build_trade_center_browser_view, resolve_owned_as
 from .trade_opportunity_runtime import build_trade_opportunity_evaluation
 from .trade_objectives import TradeSearchInstructions, build_trade_objective_assessment, validate_search_instructions
 from .strategic_discovery import StrategicDiscoveryRequest, prepare_discovery, build_strategic_discovery
+from .progressive_discovery import ProgressiveDiscovery
 from .trade_simulation_runtime import build_post_trade_simulation_comparison
 from .waiver_action_runtime import build_actionable_waiver_comparison
 from .what_if_runtime import build_player_unavailable_scenario
@@ -2867,6 +2868,8 @@ def create_app(
             assessment = {"status": "unavailable", "decision_effect": "no_disposition_change"}
         return {**result, "objective_assessment": assessment}
 
+    progressive_discovery = ProgressiveDiscovery()
+
     @application.post("/api/opportunities/strategic-discover")
     def discover_strategic_trades(request: StrategicDiscoveryRequest, user_id: str = Depends(require_beta_user)):
         # Validate instructions before admission/source work, then re-read after
@@ -2894,7 +2897,10 @@ def create_app(
                     read = discovery_horizon_provider(runtime, player_ids)
                 except Exception as exc:
                     _logger.warning("Discovery raw horizons unavailable error_type=%s", type(exc).__name__)
-            return build_strategic_discovery(runtime, request, read=read)
+            try:
+                return progressive_discovery.build(runtime, request, read=read)
+            except ValueError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @application.post("/api/trade-center/analyze")
     def analyze_trade(request: EvaluateTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:

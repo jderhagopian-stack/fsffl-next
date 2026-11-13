@@ -56,7 +56,8 @@ Both are provisional until cuts and roster consequences are checked. Categorical
 coverage favors different counterparties, hypotheses and outgoing assets; it
 contains no weighted master score. Strained or incomplete cases remain visible.
 
-Return at most 80 packages and run at most eight detailed pre-Simulation screens.
+Return at most 80 packages per batch and run at most eight detailed pre-Simulation
+screens per request (at most 32 distinct screens per continued search).
 The effective screen ceiling also respects the requested return limit. Screens
 now precede final retention: every evaluated point, including a failed parent,
 survives; remaining result slots preserve categorical exploration. A complete
@@ -135,8 +136,8 @@ Published Forecast and Value, request-local baseline lineups, existing provision
 Forecast attachment and profiles are reused across screens. No model fitting,
 Forecast acquisition, Intrinsic game, Monte Carlo run, database payload load or
 production write occurs during discovery. Source release/unavailability preserves
-partial structural results. There is no new cache, worker, queue or persistence
-owner. The hosted route uses existing heavy-work admission, rechecks runtime after
+partial structural results. Only the bounded response cache described below is added; there is no new
+worker, queue or persistence owner. The hosted route uses existing heavy-work admission, rechecks runtime after
 admission and returns 409 promptly when busy rather than waiting behind a refresh.
 
 Focused validation covers bounded geometry, all four shapes, source-reader parity,
@@ -152,7 +153,7 @@ Explore / For You consumes this API directly. The first read uses automatic
 competitive-state direction; owners can switch to request-scoped priorities.
 The compact **Refine your search** control follows **Your Direction**, before
 results. It supports current canonical counterparties, exact targets, received
-player position, and protected managed players. `target_position` is optional,
+player position, required outgoing players or picks, and protected managed players. `target_position` is optional,
 validated against the current league player population, and applied to received
 inventories before bounded generation. A combined target must match that position.
 No league-specific starting positions or fixed team counts are assumed.
@@ -201,3 +202,31 @@ preserved inside each group, and failed parents/linked repairs remain available.
 This changes neither Decision authority, intrinsic economics, nor the underlying
 unweighted priorities; no composite score or final mutual-benefit claim is added.
 The standalone Market vs. Intrinsic discovery button is temporarily removed.
+
+## Continuation and directed offers
+
+The live endpoint wraps each existing at-most-eight-screen batch with bounded
+continuation. Responses include `search_progress` with cumulative distinct screens,
+preliminary-fit count, stop reason, and optional opaque `next_token`. Send it back
+as `continuation_token` with identical instructions. The browser continues toward
+four preliminary fits, stopping no later than 32 screens or pool exhaustion; it
+preserves prior results, supports pause-after-batch and explicit further screening.
+
+`offered_asset_ref` requires a canonically owned outgoing player or pick in every
+package. It is enforced before the six-ingredient enumeration cap and cannot send
+a protected player. Received targets/position/partner constraints are unchanged.
+For You and Trade Finder share the live engine; Trade Finder opens directed controls.
+
+Tokens carry only signed IDs/progress and bind exact tenant, State/generation,
+Forecast/Simulation/Value identities, native-source identity and request settings.
+They expire after ten minutes; restart or scope changes return 409. Each search
+shares one repair sequence. Cross-batch repair duplicates link to earlier results
+and stop rather than assuming missing previous screen details or re-evaluating.
+
+Response reuse is process-local, at most four entries / 4 MiB of accounted response
+and key graphs / five minutes. There is no retained State/model/source graph or new
+persistence adapter. Noncached concurrent batches fail fast. Existing heavy-work
+admission remains in force. Generation can revisit the same at-most-640 cheap pool
+per batch; diagnostics describe that work per request rather than implying only
+640 CPU visits across all requests. No Forecast, Intrinsic or full Simulation runs
+are added. [Pick evidence coverage](pick-economics-coverage.md) remains explicit.

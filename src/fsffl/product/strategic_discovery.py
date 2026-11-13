@@ -27,6 +27,7 @@ from .trade_intrinsic_evidence import bind_trade_intrinsic_values, unavailable_t
 from .trade_objectives import TradeSearchInstructions, objective_context, build_trade_objective_assessment
 from .trade_value_adapter import cardinal_market_profiles
 from .strategic_discovery_presentation import discovery_display_context
+from .discovery_pick_context import discovery_pick_context
 from .opportunity_posture import calculated_competitive_state, default_posture_for_state
 from dataclasses import replace
 
@@ -38,6 +39,8 @@ class StrategicDiscoveryRequest(FrozenModel):
     counterparty_team_id: str | None = None
     target_asset_ref: str | None = None
     target_position: str | None = None
+    offered_asset_ref: str | None = None
+    continuation_token: Annotated[str | None, Field(max_length=32768)] = None
     max_candidates: Annotated[int, Field(ge=1, le=80)] = 80
     evaluation_budget: Annotated[int, Field(ge=0, le=8)] = 8
 
@@ -67,6 +70,12 @@ def prepare_discovery(runtime, request):
     owned = {a.player_id for a in browser.focal_team.assets if a.player_id}
     if not set(context.protected_player_ids) <= owned:
         raise ValueError('Protected players must belong to the managed team')
+    if request.offered_asset_ref is not None:
+        offered = next((a for a in browser.focal_team.assets if a.asset_ref == request.offered_asset_ref), None)
+        if offered is None:
+            raise ValueError('The offered asset must belong to the managed team')
+        if offered.player_id in context.protected_player_ids:
+            raise ValueError('The offered player is protected')
     teams = browser.counterparties
     if request.counterparty_team_id is not None:
         teams = tuple(t for t in teams if t.team_id == request.counterparty_team_id)
@@ -116,6 +125,7 @@ def build_discovery_lanes(runtime, request, read):
     focal = inventories[runtime.selected_team_id]
     focal = focal.model_copy(update={'assets':tuple(a for a in focal.assets
         if not isinstance(a,PlayerAsset) or a.player_id not in context.protected_player_ids)})
+    required_send = next((a for a in focal.assets if _ref(a) == request.offered_asset_ref), None)
     forecasts = _latest_season_forecast_means(runtime)
     profiles = cardinal_market_profiles(runtime.value_evidence)
     metric_values = {goal:{} for goal in TradeObjective}
@@ -162,7 +172,7 @@ def build_discovery_lanes(runtime, request, read):
         def add(name,sends,receives):
             if sends and receives:
                 lanes.append(StrategicPackageLane(name,focal.model_copy(update={'assets':sends}),
-                    other.model_copy(update={'assets':receives}),required_receive=required))
+                    other.model_copy(update={'assets':receives}),required_receive=required,required_send=required_send))
         # Request order changes which horizon hypotheses receive early exploration.
         goals = tuple(dict.fromkeys((*context.objectives,TradeObjective.THREE_YEAR,TradeObjective.CAREER)))
         for goal in goals:
@@ -215,7 +225,7 @@ def _representative_indices(rows,budget):
     return chosen
 
 
-def build_strategic_discovery(runtime, request, *, read=None):
+def build_strategic_discovery(runtime, request, *, read=None, previously_screened=(), feedback_already_attempted=False):
     start=monotonic()
     if read is not None and not published_horizons_match_runtime(runtime,read):
         read=None
@@ -223,7 +233,7 @@ def build_strategic_discovery(runtime, request, *, read=None):
     pool_budget=min(640,request.max_candidates*8)
     screen_cap=min(request.evaluation_budget,request.max_candidates)
     from .strategic_feedback import FeedbackVisits, repair_path, needs_second_step
-    can_feedback=(read is not None and screen_cap>=3 and TradeObjective.CURRENT in context.objectives
+    can_feedback=(request.offered_asset_ref is None and read is not None and screen_cap>=3 and TradeObjective.CURRENT in context.objectives
         and runtime.forecast_evidence is not None
         and runtime.forecast_evidence.simulation_forward_forecasts is not None
         and runtime.simulation_analytics is not None)
@@ -268,10 +278,12 @@ def build_strategic_discovery(runtime, request, *, read=None):
     rows=[make_row(item.seed.proposal,item.seed.point_id,item.hypotheses) for item in seeds]
     pool_count=len(rows)
     by_point={row['point_id']:row for row in rows}
-    root_order=[rows[i] for i in _representative_indices(rows,min(len(rows),screen_cap+2))]
+    excluded = frozenset(previously_screened)
+    roots = [row for row in rows if row['point_id'] not in excluded]
+    root_order=[roots[i] for i in _representative_indices(roots,min(len(roots),screen_cap+2))]
     generated=monotonic()
     screened=[];seen={};root_attempts=repair_attempts=errors=duplicates=existing_repairs=0
-    sequence_used=False
+    sequence_used=feedback_already_attempted
 
     effective_forecasts=None
     baseline_by_team={}
@@ -293,6 +305,8 @@ def build_strategic_discovery(runtime, request, *, read=None):
             shared_error=exc
     def screen(row,kind):
         nonlocal errors,root_attempts,repair_attempts
+        if row['point_id'] in excluded:
+            return None
         if row['point_id'] in seen:
             return seen[row['point_id']]
         if len(screened)>=screen_cap:
@@ -334,6 +348,10 @@ def build_strategic_discovery(runtime, request, *, read=None):
         for point,lineage in path:
             sequence_used=True
             if len(screened)>=screen_cap: break
+            if point.point_id in excluded:
+                root.setdefault('linked_prior_point_ids',[]).append(point.point_id)
+                visits.skipped['previously_evaluated_repair_not_repeated'] += 1
+                break
             row=by_point.get(point.point_id)
             if row is not None: existing_repairs+=1
             if row is None:
@@ -349,9 +367,10 @@ def build_strategic_discovery(runtime, request, *, read=None):
             if result is None or (lineage['depth']==1 and not needs_second_step(result)): break
     # Keep every evaluated point and failed parent; only then fill unscreened
     # exploration slots. The old 540->80 pruning cannot erase this evidence.
-    fillers=[row for row in rows if row['point_id'] not in seen]
+    fillers=[row for row in rows if row['point_id'] not in seen and row['point_id'] not in excluded]
     rows=screened+[fillers[i] for i in _representative_indices(fillers,
         max(0,request.max_candidates-len(screened)))]
+    unexamined_pool_count = len([point for point in by_point if point not in seen and point not in excluded])
     _attach_comparable_frontiers(rows,runtime)
     for row in rows:
         row['display_context'] = discovery_display_context(row)
@@ -360,10 +379,13 @@ def build_strategic_discovery(runtime, request, *, read=None):
     return {'league_state_id':runtime.league_state.state_id,'publication_generation_id':runtime.publication_generation_id,
         'focal_team_id':runtime.selected_team_id,'priority_context':context.model_dump(mode='json'),
         'competitive_context':team_contexts[runtime.selected_team_id], 'team_competitive_contexts':team_contexts,
+        'pick_evidence':discovery_pick_context(runtime, rows),
         'candidate_packages':rows,'diagnostics':{**diagnostics,'candidate_pool_unique_count':len(by_point),'generated_candidate_pool_unique_count':pool_count,
             'candidate_pool_limit':pool_budget,'max_candidates':request.max_candidates,
             'pool_shapes':diagnostics['shapes'],'pool_hypotheses':diagnostics['hypotheses'],
             'candidate_count':len(rows),'returned_candidate_limit':request.max_candidates,
+            'pick_package_count':sum(any(a['asset_ref'].startswith('pick:') for a in (*r['send'],*r['receive'])) for r in rows),
+            'native_pick_intrinsic_coverage':'unavailable',
             'shapes':dict(Counter(f"{len(r['send'])}_for_{len(r['receive'])}" for r in rows)),
             'hypotheses':dict(Counter(h for r in rows for h in r['hypotheses'])),
             'returned_counterparties':len({r['counterparty_team_id'] for r in rows}),
@@ -382,6 +404,8 @@ def build_strategic_discovery(runtime, request, *, read=None):
             'duplicate_repair_points':duplicates,'repair_existing_pool_points':existing_repairs,
             'repair_sequence_attempted':sequence_used,
             'evaluated_points_retained':len(screened),
+            'previously_evaluated_skipped':len(excluded),
+            'unexamined_pool_count':unexamined_pool_count,
             'rank_signal_covered_players':{goal.value:len(values) for goal,values in rank_signals.items()},
             'native_player_coverage':{name:len(values) for name,values in read.values.items()} if read is not None else {},
             'raw_source':dict(read.source) if read is not None else None},
