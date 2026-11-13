@@ -8,7 +8,7 @@
   const signed=(v,d=1)=>{if(!finite(v))return 'Unavailable';const rounded=Number(v.toFixed(d));return(rounded>0?'+':'')+(rounded===0?0:v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});};
   const ctx=()=>typeof state!=='undefined'?state.context||{}:{};
   const contextKey=()=>JSON.stringify([ctx().user_id,ctx().league_id,ctx().team_id,ctx().state_id,ctx().capability_readiness?.publication?.generation_id||ctx().publication_generation_id]);
-  const fresh=()=>({key:contextKey(),sequence:0,result:null,browser:null,busy:false,inFlight:false,pauseRequested:false,pendingBatch:null,started:false,error:'',browserError:'',browserLoading:false,mode:'automatic',goal:ALL[0],partner:'',position:'',target:'',offer:'',protected:[],directed:false,intentKey:'',expanded:false,dirty:false});
+  const fresh=()=>({key:contextKey(),sequence:0,result:null,browser:null,busy:false,inFlight:false,pauseRequested:false,pendingBatch:null,started:false,error:'',browserError:'',browserLoading:false,mode:'automatic',goal:ALL[0],partner:'',position:'',target:'',offer:'',protected:[],directed:false,expanded:false,dirty:false});
   let view=fresh(),host=null;
   function reconcile(){if(view.key!==contextKey())view=fresh();}
   function visibleHost(){return host?.isConnected&&typeof state!=='undefined'&&state.route==='opportunities'&&host.id==='market-ns-body'&&['for_you','trade_finder'].includes(window.fsfflMarketNorthStar?.activeTab?.());}
@@ -156,24 +156,22 @@
     catch(error){if(view===current&&key===contextKey())view.browserError=error?.message||'Search controls are unavailable.';}
     if(view===current){view.browserLoading=false;paint();}
   }
+  function applyIntent(intent,value){
+    reconcile();
+    view.offer='';view.target='';view.position='';view.partner='';
+    if(intent==='shop')view.offer=value||'';
+    if(intent==='target')view.target=value||'';
+    if(intent==='position')view.position=value||'';
+    if(intent==='owner')view.partner=value||'';
+    view.sequence+=1;view.dirty=true;view.expanded=true;
+  }
   function render(body,payload,{directed=false}={}){
     reconcile();host=body;
     if(directed&&!view.directed)view.expanded=true;
     view.directed=directed;
-    const intent=window.fsfflMarketIntent?.selected?.();
-    const intentKey=JSON.stringify(intent||{});
-    if(directed&&intent?.value&&view.intentKey!==intentKey){
-      view.intentKey=intentKey;
-      view.offer='';view.target='';view.position='';view.partner='';
-      if(intent.intent==='shop')view.offer=intent.value;
-      if(intent.intent==='target')view.target=intent.value;
-      if(intent.intent==='position')view.position=intent.value;
-      if(intent.intent==='owner')view.partner=intent.value;
-      view.sequence+=1;view.dirty=true;
-    }
     if(!ctx().league_id||!ctx().team_id||!ctx().state_id){host.innerHTML='<div class="se-empty"><b>Connect a league and choose your franchise to discover trades.</b></div>';return;}
     paint();if(!view.started){void loadBrowser();if(!directed&&!view.dirty)void run();}
   }
-  window.fsfflStrategicExplore={render,run,priorities};
+  window.fsfflStrategicExplore={render,run,priorities,applyIntent};
   window.addEventListener('fsffl:product-context-updated',()=>{reconcile();});
 })();

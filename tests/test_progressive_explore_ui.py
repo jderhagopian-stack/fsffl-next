@@ -39,6 +39,21 @@ search_progress:{total_screened:batch*8,max_total_screens:32,preliminary_fit_cou
  assert.equal(JSON.parse(calls.filter(c=>c.options).at(-1).options.body).offered_asset_ref,'pick:owned');
  const quality=response(1,[row('fifth','Directed result')],'next');quality.search_progress.stop_reason='shortlist_ready';quality.search_progress.preliminary_fit_count=4;
  pending.shift()(quality);await flush();assert(!pending.length);assert(host.innerHTML.includes('Directed result'));
+ // Repeated explicit links override local edits; repaints do not.
+ ui.applyIntent('shop','player:A');ui.render(host,null,{directed:true});
+ controls['[data-se-offer]']({target:{value:'player:B'}});ui.render(host,null,{directed:true});
+ controls['[data-se-run]']();await flush();
+ assert.equal(JSON.parse(calls.filter(c=>c.options).at(-1).options.body).offered_asset_ref,'player:B');
+ pending.shift()(quality);await flush();
+ ui.applyIntent('shop','player:A');ui.render(host,null,{directed:true});controls['[data-se-run]']();await flush();
+ assert.equal(JSON.parse(calls.filter(c=>c.options).at(-1).options.body).offered_asset_ref,'player:A');
+ pending.shift()(quality);await flush();
+ ui.applyIntent('target','player:T');ui.render(host,null,{directed:true});
+ controls['[data-se-target]']({target:{value:'player:other'}});ui.render(host,null,{directed:true});
+ ui.applyIntent('target','player:T');ui.render(host,null,{directed:true});controls['[data-se-run]']();await flush();
+ const targeted=JSON.parse(calls.filter(c=>c.options).at(-1).options.body);
+ assert.equal(targeted.target_asset_ref,'player:T');assert(!targeted.offered_asset_ref);
+ pending.shift()(quality);await flush();
  // Changing route stops continuation; it cannot run invisibly behind Trade Center.
  controls['[data-se-more]']();await flush();c.state.route='trade_center';
  pending.shift()(response(2,[],'unwanted'));await flush();assert(!pending.length);
@@ -53,3 +68,10 @@ def test_trade_finder_delegates_to_same_discovery_consumer():
     source=Path('src/fsffl/product/static/north_star_market.js').read_text()
     finder=source.split('function renderTradeFinder(body,payload){',1)[1].split('\n',2)[1]
     assert 'fsfflStrategicExplore.render(body,payload,{directed:true})' in finder
+
+
+def test_explicit_navigation_consumption_applies_the_intent_once():
+    source=Path('src/fsffl/product/static/north_star_market.js').read_text()
+    consume=source.split('function consumeMarketDeepLink(){',1)[1].split('function openTab(',1)[0]
+    assert 'fsfflConsumeDeepLinkIntent' in consume
+    assert 'fsfflStrategicExplore?.applyIntent?.(pending.marketIntent,pending.marketValue' in consume

@@ -116,6 +116,7 @@
     if(!pending?.marketTab)return null;
     if(TABS.some(row=>row[0]===pending.marketTab))market.tab=pending.marketTab;
     if(pending.marketIntent&&window.fsfflMarketIntent?.set)window.fsfflMarketIntent.set(pending.marketIntent,pending.marketValue||"");
+    if(pending.marketIntent)window.fsfflStrategicExplore?.applyIntent?.(pending.marketIntent,pending.marketValue||"");
     return pending;
   }
   function openTab(key){
