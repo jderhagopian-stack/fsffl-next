@@ -231,8 +231,8 @@
     const ctx=marketContext||{},id=activeId;if(!id)return"";
     const actions=[];
     if(ctx.rosterStatus==="available")actions.push(["waiver","Evaluate add/drop"]);
-    else if(ctx.managed===true)actions.push(["shop","Shop in Trade Finder"]);
-    else if(ctx.ownerTeamId)actions.push(["target","Target in Trade Finder"],["owner","Open current owner"]);
+    else if(ctx.managed===true)actions.push(["shop","Shop player"]);
+    else if(ctx.ownerTeamId)actions.push(["target","Target player"],["owner","Open current owner"]);
     if(!actions.length)return"";
     return "<section class='pi-market-actions'><small>Market actions</small><div>"+actions.map(([key,label])=>"<button type='button' class='secondary-button' data-pi-market-action='"+key+"'>"+label+"</button>").join("")+"</div></section>";
   }

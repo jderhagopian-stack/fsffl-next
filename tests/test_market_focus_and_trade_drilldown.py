@@ -177,8 +177,8 @@ def test_player_intelligence_market_actions_route_by_current_ownership_context()
     for phrase in (
         "Market actions",
         "Evaluate add/drop",
-        "Shop in Trade Finder",
-        "Target in Trade Finder",
+        "Shop player",
+        "Target player",
         "Open current owner",
         "openFreeAgent",
         'openTradeFinder?.("shop"',
