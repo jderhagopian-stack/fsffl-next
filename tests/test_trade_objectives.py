@@ -168,3 +168,22 @@ def test_optional_assessment_failure_preserves_legacy_result(monkeypatch):
     assert response.json()['objective_assessment']['status'] == 'unavailable'
     assert response.json()['roster_legality']
     assert response.json()['decision'] is None
+
+
+def test_protections_without_goals_preserve_server_inference_and_handoff(monkeypatch):
+    from fsffl.product.trade_objectives import objective_context
+    import fsffl.product.trade_objectives as module
+    from fsffl.team_utility.utility import CalculatedCompetitiveState
+    runtime, _, _ = fixture()
+    monkeypatch.setattr(module, 'calculated_competitive_state', lambda _: CalculatedCompetitiveState.CONTENDER)
+    automatic = objective_context(runtime, 'alpha')
+    protected = TradeSearchInstructions(protected_player_ids=('a2',))
+    current = objective_context(runtime, 'alpha', protected)
+    assert current.objectives == automatic.objectives == (G.CURRENT,)
+    assert current.explicitly_directed is False
+    assert current.source == automatic.source
+    assert current.protected_player_ids == ('a2',)
+    custom = objective_context(runtime, 'alpha', TradeSearchInstructions(objectives=(G.CAREER,), protected_player_ids=('a2',)))
+    assert custom.objectives == (G.CAREER,)
+    assert custom.explicitly_directed
+    assert objective_context(runtime, 'alpha', protected) == current

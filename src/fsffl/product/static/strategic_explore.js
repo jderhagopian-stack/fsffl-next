@@ -16,15 +16,13 @@
   const teamName=id=>(view.browser?.counterparties||[]).find(t=>t.team_id===id)?.display_name||'Other franchise';
   const option=(v,label,selected)=>`<option value="${esc(v)}"${selected===v?' selected':''}>${esc(label)}</option>`;
   function instructions(){
-    if(view.mode==='automatic'&&!view.protected.length)return null;
-    const objectives=view.mode==='automatic'?view.result?.priority_context?.objectives:(view.goal==='all'?ALL:[view.goal]);
-    if(!objectives?.length)throw new Error('Run automatic discovery before adding protections, or choose priorities.');
-    return{objectives,protected_player_ids:[...view.protected]};
+    if(view.mode==='automatic')return view.protected.length?{protected_player_ids:[...view.protected]}:null;
+    return{objectives:view.goal==='all'?ALL:[view.goal],protected_player_ids:[...view.protected]};
   }
   function requestBody(){const body={max_candidates:80,evaluation_budget:8};const goals=instructions();if(goals)body.search_instructions=goals;if(view.partner)body.counterparty_team_id=view.partner;if(view.position)body.target_position=view.position;if(view.target)body.target_asset_ref=view.target;return body;}
   function priorities(context){return(context?.objectives||[]).map(g=>GOALS[g]||g.replaceAll('_',' ')).join(' / ')||'Direction unavailable';}
   function direction(){
-    const inferred=view.result?.priority_context;
+    const inferred=view.result?.priority_context?.explicitly_directed?null:view.result?.priority_context;
     return `<section class="se-direction"><div class="se-row"><p class="eyebrow">Your Direction</p><small>You’re in control</small></div><div class="se-modes" role="group" aria-label="Search direction">${[['automatic','Automatic'],['custom','Set priorities']].map(([key,label])=>`<button type="button" data-se-mode="${key}" aria-pressed="${view.mode===key}">${label}</button>`).join('')}</div>${view.mode==='custom'?`<label class="se-field"><span>Your priority</span><select data-se-goal>${Object.entries(GOALS).map(([g,label])=>option(g,label,view.goal)).join('')}${option('all','Compare all horizons',view.goal)}</select></label><p>Prioritize your chosen horizon. Keep the sacrifices visible.</p>`:`<span class="se-direction-label">${esc(inferred?priorities(inferred):'Let team context guide discovery')}</span><p>Inferred from competitive state. Override it at any time; owner preferences are not confirmed.</p>`}</section>`;
   }
   function refinements(){

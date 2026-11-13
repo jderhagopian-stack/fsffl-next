@@ -26,7 +26,10 @@ admitted counterparty; a received pick can be targeted using `pick:pick-id`.
 Protections must reference owned players. Instructions override inferred managed
 priorities for this request; counterparty motives remain hypotheses. Exact assets
 and temporary instructions accompany each `trade_center_request` for subsequent
-analysis/Simulation. Returning to automatic mode does not change durable profiles.
+analysis/Simulation. Returning to automatic mode does not change durable profiles. A protection-only
+`search_instructions` object omits `objectives`; the server infers current
+priorities and applies the protections without an explicit goal override. An
+explicit empty objective list remains invalid.
 
 ## Candidate generation
 
