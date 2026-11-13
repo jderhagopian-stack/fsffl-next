@@ -88,7 +88,7 @@ def test_market_disagreement_has_mobile_layout_and_release_wiring() -> None:
     assert "@media(max-width:680px)" in css
     assert ".imd-row{grid-template-columns:1fr 1fr" in css
     assert f"/static/intrinsic_market_discovery.css?v={RELEASE}" in html
-    assert f"/static/intrinsic_market_discovery.js?v={RELEASE}" in html
+    assert "/static/intrinsic_market_discovery.js?v=" not in html  # Paused in the live Explore surface.
 
 
 def test_market_disagreement_browser_script_parses() -> None:
