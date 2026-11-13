@@ -1,8 +1,9 @@
 # Bounded strategic discovery backend
 
-This opt-in backend explores multiple trade hypotheses and attaches existing
-Decision evidence. The current Explore interface and default ForYou ordering are
-unchanged. Review the mobile mockup and real-league usefulness before activation.
+This bounded backend explores multiple trade hypotheses and attaches existing
+Decision evidence. The reviewed Explore interface consumes these diagnostic
+results while preserving server order and explicit tradeoffs. Discovery does not
+promote packages to confirmed recommendations.
 
 `POST /api/opportunities/strategic-discover` accepts an empty body for automatic
 priorities, or optional request-scoped instructions:
@@ -141,3 +142,38 @@ and required cuts, partial failures, single source read, unchanged inputs, no
 Simulation, and 12-team Superflex/1-QB contract fixtures. Saved real inputs can be
 replayed locally without production changes. Such replay is distinct from hosted
 response acceptance, owner-intent validation and confirmed competitive benefit.
+
+## Explore production interface
+
+Explore / For You consumes this API directly. The first read uses automatic
+competitive-state direction; owners can switch to request-scoped priorities.
+The compact **Refine your search** control follows **Your Direction**, before
+results. It supports current canonical counterparties, exact targets, received
+player position, and protected managed players. `target_position` is optional,
+validated against the current league player population, and applied to received
+inventories before bounded generation. A combined target must match that position.
+No league-specific starting positions or fixed team counts are assumed.
+
+The interface preserves server candidate order, separates screened packages from
+incomplete exploration, and shows both sides' preliminary lineup changes,
+cut-adjusted native horizon contributions, Market costs, coverage, and linked
+repair alternatives. Lineup points are explicitly labeled by their returned
+basis; they are not wins or playoff probabilities. No saved scenario is shipped
+as live intelligence. Native asset contribution is not franchise utility, and
+overlapping horizons are not added. Owner motives remain inferred.
+
+Only one discovery request is active per browser context; edits invalidate its
+response. Submitting changed settings replaces old results rather than showing
+an old package under new priorities. Repeated rendering does not rerun discovery;
+there is no polling, automatic retry, automatic Simulation, or new persistence.
+State/team/publication changes fence responses and discard request-scoped settings.
+
+Trade Center receives the exact package and temporary instructions. Its quick,
+analysis, Simulation, and bounded frontier routes admit the same instructions.
+Protections exclude sends before frontier exploration; required cuts that lose
+protected players remain explicitly blocked. Frontier assessments retain unknown
+future contribution rather than manufacturing native values or claiming a
+priority-optimized frontier. Existing Decision ordering/authority is unchanged.
+Trade Center displays both teams' directional assessments separately from its
+final Decision. Explicitly analyzing a deal uses the existing progressive
+quick → analysis → Simulation workflow. Discovery itself never runs that flow.

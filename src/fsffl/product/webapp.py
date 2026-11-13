@@ -2924,7 +2924,7 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @application.post("/api/trade-center/frontier")
-    def explore_trade_frontier(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+    def explore_trade_frontier(request: EvaluateTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
         try:
             proposal = _proposal_from_request(
@@ -2936,6 +2936,7 @@ def create_app(
                 runtime,
                 proposal,
                 focal_team_id=runtime.selected_team_id,
+                search_instructions=request.search_instructions,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

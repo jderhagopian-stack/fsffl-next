@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 
 from .frontier_runtime import build_negotiation_frontier
 from .runtime import PrivateBetaRuntimeStore
-from .webapp import AnalyzeTradeRequest, _proposal_from_request
+from .webapp import EvaluateTradeRequest, _proposal_from_request
 
 
 _QUICK_FRONTIER_EVALUATIONS = 4
@@ -26,7 +26,7 @@ def install_quick_frontier_routes(
 
     @app.post("/api/trade-center/frontier/quick")
     def explore_trade_frontier_quick(
-        request: AnalyzeTradeRequest,
+        request: EvaluateTradeRequest,
         user_id: str = Depends(require_user),
     ) -> dict[str, object]:
         runtime = runtime_store.get(user_id)
@@ -42,6 +42,7 @@ def install_quick_frontier_routes(
                 focal_team_id=runtime.selected_team_id,
                 max_depth=1,
                 max_evaluations=_QUICK_FRONTIER_EVALUATIONS,
+                search_instructions=request.search_instructions,
             )
             return {
                 **result,

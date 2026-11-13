@@ -17,7 +17,8 @@ from fsffl.trade_decision import (
 
 from .runtime import PrivateBetaRuntimeStore
 from .trade_value_adapter import cardinal_market_profiles
-from .webapp import AnalyzeTradeRequest, _proposal_from_request
+from .webapp import EvaluateTradeRequest, _proposal_from_request
+from .trade_objectives import validate_search_instructions
 
 
 _logger = logging.getLogger("uvicorn.error")
@@ -155,12 +156,13 @@ def install_progressive_delivery_routes(
 
     @app.post("/api/trade-center/quick")
     def trade_center_quick(
-        request: AnalyzeTradeRequest,
+        request: EvaluateTradeRequest,
         user_id: str = Depends(require_user),
     ) -> dict[str, object]:
         runtime = runtime_store.get(user_id)
         try:
             proposal = _proposal_from_request(runtime, request, draft_prefix="product-trade-quick")
+            validate_search_instructions(runtime, proposal, request.search_instructions)
             return _quick_trade_view(runtime, proposal, focal_team_id=runtime.selected_team_id)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

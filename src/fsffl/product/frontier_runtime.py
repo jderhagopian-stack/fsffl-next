@@ -28,6 +28,7 @@ from fsffl.trade_decision import (
 from fsffl.trade_decision.models import BilateralTradeProposal, TradeLeg
 
 from .trade_analysis_runtime import build_private_beta_trade_analysis
+from .trade_objectives import TradeSearchInstructions, validate_search_instructions, build_trade_objective_assessment
 
 
 _PRODUCT_MODEL_VERSION = "next8-negotiation-frontier-v2"
@@ -87,6 +88,7 @@ def build_negotiation_frontier(
     counterparty_behavior_profile: OwnerBehaviorProfile | None = None,
     max_depth: int = 1,
     max_evaluations: int = 24,
+    search_instructions: TradeSearchInstructions | None = None,
 ) -> dict[str, object]:
     """Explore a responsive first slice of the governed negotiation frontier.
 
@@ -103,6 +105,7 @@ def build_negotiation_frontier(
     if focal_team_id not in {proposal.side_a.team_id, proposal.side_b.team_id}:
         raise ValueError("focal team must be one side of the frontier seed")
 
+    validate_search_instructions(runtime, proposal, search_instructions)
     focal_leg = proposal.side_a if proposal.side_a.team_id == focal_team_id else proposal.side_b
     counter_leg = proposal.side_b if proposal.side_a.team_id == focal_team_id else proposal.side_a
     max_seed_size = max(len(focal_leg.sends), len(counter_leg.sends))
@@ -113,6 +116,10 @@ def build_negotiation_frontier(
         include_faab=False,
     )
     focal_inventory = build_team_trade_inventory(league_state, team_id=focal_leg.team_id, bounds=bounds)
+    if search_instructions is not None:
+        protected = set(search_instructions.protected_player_ids)
+        focal_inventory = focal_inventory.model_copy(update={'assets': tuple(a for a in focal_inventory.assets
+            if a.kind != 'player' or a.player_id not in protected)})
     counter_inventory = build_team_trade_inventory(league_state, team_id=counter_leg.team_id, bounds=bounds)
     seed = make_frontier_point(
         _package(focal_leg.team_id, focal_leg.sends),
@@ -129,10 +136,20 @@ def build_negotiation_frontier(
             focal_team_id=focal_team_id,
             counterparty_behavior_profile=counterparty_behavior_profile,
         )
+        if search_instructions is not None:
+            assessment = build_trade_objective_assessment(runtime, point_proposal, analysis, search_instructions)
+            detail_by_point[point.point_id] = {'objective_assessment': assessment}
+            if any(assessment[s]['protected_players_lost'] for s in ('side_a', 'side_b')):
+                candidate = _incomplete_candidate(point, runtime)
+                detail_by_point[point.point_id].update({'decision_shape': None,
+                    'feasibility_shape': 'constraints_violated', 'action_authority': 'diagnostic_only',
+                    'reasons': ['protected_player_would_be_lost']})
+                return candidate
         decision_payload = analysis.get("decision")
         if decision_payload is None:
             candidate = _incomplete_candidate(point, runtime)
             detail_by_point[point.point_id] = {
+                **detail_by_point.get(point.point_id, {}),
                 "decision_shape": None,
                 "feasibility_shape": "incomplete",
                 "behavioral_evidence": analysis.get("behavioral_context") is not None,
@@ -169,6 +186,7 @@ def build_negotiation_frontier(
             search_model_version=_PRODUCT_MODEL_VERSION,
         )
         detail_by_point[point.point_id] = {
+            **detail_by_point.get(point.point_id, {}),
             "decision_shape": decision.shape.value,
             "feasibility_shape": feasibility.shape.value,
             "behavioral_evidence": acceptance is not None,

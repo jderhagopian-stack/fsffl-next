@@ -112,8 +112,14 @@ def test_real_api_user_instruction_ownership_rejection_and_legacy_routes(monkeyp
         for route in ('analyze', 'simulate'):
             assert client.post('/api/trade-center/'+route, json={**body, 'search_instructions': instructions}).status_code == 422
     assert len(calls) == 1
-    # Unsupported routes must not silently accept instructions.
-    assert client.post('/api/trade-center/frontier', json=body).status_code == 422
+    # Guided frontiers preserve goals and exclude protected sends before exploration.
+    response = client.post('/api/trade-center/frontier', json=body)
+    assert response.status_code == 200
+    points = response.json()['points']
+    assert points
+    assert all(a['asset'].get('player_id') != 'a2' for p in points for a in p['focal_assets'])
+    assert all(p['objective_assessment']['side_a']['context']['objectives'] == ['career_contribution'] for p in points)
+    # The legacy opportunity route still rejects unsupported instructions.
     assert client.post('/api/opportunities/trade', json=body).status_code == 422
     assert store.get(runtime.user_id).league_state == runtime.league_state
 
