@@ -25,6 +25,7 @@ class StrategicPackageLane:
     focal: TeamTradeInventory
     counterparty: TeamTradeInventory
     required_receive: Asset | None = None
+    required_send: Asset | None = None
 
 
 @dataclass(frozen=True)
@@ -41,7 +42,12 @@ def _diagonal_pairs(left, right):
 
 
 def _lane_pairs(lane, *, bounds, as_of, shape_offset):
-    inventory_a = lane.focal.model_copy(update={'assets': lane.focal.assets[:bounds.ingredients_per_side]})
+    sent = lane.focal.assets
+    if lane.required_send is not None:
+        if lane.required_send not in sent:
+            return
+        sent = (lane.required_send, *(a for a in sent if a != lane.required_send))
+    inventory_a = lane.focal.model_copy(update={'assets': sent[:bounds.ingredients_per_side]})
     received = lane.counterparty.assets
     if lane.required_receive is not None:
         if lane.required_receive not in received:
@@ -60,7 +66,8 @@ def _lane_pairs(lane, *, bounds, as_of, shape_offset):
     shapes = shapes[shape_offset:] + shapes[:shape_offset]
     queues = deque()
     for sent, received in shapes:
-        a = tuple(p for p in packs_a if len(p.assets) == sent)
+        a = tuple(p for p in packs_a if len(p.assets) == sent and
+            (lane.required_send is None or lane.required_send in p.assets))
         b = tuple(p for p in packs_b if len(p.assets) == received and
             (lane.required_receive is None or lane.required_receive in p.assets))
         if a and b:

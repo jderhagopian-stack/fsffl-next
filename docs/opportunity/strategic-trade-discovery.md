@@ -111,10 +111,10 @@ The backend objective contract is specified in
 It supports automatic hypothesis context and explicit request-scoped goals while
 leaving discovery ordering, final action authority and the UI rollout separate.
 
-The opt-in [bounded discovery backend](bounded-strategic-discovery.md) reuses
+The [bounded discovery backend](bounded-strategic-discovery.md) reuses
 canonical packages, cheap Decision economics and both-team objective evidence.
 Its package/visit/screen budgets and remaining acceptance gates are explicit;
-existing Explore/ForYou activation remains a separate reviewed step.
+Explore/For You and directed Trade Finder consume the same engine, as described below.
 
 
 Current competitive evaluation must consume the existing
@@ -122,3 +122,31 @@ Current competitive evaluation must consume the existing
 Keep preseason comparisons and future-horizon economics separate, preserve earned
 results, and compare baseline/scenario outcomes on identical forward evidence.
 A coherent saved State alone does not establish current injury-adjusted inputs.
+
+## Progressive discovery delivery
+
+Automatic For You and directed Trade Finder use one strategic-discovery engine.
+Trade Finder is the configure-first entry, including a required outgoing player or
+pick; Explore supports the same targets, counterparties, position and protection
+constraints. Trade Center remains the deeper bilateral/Simulation workspace.
+Legacy browser search code remains a compatibility fallback, not the live second
+engine. Removing that fallback is a later cleanup, not a new economic model.
+
+Evaluate at most eight distinct packages per request and at most 32 per search.
+Continue automatically toward four preliminary fits, or stop when the bounded
+pool or screening limit is reached. Four is a shortlist-size preference, not an
+acceptance/materiality threshold or guarantee of benefit. Additional screening
+within the remaining budget is explicit; the user can pause after a batch.
+Completed packages remain visible and are not re-evaluated by continuation.
+
+Continuation is signed and tied to tenant, State, published generation, evidence
+identities and instructions. A small, byte/entry/TTL-bounded response cache reuses
+exact repeats without retaining State/model graphs or creating persistence.
+Cheap bounded generation is replayed between batches; detailed screens are skipped
+by canonical IDs. One repair sequence is shared across the whole search. Missing
+or conflicting evidence, failed parents, protections and exact handoffs remain
+intact. Restart/expiration or evidence changes require a new search.
+
+The next pick tranche is governed by [pick-economics-coverage.md](pick-economics-coverage.md).
+Current Market and origin-slot evidence is reusable; compatible native-horizon
+pick contribution must pass its own upstream authority/evidence gate.

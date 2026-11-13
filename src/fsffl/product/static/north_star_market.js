@@ -116,6 +116,7 @@
     if(!pending?.marketTab)return null;
     if(TABS.some(row=>row[0]===pending.marketTab))market.tab=pending.marketTab;
     if(pending.marketIntent&&window.fsfflMarketIntent?.set)window.fsfflMarketIntent.set(pending.marketIntent,pending.marketValue||"");
+    if(pending.marketIntent)window.fsfflStrategicExplore?.applyIntent?.(pending.marketIntent,pending.marketValue||"");
     return pending;
   }
   function openTab(key){
@@ -298,6 +299,7 @@
     return unavailable("No paths match this view","The submitted Search may have results outside the current advanced filters.");
   }
   function renderTradeFinder(body,payload){
+    if(window.fsfflStrategicExplore)return window.fsfflStrategicExplore.render(body,payload,{directed:true});
     if(market.pathKey)return renderCandidatePathDetail(body,payload);
     if(!payload||payload.status!=="ready"){body.innerHTML=loading("Loading Trade Finder","Server-owned Search is preparing the current candidate workspace.");return}
     if(!market.playerLoaded&&!market.playerLoading)void ensurePlayerUniverse();
