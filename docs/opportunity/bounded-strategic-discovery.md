@@ -57,7 +57,7 @@ coverage favors different counterparties, hypotheses and outgoing assets; it
 contains no weighted master score. Strained or incomplete cases remain visible.
 
 Return at most 80 packages per batch and run at most eight detailed pre-Simulation
-screens per request (at most 32 distinct screens per continued search).
+screens per request (at most 80 distinct screens per continued search).
 The effective screen ceiling also respects the requested return limit. Screens
 now precede final retention: every evaluated point, including a failed parent,
 survives; remaining result slots preserve categorical exploration. A complete
@@ -149,7 +149,7 @@ response acceptance, owner-intent validation and confirmed competitive benefit.
 
 ## Explore production interface
 
-Explore / For You consumes this API directly. The first read uses automatic
+Explore / Opportunities consumes this API directly. The first read uses automatic
 competitive-state direction; owners can switch to request-scoped priorities.
 The compact **Refine your search** control follows **Your Direction**, before
 results. It supports current canonical counterparties, exact targets, received
@@ -209,13 +209,13 @@ The live endpoint wraps each existing at-most-eight-screen batch with bounded
 continuation. Responses include `search_progress` with cumulative distinct screens,
 preliminary-fit count, stop reason, and optional opaque `next_token`. Send it back
 as `continuation_token` with identical instructions. The browser continues toward
-four preliminary fits, stopping no later than 32 screens or pool exhaustion; it
+four preliminary fits, stopping after at most32 screens per action or pool exhaustion; it
 preserves prior results, supports pause-after-batch and explicit further screening.
 
 `offered_asset_ref` requires a canonically owned outgoing player or pick in every
 package. It is enforced before the six-ingredient enumeration cap and cannot send
 a protected player. Received targets/position/partner constraints are unchanged.
-For You and Trade Finder share the live engine; Trade Finder opens directed controls.
+Opportunities combines automatic and directed controls; old Trade Finder links resolve there.
 
 Tokens carry only signed IDs/progress and bind exact tenant, State/generation,
 Forecast/Simulation/Value identities, native-source identity and request settings.
@@ -230,3 +230,5 @@ admission remains in force. Generation can revisit the same at-most-640 cheap po
 per batch; diagnostics describe that work per request rather than implying only
 640 CPU visits across all requests. No Forecast, Intrinsic or full Simulation runs
 are added. [Pick evidence coverage](pick-economics-coverage.md) remains explicit.
+
+Find More explicitly continues beyond the initial32 up to80 distinct screens, preserving all evaluated cards within the existing80-card bound. It never restarts unchanged instructions or repeats earlier screened packages. The initial/action browser ceiling remains32; server batches remain8. See the unified experience in strategic-trade-discovery.md.

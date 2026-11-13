@@ -82,14 +82,13 @@ def test_new_market_assets_load_after_existing_recomposition() -> None:
     assert source.index("market_trade_recomposition.js") < source.index("market_trade_drilldown.js")
 
 
-def test_market_north_star_has_exactly_four_primary_tabs_and_neutral_language() -> None:
+def test_market_north_star_has_exactly_three_primary_tabs_and_neutral_language() -> None:
     source = _read(STATIC / "north_star_market.js")
-    assert '["for_you","For You","What might I care about?"]' in source
-    assert '["trade_finder","Trade Finder","Find realistic paths"]' in source
+    assert '["for_you","Opportunities","Find your next move"]' in source
     assert '["player_board","Player Board","Discover for yourself"]' in source
     assert '["free_agents","Free Agents","Add without a trade"]' in source
     tabs = source.split("const TABS=[", 1)[1].split("];", 1)[0]
-    assert tabs.count('["') == 4
+    assert tabs.count('["') == 3
     assert "data-market-disagreement" not in source
     assert "Explore Value disagreement" not in source
     for phrase in (
@@ -164,9 +163,9 @@ def test_free_agents_only_run_governed_add_drop_on_explicit_action() -> None:
     assert "/api/opportunities/waiver" not in source.split("async function runWaiver(){", 1)[0]
 
 
-def test_market_mobile_contract_preserves_four_tabs_and_player_identity() -> None:
+def test_market_mobile_contract_preserves_three_tabs_and_player_identity() -> None:
     css = _read(STATIC / "north_star_market.css")
-    assert ".market-ns-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))" in css
+    assert ".market-ns-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))" in css
     assert "@media(max-width:760px)" in css
     assert ".market-ns-v2{width:100%;max-width:100%;overflow:hidden}" in css
     assert ".market-ns-player-table{width:100%;max-width:100%}" in css
@@ -178,8 +177,8 @@ def test_player_intelligence_market_actions_route_by_current_ownership_context()
     for phrase in (
         "Market actions",
         "Evaluate add/drop",
-        "Shop in Trade Finder",
-        "Target in Trade Finder",
+        "Shop player",
+        "Target player",
         "Open current owner",
         "openFreeAgent",
         'openTradeFinder?.("shop"',
