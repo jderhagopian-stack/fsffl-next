@@ -90,8 +90,9 @@ def test_market_north_star_has_exactly_four_primary_tabs_and_neutral_language() 
     assert '["free_agents","Free Agents","Add without a trade"]' in source
     tabs = source.split("const TABS=[", 1)[1].split("];", 1)[0]
     assert tabs.count('["') == 4
+    assert "data-market-disagreement" not in source
+    assert "Explore Value disagreement" not in source
     for phrase in (
-        "Value disagreement",
         "Worth attention",
         "Prelim plausible",
         "Bilateral friction",
