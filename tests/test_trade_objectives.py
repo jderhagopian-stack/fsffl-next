@@ -112,8 +112,14 @@ def test_real_api_user_instruction_ownership_rejection_and_legacy_routes(monkeyp
         for route in ('analyze', 'simulate'):
             assert client.post('/api/trade-center/'+route, json={**body, 'search_instructions': instructions}).status_code == 422
     assert len(calls) == 1
-    # Unsupported routes must not silently accept instructions.
-    assert client.post('/api/trade-center/frontier', json=body).status_code == 422
+    # Guided frontiers preserve goals and exclude protected sends before exploration.
+    response = client.post('/api/trade-center/frontier', json=body)
+    assert response.status_code == 200
+    points = response.json()['points']
+    assert points
+    assert all(a['asset'].get('player_id') != 'a2' for p in points for a in p['focal_assets'])
+    assert all(p['objective_assessment']['side_a']['context']['objectives'] == ['career_contribution'] for p in points)
+    # The legacy opportunity route still rejects unsupported instructions.
     assert client.post('/api/opportunities/trade', json=body).status_code == 422
     assert store.get(runtime.user_id).league_state == runtime.league_state
 
@@ -162,3 +168,22 @@ def test_optional_assessment_failure_preserves_legacy_result(monkeypatch):
     assert response.json()['objective_assessment']['status'] == 'unavailable'
     assert response.json()['roster_legality']
     assert response.json()['decision'] is None
+
+
+def test_protections_without_goals_preserve_server_inference_and_handoff(monkeypatch):
+    from fsffl.product.trade_objectives import objective_context
+    import fsffl.product.trade_objectives as module
+    from fsffl.team_utility.utility import CalculatedCompetitiveState
+    runtime, _, _ = fixture()
+    monkeypatch.setattr(module, 'calculated_competitive_state', lambda _: CalculatedCompetitiveState.CONTENDER)
+    automatic = objective_context(runtime, 'alpha')
+    protected = TradeSearchInstructions(protected_player_ids=('a2',))
+    current = objective_context(runtime, 'alpha', protected)
+    assert current.objectives == automatic.objectives == (G.CURRENT,)
+    assert current.explicitly_directed is False
+    assert current.source == automatic.source
+    assert current.protected_player_ids == ('a2',)
+    custom = objective_context(runtime, 'alpha', TradeSearchInstructions(objectives=(G.CAREER,), protected_player_ids=('a2',)))
+    assert custom.objectives == (G.CAREER,)
+    assert custom.explicitly_directed
+    assert objective_context(runtime, 'alpha', protected) == current

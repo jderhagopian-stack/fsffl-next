@@ -12,7 +12,7 @@
   function productState(){try{return typeof state!=='undefined'?state:null}catch(_){return null}}
   function opportunityStore(){try{return typeof fsfflOpportunityState!=='undefined'?fsfflOpportunityState:null}catch(_){return null}}
   function contextKey(){if(typeof tradeContextKey==='function')return tradeContextKey();const c=productState()?.context||{};return`${c.league_id||''}|${c.team_id||''}|${c.state_id||''}`}
-  function stableDraft(){try{if(typeof tradeDraftPayload!=='function')return null;const p=tradeDraftPayload();return{counterparty_team_id:p.counterparty_team_id,focal_asset_refs:[...(p.focal_asset_refs||[])].sort(),counterparty_asset_refs:[...(p.counterparty_asset_refs||[])].sort()}}catch(_){return null}}
+  function stableDraft(){try{if(typeof tradeDraftPayload!=='function')return null;const p=tradeDraftPayload();return{counterparty_team_id:p.counterparty_team_id,focal_asset_refs:[...(p.focal_asset_refs||[])].sort(),counterparty_asset_refs:[...(p.counterparty_asset_refs||[])].sort(),...(p.search_instructions?{search_instructions:p.search_instructions}:{})}}catch(_){return null}}
   function draftKey(){if(typeof tradeScopeKey==='function')return tradeScopeKey();const p=stableDraft();return p?`${contextKey()}|${p.counterparty_team_id}|${p.focal_asset_refs.join(',')}|${p.counterparty_asset_refs.join(',')}`:null}
   function currentTrade(generation,key){return generation===tradeGeneration&&key===draftKey()}
   function responseMatchesState(result,expectedStateId){return(!expectedStateId||result?.state_id_before===expectedStateId)&&(typeof tradeResultMatchesContext!=='function'||tradeResultMatchesContext(result))}

@@ -11,12 +11,13 @@ from .opportunity_posture import calculated_competitive_state, default_posture_f
 
 
 class TradeSearchInstructions(FrozenModel):
-    objectives: tuple[TradeObjective, ...]
+    # Omitted goals retain server inference while applying explicit protections.
+    objectives: tuple[TradeObjective, ...] | None = None
     protected_player_ids: tuple[str, ...] = ()
 
 
 def objective_context(runtime, team_id, instructions=None):
-    if instructions is not None:
+    if instructions is not None and instructions.objectives is not None:
         return OwnerObjectiveContext(
             team_id=team_id, objectives=instructions.objectives,
             protected_player_ids=instructions.protected_player_ids,
@@ -31,6 +32,7 @@ def objective_context(runtime, team_id, instructions=None):
     }.get(posture, (TradeObjective.CURRENT, TradeObjective.THREE_YEAR, TradeObjective.CAREER))
     return OwnerObjectiveContext(team_id=team_id, objectives=objectives,
         calculated_competitive_state=calculated.value, inferred_posture=posture.value,
+        protected_player_ids=instructions.protected_player_ids if instructions is not None else (),
         source="calculated_state_posture_hypothesis_v1")
 
 

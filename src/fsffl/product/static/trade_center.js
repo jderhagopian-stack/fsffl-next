@@ -1,7 +1,7 @@
 const tradeUiState={browser:null,counterpartyTeamId:'',focalSelected:new Set(),counterpartySelected:new Set(),loading:false,valueLenses:null,draftRevision:0,requests:{},loadSequence:0,loadPromise:null,loadContextKey:null,browserContextKey:null};
 
 function tradeContextKey(){const c=state?.context||{};return JSON.stringify([c.league_id||null,c.team_id||null,c.state_id||null,c.capability_readiness?.publication?.generation_id||c.publication_generation_id||null])}
-function tradeScopeKey(){const p=tradeDraftPayload();return JSON.stringify([tradeContextKey(),tradeUiState.draftRevision,p.counterparty_team_id,[...p.focal_asset_refs].sort(),[...p.counterparty_asset_refs].sort()])}
+function tradeScopeKey(){const p=tradeDraftPayload();return JSON.stringify([tradeContextKey(),tradeUiState.draftRevision,p.counterparty_team_id,[...p.focal_asset_refs].sort(),[...p.counterparty_asset_refs].sort(),p.search_instructions||null])}
 function tradeBeginRequest(kind){const id=(tradeUiState.requests[kind]||0)+1;tradeUiState.requests[kind]=id;return{kind,id,key:tradeScopeKey()}}
 function tradeScopeIsCurrent(request){return Boolean(request&&request.key===tradeScopeKey())}
 function tradeRequestIsCurrent(request){return tradeScopeIsCurrent(request)&&tradeUiState.requests[request.kind]===request.id}
@@ -162,7 +162,7 @@ function renderTradeAnalysis(result){
   </div>`;
 }
 
-function tradeDraftPayload(){return{counterparty_team_id:tradeUiState.counterpartyTeamId,focal_asset_refs:[...tradeUiState.focalSelected],counterparty_asset_refs:[...tradeUiState.counterpartySelected]}}
+function tradeDraftPayload(){const payload={counterparty_team_id:tradeUiState.counterpartyTeamId,focal_asset_refs:[...tradeUiState.focalSelected],counterparty_asset_refs:[...tradeUiState.counterpartySelected]};if(tradeUiState.searchInstructions&&tradeUiState.searchInstructionsContextKey===tradeContextKey())payload.search_instructions=tradeUiState.searchInstructions;return payload}
 function renderTradeSimulationResult(result){
   const target=qs('#trade-simulation-result');if(!target)return;
   const rows=result.team_deltas||[];
@@ -177,7 +177,7 @@ function renderTradeFrontierResult(result){
   target.innerHTML=`<div style="border:1px solid var(--line);border-radius:12px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><p class="eyebrow">NEXT-6 price discovery</p><h3 style="margin:0">Adjacent negotiation frontier</h3><p style="color:var(--muted);font-size:12px;margin:6px 0 0">These are canonically owned package variations evaluated through NEXT-5. Search does not rewrite Value to balance a trade.</p></div><span class="status-chip">${Number(result.evaluated_count||0).toLocaleString()} packages tested</span></div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Your package</th><th>Their package</th><th>Bilateral shape</th><th>Feasibility</th><th>Authority</th></tr></thead><tbody>${visible.length?visible.map(point=>`<tr><td>${frontierPackageMarkup(point.focal_assets)}</td><td>${frontierPackageMarkup(point.counterparty_assets)}</td><td style="text-transform:capitalize">${escapeHtml(tradeDirectionText(point.decision_shape))}</td><td style="text-transform:capitalize">${escapeHtml(tradeDirectionText(point.feasibility_shape))}</td><td style="text-transform:capitalize">${escapeHtml(tradeDirectionText(point.action_authority))}</td></tr>`).join(''):'<tr><td colspan="5">No adjacent packages were produced inside the current search bounds.</td></tr>'}</tbody></table></div><p style="color:var(--muted);font-size:11px;margin:10px 0 0">Showing up to 18 nearby package points. Unknown materiality or acceptance remains a blocker to action authority rather than being guessed.</p></div>`;
 }
 
-function clearTradeDraft(){tradeUiState.focalSelected.clear();tradeUiState.counterpartySelected.clear();invalidateTradeScenario();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();renderTradeAnalysisNotice()}
+function clearTradeDraft(){tradeUiState.searchInstructions=null;tradeUiState.searchInstructionsContextKey=null;tradeUiState.focalSelected.clear();tradeUiState.counterpartySelected.clear();invalidateTradeScenario();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();renderTradeAnalysisNotice()}
 function chooseTradeCounterparty(teamId){tradeUiState.counterpartyTeamId=teamId;tradeUiState.counterpartySelected.clear();invalidateTradeScenario();const search=qs('#counterparty-asset-filter');if(search)search.value='';['type','position','slot'].forEach(kind=>{const control=qs(`#${tradeFilterId('counterparty',kind)}`);if(control)control.value=''});renderTradeCounterparties();renderTradeDraftSide('counterparty');renderTradeAssetList('counterparty');updateAnalyzeTradeState();renderTradeAnalysisNotice()}
 
 async function analyzeTradeDraft(){

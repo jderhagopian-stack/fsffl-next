@@ -104,7 +104,7 @@
   function shell(payload=null){
     const host=panel();if(!host)return;
     host.classList.add("market-ns-v2");
-    host.innerHTML="<header class='market-ns-head'><div><p class='eyebrow'>Explore</p><h1>Find something worth doing.</h1><p>FSFFL can surface relevant opportunities, or you can explore the league on your own terms.</p></div><span class='status-chip'>"+(market.readOnly?"Read-only discovery":"Governed discovery")+"</span></header>"+tabNav()+"<div id='market-ns-body'></div><details class='market-ns-authority'><summary>Authority & evidence</summary><p>Search discovers candidate structures. Trade Center owns bilateral Decision, package consequences and exact Simulation. Broad Market and 3-Year Intrinsic remain separate. Missing evidence stays unavailable; acceptance probability is not estimated.</p></details>";
+    host.innerHTML="<header class='market-ns-head'><div><p class='eyebrow'>Explore</p><h1>"+(market.tab==="for_you"?"Make your next move count.":"Find something worth doing.")+"</h1><p>"+(market.tab==="for_you"?"Trade opportunities shaped around your franchise—and theirs.":"FSFFL can surface relevant opportunities, or you can explore the league on your own terms.")+"</p></div><span class='status-chip'>"+(market.readOnly?"Read-only discovery":"Governed discovery")+"</span></header>"+tabNav()+"<div id='market-ns-body'></div><details class='market-ns-authority'><summary>Authority & evidence</summary><p>Search discovers candidate structures. Trade Center owns bilateral Decision, package consequences and exact Simulation. Broad Market and 3-Year Intrinsic remain separate. Missing evidence stays unavailable; acceptance probability is not estimated.</p></details>";
     wireTabs();
     renderBody(payload||opp()?.payload||null);
   }
@@ -163,6 +163,7 @@
     return"<article class='market-ns-opportunity "+a.key+"'><button type='button' data-market-open='"+esc(item.opportunity_id)+"'><span class='market-ns-orb'>↗</span><div><div class='market-ns-card-top'><small>"+esc(item.need_dimension||"Opportunity")+(saved?" · Saved":"")+"</small>"+opportunityPill(item)+"</div><h3>"+esc(opportunityTitle(item,payload))+"</h3><p>"+esc(why)+"</p><div class='market-ns-opportunity-evidence'><span><small>Candidate paths</small><strong>"+esc(paths.length)+" preliminarily screened</strong></span><span><small>Example targets</small><strong>"+esc(targets.join(" · ")||"See paths")+"</strong></span><span><small>Primary risk</small><strong>"+esc(risk)+"</strong></span></div><span class='market-ns-card-cta'>Open opportunity →</span></div></button></article>";
   }
   function renderForYou(body,payload){
+    if(window.fsfflStrategicExplore)return window.fsfflStrategicExplore.render(body,payload);
     if(market.pathKey)return renderCandidatePathDetail(body,payload);
     if(market.detailKey)return renderOpportunityDetail(body,payload);
     if(!payload||payload.status!=="ready"){body.innerHTML=loading("Preparing your Market","For You waits for governed strategic, economic and bilateral evidence; it does not promote raw Search rows.");return}
@@ -504,7 +505,7 @@
 
   window.fsfflMarketNorthStarV2=true;
   window.renderFsfflMarketNorthStar=renderNorthStar;
-  window.fsfflMarketNorthStar={version:VERSION,bootReadOnly,openTab,openTradeFinder,openFreeAgent,openOwner,render:renderNorthStar};
+  window.fsfflMarketNorthStar={version:VERSION,activeTab:()=>market.tab,bootReadOnly,openTab,openTradeFinder,openFreeAgent,openOwner,render:renderNorthStar};
   window.addEventListener("fsffl:product-context-updated",reset);
   window.addEventListener("fsffl:market-focus-applied",()=>{if(onMarket())shell(opp()?.payload||null)});
   window.addEventListener("fsffl:market-focus-state-changed",()=>{if(onMarket()&&market.tab==="trade_finder")renderBody(opp()?.payload||null)});

@@ -34,6 +34,7 @@ class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
     counterparty_team_id: str | None = None
     target_asset_ref: str | None = None
+    target_position: str | None = None
     max_candidates: Annotated[int, Field(ge=1, le=80)] = 80
     evaluation_budget: Annotated[int, Field(ge=0, le=8)] = 8
 
@@ -60,6 +61,15 @@ def prepare_discovery(runtime, request):
         teams = tuple(t for t in teams if any(a.asset_ref == request.target_asset_ref for a in t.assets))
         if not teams:
             raise ValueError('The target must be owned by an admitted counterparty')
+    if request.target_position is not None:
+        if request.target_position not in {p.position.value for p in state.players}:
+            raise ValueError('Target position must exist in the current league player population')
+        positions = {p.player_id: p.position.value for p in state.players}
+        if request.target_asset_ref is not None and not any(
+            a.asset_ref == request.target_asset_ref and positions.get(a.player_id) == request.target_position
+            for team in teams for a in team.assets
+        ):
+            raise ValueError('The target asset must match the requested position')
     return context, browser, teams
 
 
@@ -128,6 +138,9 @@ def build_discovery_lanes(runtime, request, read):
     lanes=[]
     for team in teams:
         other = inventories[team.team_id]
+        if request.target_position is not None:
+            other = other.model_copy(update={'assets': tuple(a for a in other.assets
+                if isinstance(a, PlayerAsset) and positions.get(a.player_id) == request.target_position)})
         other_context = objective_context(runtime,team.team_id)
         other_goal = next((g for g in other_context.objectives if metric_values[g]),TradeObjective.MARKET)
         required = next((a for a in other.assets if _ref(a)==request.target_asset_ref),None)
