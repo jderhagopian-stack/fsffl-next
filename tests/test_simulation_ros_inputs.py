@@ -262,8 +262,8 @@ def test_trade_screen_and_confirmation_consume_same_forward_roster_evidence():
     assert analysis['position_strength'] is not None
     row = {'counterparty_team_id': 'b', 'send': [{'asset_ref': 'player:starter'}], 'receive': [{'asset_ref': 'player:opp'}]}
     screen = evaluate_candidate_path(runtime, row)
-    assert screen['preliminary_bilateral_screen']['focal']['starter_points_delta'] == 70
-    assert screen['preliminary_bilateral_screen']['counterparty']['starter_points_delta'] == -140
+    assert screen['preliminary_bilateral_screen']['focal']['starter_points_delta'] == pytest.approx(140 / 13)
+    assert screen['preliminary_bilateral_screen']['counterparty']['starter_points_delta'] == pytest.approx(-280 / 13)
     # Default progressive factory runs the existing confirmation protocol;
     # this small deterministic loader keeps a test-sized sample without providers.
     def loader(s, e):

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Mapping
+from typing import Mapping, Literal
+from math import isfinite
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from fsffl.state.models import FrozenModel
 from fsffl.team_utility.position_strength import TeamPositionStrengthComparison
@@ -48,7 +49,11 @@ class PreliminaryBilateralScreen(FrozenModel):
     counterparty: PreliminarySideAssessment
     shape: PreliminaryBilateralShape
     acceptance_probability: None = None
-    model_version: str = "next5-preliminary-bilateral-screen-v1"
+    current_points_basis: Literal["optimized_horizon_lineup", "remaining_regular_season_weekly_mean"] = "optimized_horizon_lineup"
+    current_points_weeks: tuple[int, ...] = ()
+    current_points_weeks_by_team: dict[str, tuple[int, ...]] = Field(default_factory=dict)
+    current_points_unit: Literal["fantasy_points"] = "fantasy_points"
+    model_version: str = "next5-preliminary-bilateral-screen-v2:explicit-current-points-basis"
 
     @model_validator(mode="after")
     def validate_sides(self) -> "PreliminaryBilateralScreen":
@@ -85,6 +90,7 @@ def _side_assessment(
     net: BilateralRosterAdjustedMarketNet,
     comparisons: Mapping[str, TeamPositionStrengthComparison],
     economic_materiality: float,
+    current_points_deltas: Mapping[str, float | None] | None = None,
 ) -> PreliminarySideAssessment:
     adjusted = _adjusted_side(net, team_id)
     market_delta = (
@@ -92,7 +98,10 @@ def _side_assessment(
         if adjusted.status == RosterAdjustedEconomicStatus.COMPLETE
         else None
     )
-    starter_delta = _starter_delta(comparisons, team_id)
+    starter_delta = (_starter_delta(comparisons, team_id) if current_points_deltas is None
+                     else current_points_deltas.get(team_id))
+    if starter_delta is not None and not isfinite(starter_delta):
+        raise ValueError("Current roster points must be finite or unavailable")
     reasons: list[str] = []
 
     if market_delta is None:
@@ -154,6 +163,10 @@ def assess_preliminary_bilateral_screen(
     focal_team_id: str,
     roster_adjusted_market_net: BilateralRosterAdjustedMarketNet,
     position_strength_comparisons: Mapping[str, TeamPositionStrengthComparison],
+    current_points_deltas: Mapping[str, float | None] | None = None,
+    current_points_basis: str = "optimized_horizon_lineup",
+    current_points_weeks: tuple[int, ...] = (),
+    current_points_weeks_by_team: Mapping[str, tuple[int, ...]] | None = None,
 ) -> PreliminaryBilateralScreen:
     """Classify a cheap pre-Simulation bilateral screen without a master score.
 
@@ -163,6 +176,10 @@ def assess_preliminary_bilateral_screen(
     """
 
     side_ids = {proposal.side_a.team_id, proposal.side_b.team_id}
+    if (current_points_deltas is None) != (current_points_basis == "optimized_horizon_lineup"):
+        raise ValueError("Current roster points require an explicit matching basis")
+    if current_points_deltas is not None and set(current_points_deltas) != side_ids:
+        raise ValueError("Current roster points must cover both trade teams")
     if focal_team_id not in side_ids:
         raise ValueError("focal team must be one side of preliminary trade screen")
     counterparty_team_id = next(team_id for team_id in side_ids if team_id != focal_team_id)
@@ -175,12 +192,14 @@ def assess_preliminary_bilateral_screen(
         net=roster_adjusted_market_net,
         comparisons=position_strength_comparisons,
         economic_materiality=threshold,
+        current_points_deltas=current_points_deltas,
     )
     counterparty = _side_assessment(
         team_id=counterparty_team_id,
         net=roster_adjusted_market_net,
         comparisons=position_strength_comparisons,
         economic_materiality=threshold,
+        current_points_deltas=current_points_deltas,
     )
 
     if focal.shape == PreliminarySideShape.DOMINATED:
@@ -207,4 +226,7 @@ def assess_preliminary_bilateral_screen(
         focal=focal,
         counterparty=counterparty,
         shape=shape,
+        current_points_basis=current_points_basis,
+        current_points_weeks=current_points_weeks,
+        current_points_weeks_by_team=dict(current_points_weeks_by_team or {}),
     )
