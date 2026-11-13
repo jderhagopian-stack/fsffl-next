@@ -261,7 +261,7 @@ def build_strategic_discovery(runtime, request, *, read=None):
             cuts=tuple(TeamRosterLegalityResolution.model_validate(r) for r in result['roster_legality'])
             evidence=bind_trade_intrinsic_values(runtime,proposal,read,roster_resolutions=cuts) if read is not None else unavailable_trade_intrinsic('Published native horizon evidence unavailable')
             result={**result,'horizon_asset_economics':evidence}
-            row.update({'forecast_input':result.get('forecast_input'),'evidence_status':'pre_simulation_screened','preliminary_decision_screen':result.get('preliminary_bilateral_screen'),
+            row.update({'current_roster_points':result.get('current_roster_points'),'forecast_input':result.get('forecast_input'),'evidence_status':'pre_simulation_screened','preliminary_decision_screen':result.get('preliminary_bilateral_screen'),
                 'roster_legality':result['roster_legality'],'position_strength_comparisons':result.get('position_strength_comparisons'),
                 'horizon_asset_economics':evidence,'roster_adjusted_market_net':result.get('roster_adjusted_market_net'),
                 'objective_assessment':build_trade_objective_assessment(runtime,proposal,result,request.search_instructions),

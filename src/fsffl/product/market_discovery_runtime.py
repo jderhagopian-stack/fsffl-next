@@ -757,11 +757,20 @@ def evaluate_candidate_path(
         economic_net,
         trade_team_resolutions,
     )
+    current_points = None
+    if horizon == ForecastHorizon.REST_OF_SEASON:
+        from .current_roster_screen import remaining_regular_points
+        current_points = remaining_regular_points(runtime, legal_after,
+            team_ids=(focal_team_id, counterparty_team_id))
     screen = assess_preliminary_bilateral_screen(
         proposal,
         focal_team_id=focal_team_id,
         roster_adjusted_market_net=adjusted_market,
         position_strength_comparisons=comparisons,
+        current_points_deltas=current_points["deltas"] if current_points else None,
+        current_points_basis=current_points["basis"] if current_points else "optimized_horizon_lineup",
+        current_points_weeks=current_points["weeks"] if current_points else (),
+        current_points_weeks_by_team=current_points["weeks_by_team"] if current_points else None,
     )
     decision_finished = monotonic()
 
@@ -819,6 +828,7 @@ def evaluate_candidate_path(
             for team_id, comparison in comparisons.items()
         },
         "preliminary_bilateral_screen": screen.model_dump(mode="json"),
+        "current_roster_points": current_points,
         "decision_completeness": {
             "status": "partial_pre_simulation",
             "simulation_backed": False,
