@@ -28,6 +28,7 @@ from .trade_objectives import TradeSearchInstructions, objective_context, build_
 from .trade_value_adapter import cardinal_market_profiles
 
 _logger = logging.getLogger("fsffl.product.performance")
+_MODEL_VERSION = "strategic-discovery-v2:bounded-feedback-retention"
 
 class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
@@ -174,10 +175,12 @@ def _representative_indices(rows,budget):
         if not eligible: eligible=remaining
         # A conditional raw horizon complement may guide investigation; actual cuts
         # and team consequences are evaluated only in the subsequent Decision pass.
-        index=next((i for i in eligible if rows[i]['pre_cut_horizon_complement_hypothesis']),eligible[0])
-        if not rows[index]['pre_cut_horizon_complement_hypothesis']:
+        index=next((i for i in eligible if rows[i]['pre_cut_horizon_complement_hypothesis']),None)
+        if index is None:
+            index=next((i for i in eligible if rows[i].get('counterparty_horizon_gain_current_pending')),None)
+        if index is None:
             index=next((i for i in eligible if rows[i].get('preliminary_economic_band')
-                in ('robust_or_ordinary','bounded_uncertainty')),index)
+                in ('robust_or_ordinary','bounded_uncertainty')),eligible[0])
         chosen.append(index);remaining.remove(index)
         teams.add(rows[index]['counterparty_team_id']);hypotheses.update(rows[index]['hypotheses'])
         sent.update(a['asset_ref'] for a in rows[index]['send'])
@@ -190,17 +193,24 @@ def build_strategic_discovery(runtime, request, *, read=None):
         read=None
     lanes,context,browser,teams,rank_signals,profiles=build_discovery_lanes(runtime,request,read)
     pool_budget=min(640,request.max_candidates*8)
+    screen_cap=min(request.evaluation_budget,request.max_candidates)
+    from .strategic_feedback import FeedbackVisits, repair_path, needs_second_step
+    can_feedback=(read is not None and screen_cap>=3 and TradeObjective.CURRENT in context.objectives
+        and runtime.forecast_evidence is not None
+        and runtime.forecast_evidence.simulation_forward_forecasts is not None
+        and runtime.simulation_analytics is not None)
+    reserve=min(8,pool_budget//4) if can_feedback else 0
+    visits=FeedbackVisits(reserve)
+    generation_limit=pool_budget-reserve
     seeds,diagnostics=generate_strategic_packages(lanes,as_of=runtime.league_state.as_of,
-        bounds=StrategicSearchBounds(max_candidates=pool_budget,max_pair_visits=pool_budget))
+        bounds=StrategicSearchBounds(max_candidates=generation_limit,max_pair_visits=generation_limit))
     options={a.asset_ref:a for team in (browser.focal_team,*teams) for a in team.assets}
     asset_index=owned_asset_index(browser)
     market_values={asset_id:p.market_price.distribution.mean for asset_id,p in profiles.items() if p.market_price is not None}
     contexts={team.team_id:objective_context(runtime,team.team_id) for team in teams}
-    rows=[]
-    for item in seeds:
-        proposal=item.seed.proposal
-        row={'point_id':item.seed.point_id,'counterparty_team_id':proposal.side_b.team_id,
-            'hypotheses':list(item.hypotheses),'send':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_a.sends],
+    def make_row(proposal, point_id, hypotheses):
+        row={'point_id':point_id,'counterparty_team_id':proposal.side_b.team_id,
+            'hypotheses':list(hypotheses),'send':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_a.sends],
             'receive':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_b.sends],
             'action_authority':'diagnostic_only','evidence_status':'not_roster_screened'}
         evidence=bind_trade_intrinsic_values(runtime,proposal,read) if read is not None else unavailable_trade_intrinsic('Published native horizon evidence unavailable')
@@ -210,6 +220,8 @@ def build_strategic_discovery(runtime, request, *, read=None):
             deltas=[((evidence.get(supported[g]) or {}).get(label) or {}).get('mean_delta') for g in team_context.objectives]
             return bool(deltas) and all(d is not None and d>=0 for d in deltas) and any(d>0 for d in deltas)
         row['pre_cut_horizon_complement_hypothesis']=raw_priority_gain(context,'side_a') and raw_priority_gain(contexts[proposal.side_b.team_id],'side_b')
+        row['counterparty_horizon_gain_current_pending']=(TradeObjective.CURRENT in context.objectives
+            and raw_priority_gain(contexts[proposal.side_b.team_id],'side_b'))
         row['raw_horizon_trade_deltas']={name:{side:((evidence.get(name) or {}).get(side) or {}).get('mean_delta') for side in ('side_a','side_b')} for name in ('three_year','career')}
         try:
             cheap=evaluate_candidate_economics(runtime,row,profiles=profiles,market_values=market_values,
@@ -224,15 +236,19 @@ def build_strategic_discovery(runtime, request, *, read=None):
             'counterparty_asset_refs':[_ref(a) for a in proposal.side_b.sends]}
         if request.search_instructions is not None:
             row['trade_center_request']['search_instructions']=request.search_instructions.model_dump(mode='json')
-        rows.append(row)
+        return row
+    rows=[make_row(item.seed.proposal,item.seed.point_id,item.hypotheses) for item in seeds]
     pool_count=len(rows)
-    rows=[rows[i] for i in _representative_indices(rows,request.max_candidates)]
-    generated=monotonic();selected=_representative_indices(rows,request.evaluation_budget)
-    errors=0
+    by_point={row['point_id']:row for row in rows}
+    root_order=[rows[i] for i in _representative_indices(rows,min(len(rows),screen_cap+2))]
+    generated=monotonic()
+    screened=[];seen={};root_attempts=repair_attempts=errors=duplicates=existing_repairs=0
+    sequence_used=False
+
     effective_forecasts=None
     baseline_by_team={}
     shared_error=None
-    if selected and runtime.forecast_evidence is not None:
+    if screen_cap and runtime.forecast_evidence is not None:
         try:
             from .simulation_forecasts import current_forecast_coordinates
             forecasts,horizon,cutoff=current_forecast_coordinates(runtime.league_state,runtime.forecast_evidence)
@@ -240,15 +256,23 @@ def build_strategic_discovery(runtime, request, *, read=None):
                 attach_provisional_position_floor_forecasts(runtime.league_state,forecasts,as_of=cutoff,horizon=horizon))
             simulation=runtime.simulation_analytics
             baseline_by_team={v.team_id:v.optimized_lineup for v in (simulation.team_views if simulation is not None else ()) if v.optimized_lineup is not None}
-            needed={runtime.selected_team_id,*(rows[i]['counterparty_team_id'] for i in selected)}
+            needed={runtime.selected_team_id,*(row['counterparty_team_id'] for row in root_order)}
             for team_id in sorted(needed-set(baseline_by_team)):
                 baseline_by_team[team_id]=optimize_team_lineup(runtime.league_state,effective_forecasts,
                     team_id=team_id,as_of=cutoff,horizon=horizon,
                     allow_unfilled_slots=True,model_version='market-preliminary-screen-lineup-v1')
         except ValueError as exc:
             shared_error=exc
-    for index in selected:
-        row=rows[index]
+    def screen(row,kind):
+        nonlocal errors,root_attempts,repair_attempts
+        if row['point_id'] in seen:
+            return seen[row['point_id']]
+        if len(screened)>=screen_cap:
+            return None
+        seen[row['point_id']]=row;screened.append(row)
+        row['evaluation_kind']=kind
+        if kind=='root':root_attempts+=1
+        else:repair_attempts+=1
         try:
             if shared_error is not None:
                 raise shared_error
@@ -271,28 +295,66 @@ def build_strategic_discovery(runtime, request, *, read=None):
             row['evidence_status']='screen_unavailable'
             row['screen_error_type']=type(exc).__name__
             _logger.warning('Strategic discovery screen unavailable error_type=%s',type(exc).__name__)
+        return row
+
+    for root in root_order:
+        if len(screened)>=screen_cap: break
+        if root['point_id'] in seen: continue
+        screen(root,'root')
+        if not can_feedback or sequence_used or screen_cap-len(screened)<2: continue
+        path=repair_path(runtime,root,read,protected_player_ids=context.protected_player_ids,visits=visits)
+        for point,lineage in path:
+            sequence_used=True
+            if len(screened)>=screen_cap: break
+            row=by_point.get(point.point_id)
+            if row is not None: existing_repairs+=1
+            if row is None:
+                from fsffl.trade_decision.models import BilateralTradeProposal, TradeLeg
+                proposal=BilateralTradeProposal(proposal_id=point.point_id,as_of=runtime.league_state.as_of,
+                    side_a=TradeLeg(team_id=point.focal_package.team_id,sends=point.focal_package.assets),
+                    side_b=TradeLeg(team_id=point.counterparty_package.team_id,sends=point.counterparty_package.assets))
+                row=make_row(proposal,point.point_id,('feedback_repair',))
+                rows.append(row);by_point[point.point_id]=row
+            row.setdefault('repair_lineages',[]).append(lineage)
+            if point.point_id in seen: duplicates+=1
+            result=screen(row,'repair')
+            if result is None or (lineage['depth']==1 and not needs_second_step(result)): break
+    # Keep every evaluated point and failed parent; only then fill unscreened
+    # exploration slots. The old 540->80 pruning cannot erase this evidence.
+    fillers=[row for row in rows if row['point_id'] not in seen]
+    rows=screened+[fillers[i] for i in _representative_indices(fillers,
+        max(0,request.max_candidates-len(screened)))]
     _attach_comparable_frontiers(rows,runtime)
     completed=monotonic()
     return {'league_state_id':runtime.league_state.state_id,'publication_generation_id':runtime.publication_generation_id,
         'focal_team_id':runtime.selected_team_id,'priority_context':context.model_dump(mode='json'),
-        'candidate_packages':rows,'diagnostics':{**diagnostics,'candidate_pool_unique_count':pool_count,
-            'candidate_pool_limit':diagnostics['max_candidates'],'max_candidates':request.max_candidates,
+        'candidate_packages':rows,'diagnostics':{**diagnostics,'candidate_pool_unique_count':len(by_point),'generated_candidate_pool_unique_count':pool_count,
+            'candidate_pool_limit':pool_budget,'max_candidates':request.max_candidates,
             'pool_shapes':diagnostics['shapes'],'pool_hypotheses':diagnostics['hypotheses'],
             'candidate_count':len(rows),'returned_candidate_limit':request.max_candidates,
             'shapes':dict(Counter(f"{len(r['send'])}_for_{len(r['receive'])}" for r in rows)),
             'hypotheses':dict(Counter(h for r in rows for h in r['hypotheses'])),
             'returned_counterparties':len({r['counterparty_team_id'] for r in rows}),
-            'preliminary_decision_attempts':len(selected),
+            'preliminary_decision_attempts':len(screened),
             'preliminary_decision_errors':errors,'preliminary_decision_budget':request.evaluation_budget,
+            'effective_preliminary_decision_budget':screen_cap,
             'changed_state_simulation_calls':0,'forecast_or_intrinsic_recomputations':0,
             'timing_ms':{'generation_and_raw_binding':round((generated-start)*1000,3),'decision_screens':round((completed-generated)*1000,3),'total':round((completed-start)*1000,3)},
-            'screened_counterparties':len({rows[i]['counterparty_team_id'] for i in selected}),
-            'screened_hypotheses':dict(Counter(h for i in selected for h in rows[i]['hypotheses'])),
+            'screened_counterparties':len({row['counterparty_team_id'] for row in screened}),
+            'screened_hypotheses':dict(Counter(h for row in screened for h in row['hypotheses'])),
+            'pair_visits':diagnostics['pair_visits']+visits.used,'max_pair_visits':pool_budget,
+            'generation_pair_visits':diagnostics['pair_visits'],'generation_visit_budget':generation_limit,
+            'repair_pair_visits':visits.used,'repair_visit_budget':reserve,
+            'repair_visit_exhausted':visits.exhausted,'repair_skipped':dict(visits.skipped),
+            'root_screen_attempts':root_attempts,'repair_screen_attempts':repair_attempts,
+            'duplicate_repair_points':duplicates,'repair_existing_pool_points':existing_repairs,
+            'repair_sequence_attempted':sequence_used,
+            'evaluated_points_retained':len(screened),
             'rank_signal_covered_players':{goal.value:len(values) for goal,values in rank_signals.items()},
             'native_player_coverage':{name:len(values) for name,values in read.values.items()} if read is not None else {},
             'raw_source':dict(read.source) if read is not None else None},
         'interpretation':'Bounded hypotheses and preliminary consequences; no final recommendations, acceptance probabilities or confirmed mutual benefit',
-        'model_version':'strategic-discovery-v1'}
+        'model_version':_MODEL_VERSION}
 
 
 def _attach_comparable_frontiers(rows,runtime):
@@ -326,7 +388,7 @@ def _attach_comparable_frontiers(rows,runtime):
         candidate=OpportunityCandidate(candidate_id=row['point_id'],kind='trade',focal_team_id=runtime.selected_team_id,
             league_state_id=runtime.league_state.state_id,as_of=runtime.league_state.as_of,
             discovery_status='evaluated',action_authority='diagnostic_only',evidence_completeness='partial',
-            reasons=('unknown_acceptance','materiality_not_evaluated'),search_model_version='strategic-discovery-v1')
+            reasons=('unknown_acceptance','materiality_not_evaluated'),search_model_version=_MODEL_VERSION)
         groups.setdefault(tuple(coordinates),[]).append(OrderedOpportunityPoint(candidate=candidate,objectives=tuple(metrics)))
     survivors=set();eligible=set()
     for points in groups.values():
