@@ -8,8 +8,7 @@
   const SAVE_KEY="fsffl.market.savedOpportunities";
   const WATCH_KEY="fsffl.market.watchedPlayers";
   const TABS=[
-    ["for_you","For You","What might I care about?"],
-    ["trade_finder","Trade Finder","Find realistic paths"],
+    ["for_you","Opportunities","Find your next move"],
     ["player_board","Player Board","Discover for yourself"],
     ["free_agents","Free Agents","Add without a trade"]
   ];
@@ -104,7 +103,7 @@
   function shell(payload=null){
     const host=panel();if(!host)return;
     host.classList.add("market-ns-v2");
-    host.innerHTML="<header class='market-ns-head'><div><p class='eyebrow'>Explore</p><h1>"+(market.tab==="for_you"?"Make your next move count.":"Find something worth doing.")+"</h1><p>"+(market.tab==="for_you"?"Trade opportunities shaped around your franchise—and theirs.":"FSFFL can surface relevant opportunities, or you can explore the league on your own terms.")+"</p></div><span class='status-chip'>"+(market.readOnly?"Read-only discovery":"Governed discovery")+"</span></header>"+tabNav()+"<div id='market-ns-body'></div><details class='market-ns-authority'><summary>Authority & evidence</summary><p>Search discovers candidate structures. Trade Center owns bilateral Decision, package consequences and exact Simulation. Broad Market and 3-Year Intrinsic remain separate. Missing evidence stays unavailable; acceptance probability is not estimated.</p></details>";
+    host.innerHTML="<header class='market-ns-head'><div><p class='eyebrow'>Explore</p><h1>"+(market.tab==="for_you"?"Make your next move count.":"Find something worth doing.")+"</h1><p>"+(market.tab==="for_you"?"Trade opportunities shaped around your franchise—and theirs.":"FSFFL can surface relevant opportunities, or you can explore the league on your own terms.")+"</p></div></header>"+tabNav()+"<div id='market-ns-body'></div><details class='market-ns-authority'><summary>Authority & evidence</summary><p>Search discovers candidate structures. Trade Center owns bilateral Decision, package consequences and exact Simulation. Broad Market and 3-Year Intrinsic remain separate. Missing evidence stays unavailable; acceptance probability is not estimated.</p></details>";
     wireTabs();
     renderBody(payload||opp()?.payload||null);
   }
@@ -114,12 +113,14 @@
   function consumeMarketDeepLink(){
     const pending=window.fsfflConsumeDeepLinkIntent?.("opportunities");
     if(!pending?.marketTab)return null;
-    if(TABS.some(row=>row[0]===pending.marketTab))market.tab=pending.marketTab;
+    const pendingTab=pending.marketTab==="trade_finder"?"for_you":pending.marketTab;
+    if(TABS.some(row=>row[0]===pendingTab))market.tab=pendingTab;
     if(pending.marketIntent&&window.fsfflMarketIntent?.set)window.fsfflMarketIntent.set(pending.marketIntent,pending.marketValue||"");
     if(pending.marketIntent)window.fsfflStrategicExplore?.applyIntent?.(pending.marketIntent,pending.marketValue||"");
     return pending;
   }
   function openTab(key){
+    if(key==="trade_finder")key="for_you";
     if(!TABS.some(row=>row[0]===key))return;
     market.tab=key;market.detailKey="";market.pathKey="";market.detailSection="overview";
     if((key==="for_you"||key==="trade_finder")&&opp()?.payload?.status!=="ready"){
@@ -480,7 +481,7 @@
     if(typeof setRoute==="function")setRoute("behavioral_intelligence");
   }
   function openTradeFinder(intent,value){
-    window.fsfflSetDeepLinkIntent?.({route:"opportunities",marketTab:"trade_finder",marketIntent:intent||"",marketValue:value||""});
+    window.fsfflSetDeepLinkIntent?.({route:"opportunities",marketTab:"for_you",marketIntent:intent||"",marketValue:value||""});
     if(typeof setRoute==="function")setRoute("opportunities");
   }
   function openFreeAgent(playerId){

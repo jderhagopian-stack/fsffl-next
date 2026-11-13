@@ -3,7 +3,7 @@
 .market-ns-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding:4px 0 12px}
 .market-ns-head h1{margin:2px 0 5px;font-size:clamp(2.15rem,7vw,4.4rem);line-height:.92;letter-spacing:-.065em}
 .market-ns-head p:not(.eyebrow){margin:0;max-width:620px;color:var(--muted);font-size:11px;line-height:1.45}
-.market-ns-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--line);border-radius:13px;background:#07101c;margin:0 0 12px}
+.market-ns-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--line);border-radius:13px;background:#07101c;margin:0 0 12px}
 .market-ns-tabs button{min-width:0;min-height:48px;border:0;border-radius:9px;background:transparent;color:#8194a8;padding:7px 8px;text-align:left;font:inherit;cursor:pointer}
 .market-ns-tabs button strong{display:block;font-size:10px;color:#a8bac9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .market-ns-tabs button small{display:block;margin-top:2px;font-size:7px;line-height:1.2;color:#687d91;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -114,7 +114,7 @@ leaving discovery ordering, final action authority and the UI rollout separate.
 The [bounded discovery backend](bounded-strategic-discovery.md) reuses
 canonical packages, cheap Decision economics and both-team objective evidence.
 Its package/visit/screen budgets and remaining acceptance gates are explicit;
-Explore/For You and directed Trade Finder consume the same engine, as described below.
+Opportunities consumes the same engine for automatic and directed searches.
 
 
 Current competitive evaluation must consume the existing
@@ -125,14 +125,13 @@ A coherent saved State alone does not establish current injury-adjusted inputs.
 
 ## Progressive discovery delivery
 
-Automatic For You and directed Trade Finder use one strategic-discovery engine.
-Trade Finder is the configure-first entry, including a required outgoing player or
-pick; Explore supports the same targets, counterparties, position and protection
-constraints. Trade Center remains the deeper bilateral/Simulation workspace.
+Opportunities uses one strategic-discovery engine for automatic and directed
+search, including a required outgoing player or pick, targets, counterparties,
+position and protection constraints. Trade Center remains the deeper bilateral/Simulation workspace.
 Legacy browser search code remains a compatibility fallback, not the live second
 engine. Removing that fallback is a later cleanup, not a new economic model.
 
-Evaluate at most eight distinct packages per request and at most 32 per search.
+Evaluate at most eight distinct packages per request and at most 32 per action and 80 per search.
 Continue automatically toward four preliminary fits, or stop when the bounded
 pool or screening limit is reached. Four is a shortlist-size preference, not an
 acceptance/materiality threshold or guarantee of benefit. Additional screening
@@ -150,3 +149,29 @@ intact. Restart/expiration or evidence changes require a new search.
 The next pick tranche is governed by [pick-economics-coverage.md](pick-economics-coverage.md).
 Current Market and origin-slot evidence is reusable; compatible native-horizon
 pick contribution must pass its own upstream authority/evidence gate.
+
+## Unified Opportunities experience
+
+Explore has three primary tabs: Opportunities, Player Board and Free Agents.
+Opportunities combines automatic discovery and directed shopping; legacy For You
+and Trade Finder links resolve to that same view. Trade Center remains full evaluation.
+
+Find More keeps the current instructions and cursor, excludes earlier screened
+canonical packages and retains their cards. Initial/action work is at most four
+sequential eight-screen batches; explicit continuation can extend to80 distinct
+screens per search. The server may stop earlier for a preliminary shortlist or
+pool exhaustion. At80, all evaluated cards still fit the existing80-card retention
+bound. Changing direction starts a separate search; previous exclusions are not
+silently transferred to different evidence/settings. Ten-minute cursor expiry,
+exact scope fences, bounded response reuse and fail-fast admission remain.
+
+Explore different options opens the existing priorities/refinements without
+submitting work or discarding results. Edits invalidate old cards until the user
+submits the changed settings. Shop/Target actions remain explicit navigation.
+
+Cards show Preliminary once, exact give/get, both-side effects and supported
+roster/contribution explanations. Explanations summarize existing positional
+lineup deltas and native horizon ledgers; they never infer expendable players,
+owner acceptance or wins from lineup points. Unknown effects remain unavailable.
+Method qualifications, source IDs, accounting and metric definitions are available
+on demand. Actual errors, protected-player violations and required cuts remain visible.

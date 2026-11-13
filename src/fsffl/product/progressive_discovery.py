@@ -16,7 +16,7 @@ from time import monotonic
 from .strategic_discovery import build_strategic_discovery
 from .trade_intrinsic_evidence import published_horizons_match_runtime
 
-MAX_TOTAL_SCREENS = 32
+MAX_TOTAL_SCREENS = 80
 SHORTLIST_TARGET = 4
 
 
@@ -116,7 +116,7 @@ class ProgressiveDiscovery:
             'repair':prior['repair'] or result['diagnostics']['repair_sequence_attempted'], 'batches':prior['batches']+1}
         result={**result,'search_progress':{'screens_this_batch':len(attempted),'total_screened':len(screened),
             'max_total_screens':MAX_TOTAL_SCREENS,'preliminary_fit_count':len(fits),'shortlist_target':SHORTLIST_TARGET,
-            'model_version':'bounded-discovery-continuation-v1','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
+            'model_version':'bounded-discovery-continuation-v2','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
             'next_token':self._encode(payload) if has_more else None,
             'interpretation':'Bounded preliminary screening; fits are not confirmed mutual benefits. No Simulation is run.'}}
         size=_bytes(result)+_bytes(cache_key)

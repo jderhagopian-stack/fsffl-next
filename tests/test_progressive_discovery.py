@@ -13,7 +13,7 @@ def synthetic_builder(monkeypatch, *, fits=()):
     from fsffl.product import progressive_discovery as module
     calls=[]
     def build(runtime,request,*,read,previously_screened,feedback_already_attempted):
-        available=[f'p{i}' for i in range(60) if f'p{i}' not in previously_screened]
+        available=[f'p{i}' for i in range(120) if f'p{i}' not in previously_screened]
         picked=available[:request.evaluation_budget]
         calls.extend(picked)
         return {'candidate_packages':[{'point_id':p,'evaluation_kind':'root',
@@ -28,12 +28,13 @@ def test_continuation_never_rescreens_and_stops_at_total_budget(monkeypatch):
     runtime,_,_,_=read_fixture()
     service=ProgressiveDiscovery()
     token=None
-    for batch in range(4):
+    for batch in range(MAX_TOTAL_SCREENS//8):
         result=service.build(runtime,StrategicDiscoveryRequest(continuation_token=token))
         progress=result['search_progress']
         assert progress['screens_this_batch']==8
         assert progress['total_screened']==8*(batch+1)
         token=progress['next_token']
+        if batch==3:assert token is not None  # explicit Find More can go beyond the initial32
     assert len(calls)==len(set(calls))==MAX_TOTAL_SCREENS
     assert token is None and progress['stop_reason']=='screening_limit'
 
@@ -186,3 +187,17 @@ def test_pick_slot_context_uses_origin_and_keeps_incompatible_intrinsic_missing(
     assert near['three_year_intrinsic_status']==far['career_intrinsic_status']=='unavailable'
     baseline.scenario_preparation.source_state_id='stale'
     assert discovery_pick_context(runtime,rows)['pick:pick-2027-r1-a']['expected_slot'] is None
+
+
+def test_long_valid_continuation_fits_request_bound_and_clamps_last_screen(monkeypatch):
+    calls=synthetic_builder(monkeypatch)
+    runtime,_,_,_=read_fixture();service=ProgressiveDiscovery()
+    ids=[str(i).zfill(3)+'x'*1020 for i in range(79)]
+    token=service._encode({'version':1,'scope':service._scope(runtime,StrategicDiscoveryRequest(),None),
+        'started':service.clock(),'screened':ids,'fits':ids,'repair':True,'batches':10})
+    assert 32768<len(token)<=262144
+    result=service.build(runtime,StrategicDiscoveryRequest(continuation_token=token))
+    assert result['search_progress']['screens_this_batch']==1
+    assert result['search_progress']['total_screened']==80
+    assert result['search_progress']['next_token'] is None
+    assert len(calls)==1

@@ -66,7 +66,7 @@ const flush=()=>new Promise(r=>setImmediate(r));
  await flush();assert(!host.innerHTML.includes('STALE'));
  const latest=pending.filter(p=>p.url.endsWith('strategic-discover')).at(-1);
  latest.resolve({league_state_id:'new',focal_team_id:'a',publication_generation_id:'g',candidate_packages:[]});
- await flush();assert(host.innerHTML.includes('No preliminary fit established yet'));
+ await flush();assert(host.innerHTML.includes('No matching opportunities yet'));
  ui.render(host);assert.equal(requests.filter(r=>r[0].endsWith('strategic-discover')).length,2);
  // A custom result must never become Automatic's goal source when protecting an asset.
  modeHandlers.custom();goalHandler({target:{value:'career_contribution'}});protectHandler();

@@ -22,11 +22,11 @@ def _node() -> str:
     return node
 
 
-def test_market_has_exactly_four_primary_jobs_to_be_done_tabs() -> None:
+def test_market_has_exactly_three_primary_jobs_to_be_done_tabs() -> None:
     source = _source(MARKET)
     tabs = source.split("const TABS=[", 1)[1].split("];", 1)[0]
-    assert tabs.count('["') == 4
-    for label in ("For You", "Trade Finder", "Player Board", "Free Agents"):
+    assert tabs.count('["') == 3
+    for label in ("Opportunities", "Player Board", "Free Agents"):
         assert label in tabs
     for old in ("Waivers / Add-Drop", "data-ns-mode"):
         assert old not in tabs
@@ -185,7 +185,7 @@ def test_market_context_links_to_existing_player_owner_and_trade_workflows() -> 
 
 def test_market_mobile_layout_keeps_tabs_tappable_and_identity_sticky() -> None:
     css = _source(MARKET_CSS)
-    assert ".market-ns-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))" in css
+    assert ".market-ns-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))" in css
     assert "@media(max-width:760px)" in css
     assert ".market-ns-tabs button{min-height:46px" in css
     assert ".market-ns-v2{width:100%;max-width:100%;overflow:hidden}" in css

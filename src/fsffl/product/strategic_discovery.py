@@ -40,7 +40,7 @@ class StrategicDiscoveryRequest(FrozenModel):
     target_asset_ref: str | None = None
     target_position: str | None = None
     offered_asset_ref: str | None = None
-    continuation_token: Annotated[str | None, Field(max_length=32768)] = None
+    continuation_token: Annotated[str | None, Field(max_length=262144)] = None
     max_candidates: Annotated[int, Field(ge=1, le=80)] = 80
     evaluation_budget: Annotated[int, Field(ge=0, le=8)] = 8
 
