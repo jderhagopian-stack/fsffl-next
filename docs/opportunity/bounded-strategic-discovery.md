@@ -53,6 +53,43 @@ coverage favors different counterparties, hypotheses and outgoing assets; it
 contains no weighted master score. Strained or incomplete cases remain visible.
 
 Return at most 80 packages and run at most eight detailed pre-Simulation screens.
+The effective screen ceiling also respects the requested return limit. Screens
+now precede final retention: every evaluated point, including a failed parent,
+survives; remaining result slots preserve categorical exploration. A complete
+counterparty future-direction gain can guide investigation when managed Current
+is requested, while explicitly leaving the managed current benefit pending.
+This partial hypothesis does not establish full complementarity or erase other
+requested objectives and sacrifices.
+
+### Bounded feedback
+
+For a Current-inclusive search with matching native ROS, published baseline and
+native-horizon evidence, reserve up to eight pair visits **before** generation.
+Generation plus repair visits cannot exceed the same original visit ceiling.
+Roots and repairs share the same eight unique screen attempts; at most one
+two-step repair sequence is attempted, leaving independent roots to explore.
+Unused repair screens backfill roots. Duplicate canonical points reuse their
+already-attached evidence and are never screened or returned twice.
+
+An eligible root has an adverse managed weekly-point change and known cut-adjusted
+future-direction alignment for its counterparty. Existing NEXT6 geometry can
+remove a published starter and add an active same-position bench alternative
+ordered by the counterparty's admitted native horizon(s). Starter/bench facts
+only order hypotheses; they do not establish expendability. The inventory stays
+within six ingredients and each package within two assets. Both steps pass the
+same corrected weekly Decision screen and unchanged mandatory-cut accounting.
+An adequate first step can stop; missing or protected-cut evidence stops the path.
+Career-only instructions do not silently become a Current repair objective.
+
+Protected sends, source/publication identity, ownership, counterparty restrictions
+and exact received targets are preserved. Receiver packages stay unchanged during
+this first repair policy. Non-player repair geometry is not added; general root
+generation still supports picks and mixed packages. Missing native coverage is
+never assumed zero. Every repair retains root, parent, move, depth and
+`hypothesis_only` lineage. Visit/screen budgets, skipped reasons, duplicates and
+evaluated retention are explicit diagnostics. This policy explores tradeoffs; it
+does not claim that every repaired point is better or grant recommendation truth.
+
 Diagnostics distinguish visited pairs, unique pool packages, returned packages,
 omitted exploration, shapes, hypotheses, counterparties, native/rank coverage,
 source identity, timing and screen errors. This is a bounded hypothesis sample,
