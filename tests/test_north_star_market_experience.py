@@ -151,11 +151,11 @@ def test_player_board_exposes_requested_filter_and_sort_dimensions() -> None:
     assert "presentation ordering only" in source
 
 
-def test_player_board_preserves_governed_value_disagreement_discovery() -> None:
+def test_player_board_pauses_value_disagreement_entry_point() -> None:
     source = _source(MARKET)
     discovery = _source(STATIC / "intrinsic_market_discovery.js")
-    assert "Explore Value disagreement" in source
-    assert "data-market-disagreement" in source
+    assert "Explore Value disagreement" not in source
+    assert "data-market-disagreement" not in source
     assert "data-market-disagreement" in discovery
     assert "raw Market and raw Shapley quantities are never subtracted" in discovery
 

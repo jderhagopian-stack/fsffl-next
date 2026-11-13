@@ -26,6 +26,9 @@ from .trade_center_view import build_trade_center_browser_view, owned_asset_inde
 from .trade_intrinsic_evidence import bind_trade_intrinsic_values, unavailable_trade_intrinsic, published_horizons_match_runtime
 from .trade_objectives import TradeSearchInstructions, objective_context, build_trade_objective_assessment
 from .trade_value_adapter import cardinal_market_profiles
+from .strategic_discovery_presentation import discovery_display_context
+from .opportunity_posture import calculated_competitive_state, default_posture_for_state
+from dataclasses import replace
 
 _logger = logging.getLogger("fsffl.product.performance")
 _MODEL_VERSION = "strategic-discovery-v2:bounded-feedback-retention"
@@ -37,6 +40,18 @@ class StrategicDiscoveryRequest(FrozenModel):
     target_position: str | None = None
     max_candidates: Annotated[int, Field(ge=1, le=80)] = 80
     evaluation_budget: Annotated[int, Field(ge=0, le=8)] = 8
+
+
+def _competitive_context(runtime, team_id):
+    calculated = calculated_competitive_state(replace(runtime, selected_team_id=team_id))
+    simulation = runtime.simulation_analytics
+    outcome = next((row for row in simulation.simulation_result.outcomes if row.team_id == team_id), None) if simulation else None
+    return {'team_id': team_id, 'calculated_competitive_state': calculated.value,
+        'default_search_posture': default_posture_for_state(calculated).value,
+        'playoff_probability': outcome.playoff_probability if outcome else None,
+        'championship_probability': outcome.championship_probability if outcome else None,
+        'source': 'published_simulation' if simulation else 'unavailable', 'league_state_id': runtime.league_state.state_id,
+        'interpretation': 'Calculated competitive state is separate from inferred owner goals; classification is provisional league-relative policy.'}
 
 
 def _ref(asset):
@@ -338,9 +353,13 @@ def build_strategic_discovery(runtime, request, *, read=None):
     rows=screened+[fillers[i] for i in _representative_indices(fillers,
         max(0,request.max_candidates-len(screened)))]
     _attach_comparable_frontiers(rows,runtime)
+    for row in rows:
+        row['display_context'] = discovery_display_context(row)
+    team_contexts = {team.team_id: _competitive_context(runtime, team.team_id) for team in (browser.focal_team, *teams)}
     completed=monotonic()
     return {'league_state_id':runtime.league_state.state_id,'publication_generation_id':runtime.publication_generation_id,
         'focal_team_id':runtime.selected_team_id,'priority_context':context.model_dump(mode='json'),
+        'competitive_context':team_contexts[runtime.selected_team_id], 'team_competitive_contexts':team_contexts,
         'candidate_packages':rows,'diagnostics':{**diagnostics,'candidate_pool_unique_count':len(by_point),'generated_candidate_pool_unique_count':pool_count,
             'candidate_pool_limit':pool_budget,'max_candidates':request.max_candidates,
             'pool_shapes':diagnostics['shapes'],'pool_hypotheses':diagnostics['hypotheses'],

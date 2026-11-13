@@ -180,3 +180,24 @@ priority-optimized frontier. Existing Decision ordering/authority is unchanged.
 Trade Center displays both teams' directional assessments separately from its
 final Decision. Explicitly analyzing a deal uses the existing progressive
 quick → analysis → Simulation workflow. Discovery itself never runs that flow.
+
+
+### Competitive context and first-read grouping
+
+Explore explicitly displays the published calculated competitive state separately
+from the automatic search direction and user overrides. The existing provisional
+league-relative classification is unchanged: Contender → Current, Competitive →
+Balanced (Current/3-Year/Career without weights), Developing → 3-Year, Rebuilding →
+Career. Unknown remains visibly unknown with an all-horizon fallback. Published
+playoff and championship odds provide context; they are not recomputed.
+
+A presentation-only categorical view groups existing preliminary evidence. Packages
+with both-side priority gains and no known requested losses appear first, with
+Current still identified as a lineup proxy pending Simulation. Packages with gains
+and sacrifices appear under Tradeoffs to review. Known priority losses without a
+demonstrated offset remain in expandable comparison history. Missing evidence and
+zero-gain cases do not establish a fit. Original generation/evaluation order is
+preserved inside each group, and failed parents/linked repairs remain available.
+This changes neither Decision authority, intrinsic economics, nor the underlying
+unweighted priorities; no composite score or final mutual-benefit claim is added.
+The standalone Market vs. Intrinsic discovery button is temporarily removed.

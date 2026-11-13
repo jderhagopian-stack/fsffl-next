@@ -66,7 +66,7 @@ const flush=()=>new Promise(r=>setImmediate(r));
  await flush();assert(!host.innerHTML.includes('STALE'));
  const latest=pending.filter(p=>p.url.endsWith('strategic-discover')).at(-1);
  latest.resolve({league_state_id:'new',focal_team_id:'a',publication_generation_id:'g',candidate_packages:[]});
- await flush();assert(host.innerHTML.includes('No complete preliminary package yet'));
+ await flush();assert(host.innerHTML.includes('No preliminary fit established yet'));
  ui.render(host);assert.equal(requests.filter(r=>r[0].endsWith('strategic-discover')).length,2);
  // A custom result must never become Automatic's goal source when protecting an asset.
  modeHandlers.custom();goalHandler({target:{value:'career_contribution'}});protectHandler();
@@ -79,6 +79,19 @@ const flush=()=>new Promise(r=>setImmediate(r));
  await retry;assert(host.innerHTML.includes('Intelligence work is busy'));assert(host.innerHTML.includes('Your settings are preserved'));
  const next=ui.run();pending.filter(p=>p.url.endsWith('strategic-discover')).at(-1).resolve({league_state_id:'wrong',focal_team_id:'a'});
  await next;assert(host.innerHTML.includes('League intelligence changed'));
+ const grouped=ui.run();
+ const bad={point_id:'root',counterparty_team_id:'b',send:[],receive:[{asset_ref:'player:bad',label:'Bad package'}],display_context:{group:'priority_concern',reason:'Known priority losses'},evidence_status:'pre_simulation_screened'};
+ const good={point_id:'repair',counterparty_team_id:'b',send:[],receive:[{asset_ref:'player:good',label:'Good package'}],display_context:{group:'preliminary_fit',reason:'Preliminary fit'},evidence_status:'pre_simulation_screened',repair_lineages:[{root_point_id:'root'}]};
+ pending.filter(p=>p.url.endsWith('strategic-discover')).at(-1).resolve({league_state_id:'new',focal_team_id:'a',publication_generation_id:'g',competitive_context:{calculated_competitive_state:'competitive',default_search_posture:'balanced',playoff_probability:.8,championship_probability:.1},priority_context:{objectives:['current_competitiveness','three_year_contribution','career_contribution'],explicitly_directed:false},candidate_packages:[bad,good]});
+ await grouped;
+ assert(host.innerHTML.includes('Calculated competitive state'));
+ assert(host.innerHTML.includes('Competitive'));
+ assert(host.innerHTML.includes('Automatic lens: Balanced'));
+ assert(host.innerHTML.includes('80.0%')&&host.innerHTML.includes('10.0%'));
+ assert(host.innerHTML.indexOf('Explore Good package')<host.innerHTML.indexOf('Explore Bad package'));
+ assert(host.innerHTML.includes('data-se-concerns'));
+ assert(host.innerHTML.includes('Compare linked package alternatives'));
+
 })().catch(e=>{console.error(e);process.exitCode=1;});
 """
     subprocess.run([node, '-e', harness], check=True, capture_output=True, text=True)
