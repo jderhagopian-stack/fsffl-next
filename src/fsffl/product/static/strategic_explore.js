@@ -171,7 +171,7 @@
   }
   function applyIntent(intent,value){
     reconcile();
-    view.offer='';view.target='';view.position='';view.partner='';
+    view.offer='';view.target='';view.position='';view.partner='';view.young=false;view.picks=false;
     if(intent==='shop')view.offer=value||'';
     if(intent==='target')view.target=value||'';
     if(intent==='position')view.position=value||'';
