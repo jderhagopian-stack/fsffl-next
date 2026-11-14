@@ -114,7 +114,25 @@ class NativePickPriorRelease(FrozenModel):
         return fsum(p.probability * point(p.slot_in_round) for p in probabilities.slot_probabilities)
 
 
+class NativePickPriorReference(FrozenModel):
+    release_id: str
+    scope_key: str
+    evaluation_season: int
+    team_count: int
+    released_at: datetime
+
+    @model_validator(mode="after")
+    def hashes(self):
+        if any(len(v) != 64 or any(c not in '0123456789abcdef' for c in v)
+               for v in (self.release_id, self.scope_key)):
+            raise ValueError('release references require exact content identities')
+        if self.released_at.tzinfo is None or self.team_count < 1:
+            raise ValueError('release references require capacity and an aware availability time')
+        return self
+
+
 @lru_cache(maxsize=1)
-def packaged_native_pick_release() -> NativePickPriorRelease:
-    return NativePickPriorRelease.model_validate_json(
-        files("fsffl.value").joinpath("native_pick_prior_2026.json").read_text())
+def packaged_native_pick_reference() -> NativePickPriorReference:
+    # Model output stays in private persistence, never in the public package.
+    return NativePickPriorReference.model_validate_json(
+        files("fsffl.value").joinpath("native_pick_prior_2026_reference.json").read_text())
