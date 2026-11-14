@@ -29,7 +29,7 @@ from .models import BilateralTradeProposal
 from .roster_legality import TeamRosterLegalityResolution
 from .scenario import _validate_leg_ownership
 
-VERSION = 'research-native-pick-player-binding-v1'
+VERSION = 'research-native-pick-player-binding-v2:explicit-model-replay-clock'
 Horizon = Literal['three_year', 'career']
 BASIS = {'three_year':f'evaluation_calendar_y1_y3_discount_{FROZEN_INTRINSIC_DISCOUNT}',
          'career':'undiscounted_y1_y7_plus_y8_terminal'}
@@ -172,12 +172,28 @@ class ResearchCompatibilityAssessment(FrozenModel):
         return self
 
 
+class ResearchReplayEvaluation(FrozenModel):
+    """Separate football evidence cutoff from an explicitly current-model replay.
+
+    This never makes a later model a historical point-in-time forecast. Source
+    State, publication and probability timestamps remain unchanged and checked.
+    """
+    mode: Literal['point_in_time','current_model_replay'] = 'point_in_time'
+    evaluated_at: datetime
+
+    @model_validator(mode='after')
+    def aware(self):
+        if self.evaluated_at.tzinfo is None:raise ValueError('research evaluation needs an aware time')
+        return self
+
+
 @dataclass(frozen=True)
 class ResearchMixedRead:
     user_id: str
     league_id: str
     generation_id: str
     as_of: datetime
+    evaluation: ResearchReplayEvaluation
     state_ref: ReferenceType[LeagueState]
     horizon: Horizon
     scale: ValueScale
@@ -189,12 +205,17 @@ class ResearchMixedRead:
 
 def prepare_research_mixed_read(state: LeagueState, *, user_id: str, generation_id: str,
     players: ResearchPlayerPublication, picks: tuple[ResearchPickAttachment, ...],
-    assessments: tuple[ResearchCompatibilityAssessment, ...] = ()) -> ResearchMixedRead:
+    assessments: tuple[ResearchCompatibilityAssessment, ...] = (),
+    evaluation: ResearchReplayEvaluation | None = None) -> ResearchMixedRead:
     """Project once per research read; package binding below performs no mixtures.
 
     Callers supply already-owned evidence. This consistency checker is not an
     authentication or publication-proof service and is not a live admission path.
     """
+    evaluation=evaluation or ResearchReplayEvaluation(evaluated_at=state.as_of)
+    if (evaluation.evaluated_at<state.as_of or
+        (evaluation.mode=='point_in_time' and evaluation.evaluated_at!=state.as_of)):
+        raise ValueError('research evaluation does not match its declared State/clock mode')
     context=players.context;rules=state.league.rules;state_id=state.state_id
     live_policy_key=context.policy_key;semantic_key=context.semantics_key
     curve_ids={}
@@ -244,7 +265,7 @@ def prepare_research_mixed_read(state: LeagueState, *, user_id: str, generation_
             else:
                 matches=[r for r in assessments if r.curve_id==curve_id_of(curve) and r.horizon==context.horizon
                     and r.prior_context_fingerprint==fingerprint(prior.model_dump(mode='json'))
-                    and r.live_policy_key==live_policy_key and r.reviewed_at<=state.as_of]
+                    and r.live_policy_key==live_policy_key and r.reviewed_at<=evaluation.evaluated_at]
                 if len(matches)!=1:reason='compatibility_assessment_missing_or_ambiguous'
                 else:
                     assessment=matches[0]
@@ -258,7 +279,7 @@ def prepare_research_mixed_read(state: LeagueState, *, user_id: str, generation_
                             try:
                                 apply_curve=apply_frozen_native_pick_reference_curve if reference_curve else apply_frozen_native_pick_curve
                                 result=apply_curve(curve,pick,owner_team_id=owner,
-                                    probabilities=attachment.probabilities,as_of=state.as_of,
+                                    probabilities=attachment.probabilities,as_of=evaluation.evaluated_at,
                                     economic_scope_id=context.economic_scope_id,rules_signature=context.rules_signature,
                                     scoring_signature=context.scoring_signature,native_coordinate_id=context.native_coordinate_id,
                                     evaluation_season=context.evaluation_season,team_count=context.team_count)
@@ -281,7 +302,7 @@ def prepare_research_mixed_read(state: LeagueState, *, user_id: str, generation_
     # A deliberately separate research coordinate; original source scales are preserved below.
     source=dict(state_id=state_id,league_id=state.league.league_id,as_of=state.as_of.isoformat(),
         player_source=players.source_fingerprint,projected_values_fingerprint=fingerprint(players.values),player_scale=players.source_scale.model_dump(mode='json'),
-        context=context.model_dump(mode='json'),generation_id=generation_id,
+        context=context.model_dump(mode='json'),generation_id=generation_id,evaluation=evaluation.model_dump(mode='json'),
         input_assumptions=dict(players.input_assumptions),source_limitations=list(players.source_limitations),
         picks=[dict(pick_id=p.pick_id,curve_id=curve_id_of(p.curve) if p.curve else None,
             prior_context=p.prior_context.model_dump(mode='json') if p.prior_context else None,
@@ -308,7 +329,7 @@ def prepare_research_mixed_read(state: LeagueState, *, user_id: str, generation_
          'slot_input_fingerprint':p['probabilities']['simulation_input_fingerprint'] if p['probabilities'] else None,
          'slot_evidence_fingerprint':fingerprint(p['probabilities']) if p['probabilities'] else None}
         for p in source['picks']]}
-    return ResearchMixedRead(user_id,state.league.league_id,generation_id,state.as_of,ref(state),context.horizon,
+    return ResearchMixedRead(user_id,state.league.league_id,generation_id,state.as_of,evaluation,ref(state),context.horizon,
         scale,MappingProxyType(profiles),MappingProxyType(values),_freeze(compact),
         tuple(_freeze(q) for q in qualifications))
 
@@ -337,6 +358,7 @@ def bind_research_trade(state: LeagueState, proposal: BilateralTradeProposal, re
         'picks':[_thaw(p) for p in selected_sources],
         'assessments':[_thaw(r) for r in read.provenance['assessments'] if r['curve_id'] in curve_ids]}
     return dict(production_eligible=False,live_ledger_eligible=False,decision_effect='research_only_no_recommendation',
-        horizon=read.horizon,net=net.model_dump(mode='json'),economics=economics.model_dump(mode='json'),
+        evaluation_mode=read.evaluation.mode,evaluated_at=read.evaluation.evaluated_at.isoformat(),
+        football_state_as_of=state.as_of.isoformat(),horizon=read.horizon,net=net.model_dump(mode='json'),economics=economics.model_dump(mode='json'),
         roster_adjusted=adjusted,package_uncertainty=None,pick_qualifications=[_thaw(q) for q in read.pick_qualifications if q['pick_id'] in selected_picks],
         source=source,model_version=VERSION)
