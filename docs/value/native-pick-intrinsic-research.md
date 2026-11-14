@@ -159,3 +159,8 @@ The [annual-prior validation follow-up](native-pick-annual-prior-validation.md)
 quantifies complete-label versus calendar-prefix coverage, retains explicit
 class/identity/season gaps, and documents additional format-labeled selection
 sources plus a source-sensitivity replay. It does not promote a production prior.
+
+The [fitted cohort-prior candidate](native-pick-cohort-prior-candidate.md) now
+connects empirical joint trajectories to the existing annual freezer, with
+source-corroborated missingness kept as an explicit research sensitivity. It
+records chronological coverage and exact Career scoring/capacity requirements.
