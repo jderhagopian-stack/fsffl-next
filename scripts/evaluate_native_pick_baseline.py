@@ -34,7 +34,24 @@ def _total(row, horizon, discount):
     return result
 
 
-def evaluate(document, *, horizon, discount, heldout_classes, max_slots, complete_through):
+def monotone_slot_means(means):
+    """Exploratory PAVA prior: expected native outcome weakly decreases by rank.
+
+    Fits only supplied complete training-slot means with equal class counts;
+    never consumes validation outcomes or fills an unsupported slot.
+    """
+    blocks = []
+    for slot, value in sorted(means.items()):
+        blocks.append(([slot], value, 1))
+        while len(blocks) > 1 and blocks[-2][1] < blocks[-1][1]:
+            right = blocks.pop(); left = blocks.pop()
+            count = left[2] + right[2]
+            average = left[1] * (left[2] / count) + right[1] * (right[2] / count)
+            blocks.append((left[0] + right[0], average, count))
+    return {slot: average for slots, average, count in blocks for slot in slots}
+
+
+def evaluate(document, *, horizon, discount, heldout_classes, max_slots, complete_through, estimator="slot_mean"):
     """Prior complete-class slot means; abstain on any missing past slot label.
 
     The caller declares the source's complete-season boundary. A class can train
@@ -42,6 +59,8 @@ def evaluate(document, *, horizon, discount, heldout_classes, max_slots, complet
     No complete-case pooling, within-class split or future training label is used.
     This conservative comparator is not a recommendation for final model fitting.
     """
+    if estimator not in ('slot_mean', 'isotonic_slot_mean'):
+        raise ValueError('unsupported research estimator')
     if horizon not in (1, 2, 3, 7) or max_slots < 1:
         raise ValueError('supported observed horizon and positive slot count required')
     if not isfinite(discount) or not 0 < discount <= 1:
@@ -68,6 +87,14 @@ def evaluate(document, *, horizon, discount, heldout_classes, max_slots, complet
         for heldout in sorted(heldout_classes):
             train = sorted(y for y in classes if y + horizon - 1 < heldout and y + horizon - 1 <= complete_through)
             abstain = Counter(); predictions = []
+            means = {}
+            if train:
+                for slot in range(1, max_slots + 1):
+                    labels = [_total(rows.get((year, slot)), horizon, discount) for year in train]
+                    if all(v is not None for v in labels):
+                        means[slot] = fsum(labels) / len(labels)
+            if estimator == 'isotonic_slot_mean':
+                means = monotone_slot_means(means)
             for slot in range(1, max_slots + 1):
                 if not train:
                     abstain['no_mature_training_classes'] += 1
@@ -75,15 +102,14 @@ def evaluate(document, *, horizon, discount, heldout_classes, max_slots, complet
                 if heldout + horizon - 1 > complete_through:
                     abstain['target_right_censored'] += 1
                     continue
-                values = [_total(rows.get((year, slot)), horizon, discount) for year in train]
-                if any(v is None for v in values):
+                if slot not in means:
                     abstain['incomplete_training_slot'] += 1
                     continue
                 observed = _total(rows.get((heldout, slot)), horizon, discount)
                 if observed is None:
                     abstain['incomplete_target_slot'] += 1
                     continue
-                prediction = fsum(values) / len(values)
+                prediction = means[slot]
                 predictions.append(dict(rank=slot, estimate=prediction, observed=observed))
             errors = [r['estimate'] - r['observed'] for r in predictions]
             folds.append(dict(heldout_class=heldout, training_classes=train, sample_per_slot=len(train),
@@ -96,7 +122,7 @@ def evaluate(document, *, horizon, discount, heldout_classes, max_slots, complet
     digest = hashlib.sha256(json.dumps(document, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
     return dict(status='research_negative_control_not_archived_forecast_or_pick_valuation',
         production_eligible=False, input_sha256=digest, horizon=horizon, discount=discount,
-        complete_through_season=complete_through, cases=outputs)
+        complete_through_season=complete_through, estimator=estimator, cases=outputs)
 
 
 def main():
@@ -108,9 +134,10 @@ def main():
     parser.add_argument('--heldout', type=int, action='append', required=True)
     parser.add_argument('--max-slots', type=int, required=True)
     parser.add_argument('--complete-through', type=int, required=True)
+    parser.add_argument('--estimator',choices=('slot_mean','isotonic_slot_mean'),default='slot_mean')
     args = parser.parse_args()
     result = evaluate(json.loads(args.input.read_text()), horizon=args.horizon, discount=args.discount,
-        heldout_classes=args.heldout, max_slots=args.max_slots, complete_through=args.complete_through)
+        heldout_classes=args.heldout, max_slots=args.max_slots, complete_through=args.complete_through, estimator=args.estimator)
     args.output.write_text(json.dumps(result, indent=2, allow_nan=False))
     print(json.dumps({'status': result['status'], 'production_eligible': False,
         'folds': [{k:v for k,v in fold.items() if k!='predictions'} for case in result['cases'] for fold in case['folds']]}))
