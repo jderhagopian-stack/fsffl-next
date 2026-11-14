@@ -75,3 +75,22 @@ def test_invalid_evidence_fails_explicitly(change):
 
 def test_career_is_not_supported_by_a_finite_observed_window():
     with pytest.raises(ValueError):run(document([]),horizon=20)
+
+
+def test_isotonic_prior_pools_training_rank_reversals_without_filling_gaps():
+    from scripts.evaluate_native_pick_baseline import monotone_slot_means
+    assert monotone_slot_means({1:100,2:200,4:20})=={1:150,2:150,4:20}
+    doc=document([row(2014,1,(100,0,0)),row(2014,2,(200,0,0)),row(2017,1,(10,0,0)),row(2017,2,(999,0,0))])
+    first=run(doc,max_slots=3,estimator='isotonic_slot_mean')['cases'][0]['folds'][0]
+    assert [r['estimate'] for r in first['predictions']]==[150,150]
+    assert first['abstentions']=={'incomplete_training_slot':1}
+    doc['cases'][0]['selections'][-1]['raw_observed']['3']=[0,0,0]
+    changed=run(doc,max_slots=3,estimator='isotonic_slot_mean')['cases'][0]['folds'][0]
+    assert [r['estimate'] for r in changed['predictions']]==[150,150]
+
+
+def test_isotonic_pooling_uses_block_counts_and_avoids_large_sum_overflow():
+    from scripts.evaluate_native_pick_baseline import monotone_slot_means
+    assert monotone_slot_means({1:0,2:30,3:60})=={1:30,2:30,3:30}
+    values=monotone_slot_means({1:8e307,2:1e308})
+    assert values[1]==values[2]==9e307
