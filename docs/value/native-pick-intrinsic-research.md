@@ -143,3 +143,14 @@ isolation. Rankings published after the NFL draft cannot be used at an earlier
 historical cutoff. Before fitting, document source availability, format fit,
 coverage, uncertainty and reuse rights. No consensus source or model has been
 selected or fitted in this lifecycle change.
+
+## Integration follow-up
+
+The [shared-context integration design](native-pick-integration-design.md) reuses
+the accepted reference-preserving Career policy. A separate research reference
+curve consumes already-complete prospective Career authority instead of inventing
+a probability distribution from model bounds. Both curve types use the existing
+versioned persistence codec; all comparisons remain research-only. This does not
+change the scenario bridge's complete-path/terminal requirements, supply an
+untrained slot model, or wire production discovery. Named-prospect forecasting
+remains later roadmap work.
