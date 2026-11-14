@@ -36,5 +36,9 @@ def discovery_pick_context(runtime, rows, *, read=None):
             'three_year_intrinsic':read.pick_values['three_year'].get(pick.pick_id) if native else None,
             'career_intrinsic':read.pick_values['career'].get(pick.pick_id) if native else None,
             'native_source':dict(native) if native else None,
+            'intrinsic_slot_ranges':{h:{'low':native[h+'_slot_low'],'high':native[h+'_slot_high']}
+                for h in ('three_year','career') if native is not None and h+'_slot_low' in native},
+            'slot_uncertain_prior':bool(native and native.get('probability_basis')=='exchangeable_future_slot_prior'),
+            'outside_three_year_window':bool(native and native.get('three_year_point_basis')=='calendar_structural_zero'),
             'interpretation':'Preliminary draft-pick estimate' if native else 'Pick Intrinsic unavailable'}
     return result
