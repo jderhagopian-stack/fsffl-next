@@ -239,6 +239,9 @@ class PresentationContinuityStore:
                 and state.league.rules.team_count == reference.team_count
                 and state.as_of >= reference.released_at):
                 release = restore_native_pick_release(self._persistence, scope_key=reference.scope_key, release_id=reference.release_id)
+                if release is None:
+                    with self._validation_lock:
+                        self._pick_release_cache.pop((reference.scope_key, reference.release_id), None)
             analytics = runtime.simulation_analytics
             if (release is not None and release.supports(state.league.rules, season=state.league.season, as_of=state.as_of)
                 and analytics is not None
@@ -374,7 +377,6 @@ class PresentationContinuityStore:
             for item in stale:
                 self._known_snapshot_manifests.pop(item, None)
                 self._known_pick_sources.pop(item, None)
-            self._pick_release_cache.clear()
             return len(stale)
 
     @staticmethod
