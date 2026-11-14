@@ -1,5 +1,45 @@
 # Initial provisional native pick release
 
+## Later-year provisional extension
+
+Future available picks in the released rounds can now use an explicitly neutral
+draft-position prior. Forecast supplies equal probability across the league's
+possible slots for each later draft, labeled `bounded_provisional_exchangeability`.
+These are not Simulation trials or an origin team's predicted finish. Current
+next-draft values continue to require the existing published Simulation evidence;
+missing next-draft evidence is not silently filled with this later-year prior.
+
+Value applies that prior to the same frozen annual slot statistics, assuming no
+known draft-class strength adjustment. No annual table is refitted or replaced,
+and no market value, named-prospect forecast or additional historical computation
+is introduced. Equal-slot calculations are reused across origins within the read.
+All available later years can use this policy where the release's actual rules
+and round coverage apply; unsupported formats/rounds still remain unavailable.
+
+Each later pick carries a central reference and the minimum/maximum of its
+possible slot references. This shows uncertainty about draft position. It is not
+a calibrated confidence interval, a bound on actual player outcomes, or an
+estimate of all draft-class/model uncertainty. No package range or covariance is
+invented by adding individual ranges. Explore labels the slot uncertain and offers
+a compact “Value by draft slot” expansion with explicitly raw Intrinsic units.
+
+The existing horizon calendar is preserved. A 2028 pick contributes its first
+post-draft season at the existing Y3 discount in the 2026–2028 window. A 2029 pick
+contributes zero in that window, while retaining an undiscounted Career reference.
+With no new class-strength evidence and no accepted Career time discount, later
+years can have the same neutral Career center; increased uncertainty is not an
+arbitrary reduction to that center.
+
+The projection policy has its own version and availability date, pinned in the
+existing publication manifest alongside the unchanged annual release. Restored
+older manifests without this policy retain their original behavior. This prevents
+a new deployment from rewriting previously published future-pick estimates. Later
+priors can be used without current Simulation when the publication and player
+evidence are otherwise valid; they do not claim Simulation authority. No new
+database queries, tables, model-payload writes or workers are introduced.
+
+The sections below document the original first rollout and its fixed evidence.
+
 The first production prior is a bounded provisional estimate, not a claim of
 validated full-Career accuracy. The user authorized production integration after
 review of the multi-class candidate and mixed validation findings. The evidence
