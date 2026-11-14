@@ -193,3 +193,35 @@ lineup deltas and native horizon ledgers; they never infer expendable players,
 owner acceptance or wins from lineup points. Unknown effects remain unavailable.
 Method qualifications, source IDs, accounting and metric definitions are available
 on demand. Actual errors, protected-player violations and required cuts remain visible.
+
+## Larger bilateral package discovery
+
+Strategic discovery now samples up to eight assets per side and ten assets total,
+including player/pick combinations, larger consolidations and draft-pick bundles.
+These are configurable engineering search bounds, not league transaction rules or
+a change to player/pick Value. Trade Center can still evaluate a manually composed
+legal package independently of the automatic discovery sample. Multi-team trade
+discovery is separate work; this contract remains bilateral.
+
+At most twelve ordered ingredients per side enter a lane. Required Shop/Target
+assets are pinned before this ingredient limit. Per-cardinality combinations are
+lazy, and diagonal pair streams retain only visited prefixes. The engine never
+materializes the package universe or its full Cartesian product. The existing
+640-pair/candidate pool limit, eight preliminary screens per request and bounded
+Find More continuation remain unchanged. Larger packages do not cause additional
+automatic Simulation runs or any Forecast/Intrinsic recalculation.
+
+Shape scheduling alternates total size and send/receive orientation across lanes,
+so the bounded sample includes both smaller and larger hypotheses. Dedicated
+spend/acquire-draft-capital lanes provide sufficient pick ingredients for larger
+pick bundles. These lanes consume the same upstream values, team context and user
+constraints; they do not price assets or manufacture owner willingness.
+
+Screening preserves existing economic-priority tiers. Within a tier it can prefer
+an as-yet-unexamined package shape, alongside existing franchise/hypothesis/asset
+diversity. A package gains no benefit or recommendation authority merely for being
+larger. Every screened package still uses the existing roster legality, all required
+cuts, raw horizon ledgers and both-team objectives. Unknown evidence remains unknown.
+The existing narrow player-pair remove/add repair is not silently expanded into a
+new mixed-asset optimizer. Generation and screened-shape diagnostics expose actual
+sample coverage without claiming an exhaustive league optimum.

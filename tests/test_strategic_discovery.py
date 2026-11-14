@@ -159,7 +159,8 @@ def test_twelve_team_governed_roster_screens_cut_costs_and_all_shapes(monkeypatc
     assert result['diagnostics']['pair_visits']<=640
     assert result['diagnostics']['preliminary_decision_attempts']==8
     assert result['diagnostics']['preliminary_decision_errors']==0
-    assert set(result['diagnostics']['shapes'])=={'1_for_1','2_for_1','1_for_2','2_for_2'}
+    assert any(max(map(int,shape.split('_for_')))>2 for shape in result['diagnostics']['pool_shapes'])
+    assert all(sum(map(int,shape.split('_for_')))<=10 for shape in result['diagnostics']['pool_shapes'])
     screened=[r for r in result['candidate_packages'] if r['evidence_status']=='pre_simulation_screened']
     assert all(r['preliminary_decision_screen'] is not None for r in screened)
     assert any(any(c['required_cut_count']>0 for c in r['roster_legality']) for r in screened)
