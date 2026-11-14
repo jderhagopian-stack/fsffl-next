@@ -20,6 +20,7 @@ from .career_tail import lineup_capacity_signature
 from .career_forward_intrinsic import CareerForwardModelAuthority
 from .origin_aware_pick import OriginPickProbabilityEvidence
 from .shapley_intrinsic import FROZEN_INTRINSIC_DISCOUNT
+from fsffl.forecast.future_pick_position_prior import FuturePickPositionPrior
 
 MODEL_VERSION = "native-pick-empirical-prefix-conditional-career-provisional-v1"
 
@@ -103,15 +104,33 @@ class NativePickPriorRelease(FrozenModel):
             or probabilities.draft_season != self.draft_season
             or any(p.slot_in_round > self.team_count for p in probabilities.slot_probabilities)):
             raise ValueError("pick probability/release coordinates differ")
-        def point(slot):
-            row = self.slots[(round_number - 1) * self.team_count + slot - 1]
-            if horizon == "career":
-                return row.career_authority.reference_center
-            # Next year's pick has no contribution in the evaluation season.
-            return fsum(v * FROZEN_INTRINSIC_DISCOUNT ** (self.draft_season + i - self.evaluation_season)
-                        for i, v in enumerate(row.annual_native_means)
-                        if self.draft_season + i <= self.evaluation_season + 2)
-        return fsum(p.probability * point(p.slot_in_round) for p in probabilities.slot_probabilities)
+        return fsum(p.probability * self.slot_point(round_number=round_number, slot=p.slot_in_round,
+                    draft_season=self.draft_season, horizon=horizon) for p in probabilities.slot_probabilities)
+
+    def slot_point(self, *, round_number: int, slot: int, draft_season: int,
+                   horizon: Literal["three_year", "career"]) -> float:
+        if (horizon not in ("three_year", "career") or not 1 <= round_number <= self.round_count
+            or not 1 <= slot <= self.team_count or draft_season < self.draft_season):
+            raise ValueError("unsupported slot, horizon or draft calendar")
+        row = self.slots[(round_number - 1) * self.team_count + slot - 1]
+        if horizon == "career":
+            # A class-neutral, undiscounted lifetime reference. Deferral does not
+            # introduce a new Career discount or imply an equally strong class.
+            return row.career_authority.reference_center
+        return fsum(v * FROZEN_INTRINSIC_DISCOUNT ** (draft_season + i - self.evaluation_season)
+                    for i, v in enumerate(row.annual_native_means)
+                    if draft_season + i <= self.evaluation_season + 2)
+
+    def future_round_reference(self, *, prior: FuturePickPositionPrior, round_number: int,
+                               horizon: Literal["three_year", "career"]) -> tuple[float, float, float]:
+        if prior.team_count != self.team_count or prior.draft_season <= self.draft_season:
+            raise ValueError("later-year prior must match released capacity")
+        points = tuple((self.slot_point(round_number=round_number, slot=slot,
+            draft_season=prior.draft_season, horizon=horizon), probability)
+            for slot, probability in prior.probabilities())
+        # These are possible slot-reference scenarios, NOT predictive bounds on
+        # player production, class quality or a multi-asset package.
+        return fsum(value * probability for value, probability in points), min(v for v, _ in points), max(v for v, _ in points)
 
 
 class NativePickPriorReference(FrozenModel):

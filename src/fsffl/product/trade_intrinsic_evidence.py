@@ -63,6 +63,7 @@ def read_published_trade_horizon_values(
     runtime: UserRuntimeContext, *, player_ids: frozenset[str], record,
     publication_validator: PublicationValidator,
     pick_release=None, pick_simulation_fingerprint: str | None = None,
+    pick_projection_policy: str | None = None,
 ) -> PublishedTradeHorizonValues:
     """Validate once and project existing native values for a bounded owned cohort.
 
@@ -130,10 +131,13 @@ def read_published_trade_horizon_values(
         scale_id=f"raw-shapley:{name}:{state_id}:{contract.input_fingerprint}",
         version=contract.contract_version, unit_label=f"{name} raw Shapley contribution",
     ) for name in ("three_year", "career")}
-    pick_values, pick_sources = published_pick_values(runtime, pick_release, pick_simulation_fingerprint)
+    pick_values, pick_sources = published_pick_values(runtime, pick_release, pick_simulation_fingerprint,
+                                                     projection_policy=pick_projection_policy)
     if pick_sources:
         source['native_pick_prior_release_id'] = pick_release.release_id
-        source['native_pick_simulation_fingerprint'] = pick_simulation_fingerprint
+        if any(row['simulation_input_fingerprint'] is not None for row in pick_sources.values()):
+            source['native_pick_simulation_fingerprint'] = pick_simulation_fingerprint
+        source['native_pick_projection_policy'] = pick_projection_policy
     return PublishedTradeHorizonValues(
         user_id=runtime.user_id, selected_team_id=runtime.selected_team_id, as_of=state.as_of, state_ref=ref(state),
         source=MappingProxyType(source), scales=MappingProxyType(scales),
@@ -174,13 +178,15 @@ def build_trade_intrinsic_evidence(
     publication_validator: PublicationValidator,
     roster_resolutions: tuple[TeamRosterLegalityResolution, ...] | None = None,
     pick_release=None, pick_simulation_fingerprint: str | None = None,
+    pick_projection_policy: str | None = None,
 ) -> dict[str, object]:
     """Read existing publication and bind the selected transaction's raw ledgers."""
     try:
         read = read_published_trade_horizon_values(runtime,
             player_ids=frozenset(_selected_players(proposal, roster_resolutions)),
             record=record, publication_validator=publication_validator,
-            pick_release=pick_release, pick_simulation_fingerprint=pick_simulation_fingerprint)
+            pick_release=pick_release, pick_simulation_fingerprint=pick_simulation_fingerprint,
+            pick_projection_policy=pick_projection_policy)
     except ValueError as exc:
         return unavailable_trade_intrinsic(str(exc))
     return bind_trade_intrinsic_values(runtime, proposal, read, roster_resolutions=roster_resolutions)

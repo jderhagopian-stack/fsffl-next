@@ -767,7 +767,7 @@ def _published_trade_intrinsic_provider(context, proposal, result=None):
     if result is not None and result.get("roster_legality") is not None:
         resolutions = tuple(TeamRosterLegalityResolution.model_validate(row) for row in result["roster_legality"])
 
-    release, simulation_fingerprint = _presentation_continuity.native_pick_generation_hint(context)
+    release, simulation_fingerprint, projection_policy = _presentation_continuity.native_pick_generation_binding(context)
     return build_trade_intrinsic_evidence(
         context,
         proposal,
@@ -775,6 +775,7 @@ def _published_trade_intrinsic_provider(context, proposal, result=None):
         publication_validator=_presentation_continuity.career_generation_hint_matches,
         roster_resolutions=resolutions,
         pick_release=release, pick_simulation_fingerprint=simulation_fingerprint,
+        pick_projection_policy=projection_policy,
     )
 
 
@@ -782,12 +783,13 @@ def _published_discovery_horizon_provider(context, player_ids):
     """One request-local projection from the existing memory/publication owners."""
     from .trade_intrinsic_evidence import read_published_trade_horizon_values
 
-    release, simulation_fingerprint = _presentation_continuity.native_pick_generation_hint(context)
+    release, simulation_fingerprint, projection_policy = _presentation_continuity.native_pick_generation_binding(context)
     return read_published_trade_horizon_values(
         context, player_ids=player_ids,
         record=_career_intrinsic_coordinator.readiness_record_for_state(context),
         publication_validator=_presentation_continuity.career_generation_hint_matches,
         pick_release=release, pick_simulation_fingerprint=simulation_fingerprint,
+        pick_projection_policy=projection_policy,
     )
 
 
