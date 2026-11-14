@@ -1,5 +1,9 @@
 # Native pick prior: actual-draft selection evidence
 
+Latest: [Career stability and attachment checks](native-pick-career-stability-and-attachment.md)
+separate same-class source sensitivity from mixed class/source effects and verify
+the stored publication/Simulation identities.
+
 Status: research only. The third-round selection-coverage gap is resolved for this
 sample. Predictive validity and production admission are not established.
 
