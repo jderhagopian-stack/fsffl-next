@@ -43,11 +43,12 @@ def test_live_explore_consumes_evidence_and_fences_stale_responses():
         pytest.skip('Node unavailable')
     harness = r"""
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const handlers={}, pending=[], requests=[],modeHandlers={};let goalHandler,protectHandler;
-const goal={addEventListener:(event,fn)=>goalHandler=fn};
+const handlers={}, pending=[], requests=[],modeHandlers={};let protectHandler;const priorityHandlers={};
+const priority=(key,checked)=>({dataset:{sePriority:key},checked,addEventListener:(event,fn)=>priorityHandlers[key]=()=>fn()});
+const currentPriority=priority('current_competitiveness',false),careerPriority=priority('career_contribution',true);
 const protect={dataset:{seProtect:'keep'},checked:true,addEventListener:(event,fn)=>protectHandler=fn};
-const host={id:'market-ns-body',isConnected:true,innerHTML:'',querySelector:s=>s==='[data-se-goal]'?goal:null,
-querySelectorAll:s=>s==='[data-se-mode]'?['automatic','custom'].map(v=>({dataset:{seMode:v},addEventListener:(event,fn)=>modeHandlers[v]=fn})):s==='[data-se-protect]'?[protect]:[]};
+const host={id:'market-ns-body',isConnected:true,innerHTML:'',querySelector:s=>null,
+querySelectorAll:s=>s==='[data-se-mode]'?['automatic','custom'].map(v=>({dataset:{seMode:v},addEventListener:(event,fn)=>modeHandlers[v]=fn})):s==='[data-se-protect]'?[protect]:s==='[data-se-priority]'?[currentPriority,careerPriority]:[]};
 const context={state:{route:'opportunities',context:{user_id:'u',league_id:'l',team_id:'a',state_id:'s',publication_generation_id:'g'}},
  console,Set,JSON,Promise,window:{fsfflMarketNorthStar:{activeTab:()=> 'for_you'},addEventListener:(n,f)=>handlers[n]=f},
  api:(url,options)=>{requests.push([url,options]);return new Promise((resolve,reject)=>pending.push({url,resolve,reject}));}};
@@ -69,7 +70,7 @@ const flush=()=>new Promise(r=>setImmediate(r));
  await flush();assert(host.innerHTML.includes('No matching opportunities yet'));
  ui.render(host);assert.equal(requests.filter(r=>r[0].endsWith('strategic-discover')).length,2);
  // A custom result must never become Automatic's goal source when protecting an asset.
- modeHandlers.custom();goalHandler({target:{value:'career_contribution'}});protectHandler();
+ modeHandlers.custom();priorityHandlers.current_competitiveness();priorityHandlers.career_contribution();protectHandler();
  const custom=ui.run();let request=requests.at(-1);assert.equal(JSON.parse(request[1].body).search_instructions.objectives[0],'career_contribution');
  pending.filter(p=>p.url.endsWith('strategic-discover')).at(-1).resolve({league_state_id:'new',focal_team_id:'a',publication_generation_id:'g',priority_context:{objectives:['career_contribution'],explicitly_directed:true},candidate_packages:[]});await custom;
  modeHandlers.automatic();assert(!host.innerHTML.includes('Inferred direction: Build for the long term'));
