@@ -160,7 +160,7 @@ def published_horizons_match_runtime(runtime, read):
     if pick_fingerprint is not None:
         analytics = runtime.simulation_analytics
         if (analytics is None or analytics.simulation_result.simulation_input_fingerprint != pick_fingerprint
-            or analytics.league_view.context.league_state_id != getattr(state, 'state_id', None)):
+            or analytics.league_view.context.league_state_id != read.source['league_state_id']):
             return False
     return (state is not None and runtime.user_id == read.user_id
         and runtime.selected_team_id == read.selected_team_id
