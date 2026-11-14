@@ -52,7 +52,7 @@ def test_shortlist_ready_allows_explicit_continuation_without_replaying_first_ba
     assert len(calls)==16
 
 
-@pytest.mark.parametrize('change',['user','team','generation','evidence','instructions','offer','tamper','expiry'])
+@pytest.mark.parametrize('change',['user','team','generation','evidence','instructions','offer','asset_kinds','age','tamper','expiry'])
 def test_cursor_is_bound_to_exact_request_and_tenant(monkeypatch,change):
     calls=synthetic_builder(monkeypatch)
     runtime,_,_,_=read_fixture();clock=[100.]
@@ -65,6 +65,8 @@ def test_cursor_is_bound_to_exact_request_and_tenant(monkeypatch,change):
     if change=='evidence':runtime=replace(runtime,value_evidence=NS())
     if change=='instructions':body['search_instructions']={'objectives':['career_contribution']}
     if change=='offer':body['offered_asset_ref']='player:a1'
+    if change=='asset_kinds':body['target_asset_kinds']=['pick']
+    if change=='age':body['target_player_max_age']=26
     if change=='tamper':body['continuation_token']='x'+body['continuation_token']
     if change=='expiry':clock[0]+=601
     with pytest.raises(ValueError,match='expired or its evidence/settings changed'):
