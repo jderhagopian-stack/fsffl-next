@@ -155,6 +155,28 @@ def _scenario_total(scenario, evidence, horizon):
     return fsum([*(annual[y] for y in needed),scenario.terminal_raw_shapley])
 
 
+def native_slot_research_distribution(forecast, evidence, horizon):
+    """Build one slot's economics at an explicit release event, not on refresh."""
+    if horizon not in ('three_year','career'):
+        raise ValueError('unsupported native pick horizon')
+    if horizon=='three_year' and evidence.draft_season>evidence.evaluation_season+2:
+        return ValueDistribution(mean=0,stddev=0)
+    try:
+        totals=[_scenario_total(s,evidence,horizon) for s in forecast.scenarios] if forecast else []
+    except OverflowError as exc:
+        raise ValueError('native trajectory aggregation must remain finite') from exc
+    if not totals or any(v is None for v in totals):
+        return None
+    try:
+        mean=fsum(s.probability*v for s,v in zip(forecast.scenarios,totals))
+        variance=fsum(s.probability*(v-mean)**2 for s,v in zip(forecast.scenarios,totals))
+    except OverflowError as exc:
+        raise ValueError('native trajectory aggregation must remain finite') from exc
+    if not isfinite(mean) or not isfinite(variance):
+        raise ValueError('native trajectory aggregation must remain finite')
+    return ValueDistribution(mean=mean,stddev=sqrt(variance))
+
+
 def estimate_native_pick_research(evidence: NativePickResearchEvidence, *, as_of: datetime,
     expected_rules_signature: str, expected_scoring_signature: str,
     expected_native_coordinate_id: str) -> ResearchNativePickResult:
@@ -176,24 +198,9 @@ def estimate_native_pick_research(evidence: NativePickResearchEvidence, *, as_of
         missing=[];outcomes=[]
         for probability in evidence.slot_evidence.slot_probabilities:
             slot=probability.slot_in_round
-            if horizon=='three_year' and evidence.draft_season>evidence.evaluation_season+2:
-                distribution=ValueDistribution(mean=0,stddev=0)  # calendar proof, not missing-data fill
-            else:
-                forecast=by_slot.get(slot)
-                try:
-                    totals=[_scenario_total(s,evidence,horizon) for s in forecast.scenarios] if forecast else []
-                except OverflowError as exc:
-                    raise ValueError('native trajectory aggregation must remain finite') from exc
-                if not totals or any(v is None for v in totals):
-                    missing.append(slot);continue
-                try:
-                    mean=fsum(s.probability*v for s,v in zip(forecast.scenarios,totals))
-                    variance=fsum(s.probability*(v-mean)**2 for s,v in zip(forecast.scenarios,totals))
-                except OverflowError as exc:
-                    raise ValueError('native trajectory aggregation must remain finite') from exc
-                if not isfinite(mean) or not isfinite(variance):
-                    raise ValueError('native trajectory aggregation must remain finite')
-                distribution=ValueDistribution(mean=mean,stddev=sqrt(variance))
+            distribution=native_slot_research_distribution(by_slot.get(slot),evidence,horizon)
+            if distribution is None:
+                missing.append(slot);continue
             outcomes.append(PickOutcome(slot=slot,probability=probability.probability,value=distribution))
         estimate=None
         if not missing:
