@@ -74,9 +74,13 @@ holdouts.
 | 2023, first three seasons | 27 / 36 slots | 109.26 | 105.23 |
 | 2020, first-five-year observed rank means | 36 rank means | 143.98 | 165.80 |
 | 2021, first-five-year observed rank means | 36 rank means | 116.44 | 138.64 |
+| 2020, first-two-year observed rank means, next-year calendar | 36 rank means | 30.03 | 36.67 |
+| 2020, first-three-year observed rank means | 36 rank means | 55.97 | 67.01 |
+| 2021, first-two-year observed rank means, next-year calendar | 36 rank means | 21.34 | 30.58 |
+| 2021, first-three-year observed rank means | 36 rank means | 44.34 | 60.69 |
 
-The 2020 and 2021 diagnostics exclude the target selection class from both the
-prefix and selection-mixture fit. They are current-model cross-class checks,
+The 2020 and 2021 diagnostics exclude the target selection class from the
+prefix and, where used, selection-mixture fit. They are current-model cross-class checks,
 not historical point-in-time forecasts. Rank means use only fully observed
 player windows, with varying draft counts and selective coverage; 36 rank means
 does not mean every selected player's five seasons are observed. Neither check
@@ -98,10 +102,32 @@ and production eligibility remain unchanged.
 ## Production disposition
 
 The charter permits a bounded, documented provisional prior; perfect historical
-forecasts are not a prerequisite. This candidate is a stronger-supported
-research proposal than a single-class source. Nevertheless, source-format
-transport, assumed inactive seasons, slot reversals, and long-term generalization
-remain qualifications to assess before admitting it as pick Value authority.
+forecasts are not a prerequisite. The evidence supports advancing this candidate
+to a bounded provisional integration proposal rather than continuing an
+open-ended search for perfect historical inputs. The actual-draft prefix improves
+the two independent-class prefix comparisons by approximately 16–30%, while the
+2023 checks are approximately 1–4% worse. The long-term comparisons improve by
+approximately 13–16%. These results support the proposal, not a claim that every
+slot or the full Career horizon is validated.
+
+The proposed first production scope is the explicitly supported connected-rule
+coordinate, next available draft and first three rounds. Architecture must remain
+league-agnostic: unsupported rules, later drafts without origin probabilities,
+or missing source authority remain unavailable, never silently borrowed from the
+supported format. Source-format transport, assumed inactive seasons, slot
+reversals, and long-term generalization remain recorded model risks. In particular,
+these empirical selection priors do not establish the value of perfect exercise
+of an earlier pick's choice; no shape correction has been selected.
+
+The next implementation should promote a separately versioned provisional model
+through the existing Forecast/Value owners, persist immutable annual slot releases
+through the existing bounded store, and let refresh attach current ownership and
+origin probabilities without refitting. It must preserve the same shared prefix,
+calendar, explicit unknowns and reference-only Career semantics demonstrated here.
+Production reader integration, regression testing and exact-head release checks
+remain required; research `production_eligible=False` is not a feature flag to
+flip. No additional annual Shapley games are identified as necessary for this step.
+
 A raw native package balance is not franchise utility, owner willingness or a
 mutually beneficial recommendation. No production model, formula, calibration,
 reference anchor, source rule or deployment is changed by this report.
