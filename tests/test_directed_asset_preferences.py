@@ -85,6 +85,9 @@ const ui=c.window.fsfflStrategicExplore,flush=()=>new Promise(r=>setImmediate(r)
  const more=ui.run({continueSearch:true});await flush();assert.equal(calls[1].continuation_token,'next');
  assert.deepEqual(calls[1].target_asset_kinds,calls[0].target_asset_kinds);assert.deepEqual(calls[1].search_instructions,calls[0].search_instructions);
  pending.shift()({league_state_id:'s',focal_team_id:'a',publication_generation_id:'g',candidate_packages:[]});await more;
+ ui.applyIntent('target','player:specific');ui.render(host,null,{directed:true});const target=ui.run();await flush();
+ assert.equal(calls[2].target_asset_ref,'player:specific');assert(!calls[2].target_asset_kinds);assert(!calls[2].target_player_max_age);
+ pending.shift()({league_state_id:'s',focal_team_id:'a',publication_generation_id:'g',candidate_packages:[]});await target;
 })().catch(e=>{console.error(e);process.exitCode=1;});
 """
     result=subprocess.run([node,'-e',script],capture_output=True,text=True)
