@@ -76,11 +76,19 @@ The research zero assumption used the supplied panel, not this narrower source.
 
 ## Live code trace and population compatibility
 
-The accepted runtime already recomputes dynamic players **together** in the full
-reference-plus-dynamic cohort. `product/dynamic_career_composition.py`:
+The accepted runtime calculates dynamic players **together** in the full
+reference-plus-dynamic cohort. Its publication then deliberately preserves the
+input reference rows and appends only the dynamic estimates, via
+`append_dynamic_career_estimates` (`career-frozen-reference-append-v1`). This is
+an accepted reference-comparison policy, not a joint allocation of one new game.
+The [integration design](native-pick-integration-design.md) traces the merged
+PR454 authority and preserves this behavior; the counterfactual below does not
+establish that this accepted policy is invalid or require repricing players.
+
+In `product/dynamic_career_composition.py`:
 `_merge_candidate_inputs` combines the base and valid candidate Forecast rows,
-then calls the unchanged full-cohort Shapley composer. It does not assign an
-isolated candidate's marginal value and bolt it onto unchanged reference values.
+then calls the unchanged full-cohort Shapley composer. The calculation does not value a candidate alone. Publication retains reference
+rows while appending the complete expanded-game candidate results.
 The future Forecast provider admits dynamic subjects from canonical State; this
 review did not establish a separately governed future NFL-class population there.
 This is a description of the traced path, not a conclusion that an accepted
