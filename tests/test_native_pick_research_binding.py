@@ -352,3 +352,51 @@ def test_rule_signature_uses_canonical_numeric_types_and_preserves_state_convent
     reversed_rules=rules.model_copy(update={'scoring':tuple(reversed(rules.scoring))})
     assert rules_scoring_signature(rules)==rules_scoring_signature(reversed_rules)
     assert scoring_signature(state)==rules_scoring_signature(state.league.rules)
+
+
+def replay_fixture():
+    from fsffl.trade_decision.native_pick_research_binding import ResearchReplayEvaluation
+    state,pub,attachment,assessment,proposal=fixture()
+    later=NOW+timedelta(days=1)
+    curve=attachment.curve.model_copy(update={'release':attachment.curve.release.model_copy(update={'released_at':later})})
+    attachment=attachment.model_copy(update={'curve':curve})
+    assessment=assessment.model_copy(update={'curve_id':curve.curve_id,'reviewed_at':later})
+    evaluation=ResearchReplayEvaluation(mode='current_model_replay',evaluated_at=later)
+    return state,pub,attachment,assessment,proposal,evaluation
+
+
+def test_current_model_replay_preserves_football_cutoff_and_does_not_become_PIT_forecast():
+    state,pub,a,assessment,proposal,evaluation=replay_fixture();before=state.model_dump(mode='json')
+    default=prepare(state,pub,a,assessment)
+    assert default.pick_qualifications[0]['status']=='unavailable'
+    read=prepare_research_mixed_read(state,user_id='u',generation_id='g1',players=pub,picks=(a,),assessments=(assessment,),evaluation=evaluation)
+    result=bind(state,proposal,read)
+    assert result['evaluation_mode']=='current_model_replay' and result['evaluated_at']==evaluation.evaluated_at.isoformat()
+    assert result['football_state_as_of']==state.as_of.isoformat() and state.model_dump(mode='json')==before
+    assert result['pick_qualifications'][0]['status']=='shadow_available' and result['production_eligible'] is False
+
+
+def test_replay_clock_does_not_admit_future_football_probability_evidence():
+    state,pub,a,assessment,proposal,evaluation=replay_fixture()
+    a=a.model_copy(update={'probability_as_of':NOW+timedelta(hours=1)})
+    read=prepare_research_mixed_read(state,user_id='u',generation_id='g1',players=pub,picks=(a,),assessments=(assessment,),evaluation=evaluation)
+    assert read.pick_qualifications[0]['reason']=='slot_probability_context_mismatch'
+
+
+@pytest.mark.parametrize('mode,offset',[('point_in_time',1),('current_model_replay',-1)])
+def test_evaluation_mode_cannot_silently_move_the_PIT_or_State_clock(mode,offset):
+    from fsffl.trade_decision.native_pick_research_binding import ResearchReplayEvaluation
+    state,pub,a,assessment,proposal=fixture()
+    evaluation=ResearchReplayEvaluation(mode=mode,evaluated_at=NOW+timedelta(days=offset))
+    with pytest.raises(ValueError,match='clock mode'):
+        prepare_research_mixed_read(state,user_id='u',generation_id='g1',players=pub,picks=(a,),assessments=(assessment,),evaluation=evaluation)
+
+
+def test_replay_clock_is_aware_and_release_still_must_precede_evaluation():
+    from fsffl.trade_decision.native_pick_research_binding import ResearchReplayEvaluation
+    with pytest.raises(ValueError):ResearchReplayEvaluation(mode='current_model_replay',evaluated_at=NOW.replace(tzinfo=None))
+    state,pub,a,assessment,proposal,evaluation=replay_fixture()
+    curve=a.curve.model_copy(update={'release':a.curve.release.model_copy(update={'released_at':evaluation.evaluated_at+timedelta(days=1)})})
+    a=a.model_copy(update={'curve':curve});assessment=assessment.model_copy(update={'curve_id':curve.curve_id})
+    read=prepare_research_mixed_read(state,user_id='u',generation_id='g1',players=pub,picks=(a,),assessments=(assessment,),evaluation=evaluation)
+    assert read.pick_qualifications[0]['reason']=='curve_application_rejected'
