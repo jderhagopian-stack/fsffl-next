@@ -3,7 +3,7 @@ from .pick_location_runtime import build_next_season_pick_projections
 from .trade_value_adapter import cardinal_market_profiles
 
 
-def discovery_pick_context(runtime, rows):
+def discovery_pick_context(runtime, rows, *, read=None):
     refs={a['asset_ref'] for row in rows for a in (*row['send'],*row['receive']) if a['asset_ref'].startswith('pick:')}
     if not refs:
         return {}
@@ -23,6 +23,7 @@ def discovery_pick_context(runtime, rows):
         profile=profiles.get(pick.pick_id)
         market=profile.market_price if profile is not None and profile.asset_kind=='pick' else None
         projection=projections.get(pick.pick_id)
+        native = read.pick_sources.get(pick.pick_id) if read is not None else None
         result[ref]={'pick_id':pick.pick_id,'season':pick.season,'round':pick.round,
             'original_team_id':pick.original_team_id,'owner_team_id':owners.get(pick.pick_id),
             'market_value':market.distribution.mean if market else None,
@@ -30,6 +31,10 @@ def discovery_pick_context(runtime, rows):
             'expected_slot':projection.expected_slot if projection else None,
             'slot_source':projection.authority_status if projection else 'unavailable',
             'slot_model_version':projection.simulation_model_version if projection else None,
-            'three_year_intrinsic_status':'unavailable','career_intrinsic_status':'unavailable',
-            'interpretation':'Draft-capital and slot evidence are separate from raw Shapley contribution; missing pick Intrinsic is not zero.'}
+            'three_year_intrinsic_status':'bounded_provisional' if native else 'unavailable',
+            'career_intrinsic_status':'bounded_provisional' if native else 'unavailable',
+            'three_year_intrinsic':read.pick_values['three_year'].get(pick.pick_id) if native else None,
+            'career_intrinsic':read.pick_values['career'].get(pick.pick_id) if native else None,
+            'native_source':dict(native) if native else None,
+            'interpretation':'Preliminary draft-pick estimate' if native else 'Pick Intrinsic unavailable'}
     return result

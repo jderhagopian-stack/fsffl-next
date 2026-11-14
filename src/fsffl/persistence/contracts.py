@@ -249,6 +249,10 @@ class PersistenceStore(Protocol):
 
     def put_artifact(self, record: ReusableArtifactRecord) -> None: ...
 
+    def put_immutable_artifact(self, record: ReusableArtifactRecord) -> ReusableArtifactRecord:
+        """First writer wins, returning even an invalidated existing identity."""
+        ...
+
     def invalidate_scope(
         self,
         *,

@@ -511,6 +511,34 @@ class PostgresPersistenceStore(PersistenceStore):
                 ),
             )
 
+    def put_immutable_artifact(self, record: ReusableArtifactRecord) -> ReusableArtifactRecord:
+        """Never overwrite or reactivate an immutable annual model release."""
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """insert into fsffl.derived_artifact
+                   (artifact_kind, scope_kind, scope_id, input_fingerprint, model_version,
+                    payload, computed_at, invalidated_at, invalidation_reason)
+                   values (%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s)
+                   on conflict (artifact_kind, scope_kind, scope_id, input_fingerprint, model_version)
+                   do nothing""",
+                (record.key.artifact_kind, record.key.scope_kind, record.key.scope_id,
+                 record.key.input_fingerprint, record.key.model_version, json.dumps(record.payload),
+                 record.computed_at, record.invalidated_at, record.invalidation_reason),
+            )
+            cursor.execute(
+                """select artifact_kind, scope_kind, scope_id, input_fingerprint,
+                          model_version, payload, computed_at, invalidated_at, invalidation_reason
+                   from fsffl.derived_artifact
+                   where artifact_kind=%s and scope_kind=%s and scope_id=%s
+                     and input_fingerprint=%s and model_version=%s""",
+                (record.key.artifact_kind, record.key.scope_kind, record.key.scope_id,
+                 record.key.input_fingerprint, record.key.model_version),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            raise RuntimeError("immutable artifact was not readable after its insert")
+        return self._artifact_from_row(row)
+
     def invalidate_scope(
         self,
         *,

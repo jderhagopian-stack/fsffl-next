@@ -19,6 +19,9 @@ from fsffl.persistence.contracts import (
 )
 
 from .runtime import UserRuntimeContext
+from collections import OrderedDict
+from fsffl.value.native_pick_prior import packaged_native_pick_reference
+from fsffl.persistence.native_pick_prior import restore_native_pick_release
 
 
 _logger = logging.getLogger("fsffl.product.persistence")
@@ -139,6 +142,10 @@ class PresentationContinuityStore:
             tuple[str, str, str, str | None],
             tuple[str, str | None, str | None],
         ] = {}
+        # Compact immutable annual Value releases are shared across manifests;
+        # request handlers only consume these already-restored references.
+        self._pick_release_cache = OrderedDict()
+        self._known_pick_sources = {}
 
     @property
     def enabled(self) -> bool:
@@ -223,6 +230,33 @@ class PresentationContinuityStore:
         finally:
             self._local.promoting = False
 
+        pick_reference = None
+        simulation_fingerprint = None
+        try:
+            reference = packaged_native_pick_reference()
+            release = None
+            if (state.league.season == reference.evaluation_season
+                and state.league.rules.team_count == reference.team_count
+                and state.as_of >= reference.released_at):
+                release = restore_native_pick_release(self._persistence, scope_key=reference.scope_key, release_id=reference.release_id)
+                if release is None:
+                    with self._validation_lock:
+                        self._pick_release_cache.pop((reference.scope_key, reference.release_id), None)
+            analytics = runtime.simulation_analytics
+            if (release is not None and release.supports(state.league.rules, season=state.league.season, as_of=state.as_of)
+                and analytics is not None
+                and analytics.league_view.context.league_state_id == state.state_id):
+                with self._validation_lock:
+                    self._pick_release_cache[(release.economic_scope_key, release.release_id)] = release
+                    while len(self._pick_release_cache) > 4:
+                        self._pick_release_cache.popitem(last=False)
+                pick_reference = {"scope_key": release.economic_scope_key, "release_id": release.release_id}
+                simulation_fingerprint = analytics.simulation_result.simulation_input_fingerprint
+        except Exception:
+            # Optional new Value evidence must not interrupt the existing core
+            # publication. Never fall back to a missing/revoked packaged prior.
+            _logger.exception("Annual native pick release unavailable during publication")
+
         manifest_payload = {
             "contract": PRESENTATION_MODEL_VERSION,
             "league_id": state.league.league_id,
@@ -241,6 +275,8 @@ class PresentationContinuityStore:
             ],
             "total_payload_bytes": total_bytes,
             "career_input_fingerprint": career_input_fingerprint,
+            "native_pick_prior_reference": pick_reference,
+            "native_pick_simulation_fingerprint": simulation_fingerprint,
         }
         self._persistence.put_artifact(
             ReusableArtifactRecord(
@@ -340,6 +376,7 @@ class PresentationContinuityStore:
             stale = [item for item in self._known_snapshot_manifests if item[0] == user_id]
             for item in stale:
                 self._known_snapshot_manifests.pop(item, None)
+                self._known_pick_sources.pop(item, None)
             return len(stale)
 
     @staticmethod
@@ -366,12 +403,46 @@ class PresentationContinuityStore:
             league_state_id,
             selected_team_id,
         )
+        reference = manifest_payload.get("native_pick_prior_reference")
+        release_key = None
+        if isinstance(reference, Mapping):
+            scope, identity = reference.get("scope_key"), reference.get("release_id")
+            if isinstance(scope, str) and isinstance(identity, str):
+                release_key = (scope, identity)
+                with self._validation_lock:
+                    cached = release_key in self._pick_release_cache
+                if not cached and self._persistence is not None:
+                    try:
+                        release = restore_native_pick_release(self._persistence, scope_key=scope, release_id=identity)
+                    except Exception:
+                        _logger.exception("Pinned annual native pick release unavailable on restore")
+                        release = None
+                    with self._validation_lock:
+                        self._pick_release_cache[release_key] = release
+                        while len(self._pick_release_cache) > 4:
+                            self._pick_release_cache.popitem(last=False)
         with self._validation_lock:
             self._known_snapshot_manifests[key] = (
                 canonical_fingerprint(manifest_payload),
                 str(manifest_payload.get("promotion_id") or "") or None,
                 str(manifest_payload.get("career_input_fingerprint") or "") or None,
             )
+            self._known_pick_sources[key] = (
+                str(manifest_payload.get("promotion_id") or ""), release_key,
+                manifest_payload.get("native_pick_simulation_fingerprint"),
+            )
+
+    def native_pick_generation_hint(self, runtime: UserRuntimeContext):
+        """Memory-only exact-generation release selection; no read or fallback."""
+        state = runtime.league_state
+        if state is None or not runtime.publication_generation_id:
+            return None, None
+        key = self._snapshot_key(runtime.user_id, state.league.league_id, state.state_id, runtime.selected_team_id)
+        with self._validation_lock:
+            source = self._known_pick_sources.get(key)
+            if source is None or source[0] != runtime.publication_generation_id:
+                return None, None
+            return self._pick_release_cache.get(source[1]), source[2]
 
     def known_snapshot_available(
         self,

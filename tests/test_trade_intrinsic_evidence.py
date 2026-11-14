@@ -123,7 +123,8 @@ def test_hosted_provider_reads_only_existing_memory_owner():
     calls = []
     scope = {'__package__': 'fsffl.product',
         '_career_intrinsic_coordinator': SimpleNamespace(readiness_record_for_state=lambda c: calls.append(c) or record),
-        '_presentation_continuity': SimpleNamespace(career_generation_hint_matches=lambda c, r: c is runtime and r is record)}
+        '_presentation_continuity': SimpleNamespace(career_generation_hint_matches=lambda c, r: c is runtime and r is record,
+            native_pick_generation_hint=lambda c: (None, None))}
     exec(compile(ast.Module(body=[fn], type_ignores=[]), str(path), 'exec'), scope)
     result = scope[fn.name](runtime, proposal)
     assert result['status'] == 'complete'

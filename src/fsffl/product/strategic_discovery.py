@@ -32,7 +32,7 @@ from .opportunity_posture import calculated_competitive_state, default_posture_f
 from dataclasses import replace
 
 _logger = logging.getLogger("fsffl.product.performance")
-_MODEL_VERSION = "strategic-discovery-v2:bounded-feedback-retention"
+_MODEL_VERSION = "strategic-discovery-v3:published-provisional-native-picks"
 
 class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
@@ -159,6 +159,10 @@ def build_discovery_lanes(runtime, request, read):
             for goal,name in ((TradeObjective.THREE_YEAR,'three_year'),(TradeObjective.CAREER,'career')):
                 if read is not None and asset_id in read.values[name]:
                     metric_values[goal][asset] = read.values[name][asset_id]
+        elif isinstance(asset,PickAsset) and read is not None:
+            for goal,name in ((TradeObjective.THREE_YEAR,'three_year'),(TradeObjective.CAREER,'career')):
+                if asset_id in read.pick_values.get(name, {}):
+                    metric_values[goal][asset] = read.pick_values[name][asset_id]
     strengths = _position_strengths(runtime)
     positions = {p.player_id:p.position for p in state.players}
     def roster_fit(assets,recipient):
@@ -398,7 +402,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     return {'league_state_id':runtime.league_state.state_id,'publication_generation_id':runtime.publication_generation_id,
         'focal_team_id':runtime.selected_team_id,'priority_context':context.model_dump(mode='json'),
         'competitive_context':team_contexts[runtime.selected_team_id], 'team_competitive_contexts':team_contexts,
-        'pick_evidence':discovery_pick_context(runtime, rows),
+        'pick_evidence':discovery_pick_context(runtime, rows, read=read),
         'candidate_packages':rows,'diagnostics':{**diagnostics,'candidate_pool_unique_count':len(by_point),'generated_candidate_pool_unique_count':pool_count,
             'candidate_pool_limit':pool_budget,'max_candidates':request.max_candidates,
             'pool_shapes':diagnostics['shapes'],'pool_hypotheses':diagnostics['hypotheses'],
