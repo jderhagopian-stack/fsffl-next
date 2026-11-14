@@ -154,6 +154,14 @@ def test_manifest_pins_release_cold_restore_and_memory_only_request_reads(monkey
         league_state_id=runtime.league_state.state_id,selected_team_id=runtime.selected_team_id,manifest_payload=old)
     assert cold.native_pick_generation_hint(runtime)[0] is None
 
+    # A different tenant's normal State transition must not evict this shared
+    # immutable model from a still-valid published reader.
+    other=replace(runtime,user_id='another-user')
+    cold._remember_snapshot_manifest(user_id=other.user_id,league_id=other.league_state.league.league_id,
+        league_state_id=other.league_state.state_id,selected_team_id=other.selected_team_id,manifest_payload=manifest.payload)
+    cold.clear_user_validation_hints(runtime.user_id)
+    assert cold.native_pick_generation_hint(other)==(release,'sim')
+
 
 def test_revoked_release_cannot_fall_back_to_packaged_values():
     runtime,_,_,release=fixture();store=MemoryPersistence();persist_native_pick_release(store,release)
