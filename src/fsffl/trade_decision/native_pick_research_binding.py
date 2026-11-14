@@ -15,7 +15,7 @@ from weakref import ReferenceType, ref
 
 from pydantic import Field, model_validator
 
-from fsffl.state.models import FrozenModel, LeagueState, PickAsset, PlayerAsset
+from fsffl.state.models import FrozenModel, LeagueRules, LeagueState, PickAsset, PlayerAsset
 from fsffl.value.career_tail import lineup_capacity_signature
 from fsffl.value.models import AssetValueProfile, IntrinsicDynastyValueEstimate, ValueDistribution, ValueScale
 from fsffl.value.native_pick_curve_releases import FrozenNativePickCurve, apply_frozen_native_pick_curve, fingerprint
@@ -35,10 +35,15 @@ BASIS = {'three_year':f'evaluation_calendar_y1_y3_discount_{FROZEN_INTRINSIC_DIS
          'career':'undiscounted_y1_y7_plus_y8_terminal'}
 
 
+def rules_scoring_signature(rules: LeagueRules) -> str:
+    """Hash canonical rule models, never raw provider JSON or football points."""
+    rows = [r.model_dump(mode='json') for r in rules.scoring]
+    return fingerprint(sorted(rows, key=fingerprint))
+
+
 def scoring_signature(state: LeagueState) -> str:
     """Research metadata convention over canonical scoring rows, not a scorer."""
-    rows = [r.model_dump(mode='json') for r in state.league.rules.scoring]
-    return fingerprint(sorted(rows, key=fingerprint))
+    return rules_scoring_signature(state.league.rules)
 
 
 def _freeze(value):
