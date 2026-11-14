@@ -32,7 +32,7 @@ from .opportunity_posture import calculated_competitive_state, default_posture_f
 from dataclasses import replace
 
 _logger = logging.getLogger("fsffl.product.performance")
-_MODEL_VERSION = "strategic-discovery-v3:published-provisional-native-picks"
+_MODEL_VERSION = "strategic-discovery-v4:bounded-lazy-large-packages"
 
 class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
@@ -135,7 +135,7 @@ def _interleave_kinds(assets):
 def build_discovery_lanes(runtime, request, read):
     context, browser, teams = prepare_discovery(runtime,request)
     state = runtime.league_state
-    bounds = TradeSearchBounds(max_assets_per_side=2)
+    bounds = TradeSearchBounds(max_assets_per_side=8)
     inventories = {t.team_id:build_team_trade_inventory(state,team_id=t.team_id,bounds=bounds)
                    for t in (browser.focal_team,*teams)}
     focal = inventories[runtime.selected_team_id]
@@ -212,6 +212,14 @@ def build_discovery_lanes(runtime, request, read):
             add('rank_disagreement_'+goal.value,sends,receives)
         add('package_structure',_interleave_kinds(_descending(focal.assets,metric_values[TradeObjective.MARKET])),
             _interleave_kinds(_descending(other.assets,metric_values[TradeObjective.MARKET])))
+        # Draft-capital packages need room for several picks, including shapes
+        # that cannot arise from an alternating player/pick ingredient prefix.
+        focal_picks = tuple(a for a in _descending(focal.assets,metric_values[other_goal]) if isinstance(a,PickAsset))
+        other_picks = tuple(a for a in _descending(other.assets,metric_values[TradeObjective.CAREER]) if isinstance(a,PickAsset))
+        add('spend_draft_capital', focal_picks,
+            tuple(a for a in roster_fit(other.assets, focal.team_id) if isinstance(a,PlayerAsset)))
+        add('acquire_draft_capital',
+            tuple(a for a in roster_fit(focal.assets, team.team_id) if isinstance(a,PlayerAsset)), other_picks)
     # Across the first traversal, rotate teams as well as hypothesis lanes.
     names = tuple(dict.fromkeys(l.name for l in lanes))
     lanes = tuple(l for name in names for l in lanes if l.name==name)
@@ -220,7 +228,7 @@ def build_discovery_lanes(runtime, request, read):
 
 def _representative_indices(rows,budget):
     """Categorical coverage, not a composite opportunity score."""
-    remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set()
+    remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set(); shapes=set()
     while remaining and len(chosen)<budget:
         diverse = [i for i in remaining if not ({a['asset_ref'] for a in rows[i]['send']} & sent)]
         eligible = [i for i in diverse if rows[i]['counterparty_team_id'] not in teams
@@ -233,15 +241,18 @@ def _representative_indices(rows,budget):
         if not eligible: eligible=remaining
         # A conditional raw horizon complement may guide investigation; actual cuts
         # and team consequences are evaluated only in the subsequent Decision pass.
-        index=next((i for i in eligible if rows[i]['pre_cut_horizon_complement_hypothesis']),None)
-        if index is None:
-            index=next((i for i in eligible if rows[i].get('counterparty_horizon_gain_current_pending')),None)
-        if index is None:
-            index=next((i for i in eligible if rows[i].get('preliminary_economic_band')
-                in ('robust_or_ordinary','bounded_uncertainty')),eligible[0])
+        preferred = [i for i in eligible if rows[i]['pre_cut_horizon_complement_hypothesis']]
+        if not preferred:
+            preferred = [i for i in eligible if rows[i].get('counterparty_horizon_gain_current_pending')]
+        if not preferred:
+            preferred = [i for i in eligible if rows[i].get('preliminary_economic_band')
+                         in ('robust_or_ordinary','bounded_uncertainty')]
+        preferred = preferred or eligible
+        index = next((i for i in preferred if (len(rows[i]['send']),len(rows[i]['receive'])) not in shapes), preferred[0])
         chosen.append(index);remaining.remove(index)
         teams.add(rows[index]['counterparty_team_id']);hypotheses.update(rows[index]['hypotheses'])
         sent.update(a['asset_ref'] for a in rows[index]['send'])
+        shapes.add((len(rows[index]['send']),len(rows[index]['receive'])))
     return chosen
 
 
@@ -398,6 +409,9 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     for row in rows:
         row['display_context'] = discovery_display_context(row)
     team_contexts = {team.team_id: _competitive_context(runtime, team.team_id) for team in (browser.focal_team, *teams)}
+    returned_picks = {a['asset_ref'][5:] for row in rows for a in (*row['send'],*row['receive'])
+                      if a['asset_ref'].startswith('pick:')}
+    covered_picks = returned_picks & set(read.pick_sources) if read is not None else set()
     completed=monotonic()
     return {'league_state_id':runtime.league_state.state_id,'publication_generation_id':runtime.publication_generation_id,
         'focal_team_id':runtime.selected_team_id,'priority_context':context.model_dump(mode='json'),
@@ -408,7 +422,9 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             'pool_shapes':diagnostics['shapes'],'pool_hypotheses':diagnostics['hypotheses'],
             'candidate_count':len(rows),'returned_candidate_limit':request.max_candidates,
             'pick_package_count':sum(any(a['asset_ref'].startswith('pick:') for a in (*r['send'],*r['receive'])) for r in rows),
-            'native_pick_intrinsic_coverage':'unavailable',
+            'native_pick_intrinsic_coverage':('unavailable' if not covered_picks else
+                'complete' if covered_picks==returned_picks else 'partial'),
+            'native_pick_intrinsic_covered_count':len(covered_picks),
             'shapes':dict(Counter(f"{len(r['send'])}_for_{len(r['receive'])}" for r in rows)),
             'hypotheses':dict(Counter(h for r in rows for h in r['hypotheses'])),
             'returned_counterparties':len({r['counterparty_team_id'] for r in rows}),
@@ -418,6 +434,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             'changed_state_simulation_calls':0,'forecast_or_intrinsic_recomputations':0,
             'timing_ms':{'generation_and_raw_binding':round((generated-start)*1000,3),'decision_screens':round((completed-generated)*1000,3),'total':round((completed-start)*1000,3)},
             'screened_counterparties':len({row['counterparty_team_id'] for row in screened}),
+            'screened_shapes':dict(Counter(f"{len(row['send'])}_for_{len(row['receive'])}" for row in screened)),
             'screened_hypotheses':dict(Counter(h for row in screened for h in row['hypotheses'])),
             'pair_visits':diagnostics['pair_visits']+visits.used,'max_pair_visits':pool_budget,
             'generation_pair_visits':diagnostics['pair_visits'],'generation_visit_budget':generation_limit,
