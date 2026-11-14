@@ -6,7 +6,7 @@ from itertools import zip_longest
 from math import isfinite
 import logging
 from time import monotonic
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field
 from fsffl.forecast import attach_provisional_position_floor_forecasts
@@ -39,6 +39,8 @@ class StrategicDiscoveryRequest(FrozenModel):
     counterparty_team_id: str | None = None
     target_asset_ref: str | None = None
     target_position: str | None = None
+    target_asset_kinds: tuple[Literal['player','pick'], ...] | None = None
+    target_player_max_age: Annotated[int | None, Field(ge=0, le=100, strict=True)] = None
     offered_asset_ref: str | None = None
     continuation_token: Annotated[str | None, Field(max_length=262144)] = None
     max_candidates: Annotated[int, Field(ge=1, le=80)] = 80
@@ -61,11 +63,26 @@ def _ref(asset):
     return f'player:{asset.player_id}' if isinstance(asset,PlayerAsset) else f'pick:{asset.pick_id}'
 
 
+def _matches_target(option, request):
+    if request.target_asset_kinds is not None and option.asset_kind not in request.target_asset_kinds:
+        return False
+    if option.asset_kind == 'pick':
+        # Position-only searches retain their existing player-only semantics.
+        return request.target_position is None or request.target_asset_kinds is not None
+    if request.target_position is not None and option.detail != request.target_position:
+        return False
+    age = option.age_years
+    return request.target_player_max_age is None or (
+        age is not None and isfinite(age) and 0 <= age < request.target_player_max_age + 1)
+
+
 def prepare_discovery(runtime, request):
     state, focal = runtime.league_state, runtime.selected_team_id
     if state is None or focal is None:
         raise ValueError('A loaded league and managed team are required')
     context = objective_context(runtime, focal, request.search_instructions)
+    if request.target_asset_kinds is not None and (not request.target_asset_kinds or len(set(request.target_asset_kinds)) != len(request.target_asset_kinds)):
+        raise ValueError('Choose one or both target asset types without duplicates')
     browser = build_trade_center_browser_view(state, focal_team_id=focal)
     owned = {a.player_id for a in browser.focal_team.assets if a.player_id}
     if not set(context.protected_player_ids) <= owned:
@@ -88,12 +105,11 @@ def prepare_discovery(runtime, request):
     if request.target_position is not None:
         if request.target_position not in {p.position.value for p in state.players}:
             raise ValueError('Target position must exist in the current league player population')
-        positions = {p.player_id: p.position.value for p in state.players}
-        if request.target_asset_ref is not None and not any(
-            a.asset_ref == request.target_asset_ref and positions.get(a.player_id) == request.target_position
-            for team in teams for a in team.assets
-        ):
-            raise ValueError('The target asset must match the requested position')
+    if request.target_asset_ref is not None and not any(
+        a.asset_ref == request.target_asset_ref and _matches_target(a, request)
+        for team in teams for a in team.assets
+    ):
+        raise ValueError('The target asset must match the requested asset type, age and position')
     return context, browser, teams
 
 
@@ -163,9 +179,9 @@ def build_discovery_lanes(runtime, request, read):
     lanes=[]
     for team in teams:
         other = inventories[team.team_id]
-        if request.target_position is not None:
-            other = other.model_copy(update={'assets': tuple(a for a in other.assets
-                if isinstance(a, PlayerAsset) and positions.get(a.player_id) == request.target_position)})
+        if request.target_position is not None or request.target_asset_kinds is not None or request.target_player_max_age is not None:
+            eligible = {a.asset_ref for a in team.assets if _matches_target(a, request)}
+            other = other.model_copy(update={'assets': tuple(a for a in other.assets if _ref(a) in eligible)})
         other_context = objective_context(runtime,team.team_id)
         other_goal = next((g for g in other_context.objectives if metric_values[g]),TradeObjective.MARKET)
         required = next((a for a in other.assets if _ref(a)==request.target_asset_ref),None)
@@ -346,6 +362,9 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         if not can_feedback or sequence_used or screen_cap-len(screened)<2: continue
         path=repair_path(runtime,root,read,protected_player_ids=context.protected_player_ids,visits=visits)
         for point,lineage in path:
+            if any(not _matches_target(options[_ref(a)],request) for a in point.counterparty_package.assets):
+                visits.skipped['repair_outside_requested_targets'] += 1
+                break
             sequence_used=True
             if len(screened)>=screen_cap: break
             if point.point_id in excluded:
