@@ -8,11 +8,12 @@ and generic fitting implementation remain in research PR552 at
 
 ## Economic authority and scope
 
-`value/native_pick_prior_2026.json` is an immutable release of compact sufficient
+The private `native_pick_prior_release` artifact is an immutable release of compact sufficient
 statistics from that candidate: the same empirical first-three-year means for
 both horizons and the complete Career reference envelope. The original joint
 paths remain research evidence; no variance or cumulative uncertainty is invented
-when serving the compact table. Model/source fingerprints and attributed backoff
+when serving the compact table. The public package contains only its exact release
+reference, never the derived value table. Model/source fingerprints and attributed backoff
 mass remain attached to every slot. No Market values, display anchors or player
 repricing enter the table.
 
@@ -40,8 +41,9 @@ roster consequences follow the current owner.
 
 ## Lifecycle and persistence
 
-The existing publication sequence selects and persists the supported release
-before its manifest becomes reachable. The manifest pins the exact content identity
+The controlled release operation persists the supported private release before
+runtime publication. The existing publication sequence selects that exact persisted
+release before its manifest becomes reachable. The manifest pins the exact content identity
 and the published Simulation result fingerprint. Old manifests without the new
 reference retain unavailable pick Intrinsic; no historical snapshot is rewritten.
 A release cannot be applied before its release time. A fresh published State is
@@ -54,9 +56,9 @@ the same year/economy, or a revoked release, cannot be overwritten/reactivated b
 refresh. Future class updates require a separate explicit correction/stage design;
 this initial implementation does not add an automatic correction path.
 
-Initial publication adds two shared rows: the small annual identity lock and the
-17.6 KB release. Later publications make two pooled operations/four bounded SQL
-statements, with no additional durable release writes. They do not fit, score
+Initial controlled release adds two shared rows: the small annual identity lock
+and the 17.6 KB release. Runtime publications make one exact pooled release read,
+with no additional release writes. They do not fit, score
 historical seasons, run Shapley or add Simulation worlds. The existing manifest
 grows only by the small release reference and Simulation identity. Warm release
 retention is bounded to four shared compact objects. Requests read the already
