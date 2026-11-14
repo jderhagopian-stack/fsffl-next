@@ -19,8 +19,9 @@ from historical actuals. Historical outcome labels must be assembled separately;
 realized production under a historical draft timestamp.
 
 Outputs use research-prefixed scales, preserve source/input fingerprints and
-always report `production_eligible=false`. No runtime route, refresh, producer,
-persistence adapter, or player-value reader imports this research module.
+always report `production_eligible=false`. No production runtime route, refresh, producer or player-value reader imports
+this research module. The isolated research release codec described below does
+consume it; this does not enable native pick production.
 
 ## Calendar and uncertainty contract
 
@@ -90,3 +91,55 @@ explicit and distinct from an observed source fact.
 
 A successful contract test establishes arithmetic and evidence barriers. It does
 not establish that an untrained model's pick valuations are empirically correct.
+
+## Season-stable release policy
+
+Exact slot economics are calculated once for an annual evaluation season, draft
+year, round and supported economic/rules/scoring coordinate. When picks become
+available on a league's platform, attach the applicable saved release; reuse a
+shared release where eligibility and evidence rights permit. Platform availability
+is an attachment event, not a reason to refit independently for every league.
+
+Ordinary refreshes do not rebuild the curve when source timestamps, ownership,
+rosters, standings or State change. The existing Market curve is already frozen;
+this contract applies to the prospective native Intrinsic model as it develops.
+
+The accepted release stages are annual baseline, post-declarations and post-NFL
+draft. Later stages are explicit publication decisions supported by new evidence,
+not scheduled refits implemented here. Corrections require an exact predecessor
+and documented reason. Every release is content-addressed; earlier releases and
+historical pick valuations remain reproducible. A subsequent annual evaluation
+season requires its own release, including its own calendar-aligned Three-Year
+window. Do not silently relabel a frozen research coordinate as live matching-State
+player economics; that compatibility remains a promotion gate.
+
+`value/native_pick_curve_releases.py` separates the explicit curve producer from
+pure probability application. Compact distributions for every slot are retained;
+annual scenario graphs are discarded from the release. Missing horizon values
+remain explicit. Ownership does not affect slot economics. The originating team's
+current, draft-year-specific slot probabilities can change the weighted pick value
+without recomputing any slot economics. Supply probabilities governed for the
+applicable round/draft-order policy; do not invent uniform distributions, infer
+snake transformations, or borrow another draft year's probabilities.
+
+`persistence/native_pick_curve.py` uses the existing store and connection owner.
+An explicit producer saves a release idempotently. A reader loads an exact
+reference with one bounded read; a miss or invalidation never triggers a rebuild.
+There is no latest-release lookup, automatic pointer advancement, new connection
+pool, global cache, worker or scheduler. The canonical publication owner must
+serialize release selection and retire retained references on revocation. A warm
+publication can reuse its compact frozen curve without a database read per pick.
+Neither this adapter nor the research model is connected to production refresh.
+
+## Filling selection-profile gaps
+
+Use actual eligible fantasy draft history and format-specific rookie ADP when
+available. Expert consensus **post-NFL-draft rookie fantasy rankings** can inform
+an uncertain selection profile when league evidence is sparse. They describe
+which assets may be selected at a slot; ranking scores are not native economic
+outcome labels or a Market-to-Intrinsic conversion. Pool appropriate format-level
+priors and refine them with league history rather than fitting every league in
+isolation. Rankings published after the NFL draft cannot be used at an earlier
+historical cutoff. Before fitting, document source availability, format fit,
+coverage, uncertainty and reuse rights. No consensus source or model has been
+selected or fitted in this lifecycle change.
