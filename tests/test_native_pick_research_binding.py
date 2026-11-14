@@ -338,3 +338,17 @@ def test_publication_assumptions_cannot_silently_overwrite_or_be_blank(assumptio
     state,pub,attachment,assessment,proposal=fixture()
     with pytest.raises(ValueError,match='assumption'):
         ResearchPlayerPublication.model_validate({**pub.model_dump(),'input_assumptions':assumptions})
+
+
+def test_rule_signature_uses_canonical_numeric_types_and_preserves_state_convention():
+    from fsffl.state.models import LeagueRules
+    from fsffl.trade_decision.native_pick_research_binding import rules_scoring_signature
+    state=_state();raw=state.league.rules.model_dump(mode='json')
+    raw['scoring']=[{'stat':'rec','points':0.5},{'stat':'pass_int','points':-1}]
+    rules=LeagueRules.model_validate(raw)
+    normalized=[row.model_dump(mode='json') for row in rules.scoring]
+    assert rules_scoring_signature(rules)==fingerprint(sorted(normalized,key=fingerprint))
+    assert rules_scoring_signature(rules)!=fingerprint(sorted(raw['scoring'],key=fingerprint))
+    reversed_rules=rules.model_copy(update={'scoring':tuple(reversed(rules.scoring))})
+    assert rules_scoring_signature(rules)==rules_scoring_signature(reversed_rules)
+    assert scoring_signature(state)==rules_scoring_signature(state.league.rules)
