@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from math import isfinite
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from collections.abc import Mapping
 from types import MappingProxyType
@@ -25,6 +25,7 @@ from fsffl.value.career_forward_intrinsic import CareerForwardIntrinsicShadowCon
 from fsffl.value.models import AssetValueProfile, IntrinsicDynastyValueEstimate, ValueDistribution, ValueScale
 
 from .runtime import UserRuntimeContext
+from .native_pick_prior_runtime import published_pick_values
 
 
 TRADE_INTRINSIC_EVIDENCE_VERSION = "trade-raw-horizon-evidence-v1"
@@ -54,11 +55,14 @@ class PublishedTradeHorizonValues:
     values: Mapping[str, Mapping[str, float]]
     covered_player_ids: frozenset[str]
     input_assumptions: Mapping[str, str]
+    pick_values: Mapping[str, Mapping[str, float]] = field(default_factory=dict)
+    pick_sources: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
 
 
 def read_published_trade_horizon_values(
     runtime: UserRuntimeContext, *, player_ids: frozenset[str], record,
     publication_validator: PublicationValidator,
+    pick_release=None, pick_simulation_fingerprint: str | None = None,
 ) -> PublishedTradeHorizonValues:
     """Validate once and project existing native values for a bounded owned cohort.
 
@@ -126,6 +130,10 @@ def read_published_trade_horizon_values(
         scale_id=f"raw-shapley:{name}:{state_id}:{contract.input_fingerprint}",
         version=contract.contract_version, unit_label=f"{name} raw Shapley contribution",
     ) for name in ("three_year", "career")}
+    pick_values, pick_sources = published_pick_values(runtime, pick_release, pick_simulation_fingerprint)
+    if pick_sources:
+        source['native_pick_prior_release_id'] = pick_release.release_id
+        source['native_pick_simulation_fingerprint'] = pick_simulation_fingerprint
     return PublishedTradeHorizonValues(
         user_id=runtime.user_id, selected_team_id=runtime.selected_team_id, as_of=state.as_of, state_ref=ref(state),
         source=MappingProxyType(source), scales=MappingProxyType(scales),
@@ -133,6 +141,8 @@ def read_published_trade_horizon_values(
         covered_player_ids=frozenset(row.player_id for row in source_rows),
         input_assumptions=MappingProxyType({pid: contract.player_input_assumptions[pid]
             for pid in selected if pid in contract.player_input_assumptions}),
+        pick_values=MappingProxyType({name: MappingProxyType(rows) for name, rows in pick_values.items()}),
+        pick_sources=MappingProxyType(pick_sources),
     )
 
 
@@ -146,6 +156,12 @@ def _selected_players(proposal, roster_resolutions):
 
 def published_horizons_match_runtime(runtime, read):
     state = runtime.league_state
+    pick_fingerprint = read.source.get('native_pick_simulation_fingerprint')
+    if pick_fingerprint is not None:
+        analytics = runtime.simulation_analytics
+        if (analytics is None or analytics.simulation_result.simulation_input_fingerprint != pick_fingerprint
+            or analytics.league_view.context.league_state_id != getattr(state, 'state_id', None)):
+            return False
     return (state is not None and runtime.user_id == read.user_id
         and runtime.selected_team_id == read.selected_team_id
         and read.state_ref() is state
@@ -157,12 +173,14 @@ def build_trade_intrinsic_evidence(
     runtime: UserRuntimeContext, proposal: BilateralTradeProposal, *, record,
     publication_validator: PublicationValidator,
     roster_resolutions: tuple[TeamRosterLegalityResolution, ...] | None = None,
+    pick_release=None, pick_simulation_fingerprint: str | None = None,
 ) -> dict[str, object]:
     """Read existing publication and bind the selected transaction's raw ledgers."""
     try:
         read = read_published_trade_horizon_values(runtime,
             player_ids=frozenset(_selected_players(proposal, roster_resolutions)),
-            record=record, publication_validator=publication_validator)
+            record=record, publication_validator=publication_validator,
+            pick_release=pick_release, pick_simulation_fingerprint=pick_simulation_fingerprint)
     except ValueError as exc:
         return unavailable_trade_intrinsic(str(exc))
     return bind_trade_intrinsic_values(runtime, proposal, read, roster_resolutions=roster_resolutions)
@@ -178,15 +196,27 @@ def bind_trade_intrinsic_values(
         or runtime.selected_team_id not in {proposal.side_a.team_id, proposal.side_b.team_id}):
         return unavailable_trade_intrinsic("Raw horizon projection does not match the request identity")
     selected = _selected_players(proposal, roster_resolutions)
+    selected_picks = {asset.pick_id for leg in (proposal.side_a, proposal.side_b)
+                      for asset in leg.sends if isinstance(asset, PickAsset)}
     non_player_ids = {asset.pick_id if isinstance(asset, PickAsset) else f"faab:{asset.amount}"
                      for leg in (proposal.side_a, proposal.side_b) for asset in leg.sends
                      if isinstance(asset, (PickAsset, FaabAsset))}
     if selected & non_player_ids:
         return unavailable_trade_intrinsic("Asset identifiers are ambiguous across asset kinds")
+    if selected_picks & read.pick_sources.keys():
+        from fsffl.trade_decision.scenario import _validate_leg_ownership
+        try:
+            _validate_leg_ownership(state, proposal.side_a)
+            _validate_leg_ownership(state, proposal.side_b)
+        except ValueError as exc:
+            return unavailable_trade_intrinsic(str(exc))
     def horizon(values: dict[str, float], name: str) -> dict[str, object]:
         # This declares the native unit/reference, not a conversion or display
         # ruler. Same-State/source and horizon are required for additive binding.
         scale = read.scales[name]
+        release_ids = sorted({str(read.pick_sources[pid]["release_id"]) for pid in selected_picks if pid in read.pick_sources})
+        if release_ids:
+            scale = scale.model_copy(update={"scale_id": scale.scale_id + ":frozen-prior:" + ":".join(release_ids)})
         profiles = {
             player_id: AssetValueProfile(
                 asset_id=player_id,
@@ -203,6 +233,14 @@ def bind_trade_intrinsic_values(
             )
             for player_id, value in values.items() if player_id in selected
         }
+        for pick_id, value in read.pick_values.get(name, {}).items():
+            if pick_id not in selected_picks:
+                continue
+            profiles[pick_id] = AssetValueProfile(asset_id=pick_id, asset_kind="pick",
+                intrinsic_value=IntrinsicDynastyValueEstimate(asset_id=pick_id, asset_kind="pick",
+                    distribution=ValueDistribution(mean=value), scale=scale, as_of=state.as_of,
+                    model_version=str(read.pick_sources[pick_id]["model_version"]),
+                    conversion_model_version="frozen_native_prior_reference_append_v1"))
         economics = summarize_bilateral_trade_economics(proposal, profiles)
         net = calculate_bilateral_economic_net(economics)
         sides = (net.side_a.intrinsic, net.side_b.intrinsic)
@@ -230,7 +268,8 @@ def bind_trade_intrinsic_values(
         **horizons,
         "side_a_team_id": proposal.side_a.team_id,
         "side_b_team_id": proposal.side_b.team_id,
-        "source": {**read.source, "selected_player_count": len(selected & read.covered_player_ids)},
+        "source": {**read.source, "selected_player_count": len(selected & read.covered_player_ids),
+                   "pick_sources": {pid: dict(read.pick_sources[pid]) for pid in sorted(selected_picks) if pid in read.pick_sources}},
         "input_assumptions": {pid: read.input_assumptions[pid] for pid in selected if pid in read.input_assumptions},
         "semantics": "raw_asset_contribution_ledger_not_team_specific_utility_or_market_discount",
         "decision_effect": "evidence_only_no_disposition_change",
