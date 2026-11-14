@@ -1,5 +1,11 @@
 # Native pick release readiness: historical context and connected scoring
 
+Latest follow-up: [actual-draft validation](native-pick-public-draft-validation.md)
+now supplies all 36 slots from 53 public Superflex drafts under explicit absence
+assumptions. The earlier 24-slot mock-only result below is a historical prototype,
+not the latest source-coverage limit. All 53 drafts belong to one class; predictive
+validation and source/model admission remain open.
+
 The directed-search controls can proceed through release testing independently.
 Native pick valuation is still a separate production gate: the current candidate
 has not established complete Career estimates or a sufficiently supported
