@@ -193,6 +193,15 @@ def test_prepared_pick_projection_cannot_outlive_its_published_simulation():
     assert bind_trade_intrinsic_values(runtime,proposal,projection)['status']=='unavailable'
 
 
+def test_bind_many_reuses_validated_state_identity_without_serialization(monkeypatch):
+    runtime,record,proposal,release=fixture();projection=read(runtime,record,release)
+    def forbidden(self):
+        raise AssertionError('candidate binding must not serialize or fingerprint State')
+    monkeypatch.setattr(type(runtime.league_state),'state_id',property(forbidden))
+    for _ in range(20):
+        assert bind_trade_intrinsic_values(runtime,proposal,projection)['status']=='complete'
+
+
 def test_postgres_immutable_write_keeps_invalidated_first_writer(monkeypatch):
     from fsffl.persistence.postgres import PostgresPersistenceStore
     *_,release=fixture()
