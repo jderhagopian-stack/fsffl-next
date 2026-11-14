@@ -14,11 +14,11 @@ def inventory(team,n=30):
 
 def test_bounded_before_combinations_and_all_shapes(monkeypatch):
     import fsffl.opportunity.strategic_packages as module
-    original=module.enumerate_trade_packages; counts=[]
-    def bounded(inventory,**kwargs):
-        counts.append(len(inventory.assets));assert len(inventory.assets)<=6
-        return original(inventory,**kwargs)
-    monkeypatch.setattr(module,'enumerate_trade_packages',bounded)
+    original=module._package_stream; counts=[]
+    def bounded(inventory,size,required):
+        counts.append(len(inventory.assets));assert len(inventory.assets)<=12
+        return original(inventory,size,required)
+    monkeypatch.setattr(module,'_package_stream',bounded)
     lanes=tuple(StrategicPackageLane(name,inventory('a'),inventory(f'b{i}'))
         for name in ('roster','horizon','ranks') for i in range(11))
     first,diag=generate_strategic_packages(lanes,as_of=NOW)
@@ -28,9 +28,11 @@ def test_bounded_before_combinations_and_all_shapes(monkeypatch):
     assert len({s.seed.point_id for s in first})==80
     assert diag['pair_visits']<=640
     assert diag['counterparties_visited']==11
-    assert set(diag['shapes'])=={'1_for_1','2_for_1','1_for_2','2_for_2'}
+    assert {'1_for_1','2_for_1','1_for_2','2_for_2'} <= set(diag['shapes'])
+    assert any(max(len(s.seed.proposal.side_a.sends),len(s.seed.proposal.side_b.sends))==8 for s in first)
+    assert all(len(s.seed.proposal.side_a.sends)+len(s.seed.proposal.side_b.sends)<=10 for s in first)
     assert diag['stopped_at_budget'] and not diag['exhaustive_league_search']
-    assert counts and max(counts)==6
+    assert counts and max(counts)==12
 
 
 def test_target_received_pick_is_pinned_before_seed_cap():
