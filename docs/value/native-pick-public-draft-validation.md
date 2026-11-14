@@ -89,6 +89,13 @@ missing targets remain missing and are never filled.
 | Explicit corroborated-absence assumption | 32/36 | 0 | 58.14 |
 
 The rows score different subsets. They do not establish an accuracy improvement.
+A separate same-target comparison holds the 32 observed targets fixed. The slot
+frequency estimate has MAE 58.14, versus 66.52 for a constant within each draft
+round and 74.41 for a single overall constant. Both comparison constants are
+computed only from training outcomes. This supports some rank-related signal in
+this diagnostic; it does not validate Career, establish predictive uncertainty,
+select calibration anchors or authorize model promotion.
+
 The earlier 2020-board diagnostic used a different 2023 calendar window and is not
 a same-unit/window error comparator. No winner or calibrated uncertainty follows.
 
