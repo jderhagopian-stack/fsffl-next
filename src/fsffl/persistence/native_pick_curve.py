@@ -3,26 +3,37 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from fsffl.value.native_pick_curve_releases import CURVE_VERSION, FrozenNativePickCurve
+from fsffl.value.native_pick_reference_research import REFERENCE_VERSION, FrozenNativePickReferenceCurve
+
 from .contracts import ArtifactKey, PersistenceStore, ReusableArtifactRecord
+
+
+ResearchCurve = FrozenNativePickCurve | FrozenNativePickReferenceCurve
 
 
 @dataclass(frozen=True)
 class NativePickCurveReference:
     economic_scope_key: str
     curve_id: str
+    model_version: str = CURVE_VERSION
+
+    def __post_init__(self):
+        if self.model_version not in (CURVE_VERSION, REFERENCE_VERSION):
+            raise ValueError("unsupported research curve codec version")
 
     @property
     def key(self) -> ArtifactKey:
         return ArtifactKey('research_native_pick_curve', 'native_pick_economic_scope',
-                           self.economic_scope_key, self.curve_id, CURVE_VERSION)
+                           self.economic_scope_key, self.curve_id, self.model_version)
 
 
-def curve_reference(curve: FrozenNativePickCurve) -> NativePickCurveReference:
-    return NativePickCurveReference(curve.release.economic_scope_key, curve.curve_id)
+def curve_reference(curve: ResearchCurve) -> NativePickCurveReference:
+    return NativePickCurveReference(curve.release.economic_scope_key, curve.curve_id, curve.model_version)
 
 
-def _decode(record: ReusableArtifactRecord, reference: NativePickCurveReference) -> FrozenNativePickCurve:
-    curve = FrozenNativePickCurve.model_validate(record.payload)
+def _decode(record: ReusableArtifactRecord, reference: NativePickCurveReference) -> ResearchCurve:
+    codec = FrozenNativePickCurve if reference.model_version == CURVE_VERSION else FrozenNativePickReferenceCurve
+    curve = codec.model_validate(record.payload)
     if record.key != reference.key or curve_reference(curve) != reference:
         raise ValueError('persisted curve does not match its exact reference')
     if record.computed_at != curve.release.released_at:
@@ -30,7 +41,7 @@ def _decode(record: ReusableArtifactRecord, reference: NativePickCurveReference)
     return curve
 
 
-def save_research_curve(store: PersistenceStore, curve: FrozenNativePickCurve) -> NativePickCurveReference:
+def save_research_curve(store: PersistenceStore, curve: ResearchCurve) -> NativePickCurveReference:
     """Explicit producer operation. Content-addressed keys preserve older releases.
 
     The canonical publication owner must serialize release selection. This helper
@@ -49,7 +60,7 @@ def save_research_curve(store: PersistenceStore, curve: FrozenNativePickCurve) -
 
 
 def load_research_curve(store: PersistenceStore, reference: NativePickCurveReference, *,
-                        expected_economic_scope_key: str, as_of: datetime) -> FrozenNativePickCurve | None:
+                        expected_economic_scope_key: str, as_of: datetime) -> ResearchCurve | None:
     """One exact read, never a rebuild or a latest lookup.
 
     The caller can retain the returned small frozen object for its governed
