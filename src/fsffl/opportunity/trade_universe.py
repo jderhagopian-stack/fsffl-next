@@ -9,7 +9,7 @@ from fsffl.state.models import Asset, FaabAsset, FrozenModel, LeagueState, PickA
 
 
 class TradeSearchBounds(FrozenModel):
-    max_assets_per_side: Annotated[int, Field(ge=1, le=6)] = 2
+    max_assets_per_side: Annotated[int, Field(ge=1, le=8)] = 2
     include_players: bool = True
     include_picks: bool = True
     include_faab: bool = False
