@@ -27,6 +27,24 @@ owner preferences, a temporary search instruction, and a hypothetical assumption
 about another owner. Do not present a user's assumption about a counterparty as
 that counterparty's stated preference.
 
+Directed discovery supports combinations such as “players aged 26 or younger
+and draft picks, WR when receiving players, protect these assets, and compare
+Current plus Career.” Asset kinds are alternatives; player age and position are
+intersecting filters, combined with partner, offered asset and protections.
+Age 26 means younger than the 27th birthday in canonical point-in-time State;
+unknown ages do not satisfy an explicit age filter. Picks have no player age or
+position. Incoming assets, including feedback repairs, must satisfy the requested
+target filters. A conflicting specific target is rejected rather than silently
+relaxing the request. Existing position-only callers keep player-only behavior.
+
+Users may choose several horizon priorities. Those objectives remain separate in
+Decision; no new blended score, valuation premium or acceptance probability is
+introduced. In automatic mode, asset filters can still constrain discovery while
+objective inference remains active. Find More retains the same request settings,
+and its existing signed continuation fingerprint rejects changed settings.
+Pick targeting does not admit unvalidated native pick values: absent pick
+Intrinsic remains unavailable until the separate research gate passes.
+
 Owner evidence improves relevance without fabricating acceptance probabilities.
 Existing contextual/residual preference models require their accepted evidence
 and calibration gates before activation. Completed trades alone do not establish
