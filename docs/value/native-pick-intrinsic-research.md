@@ -154,3 +154,8 @@ versioned persistence codec; all comparisons remain research-only. This does not
 change the scenario bridge's complete-path/terminal requirements, supply an
 untrained slot model, or wire production discovery. Named-prospect forecasting
 remains later roadmap work.
+
+The [annual-prior validation follow-up](native-pick-annual-prior-validation.md)
+quantifies complete-label versus calendar-prefix coverage, retains explicit
+class/identity/season gaps, and documents additional format-labeled selection
+sources plus a source-sensitivity replay. It does not promote a production prior.
