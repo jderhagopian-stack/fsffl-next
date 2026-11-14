@@ -1,6 +1,12 @@
 # Native pick release readiness: historical context and connected scoring
 
-Latest follow-up: [actual-draft validation](native-pick-public-draft-validation.md)
+Latest follow-up: [multi-class candidate](native-pick-multiclass-selection-transport.md)
+extends the evidence to 222 actual Superflex drafts across 2019–2021 and evaluates
+a shared empirical prefix plus conditional long-term research reference. Its
+mixed validation results remain explicit; it is not a production admission.
+The older counts and eight-game total below describe earlier research stages.
+
+Earlier follow-up: [actual-draft validation](native-pick-public-draft-validation.md)
 now supplies all 36 slots from 53 public Superflex drafts under explicit absence
 assumptions. The earlier 24-slot mock-only result below is a historical prototype,
 not the latest source-coverage limit. All 53 drafts belong to one class; predictive
