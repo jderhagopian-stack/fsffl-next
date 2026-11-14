@@ -128,12 +128,11 @@ def freeze_native_pick_research_curve(evidence: NativePickResearchEvidence, rele
         native_input_fingerprint=fingerprint(inputs),slots=slots)
 
 
-def apply_frozen_native_pick_curve(curve: FrozenNativePickCurve, pick: DraftPick, *, owner_team_id: str,
+def validate_native_pick_curve_attachment(release, pick: DraftPick, *, owner_team_id: str,
     probabilities: OriginPickProbabilityEvidence, as_of: datetime, economic_scope_id: str,
     rules_signature: str, scoring_signature: str, native_coordinate_id: str,
     evaluation_season: int, team_count: int):
-    """Cheap mixture only: no annual trajectories, model calls or source fetching."""
-    release=curve.release
+    """Shared scope/calendar/origin checks; does not interpret numeric authority."""
     if as_of.tzinfo is None or release.released_at>as_of:
         raise ValueError('curve release must be available at the requested cutoff')
     for key,value in (('economic_scope_id',economic_scope_id),('rules_signature',rules_signature),
@@ -148,6 +147,18 @@ def apply_frozen_native_pick_curve(curve: FrozenNativePickCurve, pick: DraftPick
         raise ValueError('probabilities must match the pick origin, draft year and legal slots')
     if not owner_team_id.strip():
         raise ValueError('current owner must be explicit')
+
+
+def apply_frozen_native_pick_curve(curve: FrozenNativePickCurve, pick: DraftPick, *, owner_team_id: str,
+    probabilities: OriginPickProbabilityEvidence, as_of: datetime, economic_scope_id: str,
+    rules_signature: str, scoring_signature: str, native_coordinate_id: str,
+    evaluation_season: int, team_count: int):
+    """Cheap mixture only: no annual trajectories, model calls or source fetching."""
+    release=curve.release
+    validate_native_pick_curve_attachment(release,pick,owner_team_id=owner_team_id,
+        probabilities=probabilities,as_of=as_of,economic_scope_id=economic_scope_id,
+        rules_signature=rules_signature,scoring_signature=scoring_signature,native_coordinate_id=native_coordinate_id,
+        evaluation_season=evaluation_season,team_count=team_count)
     by_slot={x.slot_in_round:x for x in curve.slots};results={}
     for horizon in ('three_year','career'):
         missing=tuple(p.slot_in_round for p in probabilities.slot_probabilities
