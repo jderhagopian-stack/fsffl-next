@@ -22,6 +22,7 @@ from .runtime import UserRuntimeContext
 from collections import OrderedDict
 from fsffl.value.native_pick_prior import packaged_native_pick_reference
 from fsffl.persistence.native_pick_prior import restore_native_pick_release
+from fsffl.forecast.future_pick_position_prior import FUTURE_PICK_POSITION_POLICY, FUTURE_PICK_POSITION_AVAILABLE_AT
 
 
 _logger = logging.getLogger("fsffl.product.persistence")
@@ -243,15 +244,14 @@ class PresentationContinuityStore:
                     with self._validation_lock:
                         self._pick_release_cache.pop((reference.scope_key, reference.release_id), None)
             analytics = runtime.simulation_analytics
-            if (release is not None and release.supports(state.league.rules, season=state.league.season, as_of=state.as_of)
-                and analytics is not None
-                and analytics.league_view.context.league_state_id == state.state_id):
+            if release is not None and release.supports(state.league.rules, season=state.league.season, as_of=state.as_of):
                 with self._validation_lock:
                     self._pick_release_cache[(release.economic_scope_key, release.release_id)] = release
                     while len(self._pick_release_cache) > 4:
                         self._pick_release_cache.popitem(last=False)
                 pick_reference = {"scope_key": release.economic_scope_key, "release_id": release.release_id}
-                simulation_fingerprint = analytics.simulation_result.simulation_input_fingerprint
+                if analytics is not None and analytics.league_view.context.league_state_id == state.state_id:
+                    simulation_fingerprint = analytics.simulation_result.simulation_input_fingerprint
         except Exception:
             # Optional new Value evidence must not interrupt the existing core
             # publication. Never fall back to a missing/revoked packaged prior.
@@ -277,6 +277,8 @@ class PresentationContinuityStore:
             "career_input_fingerprint": career_input_fingerprint,
             "native_pick_prior_reference": pick_reference,
             "native_pick_simulation_fingerprint": simulation_fingerprint,
+            "native_pick_projection_policy": (FUTURE_PICK_POSITION_POLICY
+                if pick_reference is not None and state.as_of >= FUTURE_PICK_POSITION_AVAILABLE_AT else None),
         }
         self._persistence.put_artifact(
             ReusableArtifactRecord(
@@ -430,19 +432,25 @@ class PresentationContinuityStore:
             self._known_pick_sources[key] = (
                 str(manifest_payload.get("promotion_id") or ""), release_key,
                 manifest_payload.get("native_pick_simulation_fingerprint"),
+                manifest_payload.get("native_pick_projection_policy"),
             )
 
     def native_pick_generation_hint(self, runtime: UserRuntimeContext):
         """Memory-only exact-generation release selection; no read or fallback."""
+        release, simulation, _ = self.native_pick_generation_binding(runtime)
+        return release, simulation
+
+    def native_pick_generation_binding(self, runtime: UserRuntimeContext):
+        """Include the pinned projection policy without upgrading old manifests."""
         state = runtime.league_state
         if state is None or not runtime.publication_generation_id:
-            return None, None
+            return None, None, None
         key = self._snapshot_key(runtime.user_id, state.league.league_id, state.state_id, runtime.selected_team_id)
         with self._validation_lock:
             source = self._known_pick_sources.get(key)
             if source is None or source[0] != runtime.publication_generation_id:
-                return None, None
-            return self._pick_release_cache.get(source[1]), source[2]
+                return None, None, None
+            return self._pick_release_cache.get(source[1]), source[2], source[3]
 
     def known_snapshot_available(
         self,
