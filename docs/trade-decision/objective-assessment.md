@@ -1,9 +1,10 @@
 # Directional trade objective assessment
 
-Trade Center analysis and successful Simulation responses add a separate
-`objective_assessment`. Existing calculated results and final dispositions remain
-unchanged. This is a foundation for discovery, not a new opportunity ranking,
-franchise utility model or owner acceptance forecast.
+Trade Center analysis and successful Simulation responses include a separate
+`objective_assessment`. Its original directional foundation left final dispositions
+unchanged. Final native-horizon completion, described below, now consumes the
+published evidence in Decision after confirmed Simulation. This is not a new
+opportunity ranking, franchise utility model or owner acceptance forecast.
 
 Both teams receive an objective context. The managed user can supply optional
 `search_instructions` containing `objectives` and `protected_player_ids` on
@@ -94,3 +95,32 @@ This addition does not change final dispositions, materiality policies, native
 values, pick releases, source rules or Simulation. Final recommendation readiness
 continues to describe the existing final Decision contract. No acceptance
 probability, weighted score, market conversion or combined horizon is introduced.
+
+## Final native-horizon completion
+
+Trade Center finalizes its recommendation after the existing published horizon
+read and objective assessment. Decision consumes independently typed 3-Year and
+Career cut-adjusted changes alongside the existing material Current/Market and
+resilience assessments. The generic, unavailable Intrinsic field is not replaced
+with Market values or a fabricated combined native total.
+
+Complete expected gains and sacrifices are different from missing evidence.
+Conflicting timeline/economic effects produce a completed `review` disposition.
+Future-priority benefits can also produce a completed long-term review without
+Current gains. Positive native means alone are not claimed to be material or
+statistically significant. Clean material Current benefits can retain support
+when priorities, native costs, positional consequences and package guards permit.
+Unresolved native practical-significance calibration is declared in the evidence;
+it does not mislabel available values as absent or prevent a strategic review.
+
+The finalizer validates matching State/generation, both teams and native source
+scales, frozen pick release identities and the actual cut resolution. Confirmed
+Simulation and required material Current metrics remain necessary. Preview,
+missing/partial/nonfinite inputs or stale identity cannot promote readiness.
+Readiness, missing dimensions, headline and both native horizon numbers are copied
+from that same final response. The old material assessment is preserved rather
+than declaring native changes material under a Market threshold.
+
+This completion does not change raw Intrinsic, scoring, Forecast, Shapley, source
+selection, pick releases or Simulation. There is no new model run, native/Market
+conversion, summed-horizon utility, synthetic covariance or acceptance probability.
