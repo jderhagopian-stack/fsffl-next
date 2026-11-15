@@ -63,3 +63,34 @@ that inferred preferences match real owners or that bounded discovery finds usef
 trades. Those require retained real-league cases and the next discovery milestone.
 Explore ranking and the redesigned UI remain separate; review the mobile mockup
 before exposure.
+
+## Transaction-specific timeline and positional context
+
+`transaction_strategy` is a Decision-owned directional interpretation for each
+side. Any selected horizon may supply a benefit. Current benefits are not a
+prerequisite for 3-Year or Career alignment. Explicit user instructions remain
+separate from the other team's inferred context. Without explicit instructions,
+a future-contribution gain with complete, non-declining Current directional
+metrics may be surfaced as an additional opportunity without rewriting the
+team's inferred priorities. It is not a materiality or action recommendation.
+
+`positional_context` describes the existing optimized total-horizon lineup before
+and after the legal transaction and mandatory cuts, for both teams. It preserves
+starter/FLEX/Superflex assignments, entering/departing lineup IDs, forecasted
+bench membership, unavailable/missing roles, unfilled slots, cuts and received
+pick IDs. Its named horizon/coordinates must not be relabeled as weekly coverage.
+Roster counts alone never establish surplus. The source State and changed State
+must match before these facts join the objective assessment.
+
+A potential depth-to-future conversion requires complete Current directional
+metrics without a loss, future contribution gains, actual outgoing projected
+bench players without outgoing projected starters, known non-worsening resilience
+and no additional unfilled lineup slots. It remains a candidate: bench-depth
+reductions, any costs on other horizons, injury/bye uncertainty, and missing
+facts stay visible. IR, taxi and missing-forecast players are not relabeled as
+productive bench depth. Future contribution is not optimized future team utility.
+
+This addition does not change final dispositions, materiality policies, native
+values, pick releases, source rules or Simulation. Final recommendation readiness
+continues to describe the existing final Decision contract. No acceptance
+probability, weighted score, market conversion or combined horizon is introduced.
