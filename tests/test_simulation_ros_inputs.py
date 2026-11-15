@@ -20,6 +20,15 @@ from tests.test_season_comparison import Store
 from fsffl.forecast.season_comparison import SEASON_COMPARISON_VERSION
 
 
+@pytest.fixture(autouse=True)
+def _bounded_fixture_memory(monkeypatch):
+    # These small-fixture lifecycle tests do not measure process memory. Keep
+    # admission deterministic after unrelated full-suite allocations; dedicated
+    # resource-coordinator tests exercise the real guard separately.
+    monkeypatch.setattr('fsffl.product.resource_coordinator.current_rss_bytes',
+                        lambda: 64 * 1024 * 1024)
+
+
 def market(state):
     from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
     from fsffl.value.cardinal_authority import FSFFLCardinalValueScore

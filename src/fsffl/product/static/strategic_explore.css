@@ -20,3 +20,7 @@
 @media(min-width:700px){.se-card-body{padding:14px 16px}.se-direction{padding:16px}.se-package-grid{gap:20px}.se-impact td{font-size:20px}}
 @media(max-width:380px){.se-card-body{padding:10px}.se-package-grid{gap:8px}.se-impact td{font-size:15px}.se-impact th{font-size:10px}.se-impact thead small{font-size:8px}}
 .se-impact table{min-width:0}.se-impact th,.se-impact td{text-transform:none;letter-spacing:normal}.se-impact th{white-space:normal}.se-package-grid .se-asset{margin:6px 0}.se-package-grid .se-asset small{line-height:1.2}
+
+/* Explore lives inside the generic screen. Its ID-scoped scrolling-table rule
+   must not set a minimum width on this compact four-column comparison. */
+#generic-screen .strategic-explore .se-impact table{width:100%;min-width:0;max-width:100%;table-layout:fixed}
