@@ -13,7 +13,8 @@ from fsffl.forecast import attach_provisional_position_floor_forecasts
 from fsffl.forecast.models import ForecastHorizon
 from fsffl.team_utility import optimize_team_lineup
 
-from fsffl.opportunity.strategic_packages import StrategicPackageLane, StrategicSearchBounds, generate_strategic_packages
+from fsffl.opportunity.strategic_packages import StrategicPackageLane, StrategicSearchBounds
+from fsffl.opportunity.guided_strategic_packages import generate_guided_strategic_packages
 from fsffl.opportunity.trade_universe import TradeSearchBounds, build_team_trade_inventory
 from fsffl.state.models import FrozenModel, PlayerAsset, PickAsset
 from fsffl.trade_decision.roster_legality import TeamRosterLegalityResolution
@@ -268,7 +269,6 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     reserve=min(8,pool_budget//4) if can_feedback else 0
     visits=FeedbackVisits(reserve)
     generation_limit=pool_budget-reserve
-    from fsffl.opportunity.guided_strategic_packages import generate_guided_strategic_packages
     from fsffl.trade_decision import live_bounded_materiality_policy
     try:
         tolerance=live_bounded_materiality_policy(as_of=runtime.league_state.as_of).economic.mean_value_abs
