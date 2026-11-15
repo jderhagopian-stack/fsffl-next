@@ -61,11 +61,11 @@ def test_opportunity_detail_adds_useful_preanalysis_context() -> None:
 def test_trade_result_uses_tappable_progressive_disclosure_panels() -> None:
     source = _read(DRILLDOWN_JS)
     for phrase in (
-        "Tap any panel for the evidence underneath",
-        "Value & roster space",
+        "Trade details",
+        "Market value & roster cuts",
         "Starting lineup",
         "Season outlook",
-        "Why the decision landed here",
+        "Why this recommendation",
         "Other team",
         "<details class=\"ns3-drill-card\"",
     ):
