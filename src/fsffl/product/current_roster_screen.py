@@ -54,9 +54,21 @@ def remaining_regular_points(runtime, changed_state, *, team_ids):
     after = {(row.team_id, row.week): row.mean_points for row in panel}
     if not needed <= before.keys() or not needed <= after.keys():
         raise ValueError("Current roster screen lacks complete scheduled weekly means")
+    totals = {team: sum(after[(team, w)] - before[(team, w)] for w in items)
+              if items else None for team, items in scheduled.items()}
+    before_means = {team: sum(before[(team, w)] for w in items) / len(items)
+                    if items else None for team, items in scheduled.items()}
+    after_means = {team: sum(after[(team, w)] for w in items) / len(items)
+                   if items else None for team, items in scheduled.items()}
     return {
-        "deltas": {team: sum(after[(team, w)] - before[(team, w)] for w in items)
-                   if items else None for team, items in scheduled.items()},
+        "deltas": {team: totals[team] / len(items) if items else None
+                   for team, items in scheduled.items()},
+        "remaining_totals": totals,
+        "before_weekly_means": before_means,
+        "after_weekly_means": after_means,
+        "weekly_details": {team: tuple({"week": w, "before": before[(team, w)],
+            "after": after[(team, w)], "delta": after[(team, w)] - before[(team, w)]}
+            for w in items) for team, items in scheduled.items()},
         "basis": "remaining_regular_season_weekly_mean",
         "unit": "fantasy_points",
         "weeks": weeks,
