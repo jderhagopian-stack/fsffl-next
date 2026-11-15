@@ -47,6 +47,8 @@ def complete_native_trade_decision(base, *, material_side, native_changes, objec
         action=Action.INSUFFICIENT_EVIDENCE
     elif constraints:
         action=Action.DECLINE;reasons.append('protected_asset_constraint')
+    elif losses and not gains and not native_gains:
+        action=Action.DECLINE
     elif strategy.get('status')=='priority_tradeoff':
         action=Action.REVIEW;reasons.append('timeline_or_economic_tradeoff')
     elif (gains or native_gains) and (losses or native_losses):
