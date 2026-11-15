@@ -66,8 +66,7 @@ trade_center_request:{search_instructions:{objectives:['current_competitiveness'
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize('superflex', [False, True])
-def test_large_mixed_analysis_keeps_combined_priorities_and_complete_cut_accounting(monkeypatch, superflex):
+def _assert_large_mixed_analysis(superflex):
     from fastapi.testclient import TestClient
     from fsffl.product.runtime import PrivateBetaRuntimeStore
     from fsffl.product.webapp import create_app
@@ -75,7 +74,8 @@ def test_large_mixed_analysis_keeps_combined_priorities_and_complete_cut_account
     from fsffl.trade_decision.roster_legality import TeamRosterLegalityResolution
     from tests.test_strategic_discovery import governed_runtime_fixture
 
-    monkeypatch.setenv('FSFFL_BETA_AUTH', '0')
+    import os
+    os.environ['FSFFL_BETA_AUTH'] = '0'
     runtime, record = governed_runtime_fixture(superflex=superflex)
     state = runtime.league_state
     before = state.model_dump_json()
@@ -128,3 +128,15 @@ def test_large_mixed_analysis_keeps_combined_priorities_and_complete_cut_account
     assert transferred_context['objectives'] == context['objectives']
     assert transferred_context['protected_player_ids'] == context['protected_player_ids']
     assert state.model_dump_json() == before
+
+
+@pytest.mark.parametrize('superflex', [False, True])
+def test_large_mixed_analysis_keeps_combined_priorities_and_complete_cut_accounting(superflex):
+    # App/Forecast fixtures run in a fresh process: unrelated full-suite allocations
+    # must not contaminate the production 512 MB admission guard exercised later.
+    # The child still uses the real unchanged resource guard and analysis API.
+    import sys
+    result = subprocess.run([sys.executable, '-c',
+        'from tests.test_compact_trade_workflow import _assert_large_mixed_analysis; '
+        f'_assert_large_mixed_analysis({superflex!r})'], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
