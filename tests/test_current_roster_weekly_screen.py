@@ -45,7 +45,7 @@ def test_actual_preliminary_route_uses_weekly_sign_and_declares_units(superflex)
     assert screen['current_points_basis'] == 'remaining_regular_season_weekly_mean'
     assert screen['current_points_unit'] == 'fantasy_points'
     assert screen['current_points_weeks'] == [5, 6]
-    assert screen['focal']['starter_points_delta'] == pytest.approx(-110 / 13)
+    assert screen['focal']['starter_points_delta'] == pytest.approx(-110 / 13 / 2)
     assert screen['shape'] == 'focal_dominated'
     assert screen['acceptance_probability'] is None
     assert not result['decision_completeness']['simulation_backed']
@@ -57,7 +57,7 @@ def test_actual_preliminary_route_uses_weekly_sign_and_declares_units(superflex)
 def test_zero_ros_never_becomes_a_positional_floor_or_preseason_projection():
     runtime, changed = case(zero=True)
     points = remaining_regular_points(runtime, changed, team_ids=('b', 'a'))
-    assert points['deltas']['b'] == pytest.approx(-240 / 13)
+    assert points['deltas']['b'] == pytest.approx(-240 / 13 / 2)
 
 
 def test_exact_published_panel_is_reused_but_stale_forecast_panel_is_not(monkeypatch):
@@ -117,3 +117,18 @@ def test_only_actual_remaining_regular_games_count_not_completed_or_postseason()
         forecast_evidence=evidence), changed, team_ids=('b', 'a'))
     assert points['weeks_by_team'] == {'b': (5, 6), 'a': (6,)}
     assert points['deltas']['a'] == pytest.approx(-10 / 13)
+    assert points['deltas']['b'] == pytest.approx(points['remaining_totals']['b'] / 2)
+    assert points['deltas']['a'] == pytest.approx(points['remaining_totals']['a'])
+
+
+def test_weekly_average_reconciles_with_actual_week_rows_and_explicit_remaining_total():
+    runtime,changed=case()
+    points=remaining_regular_points(runtime,changed,team_ids=('b','a'))
+    for team,weeks in points['weeks_by_team'].items():
+        rows=points['weekly_details'][team]
+        assert [r['week'] for r in rows]==list(weeks)
+        assert points['remaining_totals'][team]==pytest.approx(sum(r['delta'] for r in rows))
+        assert points['deltas'][team]==pytest.approx(sum(r['delta'] for r in rows)/len(weeks))
+        assert points['deltas'][team]==pytest.approx(points['after_weekly_means'][team]-points['before_weekly_means'][team])
+        assert points['before_weekly_means'][team]==pytest.approx(sum(r['before'] for r in rows)/len(weeks))
+    assert points['deltas']['b']!=points['remaining_totals']['b']

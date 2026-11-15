@@ -6,8 +6,13 @@ It applies the same legal trade and mandatory cuts first. It does not turn a sum
 of season/ROS player totals into a weekly team contribution.
 
 The screen declares `current_points_basis`, `current_points_unit`, the union of
-weeks and each team's scheduled weeks. `starter_points_delta` is the difference
-in scheduled weekly fantasy-point means under this explicit basis. The separate
+weeks and each team's scheduled weeks. `starter_points_delta` is the average of the before/after weekly scoring
+differences across that team’s remaining scheduled regular-season weeks. Each
+team uses its own week count; it is not a sum of weekly differences or a
+division by the union of both teams’ weeks. Explicit `remaining_totals`,
+`before_weekly_means`, `after_weekly_means`, and `weekly_details` retain the
+underlying accounting. Zero scheduled weeks produce unavailable averages, not
+a fabricated zero. The separate
 `position_strength_comparisons` remains a total-horizon lineup diagnostic; it is
 not silently relabeled as weekly evidence. Legacy full-season/preseason screens
 declare `optimized_horizon_lineup` and retain their existing behavior.

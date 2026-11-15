@@ -29,6 +29,11 @@ def test_explore_impact_cells_fit_inside_real_generic_screen(tmp_path):
     def row(key,send,receive):
         native=lambda a,b:{'roster_adjusted':{'side_a':{'status':'complete','roster_adjusted_intrinsic_delta':a},'side_b':{'status':'complete','roster_adjusted_intrinsic_delta':b}}}
         return {'point_id':key,'counterparty_team_id':'b','send':send,'receive':receive,
+            'objective_assessment':{'side_a':{'context':{'team_id':'a'}},'side_b':{'context':{'team_id':'b'}}},
+            'current_roster_points':{'basis':'remaining_regular_season_weekly_mean',
+                'before_weekly_means':{'a':100.,'b':90.},'after_weekly_means':{'a':108.5,'b':93.6},
+                'remaining_totals':{'a':17.,'b':3.6},'weeks_by_team':{'a':[10,11],'b':[11]},
+                'weekly_details':{'a':[{'week':10,'before':100.,'after':108.5,'delta':8.5},{'week':11,'before':100.,'after':108.5,'delta':8.5}]}},
             'display_context':{'group':'priority_tradeoff'},'evidence_status':'pre_simulation_screened',
             'preliminary_decision_screen':{'current_points_basis':'remaining_regular_season_weekly_mean',
                 'focal':{'starter_points_delta':8.5},'counterparty':{'starter_points_delta':3.6}},
@@ -57,6 +62,14 @@ def test_explore_impact_cells_fit_inside_real_generic_screen(tmp_path):
                 assert all(c['inside'] for c in measurements['cells']),(width,measurements)
                 assert card.locator('.se-impact td').count()==6
                 assert [c.text_content() for c in card.locator('.se-impact td').all()]==['+8.5','+1,234.5','-80.7','+3.6','-1,234.5','+80.7']
+            accounting=page.locator('.se-card').first.locator('.se-accounting')
+            accounting.locator(':scope > summary').click()
+            assert '100.0 → 108.5' in accounting.text_content()
+            assert '2 remaining regular-season weeks' in accounting.text_content()
+            assert '+17.0 total points' in accounting.text_content()
+            accounting.locator('details summary').click()
+            assert 'Week 10: 100.0 → 108.5 (+8.5)' in accounting.text_content()
+            accounting.locator(':scope > summary').click()
             # Scrollable Player Board / generic data tables keep their existing widths.
             other=page.evaluate('''()=>{const host=document.querySelector('#generic-screen .panel');const div=document.createElement('div');div.className='market-ns-player-table';div.innerHTML='<table><tr><td>Player Board</td></tr></table>';host.appendChild(div);const width=parseFloat(getComputedStyle(div.querySelector('table')).minWidth);div.remove();return width}''')
             assert other>=720
