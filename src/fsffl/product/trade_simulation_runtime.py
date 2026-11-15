@@ -140,6 +140,16 @@ def build_post_trade_simulation_comparison(
         simulation_loader=simulation_loader,
         stage=scenario_stage,
     )
+    from .trade_analysis_runtime import _position_comparison_and_context
+    positional_context = []
+    for leg in (proposal.side_a, proposal.side_b):
+        _, context = _position_comparison_and_context(league_state, legal_after, forecasts,
+            team_id=leg.team_id, leg=leg,
+            received_assets=(proposal.side_b if leg is proposal.side_a else proposal.side_a).sends,
+            horizon=(ForecastHorizon.REST_OF_SEASON if forecast_evidence.simulation_forward_forecasts is not None else ForecastHorizon.SEASON),
+            forecast_as_of=forecast_evidence.simulation_evaluation_as_of)
+        if context is not None:
+            positional_context.append(context)
     simulated = monotonic()
 
     baseline_a = _utility_for_team(baseline, side_a_id)
@@ -329,6 +339,7 @@ def build_post_trade_simulation_comparison(
         },
         "decision_dimensions": decision_dimensions,
         "team_deltas": comparisons,
+        "positional_context": positional_context,
         "simulation_counterfactual_deltas": [
             simulation_delta_by_team[team_id].model_dump(mode="json")
             for team_id in (focal_team_id, counterparty_team_id)
