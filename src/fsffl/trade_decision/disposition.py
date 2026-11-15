@@ -19,6 +19,7 @@ from .strategy import StrategicTradeContext
 
 
 class TradeDisposition(StrEnum):
+    REVIEW = "review"
     SUPPORT = "support"
     DECLINE = "decline"
     COUNTER_OR_REVIEW = "counter_or_review"
@@ -36,6 +37,12 @@ class TradeDispositionEvidence(FrozenModel):
     owner_posture: OwnerStrategicPosture
     package_economic_resolution: PackageEconomicResolution | None = None
     strategic_resolution_applied: bool = False
+    native_horizons: tuple[dict[str, object], ...] = ()
+    native_gains: tuple[str, ...] = ()
+    native_losses: tuple[str, ...] = ()
+    review_reasons: tuple[str, ...] = ()
+    priority_objectives: tuple[str, ...] = ()
+    native_materiality_status: str | None = None
 
 
 class TradeDecisionDisposition(FrozenModel):

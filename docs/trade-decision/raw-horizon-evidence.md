@@ -1,5 +1,10 @@
 # Raw horizon evidence for selected trades
 
+The original adapter boundary described below remains unchanged. The final
+Decision consumer now binds its validated, cut-adjusted horizons after confirmed
+Simulation; see [final native-horizon completion](objective-assessment.md#final-native-horizon-completion).
+The adapter itself still performs no recommendation, conversion or new model run.
+
 The first strategic-discovery foundation adds `horizon_asset_economics` to hosted
 Trade Center analysis and successful Simulation responses. It supplements the
 existing outputs; it does not change current dispositions, claim team-specific

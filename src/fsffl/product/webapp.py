@@ -2866,7 +2866,9 @@ def create_app(
         except Exception as exc:
             _logger.warning("Trade objective assessment unavailable error_type=%s", type(exc).__name__)
             assessment = {"status": "unavailable", "decision_effect": "no_disposition_change"}
-        return {**result, "objective_assessment": assessment}
+        output = {**result, "objective_assessment": assessment}
+        from .trade_native_completion import finalize_published_trade_decision
+        return finalize_published_trade_decision(runtime, proposal, output)
 
     progressive_discovery = ProgressiveDiscovery()
 
