@@ -7,6 +7,8 @@ from fsffl.trade_decision.objectives import (
     ObjectiveMetric, OwnerObjectiveContext, TradeObjective, assess_owner_objectives,
 )
 
+from fsffl.trade_decision.transaction_strategy import assess_transaction_strategy
+
 from .opportunity_posture import calculated_competitive_state, default_posture_for_state
 
 
@@ -58,6 +60,9 @@ def build_trade_objective_assessment(runtime, proposal, result, instructions=Non
             for row in result.get("roster_legality", ())}
     authoritative = (result.get("scenario_computation") or {}).get("authoritative") is True
     source = f"{runtime.league_state.state_id}:{result.get('state_id_after', 'unavailable')}"
+    positions = {row["team_id"]: row for row in result.get("positional_context", ())
+        if row.get("source_state_id") == runtime.league_state.state_id
+        and row.get("after_state_id") == result.get("state_id_after")}
     sides = {}
     for label, leg in (("side_a", proposal.side_a), ("side_b", proposal.side_b)):
         context = objective_context(runtime, leg.team_id,
@@ -91,10 +96,11 @@ def build_trade_objective_assessment(runtime, proposal, result, instructions=Non
         assessment = assess_owner_objectives(context, tuple(metrics), sent_player_ids=sent,
             cut_player_ids=cuts.get(leg.team_id, ()))
         sides[label] = {**assessment.model_dump(mode="json"),
-            "metrics": [m.model_dump(mode="json") for m in metrics]}
+            "metrics": [m.model_dump(mode="json") for m in metrics],
+            "transaction_strategy": assess_transaction_strategy(assessment, tuple(metrics), positions.get(leg.team_id))}
     return {**sides, "decision_effect": "no_disposition_change",
         "owner_behavior_used_for_priority_inference": False,
         "durable_owner_preference_claimed": False,
         "interpretation": "Directional alignment only; inferred motives, statistical significance and owner willingness are unconfirmed",
         "semantics": "asset_contribution_is_not_franchise_utility; overlapping_horizons_are_not_additive",
-        "model_version": "trade-objective-assessment-v1"}
+        "model_version": "trade-objective-assessment-v2:transaction-context"}
