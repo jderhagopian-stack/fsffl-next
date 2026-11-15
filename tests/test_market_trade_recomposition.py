@@ -57,15 +57,8 @@ def test_single_trade_room_surfaces_useful_evidence_before_methods() -> None:
     source = _read(SCRIPT)
     css = _read(CSS)
     for phrase in (
-        "Roster-adjusted package economics",
-        "Expected wins",
-        "Playoff odds",
-        "First-place odds",
-        "Projected starter points by position",
-        "Main upside",
-        "Main risk",
-        "What to do next",
-        "Methods & evidence",
+        "What changes for each team", "Expected wins", "Playoff chances",
+        "3-Year value", "Career value", "Find a counteroffer", "How this is calculated",
     ):
         assert phrase in source
     assert "#trade-center-screen.ns2-trade-center .ns-trade-legacy" in css
@@ -77,7 +70,7 @@ def test_counter_result_stays_at_launch_point_and_recomposition_does_not_call_ap
     source = _read(SCRIPT)
     assert "id=\"ns2-counter-zone\"" in source
     assert "Searching nearby counter packages" in source
-    assert "Best returned counter paths" in source
+    assert "Counteroffers to consider" in source
     assert "await runner()" in source
     assert "fetch(" not in source
     assert "/api/" not in source
