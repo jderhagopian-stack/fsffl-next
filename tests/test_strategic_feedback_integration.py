@@ -55,11 +55,11 @@ def setup(monkeypatch, *, superflex=False, duplicates=False, fail_repair=False, 
         extras = [package('a', ('second',)), package('a', ('bench',))]
         seeds += tuple(StrategicSeed(generate_bilateral_trade_proposals((p,), (receiver,), as_of=state.as_of).proposals[0], ('other_root',)) for p in extras)
     captured = []
-    def generate(lanes, *, as_of, bounds):
+    def generate(lanes, *, as_of, bounds, **construction_context):
         captured.append(bounds.max_pair_visits)
         return seeds, {'pair_visits': len(seeds), 'max_candidates': bounds.max_candidates,
             'shapes': dict(Counter(f'{len(x.seed.proposal.side_a.sends)}_for_1' for x in seeds)), 'hypotheses': {'controlled_root': len(seeds)}}
-    monkeypatch.setattr(module, 'generate_strategic_packages', generate)
+    monkeypatch.setattr(module, 'generate_guided_strategic_packages', generate)
     actual = module.evaluate_candidate_path
     calls = []
     def evaluate(current, row, **kwargs):
