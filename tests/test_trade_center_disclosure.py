@@ -42,6 +42,7 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
     fixture = {'focal_team_id':'a','counterparty_team_id':'b','state_id_before':'s',
         'position_strength':{'positions':[{'position':'RB','before_expected_points':100,'after_expected_points':223.5,'expected_points_delta':123.5}]},
         'roster_adjusted_market_net':{'side_a':{'team_id':'a','roster_adjusted_market_delta':-81,'raw_trade_market_delta':-81,'mandatory_cut_market_cost':0,'cut_player_ids':[]},'side_b':{'team_id':'b','roster_adjusted_market_delta':81}},
+        'objective_assessment':{'side_a':{'context':{'team_id':'a','explicitly_directed':True},'transaction_strategy':{'status':'priority_gain','priority_horizons':['career_contribution'],'future_gains':['career_contribution'],'future_losses':['three_year_contribution'],'positions_with_less_forecasted_depth':['WR'],'outgoing_projected_bench_ids':['depth'],'depth_conversion_candidate':True}},'side_b':{'context':{'team_id':'b'},'transaction_strategy':{'status':'priority_tradeoff','priority_horizons':['current_competitiveness'],'current_losses':['expected_wins']}}},
         'scenario_simulation_count':50000,'team_deltas':[{'team_id':'a','competitive':{'expected_wins':.1,'playoff_probability':.03,'first_place_probability':.01}},{'team_id':'b','competitive':{'expected_wins':-.1,'playoff_probability':-.03}}],
         'availability':{'competitive_outcomes':True,'final_trade_disposition':False},
         'disposition':{'disposition':'insufficient_evidence','evidence':{'unavailable_metrics':['intrinsic_value'],'material_gains':['playoff_probability'],'material_losses':['largest_single_player_lineup_drop']}}}
@@ -79,6 +80,10 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
                 assert card.get_attribute('open') is None
             page.locator('.ns3-drill-card').nth(3).locator('summary').click()
             assert 'Missing: long-term Intrinsic trade economics' in page.locator('.ns3-missing-evidence').text_content()
+            assert 'Potential depth-to-future conversion' in page.locator('.ns3-drill-card').nth(3).text_content()
+            assert 'Less projected depth: WR' in page.locator('.ns3-drill-card').nth(3).text_content()
+            assert 'Chosen priorities: Career' in page.locator('.ns3-drill-card').nth(3).text_content()
+            assert 'Review the timeline tradeoff' in page.locator('.ns3-drill-card').nth(4).text_content()
             page.screenshot(path=str(tmp_path/f'trade-{width}.png'),full_page=True)
             updated=json.loads(json.dumps(fixture));updated['disposition']={'disposition':'support','evidence':{}};updated['availability']['final_trade_disposition']=True
             page.evaluate('(r)=>window.renderTradeSimulationResult(r)',updated)
