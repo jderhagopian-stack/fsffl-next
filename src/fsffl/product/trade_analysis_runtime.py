@@ -79,15 +79,17 @@ def _projected_starter_map(league_state, forecasts, team_ids: tuple[str, ...], *
     return protected
 
 
-def _position_strength_comparison(before_state, after_state, forecasts, *, team_id: str, **coordinates):
+def _position_comparison_and_context(before_state, after_state, forecasts, *, team_id: str, leg=None, received_assets=(), **coordinates):
     if not forecasts:
-        return None
+        return None, None
     try:
         before = _optimized_lineup(before_state, forecasts, team_id=team_id, purpose="position-strength-before", **coordinates)
         after = _optimized_lineup(after_state, forecasts, team_id=team_id, purpose="position-strength-after", **coordinates)
     except ValueError:
-        return None
-    return compare_position_strengths(before, after)
+        return None, None
+    from fsffl.team_utility.trade_position_context import summarize_trade_position_context
+    context = summarize_trade_position_context(before_state, after_state, before, after, leg, received_assets) if leg else None
+    return compare_position_strengths(before, after), context
 
 
 def build_private_beta_trade_analysis(
@@ -147,7 +149,16 @@ def build_private_beta_trade_analysis(
     )
     legal_after = roster_resolution.league_state
     trade_team_resolutions = tuple(item for item in roster_resolution.resolutions if item.team_id in {side_a_id, side_b_id})
-    position_strength = _position_strength_comparison(scenario.before, legal_after, forecasts, team_id=focal_team_id, **coordinates)
+    position_strength = None
+    positional_context = []
+    for leg in (proposal.side_a, proposal.side_b):
+        comparison, context = _position_comparison_and_context(scenario.before, legal_after, forecasts,
+            team_id=leg.team_id, leg=leg,
+            received_assets=(proposal.side_b if leg is proposal.side_a else proposal.side_a).sends, **coordinates)
+        if leg.team_id == focal_team_id:
+            position_strength = comparison
+        if context is not None:
+            positional_context.append(context)
     lineup_ready = monotonic()
 
     if forecasts:
@@ -266,6 +277,7 @@ def build_private_beta_trade_analysis(
         "package_concentration": package_concentration.model_dump(mode="json") if package_concentration is not None else None,
         "package_economics": package_economics.model_dump(mode="json") if package_economics is not None else None,
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
+        "positional_context": positional_context,
         "position_strength": position_strength.model_dump(mode="json") if position_strength is not None else None,
         "behavioral_context": behavioral_view.model_dump(mode="json") if behavioral_view is not None else None,
         "availability": {
