@@ -86,7 +86,7 @@ def test_screen_diversity_does_not_override_economic_priority():
             'receive':[{'asset_ref':'pick:k'}], 'pre_cut_horizon_complement_hypothesis':positive}
     rows=[row(1,True),row(8,False),row(4,True)]
     assert _representative_indices(rows,2)==[0,2]
-    assert _representative_indices([row(1,True),row(1,True),row(8,True)],2)==[0,2]
+    assert _representative_indices([row(1,True),row(1,True),row(8,True)],2)==[0,1]  # novelty of size does not earn priority
 
 
 @pytest.mark.parametrize('superflex',[False,True])

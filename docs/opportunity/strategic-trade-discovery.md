@@ -243,3 +243,40 @@ publication, stale State or any missing asset rejects the transfer. Trade Center
 existing quick draft, analysis, Simulation and frontier requests consume the same
 package and priorities; this presentation change does not extend their authority
 or automatically run Simulation.
+
+## Purposeful package construction and shortlist quality
+
+The large-package envelope is a capability limit, not a preference for large
+transactions. Ranked strategic lanes now build bounded one- and two-asset
+structures around their targets. Existing cardinal Market values and Decision's
+existing economic tolerance locate a negotiating envelope; candidate order does
+not minimize a Market gap or replace either team's improvement objectives.
+Larger bundles grow only when the smaller structures cannot reach that envelope,
+and stop growing when it is reached. Reverse construction supports acquiring or
+spending pick bundles. At most 78 lightweight bundle entries for twelve
+ingredients are indexed per direction; the Cartesian package-pair universe is
+never materialized. At least one eighth of the visit budget remains exploratory, including
+unusual large structures and missing-price assets. The eight-per-side / ten-total
+limits, 640 total visits and eight preliminary screens remain unchanged.
+
+Existing economic bands precede diversity in allocating full screens. Within
+that boundary, joint priority-gain hypotheses can use published lineup membership,
+position replacement floors and already published raw horizon deltas to identify
+promising investigations. The lineup hint is deliberately optimistic, can overlap
+slots, and is never reported as a competitive or utility result. Full roster,
+lineup and mandatory-cut Decision checks determine the displayed consequences.
+Complexity is a tie-breaker after the strategic hypothesis, not a universal score.
+
+Economic strain or a dominated post-cut side keeps a package out of the main
+shortlist. Other costly or incomplete candidates remain available for review and
+Trade Center. Current comparisons use Decision's existing numerical tolerance.
+When Current is requested, a purely future-ledger tradeoff with no Current change
+needs further review instead of automatically leading the page because a future
+component is positive. Explicit future-only directions remain supported. Current
+upgrades with visible future sacrifices may still be displayed as Tradeoffs.
+
+These rules do not change Value, Forecast, Shapley, Simulation, owner preferences
+or final Decision. They do not assign an acceptance probability, combine horizon
+units, or establish future team utility from additive asset contribution. Real
+league validation must assess usefulness and sacrifices, not only size coverage
+and route success.

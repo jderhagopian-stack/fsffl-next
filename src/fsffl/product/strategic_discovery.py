@@ -13,7 +13,8 @@ from fsffl.forecast import attach_provisional_position_floor_forecasts
 from fsffl.forecast.models import ForecastHorizon
 from fsffl.team_utility import optimize_team_lineup
 
-from fsffl.opportunity.strategic_packages import StrategicPackageLane, StrategicSearchBounds, generate_strategic_packages
+from fsffl.opportunity.strategic_packages import StrategicPackageLane, StrategicSearchBounds
+from fsffl.opportunity.guided_strategic_packages import generate_guided_strategic_packages
 from fsffl.opportunity.trade_universe import TradeSearchBounds, build_team_trade_inventory
 from fsffl.state.models import FrozenModel, PlayerAsset, PickAsset
 from fsffl.trade_decision.roster_legality import TeamRosterLegalityResolution
@@ -32,7 +33,7 @@ from .opportunity_posture import calculated_competitive_state, default_posture_f
 from dataclasses import replace
 
 _logger = logging.getLogger("fsffl.product.performance")
-_MODEL_VERSION = "strategic-discovery-v4:bounded-lazy-large-packages"
+_MODEL_VERSION = "strategic-discovery-v5:purposeful-bounded-packages"
 
 class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
@@ -174,6 +175,7 @@ def build_discovery_lanes(runtime, request, read):
                     asset not in metric_values[TradeObjective.CURRENT],
                     -metric_values[TradeObjective.CURRENT].get(asset,0),_ref(asset))
         return tuple(sorted(assets,key=key))
+    benches={v.team_id:set(v.optimized_lineup.bench_player_ids) for v in (runtime.simulation_analytics.team_views if runtime.simulation_analytics is not None else ()) if v.optimized_lineup is not None}
     rank_signals = {}
     for goal in (TradeObjective.THREE_YEAR,TradeObjective.CAREER):
         covered = set(metric_values[goal]) & set(metric_values[TradeObjective.MARKET])
@@ -193,6 +195,7 @@ def build_discovery_lanes(runtime, request, read):
             if sends and receives:
                 lanes.append(StrategicPackageLane(name,focal.model_copy(update={'assets':sends}),
                     other.model_copy(update={'assets':receives}),required_receive=required,required_send=required_send))
+        add('roster_surplus', tuple(sorted(roster_fit(focal.assets,team.team_id), key=lambda a: not (isinstance(a,PlayerAsset) and a.player_id in benches.get(focal.team_id,set())))), roster_fit(other.assets,focal.team_id))
         # Request order changes which horizon hypotheses receive early exploration.
         goals = tuple(dict.fromkeys((*context.objectives,TradeObjective.THREE_YEAR,TradeObjective.CAREER)))
         for goal in goals:
@@ -230,25 +233,20 @@ def _representative_indices(rows,budget):
     """Categorical coverage, not a composite opportunity score."""
     remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set(); shapes=set()
     while remaining and len(chosen)<budget:
-        diverse = [i for i in remaining if not ({a['asset_ref'] for a in rows[i]['send']} & sent)]
-        eligible = [i for i in diverse if rows[i]['counterparty_team_id'] not in teams
-                    and set(rows[i]['hypotheses'])-hypotheses]
-        if not eligible: eligible=[i for i in diverse if rows[i]['counterparty_team_id'] not in teams]
-        if not eligible: eligible=[i for i in diverse if set(rows[i]['hypotheses'])-hypotheses]
-        if not eligible: eligible=diverse
-        if not eligible: eligible=[i for i in remaining if rows[i]['counterparty_team_id'] not in teams]
-        if not eligible: eligible=[i for i in remaining if set(rows[i]['hypotheses'])-hypotheses]
-        if not eligible: eligible=remaining
-        # A conditional raw horizon complement may guide investigation; actual cuts
-        # and team consequences are evaluated only in the subsequent Decision pass.
-        preferred = [i for i in eligible if rows[i]['pre_cut_horizon_complement_hypothesis']]
-        if not preferred:
-            preferred = [i for i in eligible if rows[i].get('counterparty_horizon_gain_current_pending')]
-        if not preferred:
-            preferred = [i for i in eligible if rows[i].get('preliminary_economic_band')
-                         in ('robust_or_ordinary','bounded_uncertainty')]
-        preferred = preferred or eligible
-        index = next((i for i in preferred if (len(rows[i]['send']),len(rows[i]['receive'])) not in shapes), preferred[0])
+        # Existing Decision economics precede diversity. Unknowns and strained
+        # structures remain available for explicit review, never gain priority
+        # just because they involve a new team, size or outgoing asset.
+        plausible=[i for i in remaining if rows[i].get('preliminary_economic_band') in ('robust_or_ordinary','bounded_uncertainty')]
+        eligible=plausible or remaining
+        complement=[i for i in eligible if rows[i].get('joint_priority_gain_hypothesis') or rows[i].get('pre_cut_horizon_complement_hypothesis')]
+        eligible=complement or eligible
+        smallest=min(len(rows[i]['send'])+len(rows[i]['receive']) for i in eligible)
+        eligible=[i for i in eligible if len(rows[i]['send'])+len(rows[i]['receive'])==smallest]
+        diverse=[i for i in eligible if rows[i]['counterparty_team_id'] not in teams]
+        eligible=diverse or eligible
+        diverse=[i for i in eligible if not ({a['asset_ref'] for a in rows[i]['send']} & sent)]
+        eligible=diverse or eligible
+        index=eligible[0]
         chosen.append(index);remaining.remove(index)
         teams.add(rows[index]['counterparty_team_id']);hypotheses.update(rows[index]['hypotheses'])
         sent.update(a['asset_ref'] for a in rows[index]['send'])
@@ -271,12 +269,40 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     reserve=min(8,pool_budget//4) if can_feedback else 0
     visits=FeedbackVisits(reserve)
     generation_limit=pool_budget-reserve
-    seeds,diagnostics=generate_strategic_packages(lanes,as_of=runtime.league_state.as_of,
+    from fsffl.trade_decision import live_bounded_materiality_policy
+    try:
+        tolerance=live_bounded_materiality_policy(as_of=runtime.league_state.as_of).economic.mean_value_abs
+    except ValueError:
+        tolerance=None
+    typed_market={a:profiles[(a.player_id if isinstance(a,PlayerAsset) else a.pick_id)].market_price.distribution.mean
+        for lane in lanes for a in (*lane.focal.assets,*lane.counterparty.assets)
+        if isinstance(a,(PlayerAsset,PickAsset)) and (a.player_id if isinstance(a,PlayerAsset) else a.pick_id) in profiles
+        and profiles[(a.player_id if isinstance(a,PlayerAsset) else a.pick_id)].market_price is not None}
+    seeds,diagnostics=generate_guided_strategic_packages(lanes,as_of=runtime.league_state.as_of,
+        market_values=typed_market,economic_tolerance=tolerance,
         bounds=StrategicSearchBounds(max_candidates=generation_limit,max_pair_visits=generation_limit))
     options={a.asset_ref:a for team in (browser.focal_team,*teams) for a in team.assets}
     asset_index=owned_asset_index(browser)
     market_values={asset_id:p.market_price.distribution.mean for asset_id,p in profiles.items() if p.market_price is not None}
     contexts={team.team_id:objective_context(runtime,team.team_id) for team in teams}
+    forecast_means=_latest_season_forecast_means(runtime)
+    positions={p.player_id:p.position for p in runtime.league_state.players}
+    same_state_simulation=(runtime.simulation_analytics is not None and runtime.simulation_analytics.league_view.context.league_state_id==runtime.league_state.state_id)
+    published_lineups={v.team_id:v.optimized_lineup for v in (runtime.simulation_analytics.team_views if same_state_simulation else ()) if v.optimized_lineup is not None}
+    def current_upgrade_hypothesis(team_id,sent,received):
+        lineup=published_lineups.get(team_id)
+        from .simulation_forecasts import current_forecast_coordinates
+        try:
+            _,hint_horizon,hint_cutoff=current_forecast_coordinates(runtime.league_state,runtime.forecast_evidence)
+        except (ValueError,AttributeError): return False
+        if lineup is None or lineup.horizon!=hint_horizon or lineup.as_of>hint_cutoff: return False
+        floors={position:min(a.expected_points for a in lineup.assignments if a.position==position)
+                for position in {a.position for a in lineup.assignments}}
+        assigned={a.player_id:a.expected_points for a in lineup.assignments}
+        bench={position:max((forecast_means.get(pid,0.) for pid in lineup.bench_player_ids if positions.get(pid)==position),default=0.) for position in floors}
+        outgoing=sum(max(0.,assigned.get(a.player_id,0.)-bench.get(positions.get(a.player_id),0.)) for a in sent if isinstance(a,PlayerAsset))
+        incoming=sum(max(0.,forecast_means.get(a.player_id,0.)-floors.get(positions.get(a.player_id),0.)) for a in received if isinstance(a,PlayerAsset))
+        return incoming-outgoing>1e-9
     def make_row(proposal, point_id, hypotheses):
         row={'point_id':point_id,'counterparty_team_id':proposal.side_b.team_id,
             'hypotheses':list(hypotheses),'send':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_a.sends],
@@ -289,6 +315,16 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             deltas=[((evidence.get(supported[g]) or {}).get(label) or {}).get('mean_delta') for g in team_context.objectives]
             return bool(deltas) and all(d is not None and d>=0 for d in deltas) and any(d>0 for d in deltas)
         row['pre_cut_horizon_complement_hypothesis']=raw_priority_gain(context,'side_a') and raw_priority_gain(contexts[proposal.side_b.team_id],'side_b')
+        def possible_priority_gain(team_context,label,sent,received):
+            supported={TradeObjective.THREE_YEAR:'three_year',TradeObjective.CAREER:'career'}
+            for goal in team_context.objectives:
+                if goal==TradeObjective.CURRENT and current_upgrade_hypothesis(team_context.team_id,sent,received): return True
+                if goal in supported:
+                    value=((evidence.get(supported[goal]) or {}).get(label) or {}).get('mean_delta')
+                    if value is not None and value>1e-9: return True
+            return False
+        row['joint_priority_gain_hypothesis']=(possible_priority_gain(context,'side_a',proposal.side_a.sends,proposal.side_b.sends)
+            and possible_priority_gain(contexts[proposal.side_b.team_id],'side_b',proposal.side_b.sends,proposal.side_a.sends))
         row['counterparty_horizon_gain_current_pending']=(TradeObjective.CURRENT in context.objectives
             and raw_priority_gain(contexts[proposal.side_b.team_id],'side_b'))
         row['raw_horizon_trade_deltas']={name:{side:((evidence.get(name) or {}).get(side) or {}).get('mean_delta') for side in ('side_a','side_b')} for name in ('three_year','career')}
