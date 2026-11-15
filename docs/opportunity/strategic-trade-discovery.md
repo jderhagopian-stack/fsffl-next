@@ -225,3 +225,21 @@ cuts, raw horizon ledgers and both-team objectives. Unknown evidence remains unk
 The existing narrow player-pair remove/add repair is not silently expanded into a
 new mixed-asset optimizer. Generation and screened-shape diagnostics expose actual
 sample coverage without claiming an exhaustive league optimum.
+
+## Compact opportunity presentation and evaluation handoff
+
+The default card shows all give/get assets in two compact columns and one signed
+Current / 3-Year / Career comparison table for both franchises. Preliminary is the
+screening label; required cuts, protected-player violations and known losses remain
+visible. Team context, raw-contribution definitions and separate Market accounting
+are available in details. Pick coverage text consumes the returned diagnostic,
+rather than assuming native pick evidence is always unavailable. Search direction,
+refinements and Find More remain available without creating a second search model.
+
+Opening an opportunity in Trade Center transfers every asset reference, combined
+chosen priorities and protected players. It copies the temporary instructions and
+checks State, publication and current ownership before using the package. A changed
+publication, stale State or any missing asset rejects the transfer. Trade Center's
+existing quick draft, analysis, Simulation and frontier requests consume the same
+package and priorities; this presentation change does not extend their authority
+or automatically run Simulation.
