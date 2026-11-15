@@ -85,11 +85,19 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
             assert 'Chosen priorities: Career' in page.locator('.ns3-drill-card').nth(3).text_content()
             assert 'Review the timeline tradeoff' in page.locator('.ns3-drill-card').nth(4).text_content()
             page.screenshot(path=str(tmp_path/f'trade-{width}.png'),full_page=True)
-            updated=json.loads(json.dumps(fixture));updated['disposition']={'disposition':'support','evidence':{}};updated['availability']['final_trade_disposition']=True
+            updated=json.loads(json.dumps(fixture));updated['disposition']={'disposition':'review','evidence':{
+                'review_reasons':['timeline_or_economic_tradeoff'],'native_horizons':[
+                    {'horizon':'three_year','delta':1.5157},{'horizon':'career','delta':-80.6994}]}};updated['availability']['final_trade_disposition']=True
             page.evaluate('(r)=>window.renderTradeSimulationResult(r)',updated)
             page.wait_for_timeout(150)
             assert page.locator('#ns2-trade-room .ns2-status').text_content()=='Decision ready'
             assert page.locator('.ns3-missing-evidence').count()==0
+            assert page.locator('#ns2-trade-room > header h2').text_content()=='Review the tradeoff'
+            assert page.locator('.beta-trade-summary.final h2').text_content()=='Review the tradeoff'
+            reasons=page.locator('.ns3-drill-card').nth(3)
+            reasons.locator('summary').click()
+            assert '+1.5' in reasons.text_content() and '-80.7' in reasons.text_content()
+            assert 'Career contribution' in reasons.text_content()
             assert not errors,errors
             page.close()
         browser.close()
