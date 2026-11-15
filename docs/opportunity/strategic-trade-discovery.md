@@ -280,3 +280,26 @@ or final Decision. They do not assign an acceptance probability, combine horizon
 units, or establish future team utility from additive asset contribution. Real
 league validation must assess usefulness and sacrifices, not only size coverage
 and route success.
+
+## Timeline and positional transaction direction — 2026-11-15
+
+Competitive state guides hypotheses; it does not prescribe every transaction.
+A contender may exchange excess WR depth for future contribution or draft capital
+while preserving competitive strength. Developing/rebuilding teams may prioritize
+3-Year and Career benefits even without Current gains. Explicit user directions
+take precedence over default inference, and multiple selected goals remain
+independent channels.
+
+Transaction-level position context must consider optimized starter/FLEX/Superflex
+roles, incoming replacements, remaining forecasted depth, mandatory cuts and
+resilience for both teams. Player counts and competitive labels alone do not
+establish surplus. Selling depth can have a real injury/bye coverage cost even
+when the projected starting lineup is unchanged. Keep those costs visible.
+
+The implementation sequence is: expose trustworthy native/cut-adjusted evidence
+and positional consequences; add symmetric directional strategy interpretation;
+settle separate native materiality and final Decision integration; consolidate
+Trade Center presentation; then enrich owner intelligence and discovery.
+Directional evidence must not silently become final action authority. New
+materiality thresholds or cross-timeline exchange rates require their own
+versioned evidence and review; Market/display scales do not supply them.

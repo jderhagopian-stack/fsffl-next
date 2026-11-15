@@ -187,3 +187,22 @@ def test_protections_without_goals_preserve_server_inference_and_handoff(monkeyp
     assert custom.objectives == (G.CAREER,)
     assert custom.explicitly_directed
     assert objective_context(runtime, 'alpha', protected) == current
+
+
+def test_transaction_position_context_requires_exact_before_after_state():
+    runtime,_,proposal=fixture()
+    source=runtime.league_state.state_id
+    p={'team_id':'alpha','status':'complete','source_state_id':source,'after_state_id':'changed',
+       'before_unfilled_slots':0,'after_unfilled_slots':0,'positions':[]}
+    result={'state_id_after':'changed','scenario_computation':{'authoritative':True},
+        'positional_context':[p],'team_deltas':[{'team_id':'alpha','competitive':{'expected_wins':0,
+        'playoff_probability':0,'first_place_probability':0},'resilience':{'largest_single_player_lineup_drop':0}}]}
+    instructions=TradeSearchInstructions(objectives=(G.CAREER,))
+    r=build_trade_objective_assessment(runtime,proposal,result,instructions)
+    assert r['side_a']['transaction_strategy']['position_evidence_available']
+    assert r['side_a']['context']['explicitly_directed']
+    assert not r['side_b']['context']['explicitly_directed']
+    p['source_state_id']='stale'
+    r=build_trade_objective_assessment(runtime,proposal,result,instructions)
+    assert not r['side_a']['transaction_strategy']['position_evidence_available']
+    assert r['decision_effect']=='no_disposition_change'
