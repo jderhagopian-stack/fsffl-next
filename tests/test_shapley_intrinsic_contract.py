@@ -201,6 +201,10 @@ def test_reduced_future_evidence_path_is_provenance_not_availability_gate() -> N
 
 
 def test_released_current_owner_restores_only_the_durable_contract(monkeypatch):
+    # Contract ownership is independent of memory retained by other tests.
+    # Resource admission limits have their own dedicated regression coverage.
+    monkeypatch.setattr('fsffl.product.resource_coordinator.current_rss_bytes',
+                        lambda: 64 * 1024 * 1024)
     from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
     from fsffl.product.resource_coordinator import HeavyWorkCoordinator
 
