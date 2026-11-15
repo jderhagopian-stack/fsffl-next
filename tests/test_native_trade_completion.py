@@ -279,3 +279,13 @@ def test_frozen_pick_reference_identity_is_preserved_and_unknown_release_rejecte
     assert 'frozen-fixture-release' in done['disposition']['evidence']['native_horizons'][0]['scale']['scale_id']
     result['horizon_asset_economics']['source']['pick_sources']['future']['release_id']='other-release'
     assert not finish(runtime,proposal,result)['availability']['final_trade_disposition']
+
+
+def test_material_current_loss_with_no_gain_on_either_native_horizon_declines():
+    runtime,record,proposal=fixture();result=seed(runtime,record,proposal,current_gain=False)
+    result['material_assessment']['side_a']['expected_wins']='material_loss'
+    result['team_deltas'][0]['competitive']['expected_wins']=-1
+    set_delta(result,'three_year',-10);set_delta(result,'career',-20)
+    done=finish(runtime,proposal,result)
+    assert done['disposition']['disposition']=='decline'
+    assert done['availability']['final_trade_disposition']
