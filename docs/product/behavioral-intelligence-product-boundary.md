@@ -36,3 +36,35 @@ Behavioral evidence may inform downstream governed consumers through explicit co
 ## League-agnostic requirement
 
 The surface and its models remain league-agnostic and team-agnostic in implementation. League-specific history, rules, roster state, scoring, and owner behavior are inputs to governed calculations rather than hardcoded product logic. No league size, lineup format, scoring rule, team identity, draft convention, or owner behavior is embedded as universal truth.
+
+## Sleeper completed-history integration — 2026-11-16
+
+Sleeper supplies completed transactions, not the offers that were rejected,
+withdrawn or never made. Those missing outcomes will not be treated as negative
+training examples. Completed-history counts cannot identify acceptance rates or
+justify elevated/reduced willingness labels. This constraint applies to the
+current production path; generic research contracts do not authorize odds from
+this source alone. A future response model would need independently obtained,
+appropriate offer/outcome evidence and validation.
+
+The shared package-history contract binds source-backed observations to the
+current owner/team, league family, exact State and admissible cutoff. It reports
+sample counts, matched observed shapes, draft-pick directions and positions.
+Player/pick detail uses explicit trade-only aggregates, excluding waiver and
+free-agent activity. Legacy profiles retain reliable trade-shape observations;
+missing trade-only detail is not reconstructed from mixed acquisition totals.
+The normal existing history sync adds these optional aggregates; no request
+fetches or rebuilds history.
+
+Positive precedents may break otherwise equivalent discovery ties after economics,
+priority hypotheses, package size and diversity. A separate counteroffer lane may
+visit structures the counterparty has completed before. Unfamiliar structures stay
+reachable. These are search hypotheses, not preference estimates or willingness
+predictions. Manual priorities still control the search. Current roster needs,
+competitive timelines and positional consequences remain Decision evidence; they
+are not inferred owner personality. Existing context-controlled residual research
+is preserved and is not replaced by raw acquisition counts.
+
+Explore and Trade Center display the same compact observations inside existing
+details. They do not label an owner as unwilling because a pattern is absent, and
+they do not change Value, Forecast, Simulation or final trade disposition.
