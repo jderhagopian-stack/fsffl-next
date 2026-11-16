@@ -56,6 +56,8 @@ def test_cold_restart_binds_existing_history_via_actual_api_without_refresh_or_w
     client=TestClient(app)
     assert client.get('/api/behavioral/status').status_code==200
     assert cached_behavior_profile_for_team(state,'team:b').owner_id=='owner-b'
+    from fsffl.product.behavioral_runtime import cached_behavior_profile_readiness
+    assert cached_behavior_profile_readiness(state)=={'state_id':state.state_id,'mapped_profiles':2,'trade_only_profiles':2}
     assert client.get('/api/behavioral/profiles').status_code==200
     result=client.post('/api/opportunities/strategic-discover',json={'evaluation_budget':0,'max_candidates':8})
     assert result.status_code==200,result.text
@@ -82,6 +84,8 @@ def test_restore_does_not_bind_a_different_state_or_use_future_profiles(tmp_path
     wrong=state.model_copy(update={'as_of':state.as_of+timedelta(seconds=1)})
     coordinator.current('local-beta-user',league_state=wrong)
     assert cached_behavior_profile_for_team(wrong,'team:b') is None
+    from fsffl.product.behavioral_runtime import cached_behavior_profile_readiness
+    assert cached_behavior_profile_readiness(wrong)['mapped_profiles']==0
 
 
 def test_restored_history_publication_coalesces_and_evicts_source_references(tmp_path,monkeypatch):
