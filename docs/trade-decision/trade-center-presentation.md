@@ -36,3 +36,28 @@ Explain the difference between the before/after **sets of starting players**, no
 The quick and deep frontier keep their four/24 evaluation limits and canonical owned packages. A request reads the existing published native source once for the two rosters, then reuses Explore's accepted preliminary roster/economic/priority screen. No full season Simulation, provider acquisition or persistence work is added. Default inferred goals and explicit instructions use the same owner assessment as Explore.
 
 Compare each team's Current, 3-Year and Career changes against the original package in its own units. An original negative may shrink or disappear, while a different cost can emerge or deepen; explain both. Never combine the horizons, invent a universal repair score, or call this a final recommendation. Qualified counters remain preliminary and load into the existing guarded builder for explicit full analysis. Missing native evidence cannot become a claimed future-aware counter just because the legacy roster-only classifier was positive.
+
+### Targeted counteroffer search
+
+When matching published native horizons are available, counter search may replace
+one offered asset with another owned player or pick without enlarging a package.
+At least one original incoming target remains; abandoning the sole target is a
+different search. Protected managed-team players remain excluded.
+
+Search interleaves separate questions for each team's known Current, 3-Year and
+Career losses. Current-loss hypotheses try retaining a traded baseline starter
+and using bench/pick compensation. Native-horizon hypotheses try closing the
+original loss with minimal extra compensation within that horizon, then partial
+repairs. Smaller structural alternatives remain a separate lane. No horizons or
+teams are blended into a score. Baseline starters come from the governed optimizer,
+so FLEX/Superflex and league-specific starting requirements are respected without
+assuming that a nominal WR rank defines who is expendable.
+
+These inexpensive hypotheses omit cuts, future lineup interactions and weekly
+schedule effects. They are never presented as transaction consequences. Every
+selected package still receives the existing preliminary lineup/legality/native
+horizon/priority evaluation and comparison against the original deal. Bench
+players are not assumed worthless. A search hint cannot create a recommendation,
+owner willingness estimate or Simulation result. Missing published evidence uses
+the existing diagnostic path. Four quick /24 expanded evaluation limits remain;
+this is a bounded local search, not proof that no better league-wide deal exists.
