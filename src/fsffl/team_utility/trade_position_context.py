@@ -23,7 +23,11 @@ def summarize_trade_position_context(before_state, after_state, before, after, l
         return tuple(sorted(pid for pid in ids if pid in players and players[pid].position.value == position))
     rows = []
     for position in positions:
+        before_points = sum(a.expected_points for a in before.assignments if a.position.value == position)
+        after_points = sum(a.expected_points for a in after.assignments if a.position.value == position)
         rows.append({'position': position,
+            'before_expected_points':before_points, 'after_expected_points':after_points,
+            'expected_points_delta':after_points-before_points,
             'incoming_player_ids': group(roster_after - roster_before, position),
             'removed_nontrade_player_ids': group(roster_before - roster_after - set(outgoing), position),
             'before_starter_ids': group(before_assign, position),
@@ -40,6 +44,11 @@ def summarize_trade_position_context(before_state, after_state, before, after, l
         'before_expected_points':before.expected_points,'after_expected_points':after.expected_points,
         'expected_points_delta':after.expected_points-before.expected_points,
         'departing_lineup_ids':tuple(sorted(removed)), 'entering_lineup_ids':tuple(sorted(added)),
+        'starter_replacements':tuple({'slot':a.slot.value,'outgoing_player_id':a.player_id,
+            'replacement_was_already_starting':any(b.player_id in before_assign for b in after.assignments if b.slot==a.slot and b.slot_index==a.slot_index),
+            'replacement_player_id':next((b.player_id for b in after.assignments
+                if b.slot==a.slot and b.slot_index==a.slot_index),None)}
+            for a in before.assignments if a.player_id in outgoing),
         'before_unfilled_slots':len(before.unfilled_slots),'after_unfilled_slots':len(after.unfilled_slots),
         'positions':rows, 'received_pick_ids':tuple(a.pick_id for a in received_assets if isinstance(a, PickAsset)),
         'surplus_confirmed':False,

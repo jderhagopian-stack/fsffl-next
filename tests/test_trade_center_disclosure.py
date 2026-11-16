@@ -48,6 +48,16 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
         'scenario_simulation_count':50000,'team_deltas':[{'team_id':'a','competitive':{'expected_wins':.1,'playoff_probability':.03,'first_place_probability':.01}},{'team_id':'b','competitive':{'expected_wins':-.1,'playoff_probability':-.03}}],
         'availability':{'competitive_outcomes':True,'final_trade_disposition':False},
         'disposition':{'disposition':'insufficient_evidence','evidence':{'unavailable_metrics':['intrinsic_value'],'material_gains':['playoff_probability'],'material_losses':['largest_single_player_lineup_drop']}}}
+    fixture['position_strength']['positions'].append({'position':'WR','before_expected_points':463.5,'after_expected_points':358.,'expected_points_delta':-105.5})
+    fixture['state_id_after']='t'
+    fixture['scenario_computation']={'authoritative':True}
+    fixture['positional_context']=[{'team_id':'a','status':'complete','source_state_id':'s','after_state_id':'t',
+        'positions':[{'position':'RB','expected_points_delta':123.5,'incoming_player_ids':['b'],'after_starter_ids':['b'],
+            'baseline_league_strength':{'team_id':'a','position':'RB','strength_index':80}},
+            {'position':'WR','expected_points_delta':-105.5,'outgoing_starter_ids':['z']}],
+        'starter_replacements':[{'slot':'WR','outgoing_player_id':'z','replacement_player_id':'d'}]},
+        {'team_id':'b','status':'complete','source_state_id':'s','after_state_id':'t',
+            'positions':[{'position':'RB','expected_points_delta':-100,'outgoing_starter_ids':['b']}]}]
     with playwright.sync_playwright() as p:
         browser = p.chromium.launch(executable_path=executable,headless=True,args=['--no-sandbox'])
         for width in (320,390,430,1200):
@@ -57,9 +67,9 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
             page.set_content(html)
             page.evaluate("document.querySelectorAll('.route-screen').forEach(n=>n.hidden=n.id!=='trade-center-screen')")
             page.add_script_tag(content="const state={route:'trade_center',context:{team_id:'a',state_id:'s'}};const qs=s=>document.querySelector(s);const qsa=s=>[...document.querySelectorAll(s)];const escapeHtml=s=>String(s??'');const fmtNumber=n=>String(n??'—');")
-            for name in ('trade_center.js','trade_evidence_status.js','trade_decision_experience.js','trade_primary_narrative.js','beta_product_corrections.js','north_star_trade_center.js','market_trade_recomposition.js','market_trade_drilldown.js'):
+            for name in ('trade_center.js','trade_evidence_status.js','trade_football_story.js','trade_decision_experience.js','trade_primary_narrative.js','beta_product_corrections.js','north_star_trade_center.js','market_trade_recomposition.js','market_trade_drilldown.js'):
                 page.add_script_tag(content=(STATIC/name).read_text())
-            page.evaluate("tradeUiState.counterpartyTeamId='b';tradeUiState.focalSelected=new Set(['player:z']);tradeUiState.counterpartySelected=new Set(['player:b']);tradeUiState.browser={focal_team:{team_id:'a',assets:[{asset_ref:'player:z',label:'Zay Flowers'}]},counterparties:[{team_id:'b',display_name:'Other owner',assets:[{asset_ref:'player:b',label:'Bucky Irving'}]}]}")
+            page.evaluate("tradeUiState.counterpartyTeamId='b';tradeUiState.focalSelected=new Set(['player:z']);tradeUiState.counterpartySelected=new Set(['player:b']);tradeUiState.browser={focal_team:{team_id:'a',assets:[{asset_ref:'player:z',label:'Zay Flowers'},{asset_ref:'player:d',label:'Josh Downs'}]},counterparties:[{team_id:'b',display_name:'Other owner',assets:[{asset_ref:'player:b',label:'Bucky Irving'}]}]}")
             page.wait_for_timeout(100)
             page.evaluate('(r)=>{window.renderTradeAnalysis(r);window.renderTradeSimulationResult(r)}',fixture)
             page.wait_for_selector('.ns3-drill-card')
@@ -67,8 +77,10 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
             assert page.locator('#ns2-trade-room .ns2-status').text_content()=='Simulation complete · decision incomplete'
             assert 'long-term Intrinsic trade economics' in page.locator('#ns2-trade-room > header').text_content()
             assert not page.locator('.beta-trade-summary.final').is_visible()
-            assert page.locator('.tc-focus').text_content()=='Your chosen focus: Build for the long term'
+            assert page.locator('.tc-focus').count()==0
             assert page.locator('#ns2-trade-room > header h2').count()==1
+            lineup_summary=page.locator('.ns3-drill-card').nth(1).locator('summary').inner_text()
+            assert 'RB +123.5' in lineup_summary and 'WR -105.5' in lineup_summary
             assert not page.locator('.tc-builder').get_attribute('open')
             assert 'Zay Flowers' in page.locator('.ns2-trade-package').text_content()
             assert 'Bucky Irving' in page.locator('.ns2-trade-package').text_content()
@@ -91,20 +103,20 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
                 assert card.get_attribute('open') is None
             page.locator('.ns3-drill-card').nth(3).locator('summary').click()
             assert 'Missing: long-term Intrinsic trade economics' in page.locator('.ns3-missing-evidence').text_content()
-            assert 'Trading projected depth for future value' in page.locator('.ns3-drill-card').nth(3).text_content()
-            assert 'Less projected depth: WR' in page.locator('.ns3-drill-card').nth(3).text_content()
-            assert 'Your chosen priorities: Career' in page.locator('.ns3-drill-card').nth(3).text_content()
-            assert 'Weigh what you gain against what you give up' in page.locator('.ns3-drill-card').nth(4).text_content()
+            assert 'Josh Downs takes over the WR spot held by Zay Flowers' in page.locator('.ns3-drill-card').nth(3).text_content()
+            assert 'You asked to build for the long term' in page.locator('.ns3-drill-card').nth(3).text_content()
+            assert 'Losing Bucky Irving leaves their RB lineup weaker' in page.locator('.ns3-drill-card').nth(4).text_content()
             page.screenshot(path=str(tmp_path/f'trade-{width}.png'),full_page=True)
             updated=json.loads(json.dumps(fixture));updated['disposition']={'disposition':'review','evidence':{
                 'review_reasons':['timeline_or_economic_tradeoff'],'native_horizons':[
                     {'horizon':'three_year','delta':1.5157},{'horizon':'career','delta':-80.6994}]}};updated['availability']['final_trade_disposition']=True
             updated['horizon_asset_economics']={h:{'roster_adjusted':{'side_a':{'team_id':'a','status':'complete','roster_adjusted_intrinsic_delta':a},'side_b':{'team_id':'b','status':'complete','roster_adjusted_intrinsic_delta':b}}} for h,a,b in [('three_year',1.5157,-2.5),('career',-80.6994,0)]}
+            updated['horizon_asset_economics']['source']={'league_state_id':'s'}
             page.evaluate('(r)=>window.renderTradeSimulationResult(r)',updated)
             page.wait_for_timeout(150)
             assert page.locator('#ns2-trade-room .ns2-status').text_content()=='Evaluation complete'
             assert page.locator('.ns3-missing-evidence').count()==0
-            assert page.locator('#ns2-trade-room > header h2').text_content()=='Review the tradeoff'
+            assert page.locator('#ns2-trade-room > header h2').text_content()=='Stronger at RB, weaker at WR'
             assert not page.locator('.beta-trade-summary.final').is_visible()
             assert [x.text_content() for x in page.locator('.tc-comparison tbody td').all()]==['+0.10','-0.10','+3.0 pp','-3.0 pp','+1.5','-2.5','-80.7','0.0']
             fit=page.locator('.tc-comparison').evaluate('(n)=>({width:n.clientWidth,scroll:n.scrollWidth})')
@@ -115,8 +127,12 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
             page.screenshot(path=str(tmp_path/f'trade-complete-{width}.png'),full_page=True)
             reasons=page.locator('.ns3-drill-card').nth(3)
             reasons.locator('summary').click()
-            assert '+1.5' in reasons.text_content() and '-80.7' in reasons.text_content()
-            assert 'Career contribution' in reasons.text_content()
+            assert 'Josh Downs' in reasons.text_content()
+            hero=page.locator('#ns2-trade-room > header').inner_text()
+            assert 'Bucky Irving strengthens your RB lineup' in hero
+            assert 'Losing Zay Flowers' in hero and '3.0 percentage points' in hero
+            assert 'giving up more value' in hero and 'below the league average' in hero
+            assert 'contribution' not in hero and 'selected priorities' not in hero
             # Unknown remains a dash, not zero. Presentation does not mutate evidence.
             missing=json.loads(json.dumps(updated));missing['horizon_asset_economics']['career']['roster_adjusted']['side_b']['status']='incomplete'
             before=json.dumps(missing,sort_keys=True)

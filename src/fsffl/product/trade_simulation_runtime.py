@@ -144,7 +144,7 @@ def build_post_trade_simulation_comparison(
     positional_context = []
     for leg in (proposal.side_a, proposal.side_b):
         _, context = _position_comparison_and_context(league_state, legal_after, forecasts,
-            team_id=leg.team_id, leg=leg,
+            team_id=leg.team_id, leg=leg, baseline=baseline,
             received_assets=(proposal.side_b if leg is proposal.side_a else proposal.side_a).sends,
             horizon=(ForecastHorizon.REST_OF_SEASON if forecast_evidence.simulation_forward_forecasts is not None else ForecastHorizon.SEASON),
             forecast_as_of=forecast_evidence.simulation_evaluation_as_of)
