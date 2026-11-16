@@ -2283,9 +2283,16 @@ def _run_lightweight_startup_restore() -> None:
             history_context = _runtime_store.get(_beta_restore_user)
             if history_context.league_state is not None:
                 try:
-                    _behavioral_coordinator.current(_beta_restore_user, league_state=history_context.league_state)
+                    history_record = _behavioral_coordinator.current(_beta_restore_user, league_state=history_context.league_state)
+                    from .behavioral_runtime import cached_behavior_profile_readiness
+                    history_ready = cached_behavior_profile_readiness(history_context.league_state)
+                    logging.getLogger("uvicorn.error").info(
+                        "FSFFL startup owner history readiness status=%s stored_state=%s state=%s mapped_profiles=%s trade_only_profiles=%s",
+                        history_record.status.value, history_record.league_state_id, history_ready['state_id'],
+                        history_ready['mapped_profiles'], history_ready['trade_only_profiles'],
+                    )
                 except Exception as exc:
-                    _logger.warning("FSFFL owner history startup binding unavailable error_type=%s",type(exc).__name__)
+                    logging.getLogger("uvicorn.error").warning("FSFFL owner history startup binding unavailable error_type=%s",type(exc).__name__)
         _startup_restore_state["status"] = "complete"
         _log_startup_runtime_readiness()
     except Exception as exc:
