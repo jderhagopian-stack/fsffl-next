@@ -32,5 +32,5 @@ def test_opportunity_discovery_shows_behavior_as_context_not_search_authority() 
     assert "/api/behavioral/profiles" in source
     assert "Owner history" in source
     assert "Behavioral fit is advisory and cannot rewrite Value, disposition or action authority" in source
-    assert "This is not an acceptance probability" in source
-    assert "acceptance is uncalibrated" in source
+    assert "Completed trades do not reveal how often offers were rejected" in source
+    assert "Recorded trading history" in source
