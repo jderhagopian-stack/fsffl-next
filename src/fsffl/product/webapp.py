@@ -1459,7 +1459,7 @@ def create_app(
                 elif stage["stage"] == "analytics":
                     stage["readiness"] = "ready"
                     stage["message"] = "NEXT-7 includes projected scoring, expected wins and playoff/first-place probabilities."
-        behavior = behavior_jobs.current(user_id)
+        behavior = behavior_jobs.current(user_id, league_state=runtime.league_state)
         payload["behavioral_intelligence"] = {
             "status": behavior.status.value,
             "profile_count": behavior.result.profile_count if behavior.result is not None else 0,
@@ -1613,7 +1613,7 @@ def create_app(
         runtime = store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
-        record = behavior_jobs.current(user_id)
+        record = behavior_jobs.current(user_id, league_state=runtime.league_state)
         result = record.result
         return {
             "status": record.status.value,
@@ -1636,7 +1636,7 @@ def create_app(
         runtime = store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
-        record = behavior_jobs.current(user_id)
+        record = behavior_jobs.current(user_id, league_state=runtime.league_state)
         if record.status == BehavioralRuntimeStatus.FAILED:
             raise HTTPException(status_code=502, detail=record.error or "Behavioral Intelligence build failed")
         if record.result is None:
