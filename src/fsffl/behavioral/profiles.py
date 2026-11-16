@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import UTC, datetime
 
-from .models import BehavioralAssetKind, BehavioralEventKind, OwnerBehaviorEvent, OwnerBehaviorProfile
+from .models import CompletedTradeActivity, BehavioralAssetKind, BehavioralEventKind, OwnerBehaviorEvent, OwnerBehaviorProfile
 
 
 def build_owner_behavior_profiles(
@@ -37,6 +37,9 @@ def build_owner_behavior_profiles(
         acquired_picks = disposed_picks = 0
         acquired_faab = disposed_faab = 0
         consolidation = diversification = balanced = 0
+        trade_acquired_positions = Counter(); trade_disposed_positions = Counter()
+        trade_acquired_picks = trade_disposed_picks = 0
+        trades_acquiring_picks = trades_sending_picks = 0
 
         for event in ordered:
             for asset in event.acquired:
@@ -58,6 +61,12 @@ def build_owner_behavior_profiles(
                 elif asset.kind == BehavioralAssetKind.FAAB:
                     disposed_faab += asset.faab_amount or 0
             if event.kind == BehavioralEventKind.TRADE:
+                trade_buys = sum(a.kind == BehavioralAssetKind.PICK for a in event.acquired)
+                trade_sells = sum(a.kind == BehavioralAssetKind.PICK for a in event.disposed)
+                trade_acquired_picks += trade_buys; trade_disposed_picks += trade_sells
+                trades_acquiring_picks += bool(trade_buys); trades_sending_picks += bool(trade_sells)
+                trade_acquired_positions.update(a.position for a in event.acquired if a.kind == BehavioralAssetKind.PLAYER and a.position)
+                trade_disposed_positions.update(a.position for a in event.disposed if a.kind == BehavioralAssetKind.PLAYER and a.position)
                 counterparties.update(event.counterparty_owner_ids)
                 sent_count = len(event.disposed)
                 received_count = len(event.acquired)
@@ -87,6 +96,11 @@ def build_owner_behavior_profiles(
                 consolidation_trade_count=consolidation,
                 diversification_trade_count=diversification,
                 balanced_trade_count=balanced,
+                completed_trade_activity=CompletedTradeActivity(
+                    acquired_pick_count=trade_acquired_picks, disposed_pick_count=trade_disposed_picks,
+                    trades_acquiring_picks=trades_acquiring_picks, trades_sending_picks=trades_sending_picks,
+                    acquired_positions=dict(sorted(trade_acquired_positions.items())),
+                    disposed_positions=dict(sorted(trade_disposed_positions.items()))),
                 acquired_positions=dict(sorted(acquired_positions.items())),
                 disposed_positions=dict(sorted(disposed_positions.items())),
                 counterparty_trade_counts=dict(sorted(counterparties.items())),
