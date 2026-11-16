@@ -47,6 +47,7 @@ BehavioralStoreFactory = Callable[[], object]
 _profile_cache_lock = RLock()
 _profile_cache: dict[tuple[str, str], OwnerBehaviorProfile] = {}
 _profile_cache_state_order: list[str] = []
+_profile_cache_results: dict[str, BehavioralSyncResult] = {}
 _MAX_PROFILE_CACHE_STATES = 4
 _hosted_store_lock = RLock()
 _hosted_postgres_stores: dict[str, PostgresBehavioralIntelligenceStore] = {}
@@ -70,7 +71,12 @@ def cached_behavior_profile_for_team(
 def _publish_profiles_for_state(
     league_state: LeagueState,
     result: BehavioralSyncResult,
-) -> None:
+    *, state_id: str | None = None,
+) -> bool:
+    state_id = state_id or league_state.state_id
+    with _profile_cache_lock:
+        if _profile_cache_results.get(state_id) is result:
+            return False
     profiles_by_owner = {profile.owner_id: profile for profile in result.profiles}
     owners_by_roster = dict(result.current_owner_by_roster)
     entries: dict[tuple[str, str], OwnerBehaviorProfile] = {}
@@ -85,9 +91,9 @@ def _publish_profiles_for_state(
         owner_id = owners_by_roster.get(roster_id)
         profile = profiles_by_owner.get(owner_id) if owner_id is not None else None
         if profile is not None and profile.league_family_id == result.league_family_id and profile.as_of <= league_state.as_of:
-            entries[(league_state.state_id, team.team_id)] = profile
+            entries[(state_id, team.team_id)] = profile
     with _profile_cache_lock:
-        state_id = league_state.state_id
+        _profile_cache_results[state_id] = result
         if state_id not in _profile_cache_state_order:
             _profile_cache_state_order.append(state_id)
         # A new current mapping replaces this State's prior snapshot. Never
@@ -98,11 +104,13 @@ def _publish_profiles_for_state(
         _profile_cache.update(entries)
         while len(_profile_cache_state_order) > _MAX_PROFILE_CACHE_STATES:
             stale_state_id = _profile_cache_state_order.pop(0)
+            _profile_cache_results.pop(stale_state_id, None)
             stale_keys = [
                 key for key in _profile_cache if key[0] == stale_state_id
             ]
             for key in stale_keys:
                 _profile_cache.pop(key, None)
+    return True
 
 
 def default_behavioral_cache_path() -> Path:
@@ -178,6 +186,22 @@ class BehavioralRuntimeCoordinator:
             league_family_id = str(context["league_family_id"])
             profiles = store.load_profiles(league_family_id)
             events = store.load_events(league_family_id)
+            # These events were already loaded for durable restore. Enrich old
+            # profiles in memory at their own cutoffs, without fetching or writing.
+            from fsffl.behavioral.profiles import build_owner_behavior_profiles
+            enriched = {}
+            current_owners = {owner for _,owner in context["current_owner_by_roster"]}
+            for cutoff in sorted({p.as_of for p in profiles if p.owner_id in current_owners and p.completed_trade_activity is None}):
+                projected = {p.owner_id:p for p in build_owner_behavior_profiles(events,as_of=cutoff)}
+                for profile in profiles:
+                    if profile.owner_id not in current_owners or profile.as_of != cutoff or profile.completed_trade_activity is not None:
+                        continue
+                    observed = projected.get(profile.owner_id)
+                    if observed is not None and observed.league_family_id == profile.league_family_id and all(
+                        getattr(profile,k)==getattr(observed,k) for k in ('trade_count','consolidation_trade_count',
+                            'diversification_trade_count','balanced_trade_count')):
+                        enriched[profile.owner_id] = profile.model_copy(update={'completed_trade_activity':observed.completed_trade_activity})
+            profiles = tuple(enriched.get(p.owner_id,p) for p in profiles)
             result = BehavioralSyncResult(
                 league_family_id=league_family_id,
                 profile_count=len(profiles),
@@ -200,17 +224,24 @@ class BehavioralRuntimeCoordinator:
             result=result,
         )
 
-    def current(self, user_id: str) -> BehavioralRuntimeRecord:
+    def current(self, user_id: str, *, league_state: LeagueState | None = None) -> BehavioralRuntimeRecord:
         with self._lock:
             record = self._records.get(user_id)
-        if record is not None:
-            return record
-
-        hydrated = self._hydrate_durable_record(user_id)
-        if hydrated is None:
-            return BehavioralRuntimeRecord(user_id=user_id)
-        with self._lock:
-            return self._records.setdefault(user_id, hydrated)
+        if record is None:
+            hydrated = self._hydrate_durable_record(user_id)
+            if hydrated is None:
+                return BehavioralRuntimeRecord(user_id=user_id)
+            with self._lock:
+                record = self._records.setdefault(user_id, hydrated)
+        if league_state is not None and record.status == BehavioralRuntimeStatus.READY and record.result is not None and record.error is None:
+            state_id = league_state.state_id
+            if record.league_state_id == state_id:
+                if _publish_profiles_for_state(league_state,record.result,state_id=state_id):
+                    with _profile_cache_lock:
+                        count = sum(key[0] == state_id for key in _profile_cache)
+                        detailed = sum(key[0] == state_id and p.completed_trade_activity is not None for key,p in _profile_cache.items())
+                    _logger.info("FSFFL owner history restored state=%s mapped_profiles=%s trade_only_profiles=%s",state_id,count,detailed)
+        return record
 
     def profile_for_team(
         self,
