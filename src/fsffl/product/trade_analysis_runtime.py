@@ -79,7 +79,7 @@ def _projected_starter_map(league_state, forecasts, team_ids: tuple[str, ...], *
     return protected
 
 
-def _position_comparison_and_context(before_state, after_state, forecasts, *, team_id: str, leg=None, received_assets=(), **coordinates):
+def _position_comparison_and_context(before_state, after_state, forecasts, *, team_id: str, leg=None, received_assets=(), baseline=None, **coordinates):
     if not forecasts:
         return None, None
     try:
@@ -89,6 +89,20 @@ def _position_comparison_and_context(before_state, after_state, forecasts, *, te
         return None, None
     from fsffl.team_utility.trade_position_context import summarize_trade_position_context
     context = summarize_trade_position_context(before_state, after_state, before, after, leg, received_assets) if leg else None
+    if context is not None and baseline is not None:
+        view = next((v for v in baseline.team_views if v.team_id == team_id), None)
+        published = view.optimized_lineup if view is not None else None
+        # Reuse league comparisons only for the exact State, forecast period and
+        # optimized assignments. Equal totals alone do not establish identity.
+        if (published is not None and view.context.league_state_id == before_state.state_id
+                and published.as_of == before.as_of and published.horizon == before.horizon
+                and published.assignments == before.assignments
+                and published.bench_player_ids == before.bench_player_ids):
+            strengths = {r.position.value:r for r in view.position_strengths}
+            for row in context['positions']:
+                strength = strengths.get(row['position'])
+                if strength is not None and strength.expected_points == row['before_expected_points']:
+                    row['baseline_league_strength'] = strength.model_dump(mode='json')
     return compare_position_strengths(before, after), context
 
 
@@ -154,7 +168,8 @@ def build_private_beta_trade_analysis(
     for leg in (proposal.side_a, proposal.side_b):
         comparison, context = _position_comparison_and_context(scenario.before, legal_after, forecasts,
             team_id=leg.team_id, leg=leg,
-            received_assets=(proposal.side_b if leg is proposal.side_a else proposal.side_a).sends, **coordinates)
+            received_assets=(proposal.side_b if leg is proposal.side_a else proposal.side_a).sends,
+            baseline=getattr(runtime, 'simulation_analytics', None), **coordinates)
         if leg.team_id == focal_team_id:
             position_strength = comparison
         if context is not None:
