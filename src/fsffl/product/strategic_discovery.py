@@ -246,6 +246,10 @@ def _representative_indices(rows,budget):
         eligible=diverse or eligible
         diverse=[i for i in eligible if not ({a['asset_ref'] for a in rows[i]['send']} & sent)]
         eligible=diverse or eligible
+        # Positive completed-trade precedents break otherwise equivalent ties.
+        # Absence is never a rejection, preference estimate or economic veto.
+        observed=[i for i in eligible if (rows[i].get('owner_history',{}).get(rows[i]['counterparty_team_id'],{}).get('matching_features'))]
+        eligible=observed or eligible
         index=eligible[0]
         chosen.append(index);remaining.remove(index)
         teams.add(rows[index]['counterparty_team_id']);hypotheses.update(rows[index]['hypotheses'])
@@ -303,11 +307,18 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         outgoing=sum(max(0.,assigned.get(a.player_id,0.)-bench.get(positions.get(a.player_id),0.)) for a in sent if isinstance(a,PlayerAsset))
         incoming=sum(max(0.,forecast_means.get(a.player_id,0.)-floors.get(positions.get(a.player_id),0.)) for a in received if isinstance(a,PlayerAsset))
         return incoming-outgoing>1e-9
+    from .owner_history_runtime import build_trade_owner_history, prepare_trade_owner_history
+    from .behavioral_runtime import cached_behavior_profile_for_team
+    history_profiles={team.team_id:cached_behavior_profile_for_team(runtime.league_state,team.team_id)
+        for team in (browser.focal_team,*teams)}
+    history_positions={p.player_id:p.position.value for p in runtime.league_state.players}
+    history_context=prepare_trade_owner_history(runtime,profiles=history_profiles,player_positions=history_positions)
     def make_row(proposal, point_id, hypotheses):
         row={'point_id':point_id,'counterparty_team_id':proposal.side_b.team_id,
             'hypotheses':list(hypotheses),'send':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_a.sends],
             'receive':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_b.sends],
             'action_authority':'diagnostic_only','evidence_status':'not_roster_screened'}
+        row['owner_history']=build_trade_owner_history(runtime,proposal,context=history_context)
         evidence=bind_trade_intrinsic_values(runtime,proposal,read) if read is not None else unavailable_trade_intrinsic('Published native horizon evidence unavailable')
         def raw_priority_gain(team_context,label):
             supported={TradeObjective.THREE_YEAR:'three_year',TradeObjective.CAREER:'career'}
@@ -388,7 +399,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             proposal=_proposal_from_row(runtime,row,prefix='market-prelim',asset_index=asset_index)
             if runtime.forecast_evidence is not None:
                 result=evaluate_candidate_path(runtime,row,profiles=profiles,market_values=market_values,
-                    effective_forecasts=effective_forecasts,baseline_by_team=baseline_by_team,asset_index=asset_index)
+                    effective_forecasts=effective_forecasts,baseline_by_team=baseline_by_team,asset_index=asset_index,owner_history_context=history_context)
             else:
                 result=build_private_beta_trade_analysis(runtime,proposal,focal_team_id=runtime.selected_team_id)
             cuts=tuple(TeamRosterLegalityResolution.model_validate(r) for r in result['roster_legality'])
@@ -398,7 +409,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
                 'roster_legality':result['roster_legality'],'position_strength_comparisons':result.get('position_strength_comparisons'),
                 'horizon_asset_economics':evidence,'roster_adjusted_market_net':result.get('roster_adjusted_market_net'),
                 'objective_assessment':build_trade_objective_assessment(runtime,proposal,result,request.search_instructions),
-                'behavioral_context':result.get('behavioral_context'), 'decision_completeness':result.get('decision_completeness')})
+                'owner_history':result.get('owner_history',row.get('owner_history')), 'behavioral_context':result.get('behavioral_context'), 'decision_completeness':result.get('decision_completeness')})
         except Exception as exc:
             errors+=1
             row['evidence_status']='screen_unavailable'
