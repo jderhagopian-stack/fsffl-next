@@ -303,6 +303,9 @@ def build_post_trade_simulation_comparison(
         counterparty_profile=counterparty_profile,
         focal_owner_id=focal_profile.owner_id if focal_profile is not None else None,
     )
+    from .owner_history_runtime import build_trade_owner_history
+    owner_history=build_trade_owner_history(runtime,proposal,
+        profiles={focal_team_id:focal_profile,counterparty_team_id:counterparty_profile})
     postprocessed = monotonic()
     _logger.info(
         "FSFFL post-trade Simulation phases preparation=%.3fs simulation_or_reuse=%.3fs postprocessing=%.3fs total=%.3fs cache_hit=%s state=%s",
@@ -368,6 +371,7 @@ def build_post_trade_simulation_comparison(
         "disposition": (
             disposition.model_dump(mode="json") if disposition is not None else None
         ),
+        "owner_history": owner_history,
         "behavioral_fit": behavioral_fit.model_dump(mode="json") if behavioral_fit is not None else None,
         "availability": {
             "competitive_outcomes": True,
