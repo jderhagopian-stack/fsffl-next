@@ -53,6 +53,11 @@ def test_quick_and_deep_routes_reuse_one_published_read_and_existing_screen(monk
     store=PrivateBetaRuntimeStore();store.set_league_state(record.user_id,state);store.select_team(record.user_id,'a')
     store.set_forecast_evidence(record.user_id,forecast);store.set_simulation_analytics(record.user_id,baseline)
     store.set_value_evidence(record.user_id,market(state));store.bind_publication_generation_id(record.user_id,'g1')
+    import fsffl.product.owner_history_runtime as owner_runtime
+    from tests.test_completed_owner_history import history
+    hp=history().model_copy(update={'as_of':state.as_of})
+    history_profiles={'a':hp,'b':hp.model_copy(update={'owner_id':'owner-b'})}
+    monkeypatch.setattr(owner_runtime,'cached_behavior_profile_for_team',lambda state,team:history_profiles.get(team))
     reads=[]
     def provider(runtime,ids):
         reads.append(ids)
@@ -78,6 +83,9 @@ def test_quick_and_deep_routes_reuse_one_published_read_and_existing_screen(monk
         assert all(p['counter_review']['effects']['basis']=='remaining_regular_season_weekly_mean' for p in body['points'])
         assert all(p['objective_assessment']['side_a']['context']['explicitly_directed'] for p in body['points'])
         assert all(p['action_authority']=='diagnostic_only' for p in body['points'])
+        assert all(p['owner_history']['b']['owner_id']=='owner-b' for p in body['points'])
+        assert all(p['owner_history']['b']['source_state_id']==state.state_id for p in body['points'])
+        assert all(p['owner_history']['b']['acceptance_probability'] is None for p in body['points'])
     protected = client.post('/api/trade-center/frontier/quick', json={**payload,
         'search_instructions':{'objectives':['career_contribution'],'protected_player_ids':['bench']}})
     assert protected.status_code == 200, protected.text
