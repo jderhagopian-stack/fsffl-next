@@ -190,8 +190,8 @@ def test_opportunity_presentation_retries_runtime_readiness_without_inventing_au
     assert "setTimeout(()=>loadOpportunityWorkspace" in ui
     assert "This view will check again automatically" in ui
     assert "Diagnostic only" in ui
-    assert "not an acceptance probability" in ui
-    assert "Numeric acceptance" in ui and "separately calibrated" in ui
+    assert "Completed trades do not reveal how often offers were rejected" in ui
+    assert "Completed-trade history does not identify acceptance odds" in ui
     assert "renderFsfflOpportunities" in shell
     assert "opportunities.js" in shell
     for route in ("opportunities", "what_if", "simulator", "analytics"):

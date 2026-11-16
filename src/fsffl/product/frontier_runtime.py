@@ -34,7 +34,7 @@ from .trade_objectives import TradeSearchInstructions, validate_search_instructi
 
 _logger=logging.getLogger("uvicorn.error")
 
-_PRODUCT_MODEL_VERSION = "next8-negotiation-frontier-v4:targeted-substitutions"
+_PRODUCT_MODEL_VERSION = "next8-negotiation-frontier-v5:completed-history-lane"
 
 
 def _package(team_id: str, assets) -> TradePackageSeed:
@@ -162,6 +162,10 @@ def build_negotiation_frontier(
         profiles=cardinal_market_profiles(runtime.value_evidence)
         screen_inputs={'effective_forecasts':effective,'baseline_by_team':baselines,'profiles':profiles,
             'market_values':{pid:p.market_price.distribution.mean for pid,p in profiles.items() if p.market_price is not None}}
+    from .owner_history_runtime import cached_trade_profiles, build_trade_owner_history, prepare_trade_owner_history
+    history_profiles=cached_trade_profiles(runtime,proposal)
+    history_positions={p.player_id:p.position.value for p in league_state.players}
+    history_context=prepare_trade_owner_history(runtime,profiles=history_profiles,player_positions=history_positions)
     seed_effects=None
 
     detail_by_point: dict[str, dict[str, object]] = {}
@@ -180,7 +184,7 @@ def build_negotiation_frontier(
             row={'point_id':point.point_id,'counterparty_team_id':counter_leg.team_id,
                 'send':[{'asset_ref':ref(a)} for a in point.focal_package.assets],
                 'receive':[{'asset_ref':ref(a)} for a in point.counterparty_package.assets]}
-            result=evaluate_candidate_path(runtime,row,**screen_inputs)
+            result=evaluate_candidate_path(runtime,row,owner_history_context=history_context,**screen_inputs)
             cuts=tuple(TeamRosterLegalityResolution.model_validate(r) for r in result['roster_legality'])
             result['horizon_asset_economics']=bind_trade_intrinsic_values(runtime,point_proposal,read,roster_resolutions=cuts)
             assessment=build_trade_objective_assessment(runtime,point_proposal,result,search_instructions)
@@ -189,7 +193,7 @@ def build_negotiation_frontier(
             effects=counter_effects(result,focal_team_id,counter_leg.team_id)
             if point.point_id==seed.point_id:seed_effects=effects
             review=review_counter(seed_effects,effects,display_group=context['group'])
-            detail_by_point[point.point_id]={'objective_assessment':assessment,'counter_review':review,
+            detail_by_point[point.point_id]={'owner_history':result.get('owner_history') or build_trade_owner_history(runtime,point_proposal,context=history_context), 'objective_assessment':assessment,'counter_review':review,
                 'decision_shape':result['decision_shape'],
                 'feasibility_shape':'mutual_gain_candidate' if review['status'] in ('improves_terms','alternative') else 'mixed',
                 'action_authority':'diagnostic_only','reasons':['materiality_not_evaluated','unknown_acceptance']}
@@ -275,7 +279,9 @@ def build_negotiation_frontier(
         starters = {team: frozenset(a.player_id for a in lineup.assignments if a.player_id is not None)
             for team, lineup in screen_inputs['baseline_by_team'].items()}
         return order_counter_hypotheses(seed, neighbors, seed_effects=seed_effects,
-            published=read, starters=starters)
+            published=read, starters=starters,
+            history_matches={p.point_id:build_trade_owner_history(runtime,_proposal(p,as_of=league_state.as_of),
+                context=history_context)[counter_leg.team_id]['matching_features'] for p in neighbors})
 
     policy = FrontierSearchPolicy(
         max_depth=max_depth,
@@ -322,6 +328,7 @@ def build_negotiation_frontier(
                     }
                     for asset in point.counterparty_package.assets
                 ],
+                'owner_history':build_trade_owner_history(runtime,_proposal(point,as_of=league_state.as_of),context=history_context),
                 'counter_review': {'status':'incomplete','missing':['published_horizons'],'decision_effect':'no_disposition_change'},
                 **detail_by_point.get(point.point_id, {}),
             }

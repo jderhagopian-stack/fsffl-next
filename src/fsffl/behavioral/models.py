@@ -76,6 +76,23 @@ class OwnerBehaviorEvent(FrozenModel):
         return self
 
 
+class CompletedTradeActivity(FrozenModel):
+    """Trade-only counts, distinct from waiver/free-agent activity."""
+    model_version: str = "completed-trade-activity-v1"
+    acquired_pick_count: Annotated[int, Field(ge=0)] = 0
+    disposed_pick_count: Annotated[int, Field(ge=0)] = 0
+    trades_acquiring_picks: Annotated[int, Field(ge=0)] = 0
+    trades_sending_picks: Annotated[int, Field(ge=0)] = 0
+    acquired_positions: dict[str, int] = Field(default_factory=dict)
+    disposed_positions: dict[str, int] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_positions(self):
+        if any(v < 0 for counts in (self.acquired_positions, self.disposed_positions) for v in counts.values()):
+            raise ValueError("trade position counts cannot be negative")
+        return self
+
+
 class OwnerBehaviorProfile(FrozenModel):
     """Descriptive historical owner profile with no hidden preference weights.
 
@@ -105,6 +122,7 @@ class OwnerBehaviorProfile(FrozenModel):
     disposed_positions: dict[str, int] = Field(default_factory=dict)
     counterparty_trade_counts: dict[str, int] = Field(default_factory=dict)
     seasons_observed: tuple[int, ...] = ()
+    completed_trade_activity: CompletedTradeActivity | None = None
     model_version: str = "owner-behavior-profile-v1"
 
     @field_validator("as_of", "first_observed_at")
@@ -116,6 +134,9 @@ class OwnerBehaviorProfile(FrozenModel):
 
     @model_validator(mode="after")
     def validate_counts(self) -> "OwnerBehaviorProfile":
+        if self.completed_trade_activity is not None and max(self.completed_trade_activity.trades_acquiring_picks,
+                self.completed_trade_activity.trades_sending_picks) > self.trade_count:
+            raise ValueError("trade-only pick event counts cannot exceed completed trades")
         if self.trade_count + self.waiver_count + self.free_agent_count != self.event_count:
             raise ValueError("behavioral profile event counts must reconcile")
         if self.consolidation_trade_count + self.diversification_trade_count + self.balanced_trade_count != self.trade_count:

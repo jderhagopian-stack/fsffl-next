@@ -49,6 +49,7 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
         'availability':{'competitive_outcomes':True,'final_trade_disposition':False},
         'disposition':{'disposition':'insufficient_evidence','evidence':{'unavailable_metrics':['intrinsic_value'],'material_gains':['playoff_probability'],'material_losses':['largest_single_player_lineup_drop']}}}
     fixture['position_strength']['positions'].append({'position':'WR','before_expected_points':463.5,'after_expected_points':358.,'expected_points_delta':-105.5})
+    fixture['owner_history']={'b':{'status':'observed','source_state_id':'s','facts':['They acquired draft picks in 4 of their 10 recorded trades.']}}
     fixture['state_id_after']='t'
     fixture['scenario_computation']={'authoritative':True}
     fixture['positional_context']=[{'team_id':'a','status':'complete','source_state_id':'s','after_state_id':'t',
@@ -107,6 +108,7 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
             assert 'Josh Downs comes off your bench to start at FLEX' in page.locator('.ns3-drill-card').nth(3).text_content()
             assert 'You asked to build for the long term' in page.locator('.ns3-drill-card').nth(3).text_content()
             assert 'Losing Bucky Irving leaves their RB lineup weaker' in page.locator('.ns3-drill-card').nth(4).text_content()
+            assert 'acquired draft picks in 4' in page.locator('.ns3-drill-card').nth(4).text_content()
             page.screenshot(path=str(tmp_path/f'trade-{width}.png'),full_page=True)
             updated=json.loads(json.dumps(fixture));updated['disposition']={'disposition':'review','evidence':{
                 'review_reasons':['timeline_or_economic_tradeoff'],'native_horizons':[

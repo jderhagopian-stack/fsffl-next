@@ -32,6 +32,10 @@ assert.match(b.summary,/their RB lineup weaker/);
 assert(!/\byou\b|\byour\b/i.test(b.summary+' '+b.details.join(' ')));
 assert.match(b.summary,/gain value further down the road/);
 assert.equal(JSON.stringify(r),before);
+let h=JSON.parse(before);h.owner_history={b:{status:'observed',source_state_id:'before',facts:['They acquired picks in 4 of their 10 recorded trades.']}};
+assert.match(explain(h,'b',names).details.join(' '),/acquired picks in 4/);
+h.owner_history.b.source_state_id='stale';assert(!explain(h,'b',names).details.join(' ').includes('acquired picks in 4'));
+
 let x=JSON.parse(before);x.positional_context[0].source_state_id='stale';x.horizon_asset_economics.source.league_state_id='stale';
 let story=explain(x,'a',names);assert(!story.summary.includes('Bucky'));assert(!story.summary.includes('career'));assert(!story.details.join(' ').includes('Josh Downs'));
 x=JSON.parse(before);x.scenario_computation.authoritative=false;assert(!explain(x,'a',names).summary.includes('playoff'));

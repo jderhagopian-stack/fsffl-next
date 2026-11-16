@@ -10,16 +10,15 @@ TRADE_UI = ROOT / "src/fsffl/product/static/trade_behavioral_fit.js"
 RUNTIME = ROOT / "src/fsffl/product/behavioral_runtime.py"
 
 
-def test_behavioral_fit_uses_observed_history_and_current_context_without_probability() -> None:
+def test_behavioral_fit_only_binds_observed_history_without_response_direction() -> None:
     source = FIT.read_text(encoding="utf-8")
-    assert "counterparty_profile.consolidation_trade_count" in source
-    assert "counterparty_profile.acquired_pick_count" in source
-    assert "counterparty_profile.acquired_positions" in source
-    assert "calculated_competitive_state" in source
-    assert "counterparty_trade_counts" in source
-    assert "BehavioralEvidenceLevel.INFERRED" in source
+    assert "describe_owner_package_history" in source
+    assert "BehavioralEvidenceLevel.OBSERVED" in source
+    assert "BehavioralLikelihoodDirection.NEUTRAL" in source
+    assert "BehavioralLikelihoodDirection.REDUCED" not in source
+    assert "BehavioralLikelihoodDirection.ELEVATED" not in source
+    assert "calculated_competitive_state" not in source
     assert "acceptance_probability" not in source
-    assert "calibration_model_version" not in source
 
 
 def test_shared_post_trade_runtime_owns_behavioral_fit_without_rewriting_decision() -> None:
@@ -49,21 +48,18 @@ def test_behavioral_profile_cache_is_read_only_and_fails_missing() -> None:
     assert "_publish_profiles_for_state(league_state, result)" in source
 
 
-def test_opportunity_ui_explains_directional_fit_without_fake_acceptance_probability() -> None:
+def test_opportunity_ui_shows_recorded_facts_without_response_labels() -> None:
     source = OPPORTUNITY_UI.read_text(encoding="utf-8")
-    assert "Behavioral fit" in source
-    assert "This is not an acceptance probability" in source
-    assert "behavioral_fit" in source
+    assert "Recorded trading history" in source
+    assert "Completed trades do not reveal how often offers were rejected" in source
     assert "driver.description" in source
-    assert "Numeric acceptance remains unavailable until separately calibrated" in source
-    assert "acceptance_probability" not in source
+    assert "Numeric acceptance remains unavailable until separately calibrated" not in source
 
 
-def test_trade_center_presents_same_returned_fit_without_frontend_inference() -> None:
+def test_trade_center_presents_same_returned_observations() -> None:
     source = TRADE_UI.read_text(encoding="utf-8")
     assert "result?.behavioral_fit" in source
-    assert "Behavioral fit for this exact package" in source
-    assert "it is not an acceptance probability" in source
-    assert "cannot change governed Value coordinates" in source
+    assert "Recorded trading history" in source
     assert "driver.description" in source
-    assert "acceptance_probability" not in source
+    assert "fit.direction" not in source
+    assert "Numeric acceptance" not in source

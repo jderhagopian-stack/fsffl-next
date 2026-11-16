@@ -84,12 +84,17 @@ def _publish_profiles_for_state(
             continue
         owner_id = owners_by_roster.get(roster_id)
         profile = profiles_by_owner.get(owner_id) if owner_id is not None else None
-        if profile is not None:
+        if profile is not None and profile.league_family_id == result.league_family_id and profile.as_of <= league_state.as_of:
             entries[(league_state.state_id, team.team_id)] = profile
     with _profile_cache_lock:
         state_id = league_state.state_id
         if state_id not in _profile_cache_state_order:
             _profile_cache_state_order.append(state_id)
+        # A new current mapping replaces this State's prior snapshot. Never
+        # retain an old owner/family entry when the replacement is inadmissible.
+        for key in tuple(_profile_cache):
+            if key[0] == state_id:
+                _profile_cache.pop(key, None)
         _profile_cache.update(entries)
         while len(_profile_cache_state_order) > _MAX_PROFILE_CACHE_STATES:
             stale_state_id = _profile_cache_state_order.pop(0)

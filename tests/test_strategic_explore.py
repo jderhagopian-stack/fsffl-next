@@ -52,7 +52,7 @@ querySelectorAll:s=>s==='[data-se-mode]'?['automatic','custom'].map(v=>({dataset
 const context={state:{route:'opportunities',context:{user_id:'u',league_id:'l',team_id:'a',state_id:'s',publication_generation_id:'g'}},
  console,Set,JSON,Promise,window:{fsfflMarketNorthStar:{activeTab:()=> 'for_you'},addEventListener:(n,f)=>handlers[n]=f},
  api:(url,options)=>{requests.push([url,options]);return new Promise((resolve,reject)=>pending.push({url,resolve,reject}));}};
-vm.createContext(context);vm.runInContext(fs.readFileSync('src/fsffl/product/static/strategic_explore.js','utf8'),context);
+vm.createContext(context);vm.runInContext(fs.readFileSync('src/fsffl/product/static/trade_football_story.js','utf8'),context);vm.runInContext(fs.readFileSync('src/fsffl/product/static/strategic_explore.js','utf8'),context);
 const ui=context.window.fsfflStrategicExplore;
 const flush=()=>new Promise(r=>setImmediate(r));
 (async()=>{
@@ -82,7 +82,7 @@ const flush=()=>new Promise(r=>setImmediate(r));
  await next;assert(host.innerHTML.includes('League intelligence changed'));
  const grouped=ui.run();
  const bad={point_id:'root',counterparty_team_id:'b',send:[],receive:[{asset_ref:'player:bad',label:'Bad package'}],display_context:{group:'priority_concern',reason:'Known priority losses'},evidence_status:'pre_simulation_screened'};
- const good={point_id:'repair',counterparty_team_id:'b',send:[],receive:[{asset_ref:'player:good',label:'Good package'}],display_context:{group:'preliminary_fit',reason:'Preliminary fit'},evidence_status:'pre_simulation_screened',repair_lineages:[{root_point_id:'root'}]};
+ const good={owner_history:{b:{status:'observed',source_state_id:'new',facts:['They acquired draft picks in 4 of their 10 recorded trades.']}},point_id:'repair',counterparty_team_id:'b',send:[],receive:[{asset_ref:'player:good',label:'Good package'}],display_context:{group:'preliminary_fit',reason:'Preliminary fit'},evidence_status:'pre_simulation_screened',repair_lineages:[{root_point_id:'root'}]};
  pending.filter(p=>p.url.endsWith('strategic-discover')).at(-1).resolve({league_state_id:'new',focal_team_id:'a',publication_generation_id:'g',competitive_context:{calculated_competitive_state:'competitive',default_search_posture:'balanced',playoff_probability:.8,championship_probability:.1},priority_context:{objectives:['current_competitiveness','three_year_contribution','career_contribution'],explicitly_directed:false},candidate_packages:[bad,good]});
  await grouped;
  assert(host.innerHTML.includes('Calculated competitive state'));
@@ -92,6 +92,8 @@ const flush=()=>new Promise(r=>setImmediate(r));
  assert(host.innerHTML.indexOf('Explore Good package')<host.innerHTML.indexOf('Explore Bad package'));
  assert(host.innerHTML.includes('data-se-concerns'));
  assert(host.innerHTML.includes('Compare linked package alternatives'));
+ assert(host.innerHTML.includes('acquired draft picks in 4'));
+ good.owner_history.b.source_state_id='stale';ui.render(host);assert(!host.innerHTML.includes('acquired draft picks in 4'));
 
 })().catch(e=>{console.error(e);process.exitCode=1;});
 """

@@ -12,7 +12,7 @@ def _key(asset):
     return f'{asset.kind}:{asset.player_id if asset.kind == "player" else asset.pick_id}'
 
 
-def order_counter_hypotheses(seed, neighbors, *, seed_effects, published, starters):
+def order_counter_hypotheses(seed, neighbors, *, seed_effects, published, starters, history_matches=None):
     """Interleave distinct repair questions, then small structural alternatives.
 
     Each native horizon/team cost gets its own queue, ordered by closing the original
@@ -79,6 +79,10 @@ def order_counter_hypotheses(seed, neighbors, *, seed_effects, published, starte
                 queues.append(deque(p for _,_,p in sorted(repairs, key=lambda row:row[:2])))
     # Round robin avoids allowing one horizon or franchise to consume the budget.
     # A generic lane keeps alternative structures reachable, not only hypotheses.
+    if history_matches:
+        # Positive precedents are a separate lane after cost-repair questions.
+        # No observed precedent does not exclude an unfamiliar package.
+        queues.append(deque(p for p in ordered if history_matches.get(p.point_id)))
     queues.append(deque(ordered))
     result = []
     seen = set()
