@@ -2,6 +2,11 @@
 (function(){
   const finite=n=>typeof n==='number'&&Number.isFinite(n);
   const join=items=>items.length>1?items.slice(0,-1).join(', ')+' and '+items.at(-1):items[0]||'';
+  window.fsfflOwnerHistoryFacts=function(history,teamId,stateId,focal=false){
+    const row=history?.[teamId];
+    if(row?.status!=='observed'||row.source_state_id!==stateId)return [];
+    return (row.facts||[]).slice(0,3).map(fact=>focal?fact.replaceAll('They ','You ').replaceAll('their ','your ').replaceAll('they would','you would').replaceAll('them','you'):fact);
+  };
   window.fsfflTradeFootballStory=function(result,teamId,playerName=()=>null){
     const focal=teamId===result?.focal_team_id,subject=focal?'You':'They',possessive=focal?'your':'their';
     const assessment=[result?.objective_assessment?.side_a,result?.objective_assessment?.side_b].find(s=>s?.context?.team_id===teamId);
@@ -75,6 +80,7 @@
     if(position&&position.received_pick_ids?.length)details.push(`${subject} also receive ${position.received_pick_ids.length===1?'a draft pick':position.received_pick_ids.length+' draft picks'} for the future.`);
     const cut=(result?.roster_legality||[]).find(r=>r.team_id===teamId),cuts=names((cut?.cuts||[]).map(c=>c.player_id));
     if(cuts)details.push(`Completing the trade also means cutting ${cuts}.`);
+    details.push(...window.fsfflOwnerHistoryFacts(result?.owner_history,teamId,result?.state_id_before,focal));
     return {headline,summary:summary.join(' '),details,hasRosterEvidence:Boolean(position)};
   };
 })();
