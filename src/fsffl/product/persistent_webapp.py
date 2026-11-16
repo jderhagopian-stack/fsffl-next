@@ -2277,6 +2277,15 @@ def _run_lightweight_startup_restore() -> None:
                             _beta_restore_user,
                             exc,
                         )
+        # Restore the read-only owner lookup as well as the core intelligence.
+        # History failure stays local and must not fail the entire startup.
+        if _beta_restore_user:
+            history_context = _runtime_store.get(_beta_restore_user)
+            if history_context.league_state is not None:
+                try:
+                    _behavioral_coordinator.current(_beta_restore_user, league_state=history_context.league_state)
+                except Exception as exc:
+                    _logger.warning("FSFFL owner history startup binding unavailable error_type=%s",type(exc).__name__)
         _startup_restore_state["status"] = "complete"
         _log_startup_runtime_readiness()
     except Exception as exc:
