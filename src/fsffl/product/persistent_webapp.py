@@ -1893,6 +1893,7 @@ install_quick_frontier_routes(
     app,
     runtime_store=_runtime_store,
     require_user=_webapp.require_beta_user,
+    horizon_provider=_published_discovery_horizon_provider,
 )
 install_phase1_latency_routes(app, persistence_store=_persistence_store)
 install_latency_observability(app)
