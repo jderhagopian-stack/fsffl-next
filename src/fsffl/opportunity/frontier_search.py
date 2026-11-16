@@ -8,7 +8,7 @@ from pydantic import Field, model_validator
 
 from fsffl.state.models import FrozenModel
 
-from .frontier import BilateralFrontierPoint, expand_adjacent_packages, make_frontier_point
+from .frontier import BilateralFrontierPoint, expand_adjacent_packages, make_frontier_point, substitute_packages
 from .models import OpportunityCandidate
 from .trade_universe import TeamTradeInventory, TradeSearchBounds
 
@@ -18,6 +18,7 @@ class FrontierSearchPolicy(FrozenModel):
     max_evaluations: Annotated[int, Field(ge=1, le=10000)] = 250
     expand_focal_side: bool = True
     expand_counterparty_side: bool = True
+    include_substitutions: bool = False
 
     @model_validator(mode="after")
     def validate_policy(self) -> "FrontierSearchPolicy":
@@ -85,6 +86,14 @@ def _neighbor_points(
             next_point = make_frontier_point(point.focal_package, neighbor.package)
             neighbors[next_point.point_id] = next_point
 
+    if policy.include_substitutions:
+        for is_focal, inventory in ((True, focal_inventory), (False, counterparty_inventory)):
+            if not (policy.expand_focal_side if is_focal else policy.expand_counterparty_side):
+                continue
+            package = point.focal_package if is_focal else point.counterparty_package
+            for replacement in substitute_packages(package, inventory=inventory, bounds=bounds):
+                neighbor = make_frontier_point(replacement, point.counterparty_package) if is_focal else make_frontier_point(point.focal_package, replacement)
+                neighbors[neighbor.point_id] = neighbor
     return tuple(neighbors[key] for key in sorted(neighbors))
 
 
@@ -97,6 +106,8 @@ def explore_negotiation_frontier(
     evaluator: Callable[[BilateralFrontierPoint], OpportunityCandidate],
     policy: FrontierSearchPolicy = FrontierSearchPolicy(),
     search_model_version: str = "next6-frontier-search-v1",
+    order_neighbors: Callable[[BilateralFrontierPoint, tuple[BilateralFrontierPoint, ...]], tuple[BilateralFrontierPoint, ...]] | None = None,
+    allow_neighbor: Callable[[BilateralFrontierPoint], bool] | None = None,
 ) -> FrontierSearchResult:
     """Breadth-first bounded frontier search that does not stop on bad early offers.
 
@@ -137,13 +148,21 @@ def explore_negotiation_frontier(
         if depth >= policy.max_depth:
             continue
 
-        for neighbor in _neighbor_points(
+        neighbors = _neighbor_points(
             point,
             focal_inventory=focal_inventory,
             counterparty_inventory=counterparty_inventory,
             bounds=bounds,
             policy=policy,
-        ):
+        )
+        if allow_neighbor is not None:
+            neighbors = tuple(p for p in neighbors if allow_neighbor(p))
+        if order_neighbors is not None:
+            ordered = order_neighbors(point, neighbors)
+            if len(ordered) != len(neighbors) or {p.point_id for p in ordered} != {p.point_id for p in neighbors}:
+                raise ValueError("neighbor ordering must preserve the owned candidate set")
+            neighbors = ordered
+        for neighbor in neighbors:
             if neighbor.point_id in visited or neighbor.point_id in queued:
                 continue
             queue.append((neighbor, depth + 1))
