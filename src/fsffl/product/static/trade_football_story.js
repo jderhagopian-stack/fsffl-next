@@ -25,15 +25,30 @@
     for(const r of losses){const outgoing=names(r.outgoing_starter_ids);
       summary.push(outgoing?`Losing ${outgoing} leaves ${possessive} ${r.position} lineup weaker.`:`${subject} give up projected production at ${r.position}.`);
     }
-    // Actual slot assignments, not a guessed positional replacement or roster-count surplus.
-    if(position)for(const replacement of position.starter_replacements||[]){
-      const outgoing=playerName(replacement.outgoing_player_id),incoming=playerName(replacement.replacement_player_id);
-      if(outgoing&&incoming)details.push(replacement.replacement_was_already_starting?`${incoming} was already starting; the trade shifts ${incoming} into the ${replacement.slot} spot held by ${outgoing}.`:`In ${possessive} projected lineup, ${incoming} takes over the ${replacement.slot} spot held by ${outgoing}.`);
-      else if(outgoing&&replacement.replacement_player_id===null)details.push(`The ${replacement.slot} spot held by ${outgoing} is left unfilled in ${possessive} projected lineup.`);
+    // Marginal replacement is a change of starting players, not WR1/WR2 slot order.
+    if(position){
+      const changes=position.lineup_changes;
+      const entering=changes?.entering||[],leaving=changes?.leaving||[];
+      for(const entry of entering){const name=playerName(entry.player_id);if(!name)continue;
+        details.push(entry.origin==='bench'?`${name} comes off ${possessive} bench to start at ${entry.slot}.`:
+          `${name} enters ${possessive} starting lineup at ${entry.slot}.`);
+      }
+      if(entering.length&&leaving.length){const departing=names(leaving.map(p=>p.player_id));
+        if(departing)details.push(`${departing} ${leaving.filter(p=>playerName(p.player_id)).length>1?'leave':'leaves'} ${possessive} starting lineup.`);
+      }
+      for(const mix of changes?.flex_mix||[]){
+        const label=counts=>join(Object.entries(counts).map(([p,n])=>n===1?({QB:'a QB',RB:'an RB',WR:'a WR',TE:'a TE'}[p]||p):`${n} ${p}s`))||'an unfilled spot';
+        details.push(`${focal?'Your':'Their'} ${mix.slot} mix changes from ${label(mix.before)} to ${label(mix.after)}.`);
+      }
+      if(!changes){
+        // Older results can prove set membership but not exact slot chains.
+        const enteringNames=names(position.entering_lineup_ids);
+        if(enteringNames)details.push(`${enteringNames} ${plural(position.entering_lineup_ids)?'enter':'enters'} ${possessive} starting lineup.`);
+      }
+      if(position.after_unfilled_slots>position.before_unfilled_slots)
+        details.push(`${focal?'Your':'Their'} projected lineup has ${position.after_unfilled_slots-position.before_unfilled_slots} more unfilled starting spot${position.after_unfilled_slots-position.before_unfilled_slots===1?'':'s'}.`);
     }
     if(position)for(const r of rows){
-      const promotedIds=(r.after_starter_ids||[]).filter(id=>(r.before_forecasted_bench_ids||[]).includes(id)),promoted=names(promotedIds);
-      if(promoted)details.push(`${promoted} ${plural(promotedIds)?'move':'moves'} from the bench into ${possessive} projected ${r.position} lineup.`);
       const bench=names(r.outgoing_bench_ids);
       if(bench)details.push(`${bench} ${plural(r.outgoing_bench_ids)?'were':'was'} outside ${possessive} projected starting lineup. ${strategy.depth_conversion_candidate?'This lets '+(focal?'you':'them')+' move depth toward the future.':'That is still depth '+(focal?'you':'they')+' would be giving up.'}`);
       const benchIncoming=(r.incoming_player_ids||[]).filter(id=>(r.after_forecasted_bench_ids||[]).includes(id)),incoming=names(benchIncoming);

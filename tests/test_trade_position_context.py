@@ -105,3 +105,47 @@ def test_published_strength_reuse_requires_state_horizon_and_full_assignment_ide
     # Equal totals with a different assigned player still cannot establish identity.
     view.optimized_lineup=lineup.model_copy(update={'assignments':(lineup.assignments[0].model_copy(update={'player_id':'other'}),*lineup.assignments[1:])})
     assert 'baseline_league_strength' not in read()
+
+
+@pytest.mark.parametrize('incoming_position',[Position.RB,Position.TE,Position.QB])
+def test_actual_starter_set_captures_cross_position_flex_and_superflex_entrant(incoming_position):
+    before,_,forecasts,leg=fixture(send='a1')
+    team=before.team_states[0]
+    # a1 starts at WR; a2 moves from FLEX to WR when a1 leaves. The actual
+    # marginal entrant is reserve at FLEX/SF, even though no reserve is traded.
+    slot=RosterSlot.SUPERFLEX if incoming_position==Position.QB else RosterSlot.FLEX
+    before=before.model_copy(update={'players':before.players+(Player(player_id='reserve',full_name='Reserve',position=incoming_position),),
+        'team_states':(team.model_copy(update={'roster':tuple(r for r in team.roster if r.player_id!='qb')+(RosterEntry(player_id='reserve',slot=RosterSlot.BENCH),)}),before.team_states[1]),
+        'league':before.league.model_copy(update={'rules':before.league.rules.model_copy(update={'lineup':(LineupRequirement(slot=RosterSlot.WR,count=1),LineupRequirement(slot=slot,count=1))})})})
+    forecasts=forecasts+( _forecast('reserve',70,0).model_copy(update={'position':incoming_position}),)
+    after=before.model_copy(update={'team_states':(before.team_states[0].model_copy(update={'roster':tuple(r for r in before.team_states[0].roster if r.player_id!='a1')}),before.team_states[1])})
+    comparison,result=_position_comparison_and_context(before,after,forecasts,team_id='alpha',leg=leg,
+        horizon=ForecastHorizon.SEASON,forecast_as_of=before.as_of)
+    assert result['entering_lineup_ids']==('reserve',)
+    assert result['departing_lineup_ids']==('a1',)
+    assert any(r['position']==incoming_position.value for r in result['positions'])
+    entrant=result['lineup_changes']['entering'][0]
+    assert entrant['origin']=='bench' and entrant['slot']==slot.value
+    assert result['lineup_changes']['flex_mix']==({'slot':slot.value,'before':{'WR':1},'after':{incoming_position.value:1}},)
+    assert result['starter_replacements'][0]['replacement_was_already_starting']
+    assert sum(r['expected_points'] for r in result['lineup_changes']['entering'])-sum(r['expected_points'] for r in result['lineup_changes']['leaving'])==pytest.approx(result['expected_points_delta'])
+
+
+def test_three_required_wr_rank_cascade_identifies_the_bench_entrant():
+    before=_state()
+    ids=tuple('w'+str(i) for i in range(1,6))
+    players=tuple(Player(player_id=i,full_name=i,position=Position.WR) for i in ids)
+    roster=tuple(RosterEntry(player_id=i,slot=RosterSlot.BENCH) for i in ids)
+    before=before.model_copy(update={'players':before.players+players,
+        'team_states':(before.team_states[0].model_copy(update={'roster':roster}),before.team_states[1]),
+        'league':before.league.model_copy(update={'rules':before.league.rules.model_copy(update={'lineup':(
+            LineupRequirement(slot=RosterSlot.WR,count=3),LineupRequirement(slot=RosterSlot.FLEX,count=1))})})})
+    forecasts=tuple(_forecast(i,points,0) for i,points in zip(ids,(100,90,80,70,60)))
+    after=before.model_copy(update={'team_states':(before.team_states[0].model_copy(update={'roster':roster[1:]}),before.team_states[1])})
+    _,context=_position_comparison_and_context(before,after,forecasts,team_id='alpha',leg=TradeLeg(team_id='alpha',sends=(PlayerAsset(player_id='w1'),)),horizon=ForecastHorizon.SEASON,forecast_as_of=before.as_of)
+    assert context['entering_lineup_ids']==('w5',)
+    assert context['lineup_changes']['entering'][0]['origin']=='bench'
+    assert context['lineup_changes']['entering'][0]['slot']=='FLEX'
+    assert context['expected_points_delta']==-40
+    assert context['lineup_changes']['flex_mix']==()
+    assert context['starter_replacements'][0]['replacement_was_already_starting']

@@ -15,6 +15,7 @@ def install_quick_frontier_routes(
     *,
     runtime_store: PrivateBetaRuntimeStore,
     require_user,
+    horizon_provider=None,
 ) -> None:
     """Install the first interactive counter-search slice.
 
@@ -43,6 +44,7 @@ def install_quick_frontier_routes(
                 max_depth=1,
                 max_evaluations=_QUICK_FRONTIER_EVALUATIONS,
                 search_instructions=request.search_instructions,
+                horizon_provider=horizon_provider,
             )
             return {
                 **result,

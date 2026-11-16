@@ -1,5 +1,6 @@
 """Describe existing optimized lineups; do not infer surplus from roster counts."""
 from fsffl.state.models import PlayerAsset, PickAsset
+from collections import Counter
 
 
 def summarize_trade_position_context(before_state, after_state, before, after, leg, received_assets=()):
@@ -17,7 +18,7 @@ def summarize_trade_position_context(before_state, after_state, before, after, l
     added = set(after_assign) - set(before_assign)
     roster_before = {r.player_id for t in before_state.team_states if t.team_id == leg.team_id for r in t.roster}
     roster_after = {r.player_id for t in after_state.team_states if t.team_id == leg.team_id for r in t.roster}
-    affected = set(outgoing) | (roster_before ^ roster_after)
+    affected = set(outgoing) | (roster_before ^ roster_after) | removed | added
     positions = sorted({players[pid].position.value for pid in affected if pid in players})
     def group(ids, position):
         return tuple(sorted(pid for pid in ids if pid in players and players[pid].position.value == position))
@@ -38,12 +39,26 @@ def summarize_trade_position_context(before_state, after_state, before, after, l
             'outgoing_bench_ids': tuple(pid for pid in outgoing if pid in before.bench_player_ids and players[pid].position.value == position),
             'outgoing_unavailable_ids': tuple(pid for pid in outgoing if pid in before.unavailable_player_ids and players[pid].position.value == position),
             'outgoing_missing_forecast_ids': tuple(pid for pid in outgoing if pid in before.missing_forecast_player_ids and players[pid].position.value == position)})
+    flex_mix=[]
+    for slot in ('FLEX','SUPERFLEX'):
+        old=Counter(a.position.value for a in before.assignments if a.slot.value==slot)
+        new=Counter(a.position.value for a in after.assignments if a.slot.value==slot)
+        if old!=new: flex_mix.append({'slot':slot,'before':dict(sorted(old.items())),'after':dict(sorted(new.items()))})
     return {'team_id':leg.team_id, 'status':'complete', 'basis':'optimized_horizon_lineup',
         'source_state_id':before_state.state_id,'after_state_id':after_state.state_id,
         'horizon':before.horizon.value, 'as_of':before.as_of.isoformat(),
         'before_expected_points':before.expected_points,'after_expected_points':after.expected_points,
         'expected_points_delta':after.expected_points-before.expected_points,
         'departing_lineup_ids':tuple(sorted(removed)), 'entering_lineup_ids':tuple(sorted(added)),
+        'lineup_changes':{'flex_mix':tuple(flex_mix),
+            'entering':tuple({'player_id':pid,'position':after_assign[pid].position.value,
+                'slot':after_assign[pid].slot.value,'expected_points':after_assign[pid].expected_points,
+                'origin':'trade' if pid in roster_after-roster_before else
+                    'bench' if pid in before.bench_player_ids else 'roster'} for pid in sorted(added)),
+            'leaving':tuple({'player_id':pid,'position':before_assign[pid].position.value,
+                'slot':before_assign[pid].slot.value,'expected_points':before_assign[pid].expected_points,
+                'reason':'trade' if pid in outgoing else 'cut' if pid not in roster_after else 'bench'}
+                for pid in sorted(removed))},
         'starter_replacements':tuple({'slot':a.slot.value,'outgoing_player_id':a.player_id,
             'replacement_was_already_starting':any(b.player_id in before_assign for b in after.assignments if b.slot==a.slot and b.slot_index==a.slot_index),
             'replacement_player_id':next((b.player_id for b in after.assignments
@@ -53,4 +68,4 @@ def summarize_trade_position_context(before_state, after_state, before, after, l
         'positions':rows, 'received_pick_ids':tuple(a.pick_id for a in received_assets if isinstance(a, PickAsset)),
         'surplus_confirmed':False,
         'interpretation':'Projected roles only; weekly availability, resilience and competitive effects remain separate',
-        'model_version':'next4-trade-position-context-v1'}
+        'model_version':'next4-trade-position-context-v2:starting-set-changes'}

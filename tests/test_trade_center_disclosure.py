@@ -55,7 +55,8 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
         'positions':[{'position':'RB','expected_points_delta':123.5,'incoming_player_ids':['b'],'after_starter_ids':['b'],
             'baseline_league_strength':{'team_id':'a','position':'RB','strength_index':80}},
             {'position':'WR','expected_points_delta':-105.5,'outgoing_starter_ids':['z']}],
-        'starter_replacements':[{'slot':'WR','outgoing_player_id':'z','replacement_player_id':'d'}]},
+        'lineup_changes':{'entering':[{'player_id':'d','slot':'FLEX','origin':'bench'}],'leaving':[{'player_id':'z'}]},
+        'starter_replacements':[{'slot':'WR','outgoing_player_id':'z','replacement_player_id':'b','replacement_was_already_starting':True}]},
         {'team_id':'b','status':'complete','source_state_id':'s','after_state_id':'t',
             'positions':[{'position':'RB','expected_points_delta':-100,'outgoing_starter_ids':['b']}]}]
     with playwright.sync_playwright() as p:
@@ -67,9 +68,9 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
             page.set_content(html)
             page.evaluate("document.querySelectorAll('.route-screen').forEach(n=>n.hidden=n.id!=='trade-center-screen')")
             page.add_script_tag(content="const state={route:'trade_center',context:{team_id:'a',state_id:'s'}};const qs=s=>document.querySelector(s);const qsa=s=>[...document.querySelectorAll(s)];const escapeHtml=s=>String(s??'');const fmtNumber=n=>String(n??'—');")
-            for name in ('trade_center.js','trade_evidence_status.js','trade_football_story.js','trade_decision_experience.js','trade_primary_narrative.js','beta_product_corrections.js','north_star_trade_center.js','market_trade_recomposition.js','market_trade_drilldown.js'):
+            for name in ('trade_center.js','trade_evidence_status.js','trade_football_story.js','trade_decision_experience.js','trade_primary_narrative.js','trade_counter_paths.js','beta_product_corrections.js','north_star_trade_center.js','market_trade_recomposition.js','market_trade_drilldown.js'):
                 page.add_script_tag(content=(STATIC/name).read_text())
-            page.evaluate("tradeUiState.counterpartyTeamId='b';tradeUiState.focalSelected=new Set(['player:z']);tradeUiState.counterpartySelected=new Set(['player:b']);tradeUiState.browser={focal_team:{team_id:'a',assets:[{asset_ref:'player:z',label:'Zay Flowers'},{asset_ref:'player:d',label:'Josh Downs'}]},counterparties:[{team_id:'b',display_name:'Other owner',assets:[{asset_ref:'player:b',label:'Bucky Irving'}]}]}")
+            page.evaluate("tradeUiState.counterpartyTeamId='b';tradeUiState.focalSelected=new Set(['player:z']);tradeUiState.counterpartySelected=new Set(['player:b']);tradeUiState.browser={state_id:'s',focal_team:{team_id:'a',assets:[{asset_ref:'player:z',label:'Zay Flowers'},{asset_ref:'player:d',label:'Josh Downs'}]},counterparties:[{team_id:'b',display_name:'Other owner',assets:[{asset_ref:'player:b',label:'Bucky Irving'}]}]}")
             page.wait_for_timeout(100)
             page.evaluate('(r)=>{window.renderTradeAnalysis(r);window.renderTradeSimulationResult(r)}',fixture)
             page.wait_for_selector('.ns3-drill-card')
@@ -103,7 +104,7 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
                 assert card.get_attribute('open') is None
             page.locator('.ns3-drill-card').nth(3).locator('summary').click()
             assert 'Missing: long-term Intrinsic trade economics' in page.locator('.ns3-missing-evidence').text_content()
-            assert 'Josh Downs takes over the WR spot held by Zay Flowers' in page.locator('.ns3-drill-card').nth(3).text_content()
+            assert 'Josh Downs comes off your bench to start at FLEX' in page.locator('.ns3-drill-card').nth(3).text_content()
             assert 'You asked to build for the long term' in page.locator('.ns3-drill-card').nth(3).text_content()
             assert 'Losing Bucky Irving leaves their RB lineup weaker' in page.locator('.ns3-drill-card').nth(4).text_content()
             page.screenshot(path=str(tmp_path/f'trade-{width}.png'),full_page=True)
@@ -147,6 +148,32 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
                 page.wait_for_timeout(100)
                 assert page.locator('#ns2-trade-room > header h2').text_content()==title
                 assert page.locator('.ns2-status').text_content()=='Evaluation complete'
+            page.evaluate('(r)=>window.renderTradeSimulationResult(r)',updated)
+            page.wait_for_timeout(150)
+            page.evaluate("()=>{window.counterCalls=0;window.exploreTradeFrontier=async()=>{counterCalls++;await new Promise(r=>setTimeout(r,50));throw new Error('Source unavailable')};}")
+            page.evaluate("()=>{const b=document.querySelector('[data-ns2-counter]');b.click();b.click()}")
+            page.locator('#ns2-counter-zone [role=alert]').wait_for()
+            assert page.evaluate('counterCalls')==1
+            assert 'Source unavailable' in page.locator('#ns2-counter-zone').inner_text()
+            assert page.locator('[data-ns2-counter]').is_enabled()
+            # Show only evaluated counter contexts, explain the original cost,
+            # and load the exact package through the guarded existing builder.
+            counter={'state_id_before':'s','focal_team_id':'a','counterparty_team_id':'b','points':[
+                {'point_id':'counter','is_seed':False,'feasibility_shape':'mutual_gain_candidate',
+                 'focal_assets':[{'kind':'player','label':'Josh Downs','asset':{'player_id':'d'}}],
+                 'counterparty_assets':[{'kind':'player','label':'Bucky Irving','asset':{'player_id':'b'}}],
+                 'counter_review':{'status':'improves_terms','improved':[{'team_id':'a','metric':'career','before':-80.7,'after':-20,'resolved':False}]}},
+                {'point_id':'unverified','is_seed':False,'feasibility_shape':'mutual_gain_candidate','counter_review':{'status':'incomplete'}}]}
+            page.evaluate('(r)=>window.renderTradeFrontierResult(r)',counter)
+            page.wait_for_timeout(150)
+            assert page.locator('[data-ns2-load-counter]').count()==1
+            assert 'Your Career value cost is reduced' in page.locator('#ns2-counter-zone').inner_text()
+            page.evaluate('(r)=>window.fsfflLoadCounterPackage(r.points[0],{...r,state_id_before:"old"})',counter)
+            assert page.evaluate('[...tradeUiState.focalSelected]')==['player:z']
+            page.locator('[data-ns2-load-counter]').click()
+            assert page.evaluate('[...tradeUiState.focalSelected]')==['player:d']
+            assert page.locator('.tc-builder').get_attribute('open') is not None
+            assert 'Analyze this trade' in page.locator('#trade-analysis-empty').text_content()
             assert not errors,errors
             page.close()
         browser.close()

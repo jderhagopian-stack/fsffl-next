@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import logging
 
 from fsffl.behavioral.models import OwnerBehaviorProfile
 from fsffl.opportunity.frontier import make_frontier_point
@@ -31,7 +32,9 @@ from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_objectives import TradeSearchInstructions, validate_search_instructions, build_trade_objective_assessment
 
 
-_PRODUCT_MODEL_VERSION = "next8-negotiation-frontier-v2"
+_logger=logging.getLogger("uvicorn.error")
+
+_PRODUCT_MODEL_VERSION = "next8-negotiation-frontier-v3:published-priority-counter-review"
 
 
 def _package(team_id: str, assets) -> TradePackageSeed:
@@ -89,6 +92,7 @@ def build_negotiation_frontier(
     max_depth: int = 1,
     max_evaluations: int = 24,
     search_instructions: TradeSearchInstructions | None = None,
+    horizon_provider=None,
 ) -> dict[str, object]:
     """Explore a responsive first slice of the governed negotiation frontier.
 
@@ -126,10 +130,75 @@ def build_negotiation_frontier(
         _package(counter_leg.team_id, counter_leg.sends),
     )
 
+    # Reuse the existing published source once, bounded to these two rosters.
+    read=None
+    if horizon_provider is not None:
+        try:
+            ids=frozenset(r.player_id for t in league_state.team_states
+                if t.team_id in (focal_leg.team_id,counter_leg.team_id) for r in t.roster)
+            read=horizon_provider(runtime,ids)
+            from .trade_intrinsic_evidence import published_horizons_match_runtime
+            if read is not None and not published_horizons_match_runtime(runtime,read):
+                read=None
+        except Exception as exc:
+            _logger.warning("Counter raw horizons unavailable error_type=%s",type(exc).__name__)
+            read=None
+    screen_inputs={}
+    if read is not None and runtime.forecast_evidence is not None:
+        from .simulation_forecasts import current_forecast_coordinates
+        from fsffl.forecast.models import ForecastHorizon
+        from fsffl.forecast import attach_provisional_position_floor_forecasts
+        from fsffl.team_utility import optimize_team_lineup
+        from .trade_value_adapter import cardinal_market_profiles
+        forecasts,horizon,cutoff=current_forecast_coordinates(league_state,runtime.forecast_evidence)
+        effective=(forecasts if horizon==ForecastHorizon.REST_OF_SEASON else
+            attach_provisional_position_floor_forecasts(league_state,forecasts,as_of=cutoff,horizon=horizon))
+        simulation=runtime.simulation_analytics
+        baselines={v.team_id:v.optimized_lineup for v in (simulation.team_views if simulation is not None else ()) if v.optimized_lineup is not None}
+        for team in (focal_leg.team_id,counter_leg.team_id):
+            if team not in baselines:
+                baselines[team]=optimize_team_lineup(league_state,effective,team_id=team,as_of=cutoff,
+                    horizon=horizon,allow_unfilled_slots=True,model_version='market-preliminary-screen-lineup-v1')
+        profiles=cardinal_market_profiles(runtime.value_evidence)
+        screen_inputs={'effective_forecasts':effective,'baseline_by_team':baselines,'profiles':profiles,
+            'market_values':{pid:p.market_price.distribution.mean for pid,p in profiles.items() if p.market_price is not None}}
+    seed_effects=None
+
     detail_by_point: dict[str, dict[str, object]] = {}
 
     def evaluator(point) -> OpportunityCandidate:
         point_proposal = _proposal(point, as_of=league_state.as_of)
+        nonlocal seed_effects
+        if read is not None and runtime.forecast_evidence is not None and focal_team_id==runtime.selected_team_id and all(a.kind in ('player','pick') for a in (*point.focal_package.assets,*point.counterparty_package.assets)):
+            from .market_discovery_runtime import evaluate_candidate_path
+            from .trade_intrinsic_evidence import bind_trade_intrinsic_values
+            from fsffl.trade_decision.roster_legality import TeamRosterLegalityResolution
+            from .strategic_discovery_presentation import discovery_display_context
+            from .counter_review import counter_effects,review_counter
+            def ref(a):
+                return f'player:{a.player_id}' if a.kind=='player' else f'pick:{a.pick_id}'
+            row={'point_id':point.point_id,'counterparty_team_id':counter_leg.team_id,
+                'send':[{'asset_ref':ref(a)} for a in point.focal_package.assets],
+                'receive':[{'asset_ref':ref(a)} for a in point.counterparty_package.assets]}
+            result=evaluate_candidate_path(runtime,row,**screen_inputs)
+            cuts=tuple(TeamRosterLegalityResolution.model_validate(r) for r in result['roster_legality'])
+            result['horizon_asset_economics']=bind_trade_intrinsic_values(runtime,point_proposal,read,roster_resolutions=cuts)
+            assessment=build_trade_objective_assessment(runtime,point_proposal,result,search_instructions)
+            context=discovery_display_context({'evidence_status':'pre_simulation_screened',
+                'objective_assessment':assessment,'preliminary_decision_screen':result.get('preliminary_bilateral_screen')})
+            effects=counter_effects(result,focal_team_id,counter_leg.team_id)
+            if point.point_id==seed.point_id:seed_effects=effects
+            review=review_counter(seed_effects,effects,display_group=context['group'])
+            detail_by_point[point.point_id]={'objective_assessment':assessment,'counter_review':review,
+                'decision_shape':result['decision_shape'],
+                'feasibility_shape':'mutual_gain_candidate' if review['status'] in ('improves_terms','alternative') else 'mixed',
+                'action_authority':'diagnostic_only','reasons':['materiality_not_evaluated','unknown_acceptance']}
+            return OpportunityCandidate(candidate_id=point.point_id,kind=OpportunityKind.PRICE_DISCOVERY,
+                focal_team_id=focal_team_id,league_state_id=league_state.state_id,as_of=league_state.as_of,
+                discovery_status=DiscoveryStatus.EVALUATED,action_authority=ActionAuthority.DIAGNOSTIC_ONLY,
+                evidence_completeness=EvidenceCompleteness.PARTIAL,
+                reasons=(CandidateReason.MATERIALITY_NOT_EVALUATED,CandidateReason.UNKNOWN_ACCEPTANCE),
+                search_model_version=_PRODUCT_MODEL_VERSION)
         analysis = build_private_beta_trade_analysis(
             runtime,
             point_proposal,
@@ -235,6 +304,7 @@ def build_negotiation_frontier(
                     }
                     for asset in point.counterparty_package.assets
                 ],
+                'counter_review': {'status':'incomplete','missing':['published_horizons'],'decision_effect':'no_disposition_change'},
                 **detail_by_point.get(point.point_id, {}),
             }
         )
@@ -258,6 +328,7 @@ def build_negotiation_frontier(
             "materiality_evaluated": False,
             "market_value_rewritten": False,
             "interactive_compute_bounded": True,
+            "published_native_context":read is not None,
         },
         "model_version": _PRODUCT_MODEL_VERSION,
     }

@@ -16,7 +16,7 @@ const r={state_id_before:'before',state_id_after:'after',focal_team_id:'a',count
  team_deltas:[{team_id:'a',competitive:{playoff_probability:.03}},{team_id:'b',competitive:{playoff_probability:0}}],
  positional_context:[{team_id:'a',status:'complete',source_state_id:'before',after_state_id:'after',positions:[
  {position:'RB',expected_points_delta:123.5,incoming_player_ids:['bucky'],after_starter_ids:['bucky'],baseline_league_strength:{team_id:'a',position:'RB',strength_index:80}},
- {position:'WR',expected_points_delta:-105.5,outgoing_starter_ids:['flowers']}],starter_replacements:[{slot:'WR',outgoing_player_id:'flowers',replacement_player_id:'replacement'}]},
+ {position:'WR',expected_points_delta:-105.5,outgoing_starter_ids:['flowers']}],lineup_changes:{entering:[{player_id:'replacement',slot:'FLEX',origin:'bench'}],leaving:[{player_id:'flowers'}]},starter_replacements:[{slot:'WR',outgoing_player_id:'flowers',replacement_player_id:'replacement'}]},
  {team_id:'b',status:'complete',source_state_id:'before',after_state_id:'after',positions:[{position:'RB',expected_points_delta:-123.5,outgoing_starter_ids:['bucky']}]}],
  objective_assessment:{side_a:{context:{team_id:'a',calculated_competitive_state:'contender',explicitly_directed:true,objectives:['career_contribution']},transaction_strategy:{resilience_worsens:true}},side_b:{context:{team_id:'b'},transaction_strategy:{}}},
  horizon_asset_economics:{source:{league_state_id:'before'},career:{roster_adjusted:{side_a:{team_id:'a',status:'complete',roster_adjusted_intrinsic_delta:-80.7},side_b:{team_id:'b',status:'complete',roster_adjusted_intrinsic_delta:80.7}}},three_year:{roster_adjusted:{side_a:{team_id:'a',status:'complete',roster_adjusted_intrinsic_delta:1.5},side_b:{team_id:'b',status:'complete',roster_adjusted_intrinsic_delta:-1.5}}}}};
@@ -24,7 +24,7 @@ const before=JSON.stringify(r),a=explain(r,'a',names),b=explain(r,'b',names);
 assert.match(a.headline,/Stronger at RB, weaker at WR/);
 assert.match(a.summary,/Bucky Irving strengthens your RB lineup/);
 assert.match(a.summary,/Losing Zay Flowers/);assert.match(a.summary,/3.0 percentage points/);
-assert.match(a.details.join(' '),/Josh Downs takes over the WR spot held by Zay Flowers/);
+assert.match(a.details.join(' '),/Josh Downs comes off your bench to start at FLEX/);
 assert.match(a.summary,/below the league average/);
 assert.match(a.details.join(' '),/You asked to build for the long term/);
 assert.match(a.details.join(' '),/a contender/);
@@ -43,7 +43,7 @@ x=JSON.parse(before);x.positional_context[0].positions=[{position:'WR',expected_
 story=explain(x,'a',names);assert.match(story.details.join(' '),/still depth/);assert(!story.headline.includes('Trade depth'));
 x.objective_assessment.side_a.transaction_strategy.depth_conversion_candidate=true;x.positional_context[0].received_pick_ids=['p'];
 story=explain(x,'a',names);assert.equal(story.headline,'Trade depth for the future');assert.match(story.details.join(' '),/also receive a draft pick/);
-x=JSON.parse(before);x.positional_context[0].starter_replacements[0].replacement_was_already_starting=true;assert.match(explain(x,'a',names).details.join(' '),/was already starting/);
+x=JSON.parse(before);x.positional_context[0].starter_replacements[0].replacement_was_already_starting=true;x.positional_context[0].starter_replacements[0].replacement_player_id='bucky';assert(!explain(x,'a',names).details.join(' ').includes('Bucky Irving'));assert.match(explain(x,'a',names).details.join(' '),/Josh Downs comes off your bench/);
 x=JSON.parse(before);x.positional_context[0].positions[0].incoming_player_ids=['bucky','bench'];x.positional_context[0].positions[0].after_starter_ids=['bucky','bench'];assert.match(explain(x,'a',names).summary,/Bucky Irving and Young WR strengthen/);
 assert(!/acceptance|will accept|wants to|surplus|significant|negligible/.test(JSON.stringify(a)+JSON.stringify(b)));
 """

@@ -32,7 +32,7 @@ def test_counter_paths_reuse_existing_trade_builder_without_new_model_authority(
     source = (STATIC / "trade_counter_paths.js").read_text()
     assert "tradeUiState.focalSelected=new Set" in source
     assert "tradeUiState.counterpartySelected=new Set" in source
-    assert "Analyze Trade to run this exact package" in source
+    assert "Analyze this trade to see the full effect" in source
     assert "api('/api/" not in source
     assert "fetch(" not in source
     assert "score=" not in source.lower()

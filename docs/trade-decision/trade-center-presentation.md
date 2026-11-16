@@ -26,3 +26,13 @@ Use the returned competitive-state classification without equating it with an ow
 A projected bench role does not prove surplus, a tiny raw positive does not prove a meaningful gain, and an incoming player need not enter the lineup. Name cuts where required. Do not invent acceptance, owner motives, certainty about injury/bye cover, or reference-anchor significance. Current/championship/first-place outcomes remain separate. Use matching State and forecast-period positional evidence; if a role or replacement is unavailable, omit the unsupported claim.
 
 Published league-relative strength is reused only when the source State, forecast horizon/as-of, full optimized assignments, bench IDs and per-position points match the current comparison. No new optimization, Simulation, provider request or persistence is added for narrative generation. The formatter consumes facts; it does not assign a score, materiality threshold or recommendation.
+
+## Marginal lineup replacements
+
+Explain the difference between the before/after **sets of starting players**, not numerical WR1/WR2 or slot reordering. An existing starter moving from FLEX to WR does not supply new production. Include every affected position when a different-position bench player enters through FLEX/Superflex. Describe actual entrants, where they start, and who leaves the lineup. Do not fabricate a one-to-one replacement in a multi-asset trade. Preserve unfilled slots and cut/demotion distinctions. Legacy slot-movement fields remain for compatibility but no longer drive replacement prose.
+
+## Counteroffer review
+
+The quick and deep frontier keep their four/24 evaluation limits and canonical owned packages. A request reads the existing published native source once for the two rosters, then reuses Explore's accepted preliminary roster/economic/priority screen. No full season Simulation, provider acquisition or persistence work is added. Default inferred goals and explicit instructions use the same owner assessment as Explore.
+
+Compare each team's Current, 3-Year and Career changes against the original package in its own units. An original negative may shrink or disappear, while a different cost can emerge or deepen; explain both. Never combine the horizons, invent a universal repair score, or call this a final recommendation. Qualified counters remain preliminary and load into the existing guarded builder for explicit full analysis. Missing native evidence cannot become a claimed future-aware counter just because the legacy roster-only classifier was positive.
