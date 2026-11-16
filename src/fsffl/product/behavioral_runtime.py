@@ -68,6 +68,15 @@ def cached_behavior_profile_for_team(
         return _profile_cache.get((league_state.state_id, team_id))
 
 
+def cached_behavior_profile_readiness(league_state: LeagueState) -> dict[str, object]:
+    """Inspect the exact-State lookup without loading or rebuilding history."""
+    state_id = league_state.state_id
+    with _profile_cache_lock:
+        profiles = tuple(p for (sid,_),p in _profile_cache.items() if sid == state_id)
+    return {'state_id':state_id, 'mapped_profiles':len(profiles),
+            'trade_only_profiles':sum(p.completed_trade_activity is not None for p in profiles)}
+
+
 def _publish_profiles_for_state(
     league_state: LeagueState,
     result: BehavioralSyncResult,
