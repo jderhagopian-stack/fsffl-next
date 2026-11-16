@@ -2945,6 +2945,7 @@ def create_app(
                 proposal,
                 focal_team_id=runtime.selected_team_id,
                 search_instructions=request.search_instructions,
+                horizon_provider=discovery_horizon_provider,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
