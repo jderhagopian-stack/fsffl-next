@@ -68,3 +68,18 @@ is preserved and is not replaced by raw acquisition counts.
 Explore and Trade Center display the same compact observations inside existing
 details. They do not label an owner as unwilling because a pattern is absent, and
 they do not change Value, Forecast, Simulation or final trade disposition.
+
+### Restart continuity
+
+Restoring saved Behavioral profiles must also bind them to the exact restored
+State's read-only lookup. A READY history record alone does not prove that Search
+or Trade Center can consume it. The same binding applies to session context and
+history readers; unchanged results are coalesced and the cache remains bounded.
+A different stored State cannot populate the current lookup.
+
+When legacy trade-only fields are absent, restore may derive them once in memory
+from events already read by that restore, at each current owner's saved cutoff.
+Use the existing aggregation and require trade-count/shape reconciliation; keep
+unknown detail when it does not reconcile. This does not fetch history, write
+profiles or rerun football models. The UI labels trading history explicitly and
+shows a short unavailable message for a genuinely missing matching snapshot.
