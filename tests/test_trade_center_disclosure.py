@@ -148,6 +148,14 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
                 page.wait_for_timeout(100)
                 assert page.locator('#ns2-trade-room > header h2').text_content()==title
                 assert page.locator('.ns2-status').text_content()=='Evaluation complete'
+            page.evaluate('(r)=>window.renderTradeSimulationResult(r)',updated)
+            page.wait_for_timeout(150)
+            page.evaluate("()=>{window.counterCalls=0;window.exploreTradeFrontier=async()=>{counterCalls++;await new Promise(r=>setTimeout(r,50));throw new Error('Source unavailable')};}")
+            page.evaluate("()=>{const b=document.querySelector('[data-ns2-counter]');b.click();b.click()}")
+            page.locator('#ns2-counter-zone [role=alert]').wait_for()
+            assert page.evaluate('counterCalls')==1
+            assert 'Source unavailable' in page.locator('#ns2-counter-zone').inner_text()
+            assert page.locator('[data-ns2-counter]').is_enabled()
             # Show only evaluated counter contexts, explain the original cost,
             # and load the exact package through the guarded existing builder.
             counter={'state_id_before':'s','focal_team_id':'a','counterparty_team_id':'b','points':[
