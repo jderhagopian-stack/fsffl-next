@@ -630,6 +630,7 @@ def evaluate_candidate_path(
     asset_index: Mapping[tuple[str, str], object] | None = None,
     effective_forecasts=None,
     baseline_by_team: Mapping[str, object] | None = None,
+    owner_history_context=None,
 ) -> dict[str, object]:
     """Attach the bounded cheap Decision-owned pre-Simulation bilateral screen.
 
@@ -796,6 +797,8 @@ def evaluate_candidate_path(
         item.required_cut_count == 0 or item.cut_market_value_total is not None
         for item in trade_team_resolutions
     )
+    from .owner_history_runtime import build_trade_owner_history
+    owner_history = build_trade_owner_history(runtime, proposal, context=owner_history_context)
     completed = monotonic()
 
     from .simulation_forecasts import current_forecast_identity
@@ -812,6 +815,7 @@ def evaluate_candidate_path(
         "acceptance_probability": None,
         "focal_roster_delta": comparisons[focal_team_id].model_dump(mode="json"),
         "counterparty_roster_delta": comparisons[counterparty_team_id].model_dump(mode="json"),
+        "owner_history": owner_history,
         "behavioral_evidence_attached": behavioral is not None,
         "behavioral_context": (
             behavioral.model_dump(mode="json") if behavioral is not None else None
