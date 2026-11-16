@@ -48,6 +48,7 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
         'scenario_simulation_count':50000,'team_deltas':[{'team_id':'a','competitive':{'expected_wins':.1,'playoff_probability':.03,'first_place_probability':.01}},{'team_id':'b','competitive':{'expected_wins':-.1,'playoff_probability':-.03}}],
         'availability':{'competitive_outcomes':True,'final_trade_disposition':False},
         'disposition':{'disposition':'insufficient_evidence','evidence':{'unavailable_metrics':['intrinsic_value'],'material_gains':['playoff_probability'],'material_losses':['largest_single_player_lineup_drop']}}}
+    fixture['position_strength']['positions'].append({'position':'WR','before_expected_points':463.5,'after_expected_points':358.,'expected_points_delta':-105.5})
     fixture['state_id_after']='t'
     fixture['scenario_computation']={'authoritative':True}
     fixture['positional_context']=[{'team_id':'a','status':'complete','source_state_id':'s','after_state_id':'t',
@@ -78,6 +79,8 @@ def test_actual_trade_center_panels_stay_open_across_mutations_and_update_for_ne
             assert not page.locator('.beta-trade-summary.final').is_visible()
             assert page.locator('.tc-focus').count()==0
             assert page.locator('#ns2-trade-room > header h2').count()==1
+            lineup_summary=page.locator('.ns3-drill-card').nth(1).locator('summary').inner_text()
+            assert 'RB +123.5' in lineup_summary and 'WR -105.5' in lineup_summary
             assert not page.locator('.tc-builder').get_attribute('open')
             assert 'Zay Flowers' in page.locator('.ns2-trade-package').text_content()
             assert 'Bucky Irving' in page.locator('.ns2-trade-package').text_content()
