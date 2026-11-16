@@ -70,10 +70,20 @@ def test_quick_and_deep_routes_reuse_one_published_read_and_existing_screen(monk
         body=response.json()
         assert body['evaluated_count']<=bound
         assert body['authority']['published_native_context']
+        assert body['authority']['targeted_substitutions']
+        assert body['policy']['include_substitutions']
+        assert not body['authority']['search_hints_are_transaction_effects']
+        assert all(any(a['asset'].get('player_id') == 'opp' for a in p['counterparty_assets']) for p in body['points'])
+        assert any([a['asset'].get('player_id') for a in p['focal_assets']] == ['bench'] for p in body['points'])
         assert all(p['counter_review']['effects']['basis']=='remaining_regular_season_weekly_mean' for p in body['points'])
         assert all(p['objective_assessment']['side_a']['context']['explicitly_directed'] for p in body['points'])
         assert all(p['action_authority']=='diagnostic_only' for p in body['points'])
-    assert len(reads)==2  # Once per request, not once per candidate.
+    protected = client.post('/api/trade-center/frontier/quick', json={**payload,
+        'search_instructions':{'objectives':['career_contribution'],'protected_player_ids':['bench']}})
+    assert protected.status_code == 200, protected.text
+    assert all(all(a['asset'].get('player_id') != 'bench' for a in p['focal_assets'])
+        for p in protected.json()['points'])
+    assert len(reads)==3  # Once per request, not once per candidate.
     assert reads[0]==frozenset(p.player_id for p in state.players)
 
 

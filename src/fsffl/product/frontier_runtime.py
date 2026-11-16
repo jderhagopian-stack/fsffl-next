@@ -34,7 +34,7 @@ from .trade_objectives import TradeSearchInstructions, validate_search_instructi
 
 _logger=logging.getLogger("uvicorn.error")
 
-_PRODUCT_MODEL_VERSION = "next8-negotiation-frontier-v3:published-priority-counter-review"
+_PRODUCT_MODEL_VERSION = "next8-negotiation-frontier-v4:targeted-substitutions"
 
 
 def _package(team_id: str, assets) -> TradePackageSeed:
@@ -264,11 +264,25 @@ def build_negotiation_frontier(
         }
         return candidate
 
+    targeted = bool(read is not None and screen_inputs and focal_team_id == runtime.selected_team_id
+        and all(a.kind in ('player', 'pick') for a in (*focal_leg.sends, *counter_leg.sends)))
+    def order_neighbors(point, neighbors):
+        # Only the original offer has established cost evidence at this stage.
+        # Subsequent breadth-first layers preserve ordinary geometry/order.
+        if point.point_id != seed.point_id:
+            return neighbors
+        from .counter_search import order_counter_hypotheses
+        starters = {team: frozenset(a.player_id for a in lineup.assignments if a.player_id is not None)
+            for team, lineup in screen_inputs['baseline_by_team'].items()}
+        return order_counter_hypotheses(seed, neighbors, seed_effects=seed_effects,
+            published=read, starters=starters)
+
     policy = FrontierSearchPolicy(
         max_depth=max_depth,
         max_evaluations=max_evaluations,
         expand_focal_side=True,
         expand_counterparty_side=True,
+        include_substitutions=targeted,
     )
     result = explore_negotiation_frontier(
         seed,
@@ -278,6 +292,10 @@ def build_negotiation_frontier(
         evaluator=evaluator,
         policy=policy,
         search_model_version=_PRODUCT_MODEL_VERSION,
+        order_neighbors=order_neighbors if targeted else None,
+        # A counter should retain at least one asset the user is trying to get.
+        # Replacing the sole target is a different search, not better terms.
+        allow_neighbor=(lambda p: bool(set(p.counterparty_package.assets) & set(seed.counterparty_package.assets))) if targeted else None,
     )
 
     points = []
@@ -329,6 +347,8 @@ def build_negotiation_frontier(
             "market_value_rewritten": False,
             "interactive_compute_bounded": True,
             "published_native_context":read is not None,
+            "targeted_substitutions":targeted,
+            "search_hints_are_transaction_effects":False,
         },
         "model_version": _PRODUCT_MODEL_VERSION,
     }

@@ -147,3 +147,34 @@ def make_frontier_point(
             counterparty_package.canonical_id,
         ),
     )
+
+
+def substitute_packages(origin: TradePackageSeed, *, inventory: TeamTradeInventory,
+                        bounds: TradeSearchBounds) -> tuple[TradePackageSeed, ...]:
+    """Replace one offered asset with one other owned asset, without growing a deal.
+
+    A substitution is a single search move, not a valuation or claim of legality.
+    Ordinary roster legality and bilateral evaluation still run downstream.
+    """
+    if origin.team_id != inventory.team_id:
+        raise ValueError("origin package and inventory must belong to the same team")
+    owned = {_asset_key(a): a for a in inventory.assets}
+    offered = {_asset_key(a): a for a in origin.assets}
+    if not offered.keys() <= owned.keys():
+        raise ValueError("origin package contains an asset outside the owned inventory")
+    if len(origin.assets) > bounds.max_assets_per_side:
+        return ()
+    packages = {}
+    for removed in sorted(offered):
+        for added in sorted(owned.keys() - offered.keys()):
+            asset = owned[added]
+            if (asset.kind == "player" and not bounds.include_players or
+                asset.kind == "pick" and not bounds.include_picks or
+                asset.kind == "faab" and not bounds.include_faab):
+                continue
+            assets = tuple(a for k, a in sorted(offered.items()) if k != removed) + (asset,)
+            if _contains_multiple_faab(assets):
+                continue
+            key = canonical_package_id(origin.team_id, assets)
+            packages[key] = TradePackageSeed(team_id=origin.team_id, assets=assets, canonical_id=key)
+    return tuple(packages[k] for k in sorted(packages))
