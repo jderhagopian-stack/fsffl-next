@@ -7,13 +7,8 @@ const fsfflBaseTradeSimulationRenderer=typeof renderTradeSimulationResult==='fun
 
 function tradeBehaviorFitWords(value){return String(value||'unknown').replaceAll('_',' ')}
 function tradeBehaviorFitMarkup(fit){
-  if(!fit)return`<section class="trade-behavior-fit"><div><p class="eyebrow">Behavioral fit</p><h3>Unknown</h3><p>Historical owner evidence is not ready or cannot be mapped to this franchise. FSFFL does not substitute a guessed profile.</p></div></section>`;
-  const drivers=fit.drivers||[];
-  return`<section class="trade-behavior-fit ${escapeHtml(fit.direction||'unknown')}">
-    <div class="trade-behavior-fit-head"><div><p class="eyebrow">Behavioral fit for this exact package</p><h3>${escapeHtml(tradeBehaviorFitWords(fit.direction))}</h3><p>Directional inference from ${Number(fit.observed_trade_count||0).toLocaleString()} observed trade(s). This helps judge negotiation plausibility; it is not an acceptance probability.</p></div><span class="status-chip">${escapeHtml(tradeBehaviorFitWords(fit.evidence_level))}</span></div>
-    ${drivers.length?`<div class="trade-behavior-driver-grid">${drivers.map(driver=>`<div><strong>${escapeHtml(tradeBehaviorFitWords(driver.direction))}</strong><span>${escapeHtml(tradeBehaviorFitWords(driver.kind))}</span><small>${escapeHtml(driver.description)}</small></div>`).join('')}</div>`:'<p>No individual Behavioral drivers are available for this package.</p>'}
-    <p class="trade-behavior-boundary"><strong>Authority boundary:</strong> Behavioral fit cannot change governed Value coordinates, the focal accept/decline disposition, competitive Simulation, or NEXT-6 action authority. Numeric acceptance remains unavailable until separately calibrated.</p>
-  </section>`;
+  if(!fit||!fit.drivers?.length)return '';
+  return `<details class="trade-behavior-fit"><summary>Recorded trading history · ${Number(fit.observed_trade_count||0)} completed trades</summary>${fit.drivers.slice(0,3).map(driver=>`<p>${escapeHtml(driver.description)}</p>`).join('')}</details>`;
 }
 
 if(fsfflBaseTradeSimulationRenderer){
