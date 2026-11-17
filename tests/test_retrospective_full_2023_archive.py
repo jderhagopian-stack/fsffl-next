@@ -47,7 +47,9 @@ def test_retained_rookie_drafts_bind_complete_allotments_and_consumed_rights():
         snapshot = model.at(observed)
         counts.append((season, len(rights), len(model.uses)))
         assert not model.issues
-        assert all(p.status == "used" for p in snapshot.picks)
+        status_counts = {status: sum(p.status == status for p in snapshot.picks)
+                         for status in ("used", "unknown", "conflict", "outstanding", "not_issued")}
+        assert status_counts["used"] == len(rights), (season, status_counts, snapshot.issues)
         assert snapshot.known_outstanding_owners == ()
         # Current-season transfers alone do not cover earlier-season ownership.
         assert snapshot.transfer_ledger_complete is False
