@@ -92,6 +92,7 @@ class HistoricalPickInventorySnapshot:
     declared_draft_seasons: tuple[int, ...]
     transfer_ledger_complete: bool
     use_ledger_complete: bool
+    allotment_complete: bool
     eligible_for_pit_decision_grade: Literal[False] = False
 
     @property
@@ -116,6 +117,7 @@ class HistoricalPickInventory:
     issues: tuple[str, ...] = ()
     uncertain_pick_ids: tuple[str, ...] = ()
     use_ledger_complete: bool = False
+    allotment_complete: bool = False
     eligible_for_pit_decision_grade: Literal[False] = False
 
     def at(self, cutoff: datetime, *, boundary: Literal["before", "after"] = "after") -> HistoricalPickInventorySnapshot:
@@ -161,8 +163,16 @@ class HistoricalPickInventory:
                 continue
             failures = reverse_draft_pick_transfer_batch(owners, {t: set() for t in self.team_ids}, inverse)
             if failures:
-                issues.update(failures)
-                bad.update(touched)
+                if not self.transfer_ledger_complete and failures == ("post_event_pick_ownership_mismatch",):
+                    # A partial season ledger need not begin with original
+                    # ownership. Preserve the observed post-transfer receipt,
+                    # but never certify a complete ownership chain from it.
+                    issues.add("ownership_before_partial_ledger_unverified")
+                    for move in batch:
+                        owners[move.pick_id] = move.to_team_id
+                else:
+                    issues.update(failures)
+                    bad.update(touched)
         rows = []
         for right in self.rights:
             pid = right.pick_id
@@ -186,11 +196,12 @@ class HistoricalPickInventory:
                         or (use is not None and use.not_before is not None and not reached(use.not_before))):
                     status = "outstanding"
             rows.append(HistoricalPickAtCutoff(pid, status, owners[pid] if status == "outstanding" else None))
-        complete = (self.transfer_ledger_complete and self.use_ledger_complete and not issues
+        complete = (self.allotment_complete and self.transfer_ledger_complete and self.use_ledger_complete and not issues
                     and all(p.status in ("not_issued", "outstanding", "used") for p in rows))
         return HistoricalPickInventorySnapshot(self.inventory_id, cutoff, boundary, tuple(rows),
             tuple(sorted(issues)), complete, self.declared_draft_seasons,
-            self.transfer_ledger_complete and within_coverage, self.use_ledger_complete and within_coverage)
+            self.transfer_ledger_complete and within_coverage, self.use_ledger_complete and within_coverage,
+            self.allotment_complete)
 
 
 def build_historical_pick_inventory(*, team_ids: tuple[str, ...], rights: tuple[HistoricalPickRight, ...],
@@ -198,7 +209,8 @@ def build_historical_pick_inventory(*, team_ids: tuple[str, ...], rights: tuple[
         declared_draft_seasons: tuple[int, ...], scope_source_ref: str,
         coverage_through: datetime,
         transfer_ledger_complete: bool = False, issues: tuple[str, ...] = (),
-        uncertain_pick_ids: tuple[str, ...] = (), use_ledger_complete: bool = False) -> HistoricalPickInventory:
+        uncertain_pick_ids: tuple[str, ...] = (), use_ledger_complete: bool = False,
+        allotment_complete: bool = False) -> HistoricalPickInventory:
     """Construct once from explicitly enumerated allotments and a scoped ledger."""
     _aware(coverage_through)
     if coverage_through is None:
@@ -235,11 +247,11 @@ def build_historical_pick_inventory(*, team_ids: tuple[str, ...], rights: tuple[
         "scope_source_ref": scope_source_ref, "ledger_complete": transfer_ledger_complete,
         "coverage_through": coverage_through,
         "issues": sorted(set(issues)), "uncertain_pick_ids": sorted(set(uncertain_pick_ids)),
-        "use_ledger_complete": use_ledger_complete}
+        "use_ledger_complete": use_ledger_complete, "allotment_complete": allotment_complete}
     identity = "hpi_" + sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
     return HistoricalPickInventory(identity, tuple(sorted(team_ids)), *ordered,
         tuple(sorted(set(declared_draft_seasons))), scope_source_ref, coverage_through, transfer_ledger_complete,
-        tuple(sorted(set(issues))), tuple(sorted(set(uncertain_pick_ids))), use_ledger_complete)
+        tuple(sorted(set(issues))), tuple(sorted(set(uncertain_pick_ids))), use_ledger_complete, allotment_complete)
 
 
 def enumerate_round_pick_allotment(*, draft_season: int, rounds: int, original_team_ids: tuple[str, ...],
