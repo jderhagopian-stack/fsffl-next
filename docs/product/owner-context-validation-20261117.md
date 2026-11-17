@@ -1,9 +1,15 @@
 # Owner preference research: validation and readiness
 
-The existing context-controlled methods are reusable, but the available history
-is not sufficient to promote reliable owner preferences into live trade search.
-Continue using the completed-trade observations already live. Do not replace
-missing historical context with today's roster or infer acceptance odds.
+**Scope correction:** this audit measured the saved canonical-State snapshot
+route, not all existing historical reconstruction. Its seven candidate records
+are **not the total usable historical sample**. The earlier conclusion about
+insufficient total history was premature. The accepted archived replay route
+must also be assessed; see [historical context reuse](historical-context-reuse-20261117.md).
+
+Existing context-controlled methods and retrospective player/pick/FAAB replay
+are reusable. No stronger owner-preference policy has yet been validated across
+these sources. Continue using completed-trade observations already live. Do not
+replace missing historical context with today's roster or infer acceptance odds.
 
 ## What was validated
 
@@ -24,7 +30,7 @@ Original authorities remain:
 - Existing coverage, shrinkage, stability and Decision evidence contracts remain
   intact. No new coefficient, reference anchor or production policy was selected.
 
-## Actual coverage
+## Saved-State snapshot coverage only
 
 These counts describe **owner-side records**, not distinct transactions. Two
 owners in one completed trade usually produce two records; some trades have more.
@@ -122,25 +128,26 @@ raw private snapshots. The audit continued with aggregate-only checks; no raw
 snapshots were exported. Aggregate evidence already establishes why promotion
 would be premature.
 
-## Efficient next sequence
+## Revised next sequence: reuse accepted history first
 
-1. Reconcile known transaction changes from trustworthy snapshots and validate
-   ownership continuity. Record exactly which context fields are reconstructed,
-   observed or still unknown; do not assume historical IR/taxi placement.
-2. Assess older-season coverage using existing historical source records and
-   defensible anchors. Completed transactions can support ownership accounting;
-   they do not manufacture missing roster-slot history or point-in-time forecasts.
-3. Add competitive/quality context only from genuine matching historical model
-   outputs where available. Keep counts-only context distinct when it is absent.
-4. Validate a versioned policy using chronological tests, other-owner training,
-   grouped transactions, pooled baselines, coverage and genuinely new observations
-   across time. Multiple cumulative profiles from the same one trade are not
-   independent evidence of stability. Preserve format/scoring distinctions.
-5. Publish supported preference evidence once through the existing owner/model
-   infrastructure; let Decision/Search read it cheaply. Preserve manual goals,
-   protections, economic evaluation and unfamiliar package exploration. Do not
-   translate relative completed-choice tendencies into rejection or acceptance odds.
+1. Reuse the accepted archived roster-context and provider-neutral ledger replay
+   (PRs #504, #507, #509, #511, #513 and #514). Do not rebuild them or equate a
+   missing canonical State with missing ownership history.
+2. Audit field-specific coverage: supported player membership, traded-pick
+   ownership, full pick inventory, conditional budget usage, roster placements,
+   owner identity and event clocks. Preserve independent scope/unknown flags.
+3. Complete the historical pick inventory adapter with evidence for original
+   allotments, ownership overrides, availability and consumption at drafts. A
+   current three-year inventory convention is not historical issuance evidence.
+4. Reconcile sources and deduplicate transactions/owner-side records before
+   reporting combined research coverage. Preserve source revisions, clocks and
+   supplemental evidence. Do not invent slots or historical forecasts.
+5. Validate the existing context-model input requirements against that broader
+   coverage, then test a versioned policy chronologically, with transaction
+   grouping, other-owner training and independent observations. Reuse existing
+   residual methods; unknown fields must not become zero or fake canonical State.
 
 No new preference weights or automatic owner-priority changes should be deployed
-on the present evidence. This is a data/context readiness finding, not a finding
-that the existing Intrinsic economics or live completed-trade history is wrong.
+from the snapshot-only count. Readiness remains to be evaluated across both
+source routes. The snapshot audit does not show that existing historical replay,
+Intrinsic economics or live completed-trade history is wrong.
