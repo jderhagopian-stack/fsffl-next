@@ -1,5 +1,10 @@
 # Historical context reuse: players, picks and FAAB
 
+Implementation continuation: the [historical pick inventory](../architecture/historical-pick-inventory.md)
+adds scoped allotments and lifecycle normalization around the accepted transfer
+primitive. It does not turn the snapshot-only sample into total coverage or
+automatically promote retrospective facts into a complete at-time State.
+
 ## Finding and correction
 
 Historical reconstruction is already implemented. The seven candidates in the
