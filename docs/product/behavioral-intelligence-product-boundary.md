@@ -88,10 +88,13 @@ shows a short unavailable message for a genuinely missing matching snapshot.
 
 The [2026-11-17 validation](owner-context-validation-20261117.md) distinguishes
 snapshot coverage, recorded continuity and model calibration from live observed
-history. Trade-specific research should use the offline
-`build_trade_context_calibration_dataset` adapter with all known transaction
-kinds for continuity checks. Do not treat a dated snapshot alone as an accurate
+history. Its saved-State sample is not a total historical coverage estimate;
+[accepted archived replay must also be reused and assessed](historical-context-reuse-20261117.md).
+The offline `build_trade_context_calibration_dataset` adapter validates the
+saved-State route with all known transaction kinds for continuity checks. It
+is not a replacement for archived retrospective roster/pick/FAAB reconstruction. Do not treat a dated snapshot alone as an accurate
 pre-trade roster, combine waiver activity with trade outcomes, or call roster-count
-residuals preferences controlled for competitive timeline. The current data does
-not justify promoting new preference weights. Existing model authorities and live
+residuals preferences controlled for competitive timeline. Stronger preference
+weights require validation across the relevant sources; snapshot-only counts
+cannot establish overall sample sufficiency. Existing model authorities and live
 history-based search behavior remain unchanged.
