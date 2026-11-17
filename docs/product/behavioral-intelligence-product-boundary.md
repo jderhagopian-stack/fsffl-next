@@ -83,3 +83,15 @@ Use the existing aggregation and require trade-count/shape reconciliation; keep
 unknown detail when it does not reconcile. This does not fetch history, write
 profiles or rerun football models. The UI labels trading history explicitly and
 shows a short unavailable message for a genuinely missing matching snapshot.
+
+### Context-controlled trade research readiness
+
+The [2026-11-17 validation](owner-context-validation-20261117.md) distinguishes
+snapshot coverage, recorded continuity and model calibration from live observed
+history. Trade-specific research should use the offline
+`build_trade_context_calibration_dataset` adapter with all known transaction
+kinds for continuity checks. Do not treat a dated snapshot alone as an accurate
+pre-trade roster, combine waiver activity with trade outcomes, or call roster-count
+residuals preferences controlled for competitive timeline. The current data does
+not justify promoting new preference weights. Existing model authorities and live
+history-based search behavior remain unchanged.
