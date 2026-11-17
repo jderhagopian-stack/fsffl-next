@@ -170,6 +170,7 @@ def normalize_sleeper_historical_pick_inventory(season_data: Mapping[str, Any], 
                 uncertain.update(missing)
     return build_historical_pick_inventory(team_ids=team_ids, rights=rights, events=tuple(events), uses=tuple(uses),
         declared_draft_seasons=declared_draft_seasons, scope_source_ref=scope_source_ref,
+        coverage_through=source_observed_at,
         transfer_ledger_complete=transfer_ledger_complete and not issues, issues=tuple(sorted(issues)),
         uncertain_pick_ids=tuple(sorted(uncertain)), use_ledger_complete=use_ledger_complete and not issues)
 
