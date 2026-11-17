@@ -25,7 +25,8 @@ def inventory(*, rights=None, events=(), uses=(), complete=True, uncertain=()):
         rights=rights if rights is not None else (right(),), events=events, uses=uses,
         declared_draft_seasons=(2024,), scope_source_ref="complete-allotment-receipt",
         coverage_through=T+timedelta(days=30),
-        transfer_ledger_complete=complete, uncertain_pick_ids=uncertain, use_ledger_complete=True)
+        transfer_ledger_complete=complete, uncertain_pick_ids=uncertain, use_ledger_complete=True,
+        allotment_complete=True)
 
 
 def test_untraded_rights_and_issuance_are_present_without_any_transactions():
@@ -119,7 +120,8 @@ def normalize(data, *, rights=None, bindings=None):
             issued_not_before=T-timedelta(days=100), issued_by=T-timedelta(days=100))
     return normalize_sleeper_historical_pick_inventory(data, rights=rights, draft_pick_bindings=bindings,
         declared_draft_seasons=(2024,), scope_source_ref="inventory", source_revision="pinned-archive",
-        source_observed_at=T+timedelta(days=10), transfer_ledger_complete=True, use_ledger_complete=True)
+        source_observed_at=T+timedelta(days=10), transfer_ledger_complete=True, use_ledger_complete=True,
+        allotment_complete=True)
 
 
 @pytest.mark.parametrize("teams,rounds", [(2, 1), (4, 6), (16, 4)])
@@ -175,7 +177,7 @@ def test_future_allotments_do_not_require_known_draft_order_or_three_year_window
     model = build_historical_pick_inventory(team_ids=("a", "b"), rights=rights, events=(), uses=(),
         declared_draft_seasons=(2030,), scope_source_ref="rule", transfer_ledger_complete=True,
         coverage_through=T,
-        use_ledger_complete=True)
+        use_ledger_complete=True, allotment_complete=True)
     assert len(model.at(T).known_outstanding_owners) == 4
     assert model.at(T).complete_for_declared_seasons is True
 
@@ -209,3 +211,43 @@ def test_multi_year_transfers_reuse_original_pick_identity():
         coverage_through=T, transfer_ledger_complete=True, use_ledger_complete=True)
     assert dict(model.at(T-timedelta(days=365)).known_outstanding_owners)["2030:1:a"] == "b"
     assert dict(model.at(T).known_outstanding_owners)["2030:1:a"] == "c"
+
+
+def test_partial_ownership_chain_does_not_erase_a_source_backed_selection():
+    event = HistoricalPickTransferEvent("partial", T, (DraftPickTransfer("p", "b", "c"),), "current-season")
+    use = HistoricalPickUse("p", "c", "draft", T+timedelta(days=1), T+timedelta(days=1))
+    model = inventory(events=(event,), uses=(use,), complete=False)
+    snapshot = model.at(T+timedelta(days=2))
+    assert snapshot.picks[0].status == "used"
+    assert "ownership_before_partial_ledger_unverified" in snapshot.issues
+    assert snapshot.known_outstanding_owners == ()
+    assert not snapshot.complete_for_declared_seasons
+
+
+def test_expiry_requires_explicit_evidence_and_removes_outstanding_right():
+    use = HistoricalPickUse("p", "a", "expiry-rule-receipt", T, T, kind="expiry")
+    model = inventory(uses=(use,))
+    assert model.at(T, boundary="before").known_outstanding_owners == (("p", "a"),)
+    assert model.at(T).picks[0].status == "used"
+
+
+def test_partial_allotment_does_not_become_a_complete_season_inventory():
+    model = build_historical_pick_inventory(team_ids=("a", "b"), rights=(right(),), events=(), uses=(),
+        declared_draft_seasons=(2024,), scope_source_ref="only-one-observed-right", coverage_through=T,
+        transfer_ledger_complete=True, use_ledger_complete=True)
+    assert model.at(T).known_outstanding_owners == (("p", "a"),)
+    assert model.at(T).allotment_complete is False
+    assert model.at(T).complete_for_declared_seasons is False
+
+
+def test_inventory_identity_binds_source_even_without_transfers_or_selections():
+    data = season(2, 1)
+    data["drafts"] = []
+    model = normalize_sleeper_historical_pick_inventory(data, rights=(), draft_pick_bindings={},
+        declared_draft_seasons=(2030,), scope_source_ref="rules", source_revision="rev",
+        source_observed_at=T)
+    data["league"]["different_source"] = True
+    other = normalize_sleeper_historical_pick_inventory(data, rights=(), draft_pick_bindings={},
+        declared_draft_seasons=(2030,), scope_source_ref="rules", source_revision="rev",
+        source_observed_at=T)
+    assert model.inventory_id != other.inventory_id
