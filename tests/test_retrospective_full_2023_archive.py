@@ -10,8 +10,50 @@ from pathlib import Path
 import pytest
 from fsffl.state.retrospective_season_audit import audit_retrospective_sleeper_season
 from fsffl.state.historical_roster_context import reconstruct_sleeper_roster_context
+from fsffl.providers.sleeper_historical_pick_inventory import (
+    normalize_sleeper_historical_pick_inventory, sleeper_linear_draft_allotment,
+)
 
 PINNED_BLOB = "e18c01bf25f58c5dfe3d0802f53de484ea257ca1"
+
+
+def test_retained_rookie_drafts_bind_complete_allotments_and_consumed_rights():
+    """Known fixture purpose, not a generic year/type-based draft classifier.
+
+    2022 is this fixture's startup. Its separately identified 2023–2026 drafts
+    are rookie drafts. Neither selection lineage nor retrospective roster maps
+    certify the complete inter-season ownership ledger or original availability.
+    """
+    path = os.getenv("FSFFL_RESEARCH_HISTORICAL_ARCHIVE")
+    if not path:
+        pytest.skip("original archived source not mounted; no real-source claim")
+    raw = Path(path).read_bytes()
+    assert sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest() == PINNED_BLOB
+    observed = datetime(2026, 11, 17, tzinfo=UTC)
+    counts = []
+    for year in json.loads(raw):
+        season = int(year["league"]["season"])
+        if season not in (2023, 2024, 2025, 2026):
+            continue
+        drafts = year.get("drafts") or ()
+        assert len(drafts) == 1
+        draft_id = str(drafts[0]["draft"]["draft_id"])
+        rights, bindings = sleeper_linear_draft_allotment(year, draft_id=draft_id, purpose="rookie",
+            purpose_source_ref="pinned-fixture:identified-rookie-draft",
+            roster_identity_source_ref="pinned-fixture:retrospective-season-rosters")
+        model = normalize_sleeper_historical_pick_inventory(year, rights=rights, draft_pick_bindings=bindings,
+            declared_draft_seasons=(season,), scope_source_ref="pinned-fixture:single-draft-allotment",
+            source_revision="git-blob:"+PINNED_BLOB, source_observed_at=observed)
+        snapshot = model.at(observed)
+        counts.append((season, len(rights), len(model.uses)))
+        assert not model.issues
+        assert all(p.status == "used" for p in snapshot.picks)
+        assert snapshot.known_outstanding_owners == ()
+        # Current-season transfers alone do not cover earlier-season ownership.
+        assert snapshot.transfer_ledger_complete is False
+        assert snapshot.complete_for_declared_seasons is False
+        assert snapshot.eligible_for_pit_decision_grade is False
+    assert sorted(counts) == [(2023, 36, 36), (2024, 36, 36), (2025, 36, 36), (2026, 36, 36)]
 
 
 def test_yearwide_2023_catches_exact_single_waiver_evidence_gap():
