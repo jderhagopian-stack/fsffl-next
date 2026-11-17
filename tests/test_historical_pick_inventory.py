@@ -24,6 +24,7 @@ def inventory(*, rights=None, events=(), uses=(), complete=True, uncertain=()):
     return build_historical_pick_inventory(team_ids=("a", "b", "c"),
         rights=rights if rights is not None else (right(),), events=events, uses=uses,
         declared_draft_seasons=(2024,), scope_source_ref="complete-allotment-receipt",
+        coverage_through=T+timedelta(days=30),
         transfer_ledger_complete=complete, uncertain_pick_ids=uncertain, use_ledger_complete=True)
 
 
@@ -173,6 +174,7 @@ def test_future_allotments_do_not_require_known_draft_order_or_three_year_window
         source_ref="explicit-future-rights-rule", issued_not_before=T, issued_by=T)
     model = build_historical_pick_inventory(team_ids=("a", "b"), rights=rights, events=(), uses=(),
         declared_draft_seasons=(2030,), scope_source_ref="rule", transfer_ledger_complete=True,
+        coverage_through=T,
         use_ledger_complete=True)
     assert len(model.at(T).known_outstanding_owners) == 4
     assert model.at(T).complete_for_declared_seasons is True
@@ -180,6 +182,30 @@ def test_future_allotments_do_not_require_known_draft_order_or_three_year_window
 
 def test_missing_use_ledger_does_not_assume_rights_are_still_outstanding():
     model = build_historical_pick_inventory(team_ids=("a", "b"), rights=(right(),), events=(), uses=(),
-        declared_draft_seasons=(2024,), scope_source_ref="rule", transfer_ledger_complete=True)
+        declared_draft_seasons=(2024,), scope_source_ref="rule", transfer_ledger_complete=True, coverage_through=T)
     assert model.at(T).picks[0].status == "unknown"
     assert model.at(T).known_outstanding_owners == ()
+
+
+def test_ledger_cannot_certify_current_ownership_beyond_its_observation_cutoff():
+    snapshot = inventory().at(T+timedelta(days=31))
+    assert snapshot.known_outstanding_owners == ()
+    assert snapshot.picks[0].status == "unknown"
+    assert "cutoff_after_ledger_coverage" in snapshot.issues
+    future = HistoricalPickTransferEvent("future", T+timedelta(days=31), (DraftPickTransfer("p", "a", "b"),), "tx")
+    with pytest.raises(ValueError, match="after source coverage"):
+        inventory(events=(future,))
+
+
+def test_multi_year_transfers_reuse_original_pick_identity():
+    issued = T-timedelta(days=1000)
+    rights = enumerate_round_pick_allotment(draft_season=2030, rounds=1, original_team_ids=("a", "b", "c"),
+        source_ref="allotment", issued_not_before=issued, issued_by=issued)
+    events = (HistoricalPickTransferEvent("older", T-timedelta(days=730),
+        (DraftPickTransfer("2030:1:a", "a", "b"),), "older-season-ledger"),
+        HistoricalPickTransferEvent("later", T, (DraftPickTransfer("2030:1:a", "b", "c"),), "later-ledger"))
+    model = build_historical_pick_inventory(team_ids=("a", "b", "c"), rights=rights, events=events, uses=(),
+        declared_draft_seasons=(2030,), scope_source_ref="verified-cross-season-roster-identity",
+        coverage_through=T, transfer_ledger_complete=True, use_ledger_complete=True)
+    assert dict(model.at(T-timedelta(days=365)).known_outstanding_owners)["2030:1:a"] == "b"
+    assert dict(model.at(T).known_outstanding_owners)["2030:1:a"] == "c"
