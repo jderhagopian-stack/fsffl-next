@@ -17,6 +17,41 @@ from fsffl.providers.sleeper_historical_pick_inventory import (
 PINNED_BLOB = "e18c01bf25f58c5dfe3d0802f53de484ea257ca1"
 
 
+def test_cross_season_pick_join_and_trade_field_coverage_on_pinned_archive():
+    from fsffl.providers.sleeper_historical_context import build_sleeper_historical_context
+    from tests.historical_archive_context_fixture import declared_archive_context_inputs
+    path = os.getenv("FSFFL_RESEARCH_HISTORICAL_ARCHIVE")
+    if not path:
+        pytest.skip("original archive not mounted; no real-source claim")
+    raw = Path(path).read_bytes()
+    assert sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest() == PINNED_BLOB
+    observed = datetime(2026, 11, 17, tzinfo=UTC)
+    records, lineage, drafts = declared_archive_context_inputs(json.loads(raw), observed=observed,
+        source_revision="git-blob:"+PINNED_BLOB)
+    result = build_sleeper_historical_context(seasons=records, lineage=lineage, rookie_drafts=drafts,
+        source_revision="git-blob:"+PINNED_BLOB, source_observed_at=observed)
+    summary = result.trades.summary()
+    by_year = {}
+    for year in (2022, 2023, 2024, 2025, 2026):
+        rows = tuple(r for r in result.trades.rows if r.request.season.season == year)
+        by_year[year] = {"trades": len(rows), "membership_context": sum(r.player_membership_context_available for r in rows)}
+    end = result.picks.inventory.at(observed)
+    # Counts/codes only. No owner, player, pick or transaction IDs in output.
+    print(json.dumps({"historical_context_field_coverage": summary, "by_season": by_year,
+        "coverage_issue_counts": result.trades.issue_counts(), "joined_pick_rights": len(result.picks.inventory.rights),
+        "joined_pick_transfer_events": len(result.picks.inventory.events),
+        "joined_pick_movements": sum(len(e.transfers) for e in result.picks.inventory.events),
+        "joined_terminal_uses": len(result.picks.inventory.uses), "end_pick_issue_codes": end.issues,
+        "identity_scope": "declared_retrospective_fixture_crosswalk_not_independent_at_time_certification"}, sort_keys=True))
+    assert summary["trade_rows"] == summary["pre_completion_snapshot_rows"] == 144, summary
+    assert summary["membership_context_rows"] == 96, summary
+    assert summary["archived_full_model_input_rows"] == 0
+    assert summary["complete_pick_count_rows"] == 0
+    assert len(result.picks.inventory.rights) == len(result.picks.inventory.uses) == 144
+    assert all(p.status == "used" for p in end.picks), end.issues
+    assert result.picks.inventory.transfer_ledger_complete is False
+
+
 def test_retained_rookie_drafts_bind_complete_allotments_and_consumed_rights():
     """Known fixture purpose, not a generic year/type-based draft classifier.
 

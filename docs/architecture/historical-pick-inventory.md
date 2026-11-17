@@ -122,3 +122,8 @@ Next integration should reconcile the verified multi-season transfer ledger and
 dated allotment/use coverage, then consume supported inventory facts through
 existing historical State/behavioral evidence boundaries. Current live pick
 valuation, trade search, manual priorities and source rules are unchanged.
+
+The [cross-season context integration](historical-cross-season-context.md) now
+joins these normalized facts through admitted franchise crosswalks and measures
+per-trade field coverage. It keeps conditional ownership and incomplete model
+inputs separate from supported roster and selection facts.
