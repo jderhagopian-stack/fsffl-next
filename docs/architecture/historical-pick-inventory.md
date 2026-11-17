@@ -99,6 +99,14 @@ start/last-pick bounds. Counts are not independently certified at-time ownership
 or a validated owner-preference training sample. Real allotment/use mapping
 acceptance is recorded with the exact run/head in the workstream checkpoint.
 
+Pinned-source [run 43997893198](https://github.com/jderhagopian-stack/fsffl-next/actions/runs/43997893198)
+at code head `e03d8d36b187649dee5ef1b4e1fd7735131f3e34` passed the focused
+contracts and four non-skipped source tests. The new source test maps all 36
+original rights to 36 consumed selections for each known 2023–2026 rookie
+fixture (144 total). It explicitly leaves complete inter-season ownership and
+PIT Decision eligibility uncertified. Subsequent documentation updates do not
+change those executable contracts.
+
 No raw archive is committed or printed. `scripts/audit_historical_pick_inventory.py`
 requires the exact Git blob digest and prints season counts only. The existing
 CI acquisition/deletion path is reused; no production State export is involved.
