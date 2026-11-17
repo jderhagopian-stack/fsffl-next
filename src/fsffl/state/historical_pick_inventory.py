@@ -111,6 +111,7 @@ class HistoricalPickInventory:
     uses: tuple[HistoricalPickUse, ...]
     declared_draft_seasons: tuple[int, ...]
     scope_source_ref: str
+    coverage_through: datetime
     transfer_ledger_complete: bool = False
     issues: tuple[str, ...] = ()
     uncertain_pick_ids: tuple[str, ...] = ()
@@ -123,11 +124,14 @@ class HistoricalPickInventory:
         if cutoff is None or boundary not in ("before", "after"):
             raise ValueError("invalid cutoff boundary")
         reached = lambda t: t is not None and (t < cutoff or (t == cutoff and boundary == "after"))
+        within_coverage = cutoff <= self.coverage_through
         rights = {p.pick_id: p for p in self.rights}
         uses = {p.pick_id: p for p in self.uses}
         owners = {p.pick_id: p.original_team_id for p in self.rights}
         bad: set[str] = set()
         issues = set(self.issues)
+        if not within_coverage:
+            issues.add("cutoff_after_ledger_coverage")
         issued_by = {p.pick_id: p.issued_by for p in self.rights}
         # An observed transfer proves existence no later than that transfer, even
         # when the original issuance date is missing. Never infer a 3-year window.
@@ -173,6 +177,8 @@ class HistoricalPickInventory:
                 if self.transfer_ledger_complete and owners[pid] != use.owner_team_id:
                     status = "conflict"
                     issues.add("pick_use_owner_mismatch")
+            elif not within_coverage:
+                status = "unknown"
             elif right.issued_not_before is not None and not reached(right.issued_not_before):
                 status = "not_issued"
             elif reached(issued_by[pid]):
@@ -183,16 +189,20 @@ class HistoricalPickInventory:
         complete = (self.transfer_ledger_complete and self.use_ledger_complete and not issues
                     and all(p.status in ("not_issued", "outstanding", "used") for p in rows))
         return HistoricalPickInventorySnapshot(self.inventory_id, cutoff, boundary, tuple(rows),
-            tuple(sorted(issues)), complete, self.declared_draft_seasons, self.transfer_ledger_complete,
-            self.use_ledger_complete)
+            tuple(sorted(issues)), complete, self.declared_draft_seasons,
+            self.transfer_ledger_complete and within_coverage, self.use_ledger_complete and within_coverage)
 
 
 def build_historical_pick_inventory(*, team_ids: tuple[str, ...], rights: tuple[HistoricalPickRight, ...],
         events: tuple[HistoricalPickTransferEvent, ...], uses: tuple[HistoricalPickUse, ...],
         declared_draft_seasons: tuple[int, ...], scope_source_ref: str,
+        coverage_through: datetime,
         transfer_ledger_complete: bool = False, issues: tuple[str, ...] = (),
         uncertain_pick_ids: tuple[str, ...] = (), use_ledger_complete: bool = False) -> HistoricalPickInventory:
     """Construct once from explicitly enumerated allotments and a scoped ledger."""
+    _aware(coverage_through)
+    if coverage_through is None:
+        raise ValueError("ledger coverage cutoff required")
     if not scope_source_ref.strip() or not declared_draft_seasons or len(team_ids) != len(set(team_ids)):
         raise ValueError("unique team identities, declared seasons and universe evidence are required")
     if len(team_ids) < 2 or any(not t.strip() for t in team_ids):
@@ -201,6 +211,8 @@ def build_historical_pick_inventory(*, team_ids: tuple[str, ...], rights: tuple[
         raise ValueError("duplicate pick allotment or use")
     if len({e.event_id for e in events}) != len(events):
         raise ValueError("duplicate pick transfer event")
+    if any(e.effective_at > coverage_through for e in events):
+        raise ValueError("completed transfer is after source coverage")
     by_id = {p.pick_id: p for p in rights}
     if any(p.original_team_id not in team_ids or p.draft_season not in declared_draft_seasons for p in rights):
         raise ValueError("allotment outside declared team/season scope")
@@ -209,6 +221,8 @@ def build_historical_pick_inventory(*, team_ids: tuple[str, ...], rights: tuple[
     if any(pid not in by_id for pid in uncertain_pick_ids):
         raise ValueError("unknown pick uncertainty reference")
     for use in uses:
+        if use.kind == "selection" and use.by is not None and use.by > coverage_through:
+            raise ValueError("observed selection is after source coverage")
         lower = by_id[use.pick_id].issued_not_before
         if lower is not None and use.by is not None and use.by < lower:
             raise ValueError("pick consumed before issuance bounds")
@@ -219,11 +233,12 @@ def build_historical_pick_inventory(*, team_ids: tuple[str, ...], rights: tuple[
         "rights": [asdict(p) for p in ordered[0]], "events": [asdict(e) for e in ordered[1]],
         "uses": [asdict(p) for p in ordered[2]], "seasons": sorted(set(declared_draft_seasons)),
         "scope_source_ref": scope_source_ref, "ledger_complete": transfer_ledger_complete,
+        "coverage_through": coverage_through,
         "issues": sorted(set(issues)), "uncertain_pick_ids": sorted(set(uncertain_pick_ids)),
         "use_ledger_complete": use_ledger_complete}
     identity = "hpi_" + sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
     return HistoricalPickInventory(identity, tuple(sorted(team_ids)), *ordered,
-        tuple(sorted(set(declared_draft_seasons))), scope_source_ref, transfer_ledger_complete,
+        tuple(sorted(set(declared_draft_seasons))), scope_source_ref, coverage_through, transfer_ledger_complete,
         tuple(sorted(set(issues))), tuple(sorted(set(uncertain_pick_ids))), use_ledger_complete)
 
 
