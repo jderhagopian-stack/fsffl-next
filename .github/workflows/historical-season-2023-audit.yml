@@ -6,6 +6,10 @@ on:
       - 'src/fsffl/state/retrospective_season_audit.py'
       - 'src/fsffl/state/historical_roster_context.py'
       - 'src/fsffl/state/historical_roster_replay.py'
+      - 'src/fsffl/state/historical_pick_inventory.py'
+      - 'src/fsffl/providers/sleeper_historical_pick_inventory.py'
+      - 'tests/test_historical_pick_inventory.py'
+      - 'scripts/audit_historical_pick_inventory.py'
       - 'tests/test_retrospective_season_audit.py'
       - 'tests/test_retrospective_full_2023_archive.py'
       - 'tests/test_historical_roster_context.py'
@@ -36,6 +40,7 @@ jobs:
       - name: Focused season and inherited historical contracts
         run: |
           python -m pytest -q tests/test_retrospective_season_audit.py \
+            tests/test_historical_pick_inventory.py \
             tests/test_historical_roster_context.py \
             tests/test_retrospective_sleeper_replay.py \
             tests/test_historical_coverage.py \
@@ -54,6 +59,9 @@ jobs:
           FSFFL_RESEARCH_HISTORICAL_ARCHIVE: ${{ runner.temp }}/historical-archive.json
         run: |
           python -m pytest -q tests/test_retrospective_full_2023_archive.py
+          python scripts/audit_historical_pick_inventory.py \
+            --archive "$FSFFL_RESEARCH_HISTORICAL_ARCHIVE" \
+            --git-blob-sha e18c01bf25f58c5dfe3d0802f53de484ea257ca1
           set +e
           python scripts/audit_retrospective_sleeper_season.py \
             --archive "$FSFFL_RESEARCH_HISTORICAL_ARCHIVE" \
