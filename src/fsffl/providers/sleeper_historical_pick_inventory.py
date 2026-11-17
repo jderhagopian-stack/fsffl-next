@@ -61,10 +61,15 @@ def sleeper_linear_draft_allotment(season_data: Mapping[str, Any], *, draft_id: 
     if (len(rosters) != teams or len(user_to_roster) != teams or len(order) != teams
             or len(set(user_to_roster.values())) != teams):
         raise ValueError("draft requires a complete historical original-roster crosswalk")
-    slot_to_roster = {int(slot): user_to_roster[str(user)] for user, slot in order.items()}
+    if any(str(user) not in user_to_roster for user in order):
+        raise ValueError("draft original-owner mapping is unavailable")
+    try:
+        slot_to_roster = {int(slot): user_to_roster[str(user)] for user, slot in order.items()}
+        season = int(draft["season"])
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("draft season/slot evidence is invalid") from None
     if set(slot_to_roster) != set(range(1, teams + 1)):
         raise ValueError("draft original slots must be a complete unique permutation")
-    season = int(draft["season"])
     source = f"{purpose_source_ref};{roster_identity_source_ref}"
     rights = enumerate_round_pick_allotment(draft_season=season, rounds=rounds,
         original_team_ids=tuple(slot_to_roster.values()), source_ref=source,
@@ -81,7 +86,8 @@ def normalize_sleeper_historical_pick_inventory(season_data: Mapping[str, Any], 
         rights: tuple[HistoricalPickRight, ...], draft_pick_bindings: Mapping[tuple[str, int, int], str],
         declared_draft_seasons: tuple[int, ...], scope_source_ref: str,
         source_revision: str, source_observed_at: datetime,
-        transfer_ledger_complete: bool = False, use_ledger_complete: bool = False) -> HistoricalPickInventory:
+        transfer_ledger_complete: bool = False, use_ledger_complete: bool = False,
+        allotment_complete: bool = False) -> HistoricalPickInventory:
     """Normalize already collected source rows; no API reads, writes or valuation.
 
     Every selection in a declared draft year must be bound or explicitly remains
@@ -124,6 +130,7 @@ def normalize_sleeper_historical_pick_inventory(season_data: Mapping[str, Any], 
         seen.add(tid)
         events.append(HistoricalPickTransferEvent(tid, at, tuple(moves), source))
     used: set[str] = set()
+    transfer_issues = set(issues)
     seen_drafts: set[str] = set()
     for entry in season_data.get("drafts", ()):
         draft = entry.get("draft") or {}
@@ -169,10 +176,11 @@ def normalize_sleeper_historical_pick_inventory(season_data: Mapping[str, Any], 
                 issues.add("completed_draft_selection_coverage_incomplete")
                 uncertain.update(missing)
     return build_historical_pick_inventory(team_ids=team_ids, rights=rights, events=tuple(events), uses=tuple(uses),
-        declared_draft_seasons=declared_draft_seasons, scope_source_ref=scope_source_ref,
+        declared_draft_seasons=declared_draft_seasons, scope_source_ref=f"{scope_source_ref};{source}",
         coverage_through=source_observed_at,
-        transfer_ledger_complete=transfer_ledger_complete and not issues, issues=tuple(sorted(issues)),
-        uncertain_pick_ids=tuple(sorted(uncertain)), use_ledger_complete=use_ledger_complete and not issues)
+        transfer_ledger_complete=transfer_ledger_complete and not transfer_issues, issues=tuple(sorted(issues)),
+        uncertain_pick_ids=tuple(sorted(uncertain)),
+        use_ledger_complete=use_ledger_complete and not (issues-transfer_issues), allotment_complete=allotment_complete)
 
 
 def inspect_sleeper_draft_pick_coverage(season_data: Mapping[str, Any]) -> dict[str, int]:
