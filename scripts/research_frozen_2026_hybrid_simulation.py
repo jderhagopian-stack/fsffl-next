@@ -16,6 +16,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import time
+from urllib.error import HTTPError, URLError
 from datetime import UTC, datetime
 from math import sqrt
 from pathlib import Path
@@ -113,20 +116,49 @@ def _git_blob_sha1(data: bytes) -> str:
 
 
 def load_pinned_sources() -> dict[str, object]:
-    """Fetch only recorded, hash-pinned historical public files."""
+    """Fetch once per offline research job; verify each cached byte string every use.
+
+    Cache is optional, scratch-only and never committed. No cache trust:
+    source bytes are hash-checked on both fetch and reuse. Retry only
+    temporary fetch errors with a bounded, short backoff.
+    """
     if ARCHIVE_CAPTURE >= PREGAME_CUTOFF:
         raise ValueError("historical source revision does not predate opening kickoff")
+    root = os.getenv("FSFFL_HISTORICAL_SOURCE_CACHE_DIR", "").strip()
+    cache_dir = Path(root) if root else None
+    if cache_dir is not None:
+        cache_dir.mkdir(parents=True, exist_ok=True)
     results = {}
     for path, sha in PINNED_BLOBS.items():
-        url = f"https://raw.githubusercontent.com/{ARCHIVE_REPOSITORY}/{ARCHIVE_COMMIT}/{path}"
-        req = Request(url, headers={"User-Agent": "fsffl-historical-offline-research/1"})
-        with urlopen(req, timeout=45) as response:
-            raw = response.read(SOURCE_LIMIT_BYTES + 1)
+        cached = cache_dir / path if cache_dir is not None else None
+        if cached is not None and cached.exists():
+            if cached.stat().st_size > SOURCE_LIMIT_BYTES:
+                raise ValueError(f"historical cache exceeds bounded limit: {path}")
+            raw = cached.read_bytes()
+        else:
+            url = f"https://raw.githubusercontent.com/{ARCHIVE_REPOSITORY}/{ARCHIVE_COMMIT}/{path}"
+            req = Request(url, headers={"User-Agent": "fsffl-historical-offline-research/1"})
+            raw = None
+            for attempt in range(3):
+                try:
+                    with urlopen(req, timeout=45) as response:
+                        raw = response.read(SOURCE_LIMIT_BYTES + 1)
+                    break
+                except (HTTPError, URLError) as exc:
+                    code = getattr(exc, "code", None)
+                    if attempt == 2 or (code is not None and code not in (429, 500, 502, 503, 504)):
+                        raise
+                    time.sleep(2 * (attempt + 1))
+            if raw is None:
+                raise ValueError(f"historical fetch did not return source: {path}")
         if len(raw) > SOURCE_LIMIT_BYTES:
             raise ValueError(f"archived source exceeds bounded size: {path}")
         actual = _git_blob_sha1(raw)
         if actual != sha:
             raise ValueError(f"source content hash mismatch at {path}: {actual}")
+        if cached is not None and not cached.exists():
+            cached.parent.mkdir(parents=True, exist_ok=True)
+            cached.write_bytes(raw)
         results[path] = json.loads(raw)
     return results
 
