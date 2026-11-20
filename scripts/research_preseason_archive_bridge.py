@@ -104,3 +104,58 @@ def extract_preseason_archive_evidence(
         ],
         "publication_ready": False,
     }
+
+
+def extract_preseason_raw_forecast_evidence(
+    row: dict[str, Any], *, cutoff: str,
+) -> dict[str, Any]:
+    """Recover pre-kickoff RAW metric ensemble; do not re-label as modern Forecast.
+
+    Source: historical current_forecast_evidence artifact runtime_result,
+    distinct from the final fantasy-point observations in Analytics. Downstream
+    accepted Forecast authority must re-score it using PIT-eligible parameters.
+    """
+    ts = datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
+    if ts.tzinfo is None or ts.utcoffset() is None:
+        raise ArchiveBridgeError("cutoff must carry timezone")
+    if row.get("artifact_kind") != "current_forecast_evidence":
+        raise ArchiveBridgeError("requires archived current Forecast evidence")
+    _clock(row.get("computed_at"), "Forecast artifact computed_at", ts)
+    payload = row["payload"]
+    original = payload.get("runtime_result") or {}
+    original_raw = original.get("raw_ensemble")
+    if not isinstance(original_raw, list) or not original_raw:
+        raise ArchiveBridgeError("original raw forecast ensemble missing")
+    seen: set[tuple[str, str, str]] = set()
+    players: set[str] = set()
+    for entry in original_raw:
+        _clock(entry.get("as_of"), "raw forecast as_of", ts)
+        prov = entry.get("provenance") or {}
+        _clock(prov.get("effective_at"), "raw forecast provenance effective_at", ts)
+        _clock(prov.get("retrieved_at"), "raw forecast provenance retrieved_at", ts)
+        key = (entry.get("player_id"), entry.get("metric"), entry.get("horizon"))
+        if not all(key) or key in seen:
+            raise ArchiveBridgeError("raw forecast metric/subject identity is missing or duplicated")
+        if entry.get("horizon") != "season":
+            raise ArchiveBridgeError("raw forecast must be original full-season vintage")
+        seen.add(key)
+        players.add(key[0])
+    coverage = original.get("coverage") or {}
+    independent = original.get("successful_source_ids")
+    if not isinstance(independent, list) or len(set(independent)) < 2:
+        raise ArchiveBridgeError("raw ensemble lacks two independent prior source identities")
+    if coverage.get("minimum_independent_sources", 0) > len(set(independent)):
+        raise ArchiveBridgeError("archived raw source coverage below accepted minimum")
+    return {
+        "status": "raw_preseason_forecast_evidence_recovered_not_rescored",
+        "archive_artifact_id": row.get("id"),
+        "archive_computed_at": row["computed_at"],
+        "cutoff": ts.astimezone(timezone.utc).isoformat(),
+        "original_forecast_version": original.get("model_version"),
+        "original_successful_source_ids": independent,
+        "raw_ensemble": original_raw,
+        "coverage": coverage,
+        "counts": {"raw_observations": len(original_raw), "unique_subjects": len(players)},
+        "modern_forecast_status": "unavailable_requires_PIT_rescoring_and_fumbles_lost_eligibility",
+        "publication_ready": False,
+    }
