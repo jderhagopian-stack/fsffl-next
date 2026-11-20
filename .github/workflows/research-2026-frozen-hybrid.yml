@@ -14,8 +14,6 @@ jobs:
   frozen-vintage-hybrid:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    env:
-      FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/fsffl-frozen-sep4-sources
     steps:
       - name: Checkout exact review head
         uses: actions/checkout@v4
@@ -33,14 +31,20 @@ jobs:
       - name: Compile historical replay
         run: python -m py_compile scripts/research_frozen_2026_hybrid_simulation.py
       - name: Verify pinned September 4 sources without simulation
+        env:
+          FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/fsffl-frozen-sep4-sources
         run: >-
           python scripts/research_frozen_2026_hybrid_simulation.py
           --validate-only --output "$RUNNER_TEMP/preseason-source-manifest.json"
       - name: Run current Simulation 2.0 on frozen legacy Forecast
+        env:
+          FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/fsffl-frozen-sep4-sources
         run: >-
           python scripts/research_frozen_2026_hybrid_simulation.py
           --trials 50000 --output "$RUNNER_TEMP/research-hybrid.json"
       - name: Repeat 50k run with identical frozen inputs
+        env:
+          FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/fsffl-frozen-sep4-sources
         run: >-
           python scripts/research_frozen_2026_hybrid_simulation.py
           --trials 50000 --output "$RUNNER_TEMP/research-hybrid-repeat.json"
