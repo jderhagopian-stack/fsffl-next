@@ -280,7 +280,7 @@ def reconstruct_sept9_sources(source: dict, *, transactions: list[dict] | None =
         for row in source["data/traded_picks.json"]
     }
     for key, rid in picks.items():
-        _, _, _, _, year, rnd, orig = key.split(":")
+        _, _, _, year, rnd, orig = key.split(":")
         iy, ir, io = int(year), int(rnd), int(orig)
         prev = picks_existing.get((iy, ir, io))
         if prev is None and rid == io:
