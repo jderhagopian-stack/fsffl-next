@@ -1,0 +1,45 @@
+name: Research 2026 frozen preseason hybrid simulation
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/research_frozen_2026_hybrid_simulation.py'
+      - '.github/workflows/research-2026-frozen-hybrid.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-vintage-hybrid:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact review head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Python 3.12.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install accepted FSFFL NEXT code
+        run: python -m pip install -e '.[dev]'
+      - name: Compile historical replay
+        run: python -m py_compile scripts/research_frozen_2026_hybrid_simulation.py
+      - name: Verify pinned September 4 sources without simulation
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --validate-only --output "$RUNNER_TEMP/preseason-source-manifest.json"
+      - name: Run current Simulation 2.0 on frozen legacy Forecast
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --trials 50000 --output "$RUNNER_TEMP/research-hybrid.json"
+      - name: Retain small model output, no raw player/provider data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsffl-2026-sept4-modern-simulation-hybrid
+          path: ${{ runner.temp }}/research-hybrid.json
+          if-no-files-found: error
+          retention-days: 14
