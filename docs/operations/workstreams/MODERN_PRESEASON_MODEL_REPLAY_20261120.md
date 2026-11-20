@@ -97,3 +97,13 @@ A new research-only offline harness (`scripts/research_frozen_2026_hybrid_simula
 
 **Next hard gate**: materially exact September 9 State with dated changes, use original #63 raw forecast evidence (336 players) for current Forecast re-scoring where supported, and execute PIT-approved missing fumbles model/fallback; then separately rebuild 3-Year and Career Intrinsic. Frozen historical stage is retained as a useful benchmarking pilot and Report Studio editorial insert; a full modern-model 2026 almanac is not yet authorized.
 
+
+## 2026-11-20 Management correction — Travis Hunter: preserved on BING BONG DRIGSY
+
+**Management confirmed that Travis Hunter has continuously been on BING BONG DRIGSY.** Historical Sleeper source `data/rosters.json`, pinned commit `72c926cdcf9450d1ba1dcb53f67d698851b54cfb`, independently corroborates roster 11, player `12530`, on BENCH, and complete pre-cutoff behavior-event history does not show a corresponding drop or transfer. **Do not remove Hunter** or invent a transaction.
+
+Archived Analytics #65 omits him entirely, and the earliest persisted canonical State snapshot likewise lacks him. Those rows are **incomplete coverage**, not a complete roster membership authority. The reconstruction now deliberately preserves **238** players with Hunter assigned to team 11; the historical Analytics hash represents only the **237** other subjects, validated as a strict subset. All **108** retained pick owners remain reconciled. The original 9/9 Analytics row count and subsequent source corroboration cannot be presented as a complete 238-player source.
+
+Potential defect to investigate in the normalizer: `src/fsffl/providers/sleeper.py` resolves player identity from the single `raw.position` field and drops entries where `_position_map.get(raw_position)` is None, despite Sleeper supporting `fantasy_positions`. The pregame older player catalog lists Hunter primary WR and fantasy positions DB/WR; a later provider primary position of DB *could* explain exclusion. This is a hypothesis, **not verified cause**, until raw 9/9 player-catalog evidence is recovered. Add a real regression before changing production normalization.
+
+No published almanac, model replay or intrinsic calculation may treat an absent analytics subject as a confirmed roster departure.
