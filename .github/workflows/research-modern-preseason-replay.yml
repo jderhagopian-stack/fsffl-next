@@ -1,0 +1,32 @@
+name: Research historical modern-model backcast
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/research_modern_preseason_replay.py'
+      - 'tests/test_research_modern_preseason_replay.py'
+      - '.github/workflows/research-modern-preseason-replay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact PR commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up governed Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install repository tests
+        run: python -m pip install -e '.[dev]'
+      - name: Run cutoff and source-leakage gates
+        run: python -m pytest -q tests/test_research_modern_preseason_replay.py
+      - name: Compile offline replay entrypoint
+        run: python -m py_compile scripts/research_modern_preseason_replay.py
