@@ -51,6 +51,62 @@ PINNED_BLOBS = {
 }
 SOURCE_LIMIT_BYTES = 7_000_000
 
+# Audited separately published pre-kickoff correction. The Sep-4 Git snapshot
+# retained an NFL team field that was already stale on Aug 30. Publication
+# date is the evidence-availability clock; this record was recovered later.
+# This exceptional personal-research correction MUST NOT be generalized to
+# unverified current player statuses.
+PREKICKOFF_TEAM_CORRECTIONS = (
+    {
+        "player_id": "sleeper:player:12504", "full_name": "Kaleb Johnson",
+        "expected_stale_team": "PIT", "verified_team": "GB",
+        "publicly_effective_at": "2026-08-30T23:59:59Z",
+        "source_url": "https://www.packers.com/news/packers-announce-roster-moves-aug-30-2026",
+        "source_kind": "dated_original_club_announcement",
+    },
+)
+
+
+def apply_dated_pregame_player_corrections(state):
+    """Update only publicly dated pre-kickoff facts, keeping lineage explicit."""
+    players = {p.player_id: p for p in state.players}
+    statuses = {p.player_id: p for p in state.player_states}
+    applied = []
+    for correction in PREKICKOFF_TEAM_CORRECTIONS:
+        pid = correction["player_id"]
+        player, old_status = players.get(pid), statuses.get(pid)
+        if player is None or old_status is None:
+            raise ValueError(f"dated source correction subject not present: {pid}")
+        evidence_at = datetime.fromisoformat(correction["publicly_effective_at"].replace("Z","+00:00"))
+        if evidence_at > state.as_of or evidence_at > PREGAME_CUTOFF:
+            raise ValueError("correction did not exist by historical preseason cutoff")
+        if player.nfl_team != correction["expected_stale_team"]:
+            raise ValueError("source correction's original historical team no longer matches")
+        # Provenance reports real retrospective retrieval rather than backdating
+        # the recovered web record. Only its published fact is pre-cutoff.
+        recovered = datetime.now(UTC)
+        prov = Provenance(
+            source=correction["source_url"],
+            retrieved_at=recovered, effective_at=evidence_at,
+        )
+        players[pid] = player.model_copy(update={"nfl_team": correction["verified_team"]})
+        statuses[pid] = old_status.model_copy(update={
+            "nfl_team": correction["verified_team"], "provenance": prov,
+        })
+        applied.append({
+            "player_id":pid, "name":correction["full_name"],
+            "from":correction["expected_stale_team"], "to":correction["verified_team"],
+            "source_kind":correction["source_kind"],
+            "published_at":correction["publicly_effective_at"],
+            "source_url":correction["source_url"],
+            "retrospective_recovery":True,
+        })
+    return state.model_copy(update={
+        "players":tuple(sorted(players.values(),key=lambda p:p.player_id)),
+        "player_states":tuple(sorted(statuses.values(),key=lambda p:p.player_id)),
+    }),applied
+
+
 
 def _git_blob_sha1(data: bytes) -> str:
     return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
@@ -117,6 +173,7 @@ def assemble_vintage_state_and_forecasts(source: dict):
                          captured_at=ARCHIVE_CAPTURE, payload=payload),
         as_of=ARCHIVE_CAPTURE,
     )
+    state,dated_corrections = apply_dated_pregame_player_corrections(state)
     if len(state.teams) != 12 or len(state.nfl_team_byes) != 32:
         raise ValueError("canonical league or NFL schedule normalization incomplete")
     if state.completed_through_week not in (None, 0):
@@ -178,6 +235,7 @@ def assemble_vintage_state_and_forecasts(source: dict):
         raise ValueError("preseason personal-use source coverage too small")
     # Modern current-runner may supply governed explicit same-position floor
     # forecasts for rostered players who never received direct projections.
+    coverage["dated_source_corrections"] = dated_corrections
     return state, tuple(rows), coverage
 
 
