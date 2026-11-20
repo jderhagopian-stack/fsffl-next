@@ -73,7 +73,7 @@ jobs:
           python -c 'import json,sys; a=json.load(open(sys.argv[1]));
           b=json.load(open(sys.argv[2]));
           assert a["simulation"] == b["simulation"], "Sep 9 model output was not deterministic";
-          assert a["reconstruction_receipt"]["sha256_player_ownership"] == "f1c0016ba592de8fa558ebc8b4f6624b762cf763a7380f48b368466d3f25f62c";
+          assert a["reconstruction_receipt"]["sha256_archived_subset_player_ownership"] == "f1c0016ba592de8fa558ebc8b4f6624b762cf763a7380f48b368466d3f25f62c";
           print("EXACT_SEPT9_REPLAY_AND_SIMULATION_DETERMINISM_PASSED")'
           "$RUNNER_TEMP/sept9-modern-simulation.json" "$RUNNER_TEMP/sept9-modern-simulation-repeat.json"
       - name: Archive Sept 9 research result (no full private tenant raw payload)
