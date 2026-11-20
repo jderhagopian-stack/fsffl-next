@@ -61,6 +61,25 @@ Across the five reconstructed fantasy weeks, actual scores exceeded correspondin
 
 A prominent tension is **Anthonyder**: it leads the league's Week 1–10 actual points per game, yet the Nov 17 no-bye proxy estimates only 123.4 before correction, versus 138.4 for Drigs24. That difference requires player-level analysis (injury status, trades, provider projections, availability, source coverage) before publishing a definitive power ranking. A new estimator cannot repair incorrect roster projections through weighting.
 
+## First walk-forward diagnostic: no demonstrated predictive gain
+
+A strict, unretrofitted comparison used five saved pregame model vintages for fantasy Weeks 5, 6, 7, 8 and 10 (six fantasy matchups each). At each week, the research estimator used that week's preserved current roster prior and **only earlier completed weeks** among those with available pregame forecast artifacts, with historical starter-identity overlap computed from the corresponding archived optimized lineups. The same fixed provisional hyperparameters and league-median residual centering were used at every cutoff.
+
+| Historical target week | Prior-only correct / 6 | Updated correct / 6 |
+|---:|---:|---:|
+| 5 | 5 | 5 |
+| 6 | 3 | 2 |
+| 7 | 3 | 3 |
+| 8 | 5 | 5 |
+| 10 | 4 | 4 |
+| **Total** | **20/30** | **19/30** |
+
+The prior weighted editorial ranking test previously produced 22/30 across this same five-week set, but the methods do not share identical scoring authority and do not have enough independent observations for statistically meaningful head-to-head selection.
+
+**Interpretation:** The evidence-updated estimator is not demonstrably better; on these archived vintages it is *one pick worse* than the current roster forecast alone. The sole changed winner pick in Week 6 was incorrect. That does not refute evidence updating as a general method; it refutes promotion of these provisional assumptions without a real calibration program. With Week 5 no historical matched evidence exists, so the updater is prior-only by construction.
+
+This replay is bounded by old forecast quality, version drift, historical lineup proxies, incomplete matched weeks and the November 17 results snapshot. It is an **audit of candidate model behavior**, not an out-of-sample efficacy claim about an operational release.
+
 ## Non-negotiable gates before promotion
 
 1. **Point-in-time authority.** Source adapter must resolve real team membership and the timestamp and roster of every historical observation, first NFL kickoff, exact pregame projection lineage and actual scores; reject future leakage or ambiguous identity. Current code performs local temporal and completeness validation but does *not* fetch/attest upstream NFL kickoff schedule.
