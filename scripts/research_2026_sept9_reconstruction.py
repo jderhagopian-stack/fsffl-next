@@ -4,8 +4,8 @@ Factual layers:
 - August-vintage Sleeper provider roster from immutable pre-kickoff Git blob.
 - Complete *historically dated* week-1 Sleeper transaction receipts, obtained
   from the public Sleeper transaction endpoint, filtered at archive cutoff.
-- An explicitly named *unexplained* Travis Hunter reconciliation against the
-  independently retained 2026-09-09 FSFFL NEXT original-vintage artifact.
+- An explicitly named analytics *coverage defect* for Travis Hunter, who
+  remains rostered on BING BONG DRIGSY throughout the historical period.
 - Thirty archived lineup/IR/taxi placement facts from that same pre-kickoff
   artifact, needed because a trade log does not record lineup edits.
 - SHA256 hashes from original Sept 9 Analytics over exact player/team/slot and
@@ -60,7 +60,7 @@ PREKICKOFF_SLOT_OVERRIDES = {
 # Explicit reconciliation exception: archived 09/09 original-vintage source
 # proves this asset was no longer rostered; no completed Sleeper drop was found.
 # Do NOT pretend that this records a transaction or establishes its timing.
-ARCHIVE_MEMBERSHIP_ABSENCES = {"12530": "Travis Hunter"}
+ARCHIVE_ANALYTICS_COVERAGE_GAPS = {"12530": {"name": "Travis Hunter", "roster_id": 11, "slot": "BENCH"}}
 # Pre-kickoff player identity from original 9/9 archived Analytics: not present
 # in the older Sept 4 Git source's Sleeper player dictionary.
 ARCHIVE_IDENTITY_ADDITIONS = {"13425": {
@@ -229,27 +229,31 @@ def reconstruct_sept9_sources(source: dict, *, transactions: list[dict] | None =
                                   "completed_at": stamp.isoformat(),
                                   "player_additions": len(gains), "player_drops": len(losses),
                                   "pick_movements": len(transfers)})
-    for pid in ARCHIVE_MEMBERSHIP_ABSENCES:
-        if pid not in owner:
-            raise HistoricalRosterMismatch(f"documented 9/9 unexplained absence was not in baseline: {pid}")
-        owner.pop(pid)
-        slot.pop(pid)
+    for pid, covered in ARCHIVE_ANALYTICS_COVERAGE_GAPS.items():
+        # User-confirmed continuous Sleeper roster membership; source roster
+        # retained it. Absence from the Analytics export is a missing row,
+        # not a removal transaction.
+        if owner.get(pid) != covered["roster_id"] or slot.get(pid) != covered["slot"]:
+            raise HistoricalRosterMismatch(
+                f"archived Analytics coverage gap cannot be reconciled: {pid}"
+            )
 
     for pid, value in PREKICKOFF_SLOT_OVERRIDES.items():
         if pid not in owner:
             raise HistoricalRosterMismatch(f"original-vintage lineup override has no reconstructed owner: {pid}")
         slot[pid] = value
 
-    mm = _hash_map(owner)
+    archive_membership = {pid: rid for pid, rid in owner.items() if pid not in ARCHIVE_ANALYTICS_COVERAGE_GAPS}
+    mm = _hash_map(archive_membership)
     if mm != EXPECTED_MEMBERSHIP_SHA:
         raise HistoricalRosterMismatch(f"September 9 recovered player roster does not match archived digest: {mm}")
-    ss = _hash_map(owner, suffix=slot)
+    ss = _hash_map(archive_membership, suffix=slot)
     if ss != EXPECTED_PLAYER_SLOT_SHA:
         raise HistoricalRosterMismatch(f"September 9 recovered roster slots do not match archived digest: {ss}")
     ps = _hash_map(picks, canonical_player=False)
     if ps != EXPECTED_PICK_SHA:
         raise HistoricalRosterMismatch(f"September 9 future pick owners do not match archived digest: {ps}")
-    if len(owner) != 237 or len(picks) != 108:
+    if len(owner) != 238 or len(archive_membership) != 237 or len(picks) != 108:
         raise HistoricalRosterMismatch("archive source-cohort player/pick counts disagree")
 
     by_rid: dict[int, list[str]] = defaultdict(list)
@@ -312,13 +316,18 @@ def reconstruct_sept9_sources(source: dict, *, transactions: list[dict] | None =
         "transactions_applied": len(applied),
         "lineup_slot_corrections_from_archived_analytics": len(PREKICKOFF_SLOT_OVERRIDES),
         "source_frozen_player_count": len(owner),
+        "archived_analytics_player_count": len(archive_membership),
         "source_frozen_pick_count": len(picks),
-        "sha256_player_ownership": mm, "sha256_player_roster_slots": ss,
+        "sha256_archived_subset_player_ownership": mm,
+        "sha256_archived_subset_player_roster_slots": ss,
+        "complete_roster_member_count": len(owner),
         "sha256_future_picks": ps,
         "unmatched_prior_drop_receipts": no_op_prior_drop,
-        "unexplained_archived_membership_absence": [
-            {"player_id": k, "full_name": v, "reason": "not established by completed transaction history"}
-            for k, v in ARCHIVE_MEMBERSHIP_ABSENCES.items()
+        "archived_analytics_coverage_defects": [
+            {"player_id": f"sleeper:player:{k}", "full_name": v["name"],
+             "source_roster_id": v["roster_id"], "source_slot": v["slot"],
+             "reason": "the Analytics archive omitted a continuously rostered player; no drop transaction"}
+            for k, v in ARCHIVE_ANALYTICS_COVERAGE_GAPS.items()
         ],
         "player_identity_recovered_from_original_vintage": list(ARCHIVE_IDENTITY_ADDITIONS),
         "transaction_trace": transaction_trace,
