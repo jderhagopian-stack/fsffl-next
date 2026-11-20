@@ -170,7 +170,11 @@ def reconstruct_sept9_sources(source: dict, *, transactions: list[dict] | None =
         if tx.get("status") != "complete":
             continue
         stamp = _iso_ms(tx.get("status_updated"))
-        if not JOURNAL_FLOOR <= stamp <= AS_OF:
+        initiated_at = _iso_ms(tx.get("created"))
+        # Sleeper batches older waivers and can change their status_updated
+        # timestamp several days later. This base roster already reflects
+        # those older claims. Partition by CREATED, not last update.
+        if not JOURNAL_FLOOR <= initiated_at <= stamp <= AS_OF:
             continue
         applied.append((stamp, tx))
     tx_ids = {str(t["transaction_id"]) for _, t in applied}
