@@ -32,7 +32,10 @@ from fsffl.forecast.models import (
 from fsffl.state.models import Provenance, Position
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.team_utility.simulation import NUMPY_PCG64_BATCHED_GAUSS_V1
-from research_2026_sept9_reconstruction import AS_OF as SEPT9_AS_OF, reconstruct_sept9_sources
+try:
+    from scripts.research_2026_sept9_reconstruction import AS_OF as SEPT9_AS_OF, reconstruct_sept9_sources
+except ModuleNotFoundError:
+    from research_2026_sept9_reconstruction import AS_OF as SEPT9_AS_OF, reconstruct_sept9_sources
 
 
 ARCHIVE_REPOSITORY = "jderhagopian-stack/sleeper-league-data"
