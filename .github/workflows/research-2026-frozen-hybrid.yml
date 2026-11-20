@@ -35,6 +35,17 @@ jobs:
         run: >-
           python scripts/research_frozen_2026_hybrid_simulation.py
           --trials 50000 --output "$RUNNER_TEMP/research-hybrid.json"
+      - name: Repeat 50k run with identical frozen inputs
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --trials 50000 --output "$RUNNER_TEMP/research-hybrid-repeat.json"
+      - name: Verify deterministic simulation equality
+        run: >-
+          python -c 'import json,sys; a=json.load(open(sys.argv[1]));
+          b=json.load(open(sys.argv[2]));
+          assert a["simulation"] == b["simulation"], "fixed-source same-seed replay drift";
+          print("DETERMINISTIC_50K_REPLAY_PASSED")'
+          "$RUNNER_TEMP/research-hybrid.json" "$RUNNER_TEMP/research-hybrid-repeat.json"
       - name: Retain small model output, no raw player/provider data
         if: success()
         uses: actions/upload-artifact@v4
