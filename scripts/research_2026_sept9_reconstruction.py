@@ -11,9 +11,9 @@ Factual layers:
 - SHA256 hashes from original Sept 9 Analytics over exact player/team/slot and
   pick-owner identities; no private archived roster payload is stored in Git.
 
-A transaction receipt cannot explain an unrecorded loss of membership.
-We use the archived Sept 9 state to establish the fact of absence and call
-the historical *reason* unknown. No future scores or November projections.
+The historical record supports continuous roster membership. An omitted
+Analytics subject is a coverage defect, not a player drop. No future scores
+or November projections are used.
 """
 from __future__ import annotations
 
