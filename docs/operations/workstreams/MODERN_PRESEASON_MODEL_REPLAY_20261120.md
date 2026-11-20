@@ -25,6 +25,14 @@ Two separate lanes:
 - Modern archived Simulation artifact id 13894 is next18-live-simulation-analytics-v19, but it is a November in-season run on another State, not a historical backcast.
 - Modern weekly-volatility training is 2023–2025 (13,046 offensive player-weeks; accepted code in src/fsffl/forecast/weekly_volatility.py), so it is temporally compatible. This does NOT certify all modern Forecast, career, pick-prior or feature-selection histories.
 
+## Additional direct-archive finding and extractable source lane
+
+Read-only SQL compared the **pre-kickoff 2026-09-09 original Analytics team views** to the first September 10 LeagueState. All 237 player owners still match, but **two roster-slot assignments do not**: for team 8, Sam LaPorta was BENCH before kickoff and TE the following day, while Travis Kelce was TE before kickoff and BENCH the following day. Therefore postgame State is incorrect even for some starting/bench placement. Use original preserved 2026-09-09 roster slots as the authoritative historical membership/placement source, not the 9/10 snapshot.
+
+Pre-kickoff archive id65 contains 237 rostered players, all with source-era roster slots, and 108 future-pick ownership rows. 216 distinct rostered players have exact *season fantasy_points* Forecast observations, each accompanied by a fantasy_regular_season horizon observation (432 total). The other 21 players have **no archived Forecast observation**; never invent 0 projections. 29 players are IR/TAXI. The archive does not carry NFL club identities or complete source-era injury/league-rule provenance, so it is a partial historical State input only.
+
+Research source adapter scripts/research_preseason_archive_bridge.py extracts original roster slots, pick ownership and surviving season Forecast observations with source clocks and fails closed on conflicting IDs/late evidence. Synthetic contract tests in tests/test_research_preseason_archive_bridge.py. Original tenant payload stays private and is not included in this repo.
+
 ## Prototype implementation
 
 - scripts/research_modern_preseason_replay.py: pure read-only historical admission checks for canonical State, original 2026 season Forecast evidence, sourced/trained parameter history, bye and roster data, and zero post-kickoff fantasy points. When evidence passes, --run invokes the existing FSFFL NEXT product Simulation 2.0 (build_live_simulation_analytics), with 50,000 NumPy PCG64 trials, not a second simulation engine.
