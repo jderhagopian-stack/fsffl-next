@@ -264,9 +264,13 @@ def reconstruct_sept9_sources(source: dict, *, transactions: list[dict] | None =
         row["reserve"] = sorted((p for p in members if slot[p] == "IR"))
         lineup = []
         for position in starters:
-            match = [p for p in members if slot[p] == position]
+            # RB/WR are repeated required slots; consume exactly one player per
+            # slot occurrence, never append an entire positional group twice.
+            match = [p for p in members if slot[p] == position and p not in lineup]
             match.sort(key=lambda p: (old_order.get(rid, {}).get(p, 100), p))
-            lineup.extend(match)
+            if not match:
+                raise HistoricalRosterMismatch(f"missing pre-kickoff starter for {position}: team {rid}")
+            lineup.append(match[0])
         if len(lineup) != 9:
             raise HistoricalRosterMismatch(f"2026 Sept 9 starter count !=9 for team {rid}: {len(lineup)}")
         ordered_positions = [slot[p] for p in lineup]
