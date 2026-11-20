@@ -32,6 +32,7 @@ from fsffl.forecast.models import (
 from fsffl.state.models import Provenance, Position
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.team_utility.simulation import NUMPY_PCG64_BATCHED_GAUSS_V1
+from research_2026_sept9_reconstruction import AS_OF as SEPT9_AS_OF, reconstruct_sept9_sources
 
 
 ARCHIVE_REPOSITORY = "jderhagopian-stack/sleeper-league-data"
@@ -172,7 +173,7 @@ def _load_issued(raw: object, *, description: str) -> datetime:
     return dt
 
 
-def assemble_vintage_state_and_forecasts(source: dict):
+def assemble_vintage_state_and_forecasts(source: dict, *, state_as_of: datetime = ARCHIVE_CAPTURE):
     """Use the accepted provider normalizer; no hand-created fantasy roster truth."""
     league = source["data/league.json"]
     if league.get("league_id") != LEAGUE_EXTERNAL_ID or int(league.get("season") or 0) != 2026:
@@ -203,7 +204,7 @@ def assemble_vintage_state_and_forecasts(source: dict):
     state = SleeperSnapshotNormalizer(include_unrostered_players=False).normalize_snapshot(
         ProviderSnapshot(provider_name="sleeper", league_external_id=LEAGUE_EXTERNAL_ID,
                          captured_at=ARCHIVE_CAPTURE, payload=payload),
-        as_of=ARCHIVE_CAPTURE,
+        as_of=state_as_of,
     )
     state,dated_corrections = apply_dated_pregame_player_corrections(state)
     if len(state.teams) != 12 or len(state.nfl_team_byes) != 32:
@@ -276,11 +277,17 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--validate-only", action="store_true")
     parser.add_argument("--trials", type=int, default=50_000)
+    parser.add_argument("--vintage", choices=("sept4", "sept9"), default="sept4")
     args = parser.parse_args()
     if args.trials < 1000 or args.trials > 50_000:
         raise ValueError("trials must be 1,000 to 50,000 for bounded research")
     source = load_pinned_sources()
-    state, forecasts, coverage = assemble_vintage_state_and_forecasts(source)
+    sept9_receipt = None
+    state_date = ARCHIVE_CAPTURE
+    if args.vintage == "sept9":
+        source, sept9_receipt = reconstruct_sept9_sources(source)
+        state_date = SEPT9_AS_OF
+    state, forecasts, coverage = assemble_vintage_state_and_forecasts(source, state_as_of=state_date)
     rostered = {x.player_id for t in state.team_states for x in t.roster}
     direct = len(rostered & {f.player_id for f in forecasts})
     meta = {
@@ -288,6 +295,9 @@ def main() -> None:
         "publication_ready": False,
         "source_revision": ARCHIVE_COMMIT,
         "source_capture_utc": ARCHIVE_CAPTURE.isoformat(),
+        "state_as_of": state_date.isoformat(),
+        "state_vintage": args.vintage,
+        "reconstruction_receipt": sept9_receipt,
         "historical_cutoff_utc": PREGAME_CUTOFF.isoformat(),
         "source_blob_shas": PINNED_BLOBS,
         "source_rights": "legacy_personal_research_only_not_commercial_release",
