@@ -13,6 +13,8 @@ jobs:
   frozen-vintage-hybrid:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/fsffl-frozen-sep4-sources
     steps:
       - name: Checkout exact review head
         uses: actions/checkout@v4
