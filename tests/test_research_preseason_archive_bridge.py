@@ -105,3 +105,63 @@ def test_duplicate_original_season_forecast_blocked():
     a["payload"]["team_views"][0]["players"][0]["forecasts"].append(f)
     with pytest.raises(ArchiveBridgeError,match="duplicate preseason"):
         extract(a)
+
+
+
+def raw_sample():
+    t = sample()
+    raw = []
+    for i in (1, 2):
+        raw.append({
+            "player_id": f"p{i}", "metric": "rush_yards", "horizon": "season",
+            "as_of": ASOF,
+            "provenance": {"effective_at": ASOF, "retrieved_at": ASOF},
+        })
+    return {"id": 63, "artifact_kind": "current_forecast_evidence",
+        "computed_at": ASOF, "payload": {
+            "runtime_result": {
+                "raw_ensemble": raw, "model_version": "original-vintage",
+                "successful_source_ids": ["provider-a", "provider-b"],
+                "coverage": {"minimum_independent_sources": 2},
+            },
+        }}
+
+
+def raw_extract(a=None):
+    from research_preseason_archive_bridge import extract_preseason_raw_forecast_evidence
+    return extract_preseason_raw_forecast_evidence(raw_sample() if a is None else a, cutoff=CUT)
+
+
+def test_raw_forecast_vintage_is_not_modern_forecast():
+    result=raw_extract()
+    assert result["status"]=="raw_preseason_forecast_evidence_recovered_not_rescored"
+    assert result["counts"]=={"raw_observations":2,"unique_subjects":2}
+    assert not result["publication_ready"]
+
+
+def test_raw_forecast_post_kickoff_provenance_blocks():
+    a=raw_sample()
+    a["payload"]["runtime_result"]["raw_ensemble"][0]["provenance"]["retrieved_at"]="2026-09-11T00:00:00Z"
+    with pytest.raises(ArchiveBridgeError,match="before cutoff"):
+        raw_extract(a)
+
+
+def test_raw_forecast_duplicate_metric_blocks():
+    a=raw_sample()
+    a["payload"]["runtime_result"]["raw_ensemble"].append(deepcopy(a["payload"]["runtime_result"]["raw_ensemble"][0]))
+    with pytest.raises(ArchiveBridgeError,match="duplicated"):
+        raw_extract(a)
+
+
+def test_raw_forecast_missing_independent_source_blocks():
+    a=raw_sample()
+    a["payload"]["runtime_result"]["successful_source_ids"]=["provider-a"]
+    with pytest.raises(ArchiveBridgeError,match="independent"):
+        raw_extract(a)
+
+
+def test_raw_forecast_undercovered_source_blocks():
+    a=raw_sample()
+    a["payload"]["runtime_result"]["coverage"]["minimum_independent_sources"]=3
+    with pytest.raises(ArchiveBridgeError,match="below accepted minimum"):
+        raw_extract(a)
