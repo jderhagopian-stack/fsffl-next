@@ -53,3 +53,14 @@ Research source adapter scripts/research_preseason_archive_bridge.py extracts or
 8. Focused tests, private exact-source decode, exact-head CI/Stable where applicable, explicit publication acceptance, and no extra infrastructure or production writes.
 
 No Render deployment, billing changes, new provider account, secret export, new data tables, or direct live model changes are authorized or claimed.
+## Additional pregame raw-Forecast source confirmed (read-only SQL)
+
+The original `current_forecast_evidence` artifact **id 63** preserves **1,680** unique season raw-metric observations for **336** players, with two independent constituent projection sources (FFToday and Razzball), no post-kickoff availability/retrieval/effective timestamps, and accepted original coverage minimum 2. The metrics are completions/interceptions? Specifically verified retained metrics: interceptions, pass_td, pass_yards, rush_td, rush_yards, receptions, rec_td and rec_yards. These inputs are upstream of fantasy-point scoring, and are stronger candidates for governed newer Forecast re-scoring than simply relabeling the old Fantasy Points outputs. No future data or new source was supplied.
+
+Research adapter `extract_preseason_raw_forecast_evidence()` in `scripts/research_preseason_archive_bridge.py` validates the untouched source cutoff and emits a **raw vintage**, expressly **not** an approved modern Forecast. Five targeted synthetic regressions extend its contract.
+
+Important negative evidence: every one of the first later State snapshot's **809** player-status rows, **32** NFL bye rows and **84** matchup rows has recorded source effective/retrieval time **September 10 12:44 UTC**, after kickoff. Those later receipts cannot make a historic Sept 9 football-state input by editing timestamps. Separate pre-kickoff published schedule and player-status evidence is required.
+
+The current `FirstPartyFumblesLostSupplement` contract explicitly declares `preseason_eligible=false` and `historical_pit_eligible=false`, with a completed-Week-2-or-later requirement. Do not run this present in-season-only FUMBLES_LOST policy as if it were preseason-authorized. A separately governed PIT source/first-party preseason model or an explicit coverage blocker is required for full current Forecast.
+
+**Checks**: Exact-head focused research workflow on commit `a75f11f8331584d422a325f53d90d599a95765c7` completed **29 synthetic tests passed**, Python compile passed (GitHub Actions workflow run `44736261180`). This is not a full private production payload decode, modern Forecast run or 50k modern simulated season.
