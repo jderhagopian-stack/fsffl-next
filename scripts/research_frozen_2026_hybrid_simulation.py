@@ -319,7 +319,7 @@ def main() -> None:
     result = build_live_simulation_analytics(
         state, forecasts=forecasts,
         forecast_model_version="legacy-2026-preseason-ensemble-hybrid-research",
-        forecast_as_of=ARCHIVE_CAPTURE,
+        forecast_as_of=state_date,  # evaluation cutoff; source Forecast remains Sep-4 vintage
         simulation_count=args.trials, seed=20260905,
         rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1, rng_batch_size=500,
     )
