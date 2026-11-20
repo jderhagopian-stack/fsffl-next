@@ -5,6 +5,8 @@ on:
     paths:
       - 'scripts/research_modern_preseason_replay.py'
       - 'tests/test_research_modern_preseason_replay.py'
+      - 'scripts/research_preseason_archive_bridge.py'
+      - 'tests/test_research_preseason_archive_bridge.py'
       - '.github/workflows/research-modern-preseason-replay.yml'
   workflow_dispatch:
 
@@ -27,6 +29,6 @@ jobs:
       - name: Install repository tests
         run: python -m pip install -e '.[dev]'
       - name: Run cutoff and source-leakage gates
-        run: python -m pytest -q tests/test_research_modern_preseason_replay.py
+        run: python -m pytest -q tests/test_research_modern_preseason_replay.py tests/test_research_preseason_archive_bridge.py
       - name: Compile offline replay entrypoint
-        run: python -m py_compile scripts/research_modern_preseason_replay.py
+        run: python -m py_compile scripts/research_modern_preseason_replay.py scripts/research_preseason_archive_bridge.py
