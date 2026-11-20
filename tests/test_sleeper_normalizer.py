@@ -581,3 +581,63 @@ def test_bounded_saved_state_identities_are_kept_without_unrostered_catalog():
     assert p2.nfl_team is None
     assert p2_status.provenance.source == "sleeper:current_player_universe"
     assert "sleeper:player:unrostered-wr" not in {player.player_id for player in bounded.players}
+
+
+def test_dual_eligible_rostered_player_is_preserved_in_normalized_state():
+    """A DB/WR's unsupported primary designation must not erase owner history."""
+    source = bundle()
+    source.players["p4"]["position"] = "DB"
+    source.players["p4"]["fantasy_positions"] = ["DB", "WR"]
+    state = SleeperNormalizer().normalize(source, as_of=AS_OF)
+    hunter = next(x for x in state.players if x.player_id == "sleeper:player:p4")
+    assert hunter.position == Position.WR
+    owned = next(t for t in state.team_states if t.team_id.endswith(":team:2"))
+    assert any(x.player_id == hunter.player_id and x.slot == RosterSlot.TAXI for x in owned.roster)
+
+
+def test_dual_eligible_saved_roster_survives_live_snapshot_enrichment():
+    source = bundle()
+    source.players["p4"]["position"] = "DB"
+    source.players["p4"]["fantasy_positions"] = ["DB", "WR"]
+    snapshot = ProviderSnapshot(
+        provider_name="sleeper",
+        league_external_id="123",
+        captured_at=AS_OF,
+        payload={
+            "league": source.league, "users": source.users,
+            "rosters": source.rosters, "players": source.players,
+            "traded_picks": source.traded_picks,
+        },
+    )
+    state = SleeperSnapshotNormalizer(include_unrostered_players=True).normalize_snapshot(snapshot, as_of=AS_OF)
+    p = next(x for x in state.players if x.player_id == "sleeper:player:p4")
+    assert p.position == Position.WR
+    assert any(x.player_id == p.player_id for t in state.team_states for x in t.roster)
+
+
+def test_unsupported_rostered_defensive_only_player_fails_explicitly_not_silently():
+    import pytest
+    source = bundle()
+    source.players["p4"]["position"] = "DB"
+    source.players["p4"]["fantasy_positions"] = ["DB", "CB"]
+    with pytest.raises(ValueError, match="cannot silently drop roster membership"):
+        SleeperNormalizer().normalize(source, as_of=AS_OF)
+
+
+def test_unrostered_dual_eligible_player_appears_in_candidate_catalog():
+    raw = {"12530": {
+        "full_name": "Travis Hunter", "position": "DB",
+        "fantasy_positions": ["DB", "WR"], "team": "JAX", "status": "active",
+    }}
+    players = canonical_players_from_sleeper_player_universe(raw)
+    assert len(players) == 1
+    assert players[0].player_id == "sleeper:player:12530"
+    assert players[0].position == Position.WR
+
+
+def test_primary_eligible_position_wins_over_alternative_list():
+    from fsffl.providers.sleeper import resolve_sleeper_fantasy_position
+    positions = {"WR": Position.WR, "TE": Position.TE}
+    assert resolve_sleeper_fantasy_position(
+        {"position": "WR", "fantasy_positions": ["TE", "WR"]}, positions,
+    ) == Position.WR

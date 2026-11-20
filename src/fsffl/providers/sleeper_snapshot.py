@@ -9,6 +9,7 @@ from fsffl.providers.sleeper import (
     SleeperPayloadBundle,
     _normalize_sleeper_player_status,
     _owned_provider_text,
+    resolve_sleeper_fantasy_position,
 )
 from fsffl.state.models import (
     LeagueState,
@@ -141,7 +142,7 @@ def canonical_players_from_sleeper_player_universe(
     for external_id, raw in raw_players.items():
         if not isinstance(raw, Mapping):
             continue
-        position = _FANTASY_POSITIONS.get(str(raw.get("position") or "").upper())
+        position = resolve_sleeper_fantasy_position(raw, _FANTASY_POSITIONS)
         nfl_team = _normalize_team(raw.get("team"))
         if position is None or nfl_team is None:
             continue
@@ -196,7 +197,7 @@ def _attach_current_fantasy_player_universe(
     for external_id, raw in raw_players.items():
         if not isinstance(raw, Mapping):
             continue
-        position = _FANTASY_POSITIONS.get(str(raw.get("position") or "").upper())
+        position = resolve_sleeper_fantasy_position(raw, _FANTASY_POSITIONS)
         nfl_team = _normalize_team(raw.get("team"))
         if position is None:
             continue
