@@ -82,7 +82,7 @@ Weeks 1–4 and 9 lacked a suitable pregame weekly-scoring panel in the archive.
 
 **Do not infer** from these numbers that record is globally more predictive than model strength. The historical sample, data vintages and forecast model maturity cannot support that claim.
 
-**Data discrepancy:** Week 2 has a 107.62–107.62 exported matchup score between Anthonyder and MochaSmev. Counting an actual tie as half a win produces an 8–1–1 / 5–4–1 derived record at exported precision, rather than the earlier report's 8–2 / 5–5 notation. Before publishing an automated report, verify against Sleeper's official win-loss-tie and tie-break settings.
+**Confirmed Week 2 tie (user corroborated, November 20, 2026):** The stored Sleeper matchup result for Week 2 is Anthonyder 107.62, MochaSmev 107.62. The league owner confirms there was a real tie this season. This is **not erroneous source data**; the prior editorial report incorrectly displayed conventional W–L records (8–2 / 5–5) instead of preserving the tie. Results calculated from the saved Week 1–10 matchup points are Anthonyder **8–1–1** and MochaSmev **5–4–1**, with a tie counted as half a win for ranking/all-play rates. The Sleeper account handle Anthonyder has not yet been independently reconciled to the reported fantasy-franchise name “Blitzers”; verify owner/franchise display names and provider standings before production publication.
 
 ## Requirements before promotion
 
