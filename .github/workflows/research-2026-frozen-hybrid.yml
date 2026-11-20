@@ -1,0 +1,94 @@
+name: Research 2026 frozen preseason hybrid simulation
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/research_frozen_2026_hybrid_simulation.py'
+      - 'scripts/research_2026_sept9_reconstruction.py'
+      - 'tests/test_research_frozen_2026_hybrid_simulation.py'
+      - '.github/workflows/research-2026-frozen-hybrid.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-vintage-hybrid:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact review head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Python 3.12.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install accepted FSFFL NEXT code
+        run: python -m pip install -e '.[dev]'
+      - name: Prove ephemeral cache content integrity
+        run: python -m pytest -q tests/test_research_frozen_2026_hybrid_simulation.py
+      - name: Compile historical replay
+        run: python -m py_compile scripts/research_frozen_2026_hybrid_simulation.py
+      - name: Verify pinned September 4 sources without simulation
+        env:
+          FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/fsffl-frozen-sep4-sources
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --validate-only --output "$RUNNER_TEMP/preseason-source-manifest.json"
+      - name: Run current Simulation 2.0 on frozen legacy Forecast
+        env:
+          FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/fsffl-frozen-sep4-sources
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --trials 50000 --output "$RUNNER_TEMP/research-hybrid.json"
+      - name: Repeat 50k run with identical frozen inputs
+        env:
+          FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/fsffl-frozen-sep4-sources
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --trials 50000 --output "$RUNNER_TEMP/research-hybrid-repeat.json"
+      - name: Verify deterministic simulation equality
+        run: >-
+          python -c 'import json,sys; a=json.load(open(sys.argv[1]));
+          b=json.load(open(sys.argv[2]));
+          assert a["simulation"] == b["simulation"], "fixed-source same-seed replay drift";
+          print("DETERMINISTIC_50K_REPLAY_PASSED")'
+          "$RUNNER_TEMP/research-hybrid.json" "$RUNNER_TEMP/research-hybrid-repeat.json"
+      - name: Verify exact Sept 9 journal and roster fingerprints
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --vintage sept9 --validate-only --output "$RUNNER_TEMP/sept9-verified-manifest.json"
+      - name: Run modern Simulation 2.0 against Sep 9 historical State
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --vintage sept9 --trials 50000 --output "$RUNNER_TEMP/sept9-modern-simulation.json"
+      - name: Repeat exact Sep 9 modern simulation
+        run: >-
+          python scripts/research_frozen_2026_hybrid_simulation.py
+          --vintage sept9 --trials 50000 --output "$RUNNER_TEMP/sept9-modern-simulation-repeat.json"
+      - name: Check Sep 9 model determinism
+        run: >-
+          python -c 'import json,sys; a=json.load(open(sys.argv[1]));
+          b=json.load(open(sys.argv[2]));
+          assert a["simulation"] == b["simulation"], "Sep 9 model output was not deterministic";
+          assert a["reconstruction_receipt"]["sha256_archived_subset_player_ownership"] == "f1c0016ba592de8fa558ebc8b4f6624b762cf763a7380f48b368466d3f25f62c";
+          print("EXACT_SEPT9_REPLAY_AND_SIMULATION_DETERMINISM_PASSED")'
+          "$RUNNER_TEMP/sept9-modern-simulation.json" "$RUNNER_TEMP/sept9-modern-simulation-repeat.json"
+      - name: Archive Sept 9 research result (no full private tenant raw payload)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsffl-2026-sept9-modern-simulation-research
+          path: ${{ runner.temp }}/sept9-modern-simulation.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain small model output, no raw player/provider data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsffl-2026-sept4-modern-simulation-hybrid
+          path: ${{ runner.temp }}/research-hybrid.json
+          if-no-files-found: error
+          retention-days: 14

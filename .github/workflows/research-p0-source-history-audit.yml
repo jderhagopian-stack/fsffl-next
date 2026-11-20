@@ -1,0 +1,57 @@
+name: Research P0 2025 feature lineage audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/research-p0-source-history-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - name: Checkout exact review head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Python 3.12.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install frozen source and model contracts
+        run: python -m pip install -e '.[dev]'
+      - name: Export only pre-2026 historical source feature claims
+        run: |
+          python - <<'PY'
+          import csv
+          import os
+          from dataclasses import asdict
+          from pathlib import Path
+          from fsffl.product.p0_forecast_runtime import frozen_p0_source_rows
+          path=Path(os.environ['RUNNER_TEMP'])/'p0-2025-reference-feature-claims.csv'
+          fields=('player_id','player_name','position','historical_gsis_id',
+                  'history_status','age','experience','prior1_points',
+                  'prior1_coverage','games','opportunity_per_game',
+                  'source_role_band','prior2_coverage')
+          rows=frozen_p0_source_rows()
+          assert len(rows)==335
+          with path.open('w',newline='',encoding='utf-8') as f:
+              writer=csv.DictWriter(f,fieldnames=fields)
+              writer.writeheader()
+              for row in rows:
+                  d=asdict(row)
+                  writer.writerow({k:d[k] for k in fields})
+          print('P0_2025_CLAIM_ROWS',len(rows))
+          PY
+      - name: Archive compact public fitted-source historical feature claims
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsffl-p0-historical-feature-claims
+          path: ${{ runner.temp }}/p0-2025-reference-feature-claims.csv
+          retention-days: 14
+          if-no-files-found: error
