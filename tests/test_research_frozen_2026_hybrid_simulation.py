@@ -53,3 +53,13 @@ def test_pregame_correction_is_source_bounded():
     assert row["player_id"]=="sleeper:player:12504"
     assert row["expected_stale_team"]=="PIT" and row["verified_team"]=="GB"
     assert row["source_url"].startswith("https://www.packers.com/news/")
+
+
+def test_travis_hunter_stays_on_bing_bong_at_sept9_cutoff():
+    from scripts import research_2026_sept9_reconstruction as historical
+    hunter = historical.ARCHIVE_ANALYTICS_COVERAGE_GAPS["12530"]
+    assert hunter == {"name": "Travis Hunter", "roster_id": 11, "slot": "BENCH"}
+    # The original September 9 Analytics export covers only 237 of 238
+    # rostered assets. Missing from an analytics cohort != a Sleeper drop.
+    assert "12530" not in historical.PREKICKOFF_SLOT_OVERRIDES
+    assert historical.EXPECTED_MEMBERSHIP_SHA
