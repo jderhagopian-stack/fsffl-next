@@ -68,3 +68,32 @@ The current `FirstPartyFumblesLostSupplement` contract explicitly declares `pres
 ## Direct source-coverage reconciliation
 
 Further read-only join of archived Analytics #65 and raw Forecast #63: among **237 rostered players**, **216** had a direct preseason full-season fantasy-point Forecast, and **21** lacked that final Forecast. Of those 21, **12** were IR/TAXI and **9** were on active roster slots. None of those **nine active-roster missing players** had a corresponding pre-cutoff raw-metric Forecast in artifact #63 either. The archival simulation's original "nine position-floor forecasts" warning is therefore independently consistent with this direct-vintage coverage. Modern re-scoring cannot recover missing source projections by processing existing raw rows alone. A governed, PIT-compatible prior/fallback must be explicitly admitted (or each unscored subject must remain a named coverage failure). Do not silently impute zero or introduce future provider rows.
+
+## 2026-11-20: executed September 4 pinned-source 50k hybrid pilot
+
+A new research-only offline harness (`scripts/research_frozen_2026_hybrid_simulation.py`) uses **10 immutable Git-blob-verified public files** from historical FSFFL repo commit `72c926cdcf9450d1ba1dcb53f67d698851b54cfb` dated **September 4, before kickoff**. It builds the canonical `LeagueState` using accepted `SleeperSnapshotNormalizer`, applies explicit dated fact corrections, attaches **231 historical legacy preseason player forecasts**, then calls existing `build_live_simulation_analytics` on its accepted NumPy/PCG64 kernel with seed 20260905 and **50,000 trials**. Research output only, no runtime backend state mutation, no private raw data in CI, no Render/Supabase changes.
+
+**Verified input**: 12 franchises, 243 rostered players, 108 future-pick ownerships, 84 fantasy matchups, all 32 NFL byes, no completed fantasy weeks, 231 direct player forecasts; **12 rostered lacked direct forecasts**, receiving the existing governed same-position conservative fallback if eligible. These Sep 4 counts are not the same as Sep 9 (237 rostered, 9 active fallback).
+
+**Important new temporal cross-check**: September 4 public roster versus September 9 archived original FSFFL NEXT showed 24 distinct player membership or ownership discrepancies. These vintages must never be represented as matching. Also September 4 source NFL club field for `sleeper:player:12504` Kaleb Johnson was PIT, though the Packers publicly announced his acquisition on **August 30, 2026**. The research adapter records the single explicit dated original club announcement at `https://www.packers.com/news/packers-announce-roster-moves-aug-30-2026` and applies PIT→GB in canonical Player and PlayerState, retaining a separate retrospective-recovery receipt. This is not permission to import unrelated post-cutoff player status facts.
+
+**Executed outcome**: GitHub Actions run `44744550445` completed 50k simulation. Corrected rerun `44745834747` / job `136325491410` also completed 50k and repeated a second 50k pass for exact same-simulation deterministic equality, **all passed**. Correcting the club field did not change team standings/title percentages at the displayed precision. In a prior attempt, GitHub transiently returned `503 Backend.max_conn reached` during a repeated fetch (not a modeling failure); the new harness caches source bytes only in CI job scratch space and verifies git blob hash on every reuse, with bounded retry. Synthetic tests now cover cache integrity.
+
+**Actual current Simulation 2.0 hybrid ranking** (Sept4 vintage; 50k):
+- T8 Bodini: 9.79 wins, 93.6% playoffs, 26.9% title
+- T2 Chef Niners: 9.04, 87.4%, 17.9%
+- T11 BING BONG DRIGSY: 9.03, 87.0%, 22.7%
+- T9 Hurts So Good: 8.81, 82.6%, 11.1%
+- T7 MochaSmevs: 8.11, 68.4%, 7.7%
+- T12 King B: 7.58, 55.3%, 4.8%
+- T10 Shish Kebab Boys: 7.23, 50.1%, 4.8%
+- T5 Ball Knower: 6.73, 34.3%, 2.1%
+- T3 STINKS: 6.41, 27.5%, 1.6%
+- T6 Trash Incessant Talkers: 5.77, 13.5%, 0.3%
+- T4 The Associate: 2.81, 0.2%, 0.0%
+- T1 HUNGRY DAWGS: 2.69, 0.2%, 0.0%
+
+**Research label**: `modern_simulation_on_legacy_2026_preseason_forecasts`, NOT "complete modern-model historical replay" and NOT a numerical final almanac release. Legacy projection source discloses **PERSONAL_RESEARCH** rights and noncommercial default; commercial publication/distribution needs separate source rights assessment. Do not promote preliminary probabilities or claim improvement solely from comparing September 3 Legacy Simulation 1.0 to September 4 NEXT Simulation 2.0, because the input vintage and simulation internals differ.
+
+**Next hard gate**: materially exact September 9 State with dated changes, use original #63 raw forecast evidence (336 players) for current Forecast re-scoring where supported, and execute PIT-approved missing fumbles model/fallback; then separately rebuild 3-Year and Career Intrinsic. Frozen historical stage is retained as a useful benchmarking pilot and Report Studio editorial insert; a full modern-model 2026 almanac is not yet authorized.
+
