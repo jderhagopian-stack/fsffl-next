@@ -198,7 +198,7 @@ def _compose_dynamic_career_contract(
         raise ValueError("Foundation 4 materializer returned components for a failed player")
     long_contract = LongHorizonForecastAuthorityContract.model_validate(
         {
-            **frozen_long.model_dump(exclude={"provenance"}),
+            **frozen_long.model_dump(exclude={"provenance", "forecasts"}),
             "forecasts": tuple(frozen_long.forecasts) + candidate_long_rows,
             "provenance": {
                 **_scalar_provenance(frozen_long.provenance),
@@ -212,6 +212,9 @@ def _compose_dynamic_career_contract(
     long_term = build_long_term_intrinsic_shadow(
         long_contract, rules=state.league.rules
     )
+    # The full policy board has been consumed by long-term Value. Do not keep
+    # its separate Forecast graph alive through tail/final-contract allocation.
+    del long_contract, frozen_long, candidate_long_rows
     tails: dict[str, CareerTailAuthority] = {
         player_id: build_career_tail_authority(
             terminal_features[player_id], rules=state.league.rules

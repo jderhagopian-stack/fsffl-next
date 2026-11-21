@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -141,6 +143,8 @@ def test_scheduler_tick_before_window_is_harmless_and_writes_nothing() -> None:
 
     assert result.attempted is True
     assert result.outcome == "before-window"
+    assert sleeper.player_fetches == 0
+    assert sleeper.schedule_fetches == 1
     assert store.puts == []
 
 
@@ -218,3 +222,49 @@ def test_github_actions_declares_free_daily_scheduler_contract() -> None:
     assert "exit 1" in workflow
     assert "type: cron" not in workflow
     assert "plan: starter" not in workflow
+
+
+@pytest.mark.parametrize("now", [
+    datetime(2027, 9, 9, tzinfo=UTC),
+    datetime(2027, 11, 21, 16, tzinfo=UTC),
+])
+def test_closed_window_skips_catalog_and_projections_without_false_failure(now):
+    store, sleeper = _Store(), _Sleeper()
+    def forbidden(_season):
+        pytest.fail("No projection fetch is eligible after the window closes")
+    result = run_annual_preseason_scheduler_tick(
+        store, clock=lambda: now, sleeper_source=sleeper,
+        fetchers=(NamedCurrentProjectionFetcher(source_id="alpha", fetch=forbidden),),
+    )
+    assert result.outcome == "window-closed"
+    assert sleeper.player_fetches == 0
+    assert sleeper.schedule_fetches == 1
+    assert store.puts == []
+
+
+def test_unknown_opener_still_fails_without_fetching_catalog():
+    store, sleeper = _Store(), _Sleeper()
+    sleeper.fetch_nfl_regular_season_schedule = lambda **kwargs: ()
+    result = run_annual_preseason_scheduler_tick(
+        store, clock=lambda: CAPTURED_AT, sleeper_source=sleeper,
+    )
+    assert result.outcome == "failed-with-reason"
+    assert "opener" in result.detail
+    assert sleeper.player_fetches == 0
+    assert store.puts == []
+
+
+def test_closed_window_route_returns_successful_skip(monkeypatch):
+    app, store, sleeper = FastAPI(), _Store(), _Sleeper()
+    monkeypatch.setenv("FSFFL_SCHEDULER_TOKEN", "test-token")
+    monkeypatch.setattr(annual_preseason_scheduler_routes, "run_annual_preseason_scheduler_tick",
+                        lambda store: run_annual_preseason_scheduler_tick(
+                            store, clock=lambda: datetime(2027, 11, 21, tzinfo=UTC),
+                            sleeper_source=sleeper))
+    annual_preseason_scheduler_routes.install_annual_preseason_scheduler_route(app, persistence_store=store)
+    response = TestClient(app).post("/internal/annual-preseason-snapshot/capture",
+                                  headers={"X-FSFFL-Scheduler-Token": "test-token"})
+    assert response.status_code == 200
+    assert response.json()["outcome"] == "window-closed"
+    assert sleeper.player_fetches == 0
+    assert store.puts == []
