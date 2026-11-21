@@ -14,11 +14,38 @@ Consumer language leads. Examples:
 - exact position-strength index, source/version and methodology are supporting detail.
 - `83% playoff chance` leads; Simulation provenance belongs underneath.
 
+## App-wide language and evidence standard — 2026-11-21
+
+Every surface (Home, Franchise, League, player cards, Explore, Trade Center,
+Owner Intelligence, Reports and History) is a finished consumer product.
+Lead with the takeaway, its specific consequence for the franchise, and the
+useful next action. Use natural football language and compact visual evidence.
+
+Do not expose internal methodology, model versions, source lineage, permutation
+counts, research caveats or pipeline terminology by default or automatically
+move them into every drill-down. Preserve these in internal governed records.
+Optional product detail should help owners inspect actual projections, roster
+changes, transactions, comparisons and outcomes. Technical research records
+are not a required part of an owner's journey.
+
+Show a short limitation only when it materially changes a decision, using plain
+language such as "Through Week 10", "Preseason retrospective" or "Too early to
+judge". Narrow or omit an unsupported claim instead of surrounding it with
+qualifications. Distinguish original predictions from retrospective analysis
+with clear edition labels. Never hide a genuine error or invent certainty.
+
+Acceptance: an owner can scan the screen, explain what changes for their team,
+and identify the next action without understanding the modeling architecture.
+Apply this immediately to new work and to existing screens when touched;
+perform a consistency pass across the complete journey before final acceptance.
+No model authority or evidence retention policy changes under this standard.
+
 ## Drill-down experience
 
-Tap/click should reveal deeper FSFFL intelligence where appropriate: projections and sources, league-relative measurements, Value evidence, optimized lineups, replacement exposure, Simulation distributions, trade consequences, package economics, counterparty perspective, Behavioral evidence, historical evidence, provenance and methodology.
-
-Analytical depth is preserved and moved to the correct interaction depth.
+Tap/click reveals useful supporting intelligence: projections, optimized lineup
+changes, replacement exposure, distributions, both-team trade consequences,
+package economics, transaction history and owner observations. Presentation
+explains governed results without inventing calculations or recommendations.
 
 ## Visual language
 

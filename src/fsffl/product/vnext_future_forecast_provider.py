@@ -23,6 +23,7 @@ from fsffl.forecast.future_state_primitive import (
     frozen_future_state_source_rows,
     governed_future_state_player_ids,
     governed_future_state_source_row,
+    governed_future_state_source_rows,
 )
 from fsffl.forecast.integrated_i1 import STATE_NAMES
 from fsffl.forecast.models import ForecastDistribution, ForecastObservation
@@ -695,7 +696,8 @@ def vnext_future_forecast_input_fingerprint(
     """
 
     del raw_forecasts
-    governed_ids = set(governed_future_state_player_ids(league_state))
+    governed_sources = governed_future_state_source_rows(league_state)
+    governed_ids = set(governed_sources)
     league_by_id = {
         item.player_id: item
         for item in league_year_one
@@ -705,7 +707,7 @@ def vnext_future_forecast_input_fingerprint(
     identities = []
     year_one = []
     for player_id in eligible_ids:
-        source = governed_future_state_source_row(league_state, player_id)
+        source = governed_sources[player_id]
         observation = league_by_id[player_id]
         identities.append(
             {

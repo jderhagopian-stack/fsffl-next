@@ -136,3 +136,46 @@ def test_future_state_primitive_exposes_probability_only_not_p0_routes_or_point_
     assert not hasattr(player, "route_for")
     assert not hasattr(player, "routes")
     assert not hasattr(player, "results")
+
+
+def test_batch_source_identity_matches_single_reads_and_drops_ambiguity():
+    from fsffl.forecast.future_state_primitive import (
+        governed_future_state_source_row, governed_future_state_source_rows,
+    )
+    state, _ = _fixture()
+    first, second = frozen_future_state_source_rows()[:2]
+    ambiguous = state.players[0].model_copy(update={
+        'player_id': first.current_player_id,
+        'provider_refs': (ProviderRef(provider='sleeper', external_id=second.sleeper_external_id),),
+    })
+    unknown = state.players[0].model_copy(update={
+        'player_id': 'unknown', 'provider_refs': (),
+    })
+    state = state.model_copy(update={'players': state.players + (ambiguous, unknown)})
+    expected = {}
+    for player in state.players:
+        try:
+            expected[player.player_id] = governed_future_state_source_row(state, player.player_id)
+        except ValueError:
+            pass
+    assert governed_future_state_source_rows(state) == expected
+    assert first.current_player_id not in expected
+    assert 'unknown' not in expected
+    revised = state.model_copy(update={'players': (unknown,)})
+    assert governed_future_state_source_rows(revised) == {}
+
+
+def test_batch_source_identity_traverses_catalog_once_for_index_and_once_for_rows():
+    from types import SimpleNamespace
+    from fsffl.forecast.future_state_primitive import governed_future_state_source_rows
+    state, _ = _fixture()
+
+    class CountingPlayers:
+        iterations = 0
+        def __iter__(self):
+            self.iterations += 1
+            return iter(state.players)
+
+    players = CountingPlayers()
+    assert len(governed_future_state_source_rows(SimpleNamespace(players=players))) == 1
+    assert players.iterations == 2
