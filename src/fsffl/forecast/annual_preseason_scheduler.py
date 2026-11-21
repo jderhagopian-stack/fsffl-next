@@ -15,7 +15,9 @@ from fsffl.providers.sleeper_snapshot import (
 )
 
 from .annual_preseason_service import capture_first_valid_annual_preseason_snapshot
-from .annual_preseason_snapshot import ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION
+from .annual_preseason_snapshot import (
+    ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION, annual_preseason_capture_window,
+)
 from .current_runtime import NamedCurrentProjectionFetcher
 
 
@@ -78,24 +80,36 @@ def run_annual_preseason_scheduler_tick(
 
     source = sleeper_source or SleeperLiveSource()
     try:
-        raw_players = source.fetch_nfl_player_universe()
-        canonical_players = canonical_players_from_sleeper_player_universe(raw_players)
-        if not canonical_players:
-            raise ValueError("Sleeper canonical NFL player universe is unavailable")
-
         schedule_rows = source.fetch_nfl_regular_season_schedule(season=season)
         if not isinstance(schedule_rows, Sequence) or isinstance(
             schedule_rows, (str, bytes)
         ):
             raise ValueError("Sleeper regular-season schedule payload is not a sequence")
 
+        schedule_rows = tuple(row for row in schedule_rows if isinstance(row, Mapping))
+        # Eligibility belongs to the existing capture authority. Check its exact
+        # date window before allocating the full NFL catalog or calling sources.
+        target_date, opener_date = annual_preseason_capture_window(schedule_rows, season=season)
+        if now.date() < target_date:
+            return AnnualPreseasonSchedulerResult(
+                season=season, attempted=True, outcome="before-window",
+                detail=f"annual preseason capture window has not opened; target={target_date.isoformat()}",
+            )
+        if now.date() >= opener_date:
+            return AnnualPreseasonSchedulerResult(
+                season=season, attempted=True, outcome="window-closed",
+                detail=f"annual preseason capture window is closed; opener_date={opener_date.isoformat()}",
+            )
+        raw_players = source.fetch_nfl_player_universe()
+        canonical_players = canonical_players_from_sleeper_player_universe(raw_players)
+        if not canonical_players:
+            raise ValueError("Sleeper canonical NFL player universe is unavailable")
+
         result = capture_first_valid_annual_preseason_snapshot(
             persistence_store,
             season=season,
             canonical_players=canonical_players,
-            schedule_rows=tuple(
-                row for row in schedule_rows if isinstance(row, Mapping)
-            ),
+            schedule_rows=schedule_rows,
             fetchers=fetchers,
             clock=lambda: now,
             minimum_independent_sources=minimum_independent_sources,
