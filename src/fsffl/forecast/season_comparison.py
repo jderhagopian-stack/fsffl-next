@@ -200,7 +200,8 @@ def apply_participation_exceptions(state, result, *, as_of, verified_roles=None,
 
 def build_participation_adjusted_outlook(state, *, preseason_forecasts,
                                         stats_source=None, history_store=None,
-                                        clock=None, fallback_forecasts=None):
+                                        clock=None, fallback_forecasts=None,
+                                        refresh_sources=False):
     """One Forecast preparation path for cards and Current lineup consumers.
 
     Return typed governed observations, explanatory participation metadata and
@@ -227,6 +228,8 @@ def build_participation_adjusted_outlook(state, *, preseason_forecasts,
                 )
             )
             kwargs["supplement_missing_sources"] = True
+        if refresh_sources:
+            kwargs["refresh_sources"] = True
         kwargs["allow_undercovered_sources"] = True
         runtime = build_in_season_forecasts(league_state, **kwargs)
         if not runtime.source_observations:
@@ -284,11 +287,13 @@ def outlook_evidence_labels(ros, evidence_basis, participation=None):
 
 def build_season_comparison(state, *, preseason_forecasts, preseason_as_of=None,
                             stats_source=None, history_store=None, clock=None,
-                            fallback_forecasts=None, preseason_basis="original_published_preseason"):
+                            fallback_forecasts=None, preseason_basis="original_published_preseason",
+                            refresh_sources=False):
     """Build small player rows; keep actuals and remaining uncertainty separate."""
     result, participation, now = build_participation_adjusted_outlook(
         state, preseason_forecasts=preseason_forecasts, stats_source=stats_source,
         history_store=history_store, clock=clock, fallback_forecasts=fallback_forecasts,
+        refresh_sources=refresh_sources,
     )
     baseline = {row.player_id: row for row in preseason_forecasts
                 if row.horizon == ForecastHorizon.SEASON and row.metric == ForecastMetric.FANTASY_POINTS}

@@ -101,6 +101,7 @@ class SeasonComparisonService:
                     preseason_as_of=frozen["as_of"], preseason_basis=frozen["basis"],
                     fallback_forecasts=tuple(baseline.league_scored_forecasts) if baseline else (),
                     history_store=self.history_store,
+                    refresh_sources=True,
                 )
                 if self.owned is not None and not self.owned(context):
                     return
