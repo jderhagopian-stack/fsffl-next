@@ -11,7 +11,7 @@ from typing import Mapping
 
 from fsffl.forecast.integrated_i1 import STATE_NAMES
 from fsffl.forecast.models import ForecastHorizon, ForecastObservation
-from fsffl.state.models import LeagueState, Position
+from fsffl.state.models import LeagueState, Player, Position
 
 from .future_state_primitive_assets import (
     FUTURE_STATE_ORIGIN_PACKAGE_SHA256,
@@ -394,6 +394,8 @@ def _score_prob(
 def _source_for_player(
     league_state: LeagueState,
     player_id: str,
+    *,
+    by_player: Mapping[str, Player] | None = None,
 ) -> FutureStateSourceRow:
     direct = _SOURCE_BY_CURRENT_ID.get(player_id) or _SOURCE_BY_PLAYER_ID.get(
         player_id
@@ -402,7 +404,8 @@ def _source_for_player(
     if direct is not None:
         candidates[direct.current_player_id] = direct
 
-    by_player = {player.player_id: player for player in league_state.players}
+    if by_player is None:
+        by_player = {player.player_id: player for player in league_state.players}
     player = by_player.get(player_id)
     if player is None:
         raise ValueError(
@@ -443,14 +446,27 @@ def governed_future_state_player_ids(
 ) -> tuple[str, ...]:
     """Canonical current ids represented by the validated frozen source cohort."""
 
-    governed: list[str] = []
+    return tuple(sorted(governed_future_state_source_rows(league_state)))
+
+
+def governed_future_state_source_rows(
+    league_state: LeagueState,
+) -> dict[str, FutureStateSourceRow]:
+    """Resolve a cohort with one local index; retain no State across calls.
+
+    The single-subject resolver remains authoritative, including missing and
+    ambiguous identity handling. A new call always observes the supplied State.
+    """
+    by_player = {player.player_id: player for player in league_state.players}
+    governed: dict[str, FutureStateSourceRow] = {}
     for player in league_state.players:
         try:
-            _source_for_player(league_state, player.player_id)
+            governed[player.player_id] = _source_for_player(
+                league_state, player.player_id, by_player=by_player,
+            )
         except ValueError:
             continue
-        governed.append(player.player_id)
-    return tuple(sorted(set(governed)))
+    return governed
 
 
 def _year_one_index(
