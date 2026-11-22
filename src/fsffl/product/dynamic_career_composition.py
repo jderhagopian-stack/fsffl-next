@@ -28,7 +28,7 @@ from fsffl.value.shapley_intrinsic_contract import build_shapley_intrinsic_contr
 from fsffl.value.career_forward_intrinsic import build_career_forward_intrinsic_shadow
 from fsffl.value.career_forward_intrinsic import append_dynamic_career_estimates
 from fsffl.value.career_tail import CareerTailAuthority, build_career_tail_authority
-from fsffl.value.long_term_intrinsic import build_long_term_intrinsic_shadow
+from fsffl.value.long_term_intrinsic import LongTermIntrinsicShadowContract, build_long_term_intrinsic_shadow
 from fsffl.product.foundation4_shadow_inputs import (
     provide_foundation4_long_horizon_forecast_contract_for_rules,
     provide_foundation4_terminal_features,
@@ -156,6 +156,7 @@ def _compose_dynamic_career_contract(
     expanded_current,
     candidate_ids: tuple[str, ...],
     components: DynamicCareerComponents,
+    long_term_loader: Callable[..., LongTermIntrinsicShadowContract] | None = None,
 ):
     """Apply accepted Y4-Y7 and Y8+ authorities to the full expanded Shapley game."""
     state = context.league_state
@@ -209,7 +210,7 @@ def _compose_dynamic_career_contract(
             },
         }
     )
-    long_term = build_long_term_intrinsic_shadow(
+    long_term = (long_term_loader or build_long_term_intrinsic_shadow)(
         long_contract, rules=state.league.rules
     )
     # The full policy board has been consumed by long-term Value. Do not keep
@@ -339,6 +340,7 @@ def build_dynamic_rostered_career_contract(
     *,
     current_intrinsic_loader,
     materializer: DynamicCareerMaterializer | None = None,
+    long_term_loader: Callable[..., LongTermIntrinsicShadowContract] | None = None,
     candidate_builder: Callable[..., P0LiveCandidateResult] = (
         build_live_p0_rostered_candidate_forecasts
     ),
@@ -590,6 +592,7 @@ def build_dynamic_rostered_career_contract(
             expanded_current=expanded_current,
             candidate_ids=tuple(sorted(complete)),
             components=complete_components,
+            long_term_loader=long_term_loader,
         )
     failures.update(component_failures)
     return result(contract=expanded, failures=failures)
