@@ -85,3 +85,46 @@ def test_native_order_closes_each_shortfall_in_its_own_units():
                                       published=evidence,starters={})
     # C closes 3Y with least extra compensation; D independently closes Career.
     assert ordered == (c_offer,d_offer)
+
+
+@pytest.mark.parametrize('horizon', ['three_year', 'career'])
+def test_universal_history_does_not_take_extra_turns_from_shortfall_repairs(horizon):
+    seed = make_frontier_point(_seed('a', PlayerAsset(player_id='original')),
+                              _seed('b', PlayerAsset(player_id='target')))
+    neighbors = tuple(make_frontier_point(_seed('a', PlayerAsset(player_id=f'option{i}')),
+        seed.counterparty_package) for i in range(12))
+    structural = sorted(neighbors, key=lambda p: p.point_id)
+    values = {'original': 100.0, 'target': 80.0}
+    for rank, point in enumerate(structural):
+        values[point.focal_package.assets[0].player_id] = 180.0 - 10 * rank
+    kwargs = dict(seed_effects={'teams': {'a': {horizon: -20.0}, 'b': {}}},
+        published=SimpleNamespace(values={horizon: values}, pick_values={}), starters={})
+    baseline = order_counter_hypotheses(seed, neighbors, **kwargs)
+    # Widely observed shapes cannot distinguish these candidates. A second
+    # identical queue must not consume another turn before the next repair.
+    result = order_counter_hypotheses(seed, neighbors, **kwargs,
+        history_matches={p.point_id: ['package_shape'] for p in neighbors})
+    assert result == baseline
+    assert len({p.point_id for p in result}) == len(neighbors)
+    def repairs(point):
+        return values[point.focal_package.assets[0].player_id] < 100
+    assert sum(repairs(p) for p in result[:3]) == 2
+    # An explicit nonmatching history map is also a no-op.
+    assert order_counter_hypotheses(seed, neighbors, **kwargs,
+        history_matches={p.point_id: [] for p in neighbors}) == baseline
+
+
+def test_selective_history_still_adds_a_question_without_excluding_alternatives():
+    seed = make_frontier_point(_seed('a', PlayerAsset(player_id='original')),
+                              _seed('b', PlayerAsset(player_id='target')))
+    neighbors = tuple(make_frontier_point(_seed('a', PlayerAsset(player_id=f'option{i}')),
+        seed.counterparty_package) for i in range(4))
+    kwargs = dict(seed_effects={'teams': {}},
+        published=SimpleNamespace(values={}, pick_values={}), starters={})
+    baseline = order_counter_hypotheses(seed, neighbors, **kwargs)
+    chosen = baseline[-1]
+    result = order_counter_hypotheses(seed, neighbors, **kwargs,
+        history_matches={chosen.point_id: ['acquire_WR'], 'outside-candidate-set': ['package_shape']})
+    assert result[0] == chosen
+    assert {p.point_id for p in result} == {p.point_id for p in neighbors}
+    assert result[1:] == baseline[:-1]
