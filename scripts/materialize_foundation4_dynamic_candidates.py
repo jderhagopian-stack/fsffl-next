@@ -492,6 +492,13 @@ def main():
     a = ap.parse_args()
     out = Path(a.out_dir); out.mkdir(parents=True, exist_ok=True)
     dev = load_module("dynamic_career_dev", a.development_module)
+    # Reuse exact immutable training fits; accepted transforms, route selection
+    # and fresh evaluation/prediction still execute on every owned build.
+    from fsffl.product.foundation4_fit_reuse import install_exact_training_fit_reuse
+    fit_scope = hashlib.sha256(
+        Path(a.development_module).read_bytes() + Path(a.route_module).read_bytes()
+    ).hexdigest()
+    install_exact_training_fit_reuse(dev, scope=fit_scope)
     accepted_matrix = dev.matrix
     dev.matrix = lambda train, evaluation, features, architecture: bounded_feature_matrix(
         accepted_matrix, dev.CATEGORICAL, train, evaluation, features, architecture)
