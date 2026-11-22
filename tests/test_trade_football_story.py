@@ -38,6 +38,22 @@ h.owner_history.b.source_state_id='stale';assert(!explain(h,'b',names).details.j
 h.owner_history.b={status:'unavailable',source_state_id:'before'};assert.match(explain(h,'b',names).details.join(' '),/Trading history: Unavailable/);
 h.owner_history.b={status:'observed',source_state_id:'before',completed_trade_count:4,facts:[]};assert.match(explain(h,'b',names).details.join(' '),/4 completed trades recorded/);
 
+h.owner_history.b={status:'observed',source_state_id:'before',completed_trade_count:10,observations_version:'package-observations-v1',observations:[
+ {kind:'acquire_picks',count:4,trade_count:10},{kind:'acquire_position',position:'WR',count:7},{kind:'package_shape',shape:'consolidation',count:3,trade_count:10}]};
+let facts=c.window.fsfflOwnerHistoryFacts(h.owner_history,'b','before');
+assert.match(facts[0],/They have traded for draft picks in 4 of 10 completed trades/);
+assert.match(facts[1],/7 receivers/);assert(!facts[1].includes('7 trades'));
+assert.match(facts[2],/sending several assets for fewer/);
+let focalFacts=c.window.fsfflOwnerHistoryFacts(h.owner_history,'b','before',true);
+assert.match(focalFacts[0],/You have traded/);assert.match(focalFacts[0],/brings you/);
+assert(!/their|them|They/.test(focalFacts.join(' ')));
+h.owner_history.b.observations=[{kind:'send_picks',count:2,trade_count:10},{kind:'counterparty',count:1}];
+facts=c.window.fsfflOwnerHistoryFacts(h.owner_history,'b','before',true);
+assert.match(facts[0],/your picks/);assert.match(facts[1],/You two have completed 1 trade together/);
+h.owner_history.b.source_state_id='stale';assert.equal(c.window.fsfflOwnerHistoryFacts(h.owner_history,'b','before').length,0);
+h.owner_history.b.source_state_id='before';h.owner_history.b.observations=[{kind:'acquire_picks',count:11,trade_count:10},{kind:'acquire_position',position:'WR',count:-1}];
+assert.deepEqual(Array.from(c.window.fsfflOwnerHistoryFacts(h.owner_history,'b','before')),['10 completed trades recorded.']);
+
 let x=JSON.parse(before);x.positional_context[0].source_state_id='stale';x.horizon_asset_economics.source.league_state_id='stale';
 let story=explain(x,'a',names);assert(!story.summary.includes('Bucky'));assert(!story.summary.includes('career'));assert(!story.details.join(' ').includes('Josh Downs'));
 x=JSON.parse(before);x.scenario_computation.authoritative=false;assert(!explain(x,'a',names).summary.includes('playoff'));

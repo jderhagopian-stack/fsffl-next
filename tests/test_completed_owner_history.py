@@ -160,3 +160,18 @@ def test_request_local_history_preparation_reuses_state_identity_and_fences_othe
         build_trade_owner_history(SimpleNamespace(league_state=CountedState()),p,context=context)
     with pytest.raises(ValueError,match='cutoff'):
         build_trade_owner_history(runtime,p.model_copy(update={'as_of':p.as_of-timedelta(seconds=1)}),context=context)
+
+
+def test_package_observations_preserve_relevant_details_without_changing_search_matches():
+    profile=history(); row=describe(profile)
+    assert row['matching_features']==['package_shape','send_picks','acquire_WR']
+    assert [o['kind'] for o in row['observations']]==['send_picks','acquire_position','package_shape']
+    assert row['observations'][0]=={'kind':'send_picks','count':1,'trade_count':1}
+    assert row['observations'][1]=={'kind':'acquire_position','position':'WR','count':1}
+    assert row['observations_version']=='package-observations-v1'
+    assert row['acceptance_probability'] is None
+    assert row['decision_effect']=='no_disposition_change'
+    legacy=describe(profile.model_copy(update={'completed_trade_activity':None}))
+    assert [o['kind'] for o in legacy['observations']]==['package_shape']
+    assert describe_owner_package_history(proposal(profile),team_id='b',profile=None,
+        player_positions={},source_state_id='state')['observations']==[]
