@@ -7,6 +7,8 @@ from typing import Annotated
 from pydantic import Field, field_validator, model_validator
 
 from fsffl.state.models import FrozenModel
+from .historical_case_models import OwnerHistoricalTradeCase
+from .owner_resume import OwnerFranchiseResume
 
 
 class BehavioralAssetKind(StrEnum):
@@ -123,6 +125,8 @@ class OwnerBehaviorProfile(FrozenModel):
     counterparty_trade_counts: dict[str, int] = Field(default_factory=dict)
     seasons_observed: tuple[int, ...] = ()
     completed_trade_activity: CompletedTradeActivity | None = None
+    historical_trade_cases: tuple[OwnerHistoricalTradeCase,...] = ()
+    franchise_resume: OwnerFranchiseResume | None = None
     model_version: str = "owner-behavior-profile-v1"
 
     @field_validator("as_of", "first_observed_at")
@@ -134,6 +138,15 @@ class OwnerBehaviorProfile(FrozenModel):
 
     @model_validator(mode="after")
     def validate_counts(self) -> "OwnerBehaviorProfile":
+        if self.franchise_resume is not None and (self.franchise_resume.owner_id != self.owner_id
+                or self.franchise_resume.league_family_id != self.league_family_id
+                or self.franchise_resume.evidence_as_of > self.as_of):
+            raise ValueError("franchise resume must match owner/family/cutoff")
+        if any(c.owner_id != self.owner_id or c.league_family_id != self.league_family_id
+                or max(c.completed_at,c.evidence_as_of) > self.as_of for c in self.historical_trade_cases):
+            raise ValueError('historical cases must match owner/family/cutoff')
+        if len({c.event_id for c in self.historical_trade_cases}) != len(self.historical_trade_cases):
+            raise ValueError('duplicate historical owner case')
         if self.completed_trade_activity is not None and max(self.completed_trade_activity.trades_acquiring_picks,
                 self.completed_trade_activity.trades_sending_picks) > self.trade_count:
             raise ValueError("trade-only pick event counts cannot exceed completed trades")

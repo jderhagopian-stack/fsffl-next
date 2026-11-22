@@ -151,8 +151,12 @@ def default_behavioral_store():
     return BehavioralIntelligenceStore(default_behavioral_cache_path())
 
 
-def default_behavioral_work(league_state: LeagueState, sleeper_league_external_id: str) -> BehavioralSyncResult:
+def default_behavioral_work(league_state: LeagueState, sleeper_league_external_id: str, *, artifact_store=None) -> BehavioralSyncResult:
+    from fsffl.behavioral.dossier_publication import load_admitted_dossier
+    loader=None if artifact_store is None else lambda family,league:load_admitted_dossier(
+        artifact_store,family_id=family,current_provider_league_id=league)
     service = BehavioralIntelligenceService(
+        dossier_loader=loader,
         source=SleeperBehaviorHistorySource(),
         store=default_behavioral_store(),
     )

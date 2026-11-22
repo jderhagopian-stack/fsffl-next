@@ -7,3 +7,44 @@
 @media(max-width:900px){.behavior-scan-signals{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.behavior-scan{padding:13px}.behavior-scan-hero{grid-template-columns:1fr}.behavior-scan-hero h3{font-size:17px}.behavior-scan-signals{grid-template-columns:1fr}.behavior-activity-evidence .metric-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.behavior-activity-evidence .metric-grid{grid-template-columns:1fr}}
+
+/* Contextual history: compact exchanges, useful facts, no research scaffolding. */
+.behavior-history-cases{margin:1rem 0}
+.behavior-history-cases h3{margin:.1rem 0 .8rem}
+.behavior-history-case{padding:1rem 0;border-top:1px solid rgba(132,190,210,.18)}
+.behavior-history-case:first-of-type{border-top:0}
+.behavior-history-case summary{cursor:pointer;list-style:none;display:grid;gap:.4rem}
+.behavior-history-case summary::-webkit-details-marker{display:none}
+.behavior-case-date{font-size:.78rem;color:#a8bfcb}
+.behavior-case-exchange{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:.65rem;align-items:center}
+.behavior-case-exchange>span{min-width:0;overflow-wrap:anywhere;font-weight:650}
+.behavior-case-exchange b{color:#68d9db;font-weight:400}
+.behavior-case-context{color:#b6cbd5;font-size:.9rem;line-height:1.45}
+.behavior-case-details{margin:.8rem 0 0;padding:.8rem 1rem;background:rgba(0,0,0,.13);border-radius:12px}
+.behavior-case-details p{margin:.3rem 0;color:#c3d5df}
+.behavior-case-label{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:#8db0c0}
+.behavior-history-more{margin-top:.5rem}
+@media(max-width:760px){.behavior-history-case{padding:.85rem 0}.behavior-case-exchange{font-size:.95rem;gap:.45rem}.behavior-case-details{padding:.7rem}}
+.behavior-shell,.behavior-dossier{grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}
+.behavior-shell>.panel,.behavior-dossier>.panel,.behavior-owner-list,.behavior-history-case{min-width:0;max-width:100%}
+.behavior-shell .panel-header>div{min-width:0}
+.behavior-shell h1,.behavior-owner-tab span{overflow-wrap:anywhere}
+.behavior-case-package{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.behavior-case-package ul{margin:.5rem 0;padding-left:1.1rem;color:#c3d5df;font-size:.9rem}
+.behavior-case-package li{margin:.3rem 0;overflow-wrap:anywhere}
+@media(max-width:760px){.behavior-shell>.panel>.panel-header{align-items:flex-start}.behavior-shell h1{font-size:1.7rem;line-height:1.15}.behavior-case-package{grid-template-columns:minmax(0,1fr)}}
+
+/* Franchise facts stay compact; season and draft depth open on demand. */
+.behavior-resume{min-width:0}
+.behavior-resume-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.behavior-resume-stats strong,.behavior-resume-stats span{display:block}
+.behavior-resume-stats strong{font-size:1.45rem;color:var(--text-primary,#edf6fa)}
+.behavior-resume-stats span{font-size:.8rem;color:var(--text-secondary,#a2b8c4);margin-top:5px}
+.behavior-resume-detail{border-top:1px solid rgba(150,190,210,.18);padding:14px 0}
+.behavior-resume-detail>summary,.behavior-draft-class>summary{cursor:pointer;color:#9ad8e5}
+.behavior-season-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;padding:12px 0;border-bottom:1px solid rgba(150,190,210,.12);font-size:.85rem}
+.behavior-draft-class{padding:12px 0}
+.behavior-draft-class ol{padding:0;list-style:none}
+.behavior-draft-class li{display:flex;flex-wrap:wrap;gap:5px 12px;padding:10px 0}
+.behavior-draft-class li>span{width:100%;color:#a2b8c4;font-size:.8rem}
+.behavior-draft-class strong{overflow-wrap:anywhere}

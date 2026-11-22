@@ -138,124 +138,140 @@ class SleeperBehaviorHistorySource:
                 if not transaction_id or transaction_id in seen_transactions:
                     continue
                 seen_transactions.add(transaction_id)
-                status = str(raw.get("status") or "").lower()
-                if status not in {"complete", "completed"}:
-                    continue
-                kind_raw = str(raw.get("type") or "").lower()
-                if kind_raw == "trade":
-                    kind = BehavioralEventKind.TRADE
-                elif kind_raw == "waiver":
-                    kind = BehavioralEventKind.WAIVER
-                elif kind_raw in {"free_agent", "free agent"}:
-                    kind = BehavioralEventKind.FREE_AGENT
-                else:
-                    continue
-                created = raw.get("created")
-                if created is None:
-                    continue
-                occurred_at = datetime.fromtimestamp(float(created) / 1000.0, tz=UTC)
-                roster_ids = tuple(
-                    int(value)
-                    for value in (raw.get("roster_ids") or ())
-                    if value is not None
-                )
-                if not roster_ids:
-                    involved = set()
-                    involved.update(int(value) for value in (raw.get("adds") or {}).values())
-                    involved.update(int(value) for value in (raw.get("drops") or {}).values())
-                    roster_ids = tuple(sorted(involved))
-
-                for roster_id in roster_ids:
-                    owner_id = owner_map.get(roster_id)
-                    if owner_id is None:
-                        continue
-                    acquired: list[BehavioralAsset] = []
-                    disposed: list[BehavioralAsset] = []
-                    for player_id, receiving_roster in (raw.get("adds") or {}).items():
-                        if int(receiving_roster) == roster_id:
-                            acquired.append(
-                                BehavioralAsset(
-                                    kind=BehavioralAssetKind.PLAYER,
-                                    asset_ref=f"sleeper:player:{player_id}",
-                                    position=player_positions.get(str(player_id)),
-                                )
-                            )
-                    for player_id, sending_roster in (raw.get("drops") or {}).items():
-                        if int(sending_roster) == roster_id:
-                            disposed.append(
-                                BehavioralAsset(
-                                    kind=BehavioralAssetKind.PLAYER,
-                                    asset_ref=f"sleeper:player:{player_id}",
-                                    position=player_positions.get(str(player_id)),
-                                )
-                            )
-                    for pick in raw.get("draft_picks") or ():
-                        if not isinstance(pick, Mapping):
-                            continue
-                        try:
-                            pick_season = int(pick["season"])
-                            pick_round = int(pick["round"])
-                            original = int(pick["roster_id"])
-                            new_owner = int(pick["owner_id"])
-                            previous_owner = int(pick["previous_owner_id"])
-                        except (KeyError, TypeError, ValueError):
-                            continue
-                        asset = BehavioralAsset(
-                            kind=BehavioralAssetKind.PICK,
-                            asset_ref=f"sleeper:pick:{pick_season}:{pick_round}:{original}",
-                            pick_season=pick_season,
-                            pick_round=pick_round,
-                        )
-                        if new_owner == roster_id:
-                            acquired.append(asset)
-                        if previous_owner == roster_id:
-                            disposed.append(asset)
-                    for faab in raw.get("waiver_budget") or ():
-                        if not isinstance(faab, Mapping):
-                            continue
-                        try:
-                            sender = int(faab["sender"])
-                            receiver = int(faab["receiver"])
-                            amount = int(faab["amount"])
-                        except (KeyError, TypeError, ValueError):
-                            continue
-                        asset = BehavioralAsset(
-                            kind=BehavioralAssetKind.FAAB,
-                            asset_ref=f"sleeper:faab:{transaction_id}:{sender}:{receiver}",
-                            faab_amount=max(amount, 0),
-                        )
-                        if receiver == roster_id:
-                            acquired.append(asset)
-                        if sender == roster_id:
-                            disposed.append(asset)
-                    counterparties = tuple(
-                        sorted(
-                            {
-                                owner_map[other]
-                                for other in roster_ids
-                                if other != roster_id and other in owner_map
-                            }
-                        )
-                    )
-                    normalized.append(
-                        OwnerBehaviorEvent(
-                            event_id=f"sleeper:{external_id}:{transaction_id}:roster:{roster_id}",
-                            league_family_id=family_id,
-                            league_external_id=external_id,
-                            season=season,
-                            owner_id=owner_id,
-                            roster_id=roster_id,
-                            occurred_at=occurred_at,
-                            kind=kind,
-                            acquired=tuple(acquired),
-                            disposed=tuple(disposed),
-                            counterparty_owner_ids=counterparties,
-                        )
-                    )
+                normalized.extend(normalize_sleeper_behavior_transaction(raw,
+                    family_id=family_id,league_external_id=external_id,season=season,
+                    owner_by_roster=owner_map,player_positions=player_positions))
         return normalized
 
     def _get(self, path: str) -> Any:
         return self._http_get_json(f"{self.base_url}{path}")
+
+
+
+def normalize_sleeper_behavior_transaction(raw: Mapping[str, Any], *, family_id: str,
+        league_external_id: str, season: int, owner_by_roster: Mapping[int,str],
+        player_positions: Mapping[str,str]) -> tuple[OwnerBehaviorEvent,...]:
+    """Shared pure normalization for live scans and historical case witnesses."""
+    external_id=league_external_id
+    owner_map=dict(owner_by_roster)
+    transaction_id=str(raw.get('transaction_id') or '').strip()
+    if not transaction_id:return ()
+    normalized=[]
+    status = str(raw.get("status") or "").lower()
+    if status not in {"complete", "completed"}:
+        return ()
+    kind_raw = str(raw.get("type") or "").lower()
+    if kind_raw == "trade":
+        kind = BehavioralEventKind.TRADE
+    elif kind_raw == "waiver":
+        kind = BehavioralEventKind.WAIVER
+    elif kind_raw in {"free_agent", "free agent"}:
+        kind = BehavioralEventKind.FREE_AGENT
+    else:
+        return ()
+    created = raw.get("created")
+    if created is None:
+        return ()
+    occurred_at = datetime.fromtimestamp(float(created) / 1000.0, tz=UTC)
+    roster_ids = tuple(
+        int(value)
+        for value in (raw.get("roster_ids") or ())
+        if value is not None
+    )
+    if not roster_ids:
+        involved = set()
+        involved.update(int(value) for value in (raw.get("adds") or {}).values())
+        involved.update(int(value) for value in (raw.get("drops") or {}).values())
+        roster_ids = tuple(sorted(involved))
+
+    for roster_id in roster_ids:
+        owner_id = owner_map.get(roster_id)
+        if owner_id is None:
+            continue
+        acquired: list[BehavioralAsset] = []
+        disposed: list[BehavioralAsset] = []
+        for player_id, receiving_roster in (raw.get("adds") or {}).items():
+            if int(receiving_roster) == roster_id:
+                acquired.append(
+                    BehavioralAsset(
+                        kind=BehavioralAssetKind.PLAYER,
+                        asset_ref=f"sleeper:player:{player_id}",
+                        position=player_positions.get(str(player_id)),
+                    )
+                )
+        for player_id, sending_roster in (raw.get("drops") or {}).items():
+            if int(sending_roster) == roster_id:
+                disposed.append(
+                    BehavioralAsset(
+                        kind=BehavioralAssetKind.PLAYER,
+                        asset_ref=f"sleeper:player:{player_id}",
+                        position=player_positions.get(str(player_id)),
+                    )
+                )
+        for pick in raw.get("draft_picks") or ():
+            if not isinstance(pick, Mapping):
+                continue
+            try:
+                pick_season = int(pick["season"])
+                pick_round = int(pick["round"])
+                original = int(pick["roster_id"])
+                new_owner = int(pick["owner_id"])
+                previous_owner = int(pick["previous_owner_id"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            asset = BehavioralAsset(
+                kind=BehavioralAssetKind.PICK,
+                asset_ref=f"sleeper:pick:{pick_season}:{pick_round}:{original}",
+                pick_season=pick_season,
+                pick_round=pick_round,
+            )
+            if new_owner == roster_id:
+                acquired.append(asset)
+            if previous_owner == roster_id:
+                disposed.append(asset)
+        for faab in raw.get("waiver_budget") or ():
+            if not isinstance(faab, Mapping):
+                continue
+            try:
+                sender = int(faab["sender"])
+                receiver = int(faab["receiver"])
+                amount = int(faab["amount"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            asset = BehavioralAsset(
+                kind=BehavioralAssetKind.FAAB,
+                asset_ref=f"sleeper:faab:{transaction_id}:{sender}:{receiver}",
+                faab_amount=max(amount, 0),
+            )
+            if receiver == roster_id:
+                acquired.append(asset)
+            if sender == roster_id:
+                disposed.append(asset)
+        counterparties = tuple(
+            sorted(
+                {
+                    owner_map[other]
+                    for other in roster_ids
+                    if other != roster_id and other in owner_map
+                }
+            )
+        )
+        normalized.append(
+            OwnerBehaviorEvent(
+                event_id=f"sleeper:{external_id}:{transaction_id}:roster:{roster_id}",
+                league_family_id=family_id,
+                league_external_id=external_id,
+                season=season,
+                owner_id=owner_id,
+                roster_id=roster_id,
+                occurred_at=occurred_at,
+                kind=kind,
+                acquired=tuple(acquired),
+                disposed=tuple(disposed),
+                counterparty_owner_ids=counterparties,
+            )
+        )
+    return tuple(normalized)
 
 
 def _default_get_json(url: str) -> Any:

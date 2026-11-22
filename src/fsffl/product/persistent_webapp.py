@@ -25,7 +25,7 @@ from . import opportunity_workspace as _opportunity_workspace
 from . import webapp as _webapp
 from fsffl import journey_telemetry as _journey_telemetry
 from .annual_preseason_scheduler_routes import install_annual_preseason_scheduler_route
-from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
+from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store, default_behavioral_work
 from .focused_opportunity_routes import install_focused_opportunity_routes
 from .acceptance_startup import production_acceptance_startup_enabled
 from .foreground_pressure import install_foreground_pressure
@@ -247,6 +247,7 @@ _beta_restore_user = (
 # Behavioral storage stays lazy so module import/port binding never waits on a
 # database connection. The coordinator owns bounded background initialization.
 _behavioral_coordinator = BehavioralRuntimeCoordinator(
+    work=lambda state,league_id:default_behavioral_work(state,league_id,artifact_store=_persistence_store),
     store_factory=default_behavioral_store,
     max_workers=1,
     heavy_work_coordinator=_heavy_work_coordinator,

@@ -1637,10 +1637,19 @@ def create_app(
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
         record = behavior_jobs.current(user_id, league_state=runtime.league_state)
+        sleeper_ids = {ref.external_id for ref in runtime.league_state.league.provider_refs if ref.provider == "sleeper"}
+        exact_state = record.league_state_id == runtime.league_state.state_id
+        same_provider_league = len(sleeper_ids) == 1 and record.sleeper_league_external_id in sleeper_ids
+        if not exact_state and not same_provider_league:
+            return {"status": "updating", "profiles": []}
         if record.status == BehavioralRuntimeStatus.FAILED:
             raise HTTPException(status_code=502, detail=record.error or "Behavioral Intelligence build failed")
         if record.result is None:
             return {"status": record.status.value, "profiles": []}
+        # Same-league last-good history remains readable, but cannot be mapped
+        # into another league merely because it reuses the same roster numbers.
+        profiles = tuple(p for p in record.result.profiles
+            if p.league_family_id == record.result.league_family_id and p.as_of <= runtime.league_state.as_of)
 
         roster_to_team = {}
         for team in runtime.league_state.teams:
@@ -1657,7 +1666,7 @@ def create_app(
             if roster_id in roster_to_team
         }
         return {
-            "status": record.status.value,
+            "status": record.status.value if exact_state else "updating",
             "league_family_id": record.result.league_family_id,
             "profiles": [
                 {
@@ -1665,7 +1674,7 @@ def create_app(
                     "current_team_id": owner_to_team[profile.owner_id].team_id if profile.owner_id in owner_to_team else None,
                     "current_team_name": owner_to_team[profile.owner_id].display_name if profile.owner_id in owner_to_team else None,
                 }
-                for profile in record.result.profiles
+                for profile in profiles
             ],
         }
 

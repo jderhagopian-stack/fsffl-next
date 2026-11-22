@@ -28,6 +28,7 @@ const fsfflStaticVersion='20260927-dualstate1';
 const leagueAtlasStaticVersion='20261005-atlas-5b72f0c76856';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
 const franchiseNorthStarStaticVersion='20261007-franchise-db64afb4f620';
+const ownerHistoryStaticVersion='20261122-owner-dossier2';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
@@ -109,7 +110,7 @@ function ensureLeagueComparisonScript(){
 function ensureMyTeamScript(){return lazyProductScript('renderFsfflMyTeam','/static/my_team_dashboard.js','Unable to load Franchise presentation module',()=>myTeamScriptPromise,value=>myTeamScriptPromise=value,franchiseNorthStarStaticVersion)}
 function ensureReportsScript(){return lazyProductScript('renderFsfflReports','/static/reports.js','Unable to load Reports presentation module',()=>reportsScriptPromise,value=>reportsScriptPromise=value)}
 function ensureOpportunitiesScript(){if(typeof window.renderFsfflOpportunities==='function')return Promise.resolve();if(opportunitiesScriptPromise)return opportunitiesScriptPromise;opportunitiesScriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`/static/opportunities.js?v=${opportunityHomeIntentStaticVersion}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error('Unable to load Opportunity Engine presentation module'));document.head.appendChild(script)});return opportunitiesScriptPromise}
-function ensureBehavioralIntelligenceScript(){return lazyProductScript('renderFsfflBehavioralIntelligence','/static/behavioral_intelligence.js','Unable to load Behavioral Intelligence presentation module',()=>behavioralIntelligenceScriptPromise,value=>behavioralIntelligenceScriptPromise=value)}
+function ensureBehavioralIntelligenceScript(){return lazyProductScript('renderFsfflBehavioralIntelligence','/static/behavioral_intelligence.js','Unable to load Behavioral Intelligence presentation module',()=>behavioralIntelligenceScriptPromise,value=>behavioralIntelligenceScriptPromise=value,ownerHistoryStaticVersion)}
 function ensureAnalyticsTerminalScript(){return lazyProductScript('renderFsfflAnalyticsTerminal','/static/analytics_terminal.js','Unable to load Analytics Terminal presentation module',()=>analyticsTerminalScriptPromise,value=>analyticsTerminalScriptPromise=value)}
 function ensureWhatIfScript(){return lazyProductScript('renderFsfflWhatIf','/static/what_if.js','Unable to load What-If scenario module',()=>whatIfScriptPromise,value=>whatIfScriptPromise=value)}
 function ensureSimulatorScript(){return lazyProductScript('renderFsfflSimulator','/static/simulator.js','Unable to load Simulator scenario module',()=>simulatorScriptPromise,value=>simulatorScriptPromise=value)}

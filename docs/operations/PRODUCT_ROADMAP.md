@@ -390,3 +390,27 @@ owner-visible acceptance and explicit unfinished work; a merged PR alone is not
 completion. Routine implementation choices stay within this plan. Material scope
 or sequence changes require agreement, not silent reprioritization. No added
 recurring expense without explicit approval.
+
+
+## Active delivery unit: contextual Owner Intelligence
+
+The agreed delivery sequence is unchanged. Complete one connected outcome from
+a historical decision through supported circumstances, validated interpretation
+and a useful owner-profile journey. Individual adapters/PRs are implementation
+steps, not separate product milestones. See
+[the integrated delivery gate](../product/contextual-owner-intelligence-delivery.md).
+Keep the consolidated implementation draft until its end-to-end acceptance is
+met. Stronger preferences remain gated by chronological evidence; missing facts
+never authorize invented context. No additional recurring expense.
+
+
+### Owner Intelligence dossier scope — 2026-11-22
+
+Complete the existing integrated owner milestone as a franchise dossier: compact
+records and trends, admitted draft selections, roster-building activity and contextual
+past decisions. Keep deeper history on expansion. Championships require explicit completed-season winner evidence; detailed playoff
+finishes require their own result evidence. Standings alone do not qualify. Preserve
+source-scoped owner tenure attestations, unknown data and current-team/owner-preference
+boundaries. This expands the same draft delivery track, not another history rewrite
+or independently promoted helper release. Production and mobile acceptance remain
+separate from local source/browser verification.

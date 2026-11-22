@@ -26,7 +26,8 @@ def test_behavioral_counterparties_resolve_from_loaded_profile_names_without_new
     assert "fsfflBehaviorName(profile)" in source
     assert "fsfflBehaviorCounterpartyName(owner)" in source
     assert "fsfflBehaviorCounterpartyName(counterparty[0])" in source
-    assert "Acceptance probability</strong><small>Not estimable" in source
+    assert "Acceptance probability</strong><small>Not estimable" not in source
+    assert "No calibrated acceptance model has been promoted" in source
     assert "Universal FSFFL Market Value remains unchanged" in source
 
 

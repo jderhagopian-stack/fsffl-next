@@ -122,6 +122,42 @@ class BehavioralIntelligenceStore:
                     ),
                 )
 
+    def put_profile_enrichment_if_unchanged(self, *, expected_profiles, profiles, expected_events):
+        from .dossier_publication import (validate_enrichment,profile_snapshot,event_snapshot,DossierPublicationConflict)
+        family=validate_enrichment(expected_profiles,profiles)
+        with self._connect() as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            rows=connection.execute('SELECT payload_json FROM behavior_profiles WHERE league_family_id=? ORDER BY owner_id',(family,)).fetchall()
+            current=tuple(OwnerBehaviorProfile.model_validate_json(r[0]) for r in rows)
+            rows=connection.execute('SELECT payload_json FROM behavior_events WHERE league_family_id=? ORDER BY event_id',(family,)).fetchall()
+            events=tuple(OwnerBehaviorEvent.model_validate_json(r[0]) for r in rows)
+            if profile_snapshot(current)!=profile_snapshot(expected_profiles) or event_snapshot(events)!=event_snapshot(expected_events):
+                raise DossierPublicationConflict('owner history changed during dossier preparation')
+            for profile in profiles:
+                connection.execute('UPDATE behavior_profiles SET payload_json=? WHERE league_family_id=? AND owner_id=?',
+                    (profile.model_dump_json(),family,profile.owner_id))
+
+    def put_refreshed_profiles(self, profiles, *, events):
+        from .historical_cases import preserve_historical_owner_cases
+        from .dossier_publication import DossierPublicationConflict
+        profiles=tuple(profiles)
+        if not profiles:return ()
+        families={p.league_family_id for p in profiles}
+        if len(families)!=1:raise ValueError('one refresh family required')
+        family=next(iter(families))
+        with self._connect() as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            rows=connection.execute('SELECT payload_json FROM behavior_profiles WHERE league_family_id=? ORDER BY owner_id',(family,)).fetchall()
+            current=tuple(OwnerBehaviorProfile.model_validate_json(r[0]) for r in rows)
+            by_owner={p.owner_id:p for p in current}
+            if any(p.owner_id in by_owner and by_owner[p.owner_id].as_of>p.as_of for p in profiles):
+                raise DossierPublicationConflict('newer owner history already published')
+            enriched=preserve_historical_owner_cases(profiles,previous_profiles=current,events=events)
+            for profile in enriched:
+                connection.execute('INSERT INTO behavior_profiles (league_family_id,owner_id,as_of,payload_json) VALUES (?,?,?,?) ON CONFLICT(league_family_id,owner_id) DO UPDATE SET as_of=excluded.as_of,payload_json=excluded.payload_json',
+                    (family,profile.owner_id,profile.as_of.isoformat(),profile.model_dump_json()))
+        return enriched
+
     def load_profiles(self, league_family_id: str) -> tuple[OwnerBehaviorProfile, ...]:
         with self._connect() as connection:
             rows = connection.execute(
