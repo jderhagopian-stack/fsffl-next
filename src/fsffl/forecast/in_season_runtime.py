@@ -162,6 +162,7 @@ def build_in_season_forecasts(
     history_writer: ProjectionHistoryWriter | None = None,
     minimum_independent_sources: int = 2,
     supplement_missing_sources: bool = False,
+    refresh_sources: bool = False,
     allow_undercovered_sources: bool = False,
 ) -> InSeasonForecastRuntimeResult:
     """Build governed ROS or week forecasts from independent provider evidence.
@@ -170,7 +171,9 @@ def build_in_season_forecasts(
     intended remaining schedule or target week. This runtime never subtracts
     completed games from an ambiguous source and never combines WEEK evidence with
     ROS evidence. Persistence is best-effort evidence retention and cannot change
-    which observations become Forecast truth.
+    which observations become Forecast truth. Owned refresh may explicitly try
+    current sources first and use exact-window stored revisions only when a
+    provider fetch or normalization fails; replay remains stored-only by default.
     """
 
     if horizon not in {ForecastHorizon.REST_OF_SEASON, ForecastHorizon.WEEK}:
@@ -201,14 +204,17 @@ def build_in_season_forecasts(
         providers = [item.snapshot.provider for item in source_revisions]
         if len(providers) != len(set(providers)):
             raise ValueError("saved in-season revisions must contain one latest row per provider")
-        # An explicit empty history result means no canonical revisions were
-        # retained for this State/period. During an owned build, fill only the
-        # missing approved provider slots; never relabel a different period or
-        # discard a saved provider revision.
+        # Historical/stored-only callers retain their existing provider rows.
+        # Owned refresh can opt into trying every configured provider first;
+        # saved exact-window rows then serve only as per-provider fallback.
+        # Neither mode relabels evidence from a different period.
         active_fetchers = ()
-        if supplement_missing_sources:
+        if supplement_missing_sources or refresh_sources:
             approved_fetchers = fetchers or default_in_season_projection_fetchers(horizon=horizon)
-            active_fetchers = tuple(item for item in approved_fetchers if item.source_id not in providers)
+            active_fetchers = tuple(
+                item for item in approved_fetchers
+                if refresh_sources or item.source_id not in providers
+            )
             if len({item.source_id for item in approved_fetchers}) != len(approved_fetchers):
                 raise ValueError("in-season projection fetcher ids must be unique")
         snapshots, failed = _fetch_snapshots(
@@ -290,6 +296,11 @@ def build_in_season_forecasts(
                 f"{source_id}: saved projection revision does not match requested "
                 "State horizon/period/cutoff"
             )
+            continue
+        # An owned refresh prefers newly normalized evidence. Retained revisions
+        # remain same-window fallback, never a second vote for that provider.
+        # This opt-in does not alter historical/stored-only replay behavior.
+        if refresh_sources and source_id in successful:
             continue
         observations: list[ForecastObservation] = []
         for item in revision.observations:

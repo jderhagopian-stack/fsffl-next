@@ -258,7 +258,7 @@ _full_refresh_seconds = max(
 def _prepare_simulation_forecasts(context, evidence):
     # Called by the owned refresh under the existing heavy-work claim. The same
     # artifact is subsequently reused by cards; trade requests never acquire it.
-    _season_comparison_service.prepare(context, already_admitted=True)
+    _season_comparison_service.prepare(context, force=True, already_admitted=True)
     return _season_comparison_service.simulation_evidence(context, evidence)
 
 

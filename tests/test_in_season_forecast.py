@@ -1105,3 +1105,86 @@ def test_completed_actuals_plus_ros_is_accepted_as_career_year_one_input():
     assert candidate_failures == {}
     assert set(accepted) == {actual.player_id}
     assert accepted[actual.player_id].distribution.mean == pytest.approx(137.5)
+
+
+def _refresh_fixture(fetchers, *, revisions=None, **kwargs):
+    return build_in_season_forecasts(
+        _state(), horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        source_revisions=tuple(_saved_revision(p) for p in ('cbs', 'razzball'))
+            if revisions is None else revisions,
+        fetchers=tuple(fetchers), clock=lambda: NOW, refresh_sources=True,
+        **kwargs,
+    )
+
+
+def test_owned_refresh_replaces_both_saved_providers_without_duplicate_votes():
+    fetched, saved = [], []
+    fetchers = [NamedInSeasonProjectionFetcher(
+        source_id=p, fetch=lambda season, week, p=p:
+            fetched.append(p) or _snapshot(p, rush_yards=900.0),
+    ) for p in ('cbs', 'razzball')]
+    result = _refresh_fixture(fetchers, history_writer=SimpleNamespace(save_revision=saved.append))
+    assert set(fetched) == {'cbs', 'razzball'}
+    assert result.successful_source_ids == ('cbs', 'razzball')
+    assert len(result.source_observations) == 10
+    rush = next(r for r in result.raw_ensemble if r.metric == ForecastMetric.RUSH_YARDS)
+    assert rush.distribution.mean == pytest.approx(900.0)
+    assert all(r.provenance.source_version.endswith('-ros-v1') for r in result.source_observations)
+    assert len(saved) == 2
+    assert all(r.snapshot.period_start == PERIOD_START and r.snapshot.period_end == PERIOD_END for r in saved)
+
+
+@pytest.mark.parametrize('failure', ['fetch', 'normalize'])
+def test_owned_refresh_retains_same_window_fallback_and_original_vintage(failure):
+    def broken(season, week):
+        if failure == 'fetch':
+            raise ValueError('provider unavailable')
+        snapshot = _snapshot('cbs', rush_yards=900.0)
+        return snapshot.model_copy(update={'rows': ()})
+    result = _refresh_fixture([
+        NamedInSeasonProjectionFetcher(source_id='cbs', fetch=broken),
+        NamedInSeasonProjectionFetcher(source_id='razzball',
+            fetch=lambda season, week: _snapshot('razzball', rush_yards=900.0)),
+    ])
+    assert result.successful_source_ids == ('cbs', 'razzball')
+    assert len(result.source_observations) == 10
+    rush = next(r for r in result.raw_ensemble if r.metric == ForecastMetric.RUSH_YARDS)
+    assert rush.distribution.mean == pytest.approx(800.0)
+    retained = [r for r in result.source_observations if r.source == 'cbs']
+    assert all(r.provenance.retrieved_at == NOW - timedelta(hours=2) for r in retained)
+    assert all(r.provenance.source_version == 'cbs-saved-v1' for r in retained)
+    assert any(reason.startswith('cbs:') for reason in result.failed_sources)
+
+
+def test_owned_refresh_cannot_substitute_wrong_window_history_after_source_failure():
+    revision = _saved_revision('cbs')
+    wrong = revision.model_copy(update={'snapshot': revision.snapshot.model_copy(update={
+        'period_start': PERIOD_START + timedelta(days=1),
+    })})
+    def broken(season, week):
+        raise ValueError('provider unavailable')
+    result = _refresh_fixture([
+        NamedInSeasonProjectionFetcher(source_id='cbs', fetch=broken),
+        NamedInSeasonProjectionFetcher(source_id='razzball',
+            fetch=lambda season, week: _snapshot('razzball', rush_yards=900.0)),
+    ], revisions=(wrong, _saved_revision('razzball')), allow_undercovered_sources=True)
+    assert result.successful_source_ids == ('razzball',)
+    assert not result.ensemble_ready
+    assert {r.source for r in result.source_observations} == {'razzball'}
+    assert any('State horizon/period/cutoff' in reason for reason in result.failed_sources)
+
+
+def test_stored_only_replay_does_not_fetch_or_change_values():
+    def forbidden(season, week):
+        pytest.fail('Stored-only replay must not call providers')
+    result = build_in_season_forecasts(
+        _state(), horizon=ForecastHorizon.REST_OF_SEASON,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        source_revisions=tuple(_saved_revision(p) for p in ('cbs', 'razzball')),
+        fetchers=(NamedInSeasonProjectionFetcher(source_id='cbs', fetch=forbidden),),
+        clock=lambda: NOW,
+    )
+    rush = next(r for r in result.raw_ensemble if r.metric == ForecastMetric.RUSH_YARDS)
+    assert rush.distribution.mean == pytest.approx(700.0)
+    assert all(r.provenance.retrieved_at == NOW - timedelta(hours=2) for r in result.source_observations)

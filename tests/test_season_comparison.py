@@ -326,3 +326,20 @@ def test_official_unavailability_precedes_single_source_fallback_like_intrinsic(
     explanation = apply_participation_exceptions(state,result,as_of=NOW)
     assert explanation[PID]['participation_basis']=='verified_unavailable'
     assert result.forward_forecasts[0].distribution.mean==0
+
+
+def test_owned_preparation_refreshes_sources_once_and_readers_reuse_result():
+    state = _state()
+    store, calls = Store(), []
+    def builder(state, **kwargs):
+        calls.append(kwargs['refresh_sources'])
+        return packet(state)
+    service = SeasonComparisonService(persistence_store=store, builder=builder)
+    runtime = context(state)
+    service.prepare(runtime)
+    service.prepare(runtime)
+    service.player(runtime, PID)
+    assert calls == [True]
+    service.prepare(runtime, force=True, already_admitted=True)
+    service.prepare(runtime)
+    assert calls == [True, True]
