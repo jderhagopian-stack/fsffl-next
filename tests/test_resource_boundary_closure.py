@@ -138,6 +138,9 @@ def test_heavy_work_telemetry_is_bounded_and_non_identifying(monkeypatch) -> Non
 
 
 def test_heavy_completion_reclaims_scratch_before_releasing_lane(monkeypatch):
+    # Sequencing under admissible memory, independent of the full suite's RSS.
+    # Dedicated memory-admission tests retain explicit over-cap coverage.
+    monkeypatch.setattr(resource_module, "current_rss_bytes", lambda: 300 * 1024 * 1024)
     coordinator = HeavyWorkCoordinator()
     labels = []
     def reclaim(*, label):
@@ -916,7 +919,8 @@ def test_hard_memory_gate_is_unchanged() -> None:
     assert "hard memory limit reached" in acceptance
 
 
-def test_intrinsic_compatible_restore_waits_for_existing_heavy_phase() -> None:
+def test_intrinsic_compatible_restore_waits_for_existing_heavy_phase(monkeypatch) -> None:
+    monkeypatch.setattr(resource_module, "current_rss_bytes", lambda: 300 * 1024 * 1024)
     state = _state("a")
     context = _runtime("user-a", state)
     gate = HeavyWorkCoordinator(max_waiters=2)
@@ -1022,6 +1026,7 @@ def test_material_state_refresh_skips_stale_waiting_simulation_and_publishes_onc
     monkeypatch,
 ) -> None:
     """Reproduce cold partial restore -> State refresh while old Simulation waits."""
+    monkeypatch.setattr(resource_module, "current_rss_bytes", lambda: 300 * 1024 * 1024)
 
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     original = _state("race", minute=0)
@@ -1226,6 +1231,7 @@ def test_equivalent_reconciliation_triggers_coalesce_at_final_job_admission(
     monkeypatch,
 ) -> None:
     """Two near-simultaneous startup/browser triggers create one owner."""
+    monkeypatch.setattr(resource_module, "current_rss_bytes", lambda: 300 * 1024 * 1024)
 
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     state = _state("coalesce")

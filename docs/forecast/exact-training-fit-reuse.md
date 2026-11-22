@@ -85,3 +85,14 @@ coverage and coherent publication. The first run after deploy can reuse models
 across cells, but starts with an empty process cache. No repeated expensive
 refreshes solely to manufacture hits; no claim that the 512-MiB reliability or
 full product acceptance gates are complete before measurement.
+
+## Full-suite test isolation
+
+The first stable run passed 3,241 tests but four sequencing/concurrency tests
+read the full pytest process's accumulated ~541 MB RSS, so their work never
+entered the lane whose ordering they tested. Injecting that ambient RSS reproduced
+all four failures in isolation. Those four tests now explicitly provide the
+intended admissible 300-MiB initial state. Production limits/admission code are
+unchanged; dedicated over-cap refusal and isolated resource acceptance remain
+separate checks. This resolves test-order dependence, not the live ~502-MiB
+peak or outstanding hosted memory-margin gate.
