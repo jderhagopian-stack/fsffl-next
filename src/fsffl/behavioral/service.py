@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import logging
 
 from fsffl.state.models import LeagueState
 
@@ -82,9 +83,14 @@ class BehavioralIntelligenceService:
         profiles = build_owner_behavior_profiles(all_events, as_of=cutoff)
         if self.dossier_loader is not None:
             from .dossier_publication import enrich_current_profiles
-            prepared=self.dossier_loader(history.league_family_id, current)
-            if prepared is not None:
-                profiles=enrich_current_profiles(profiles,events=all_events,prepared=prepared)
+            try:
+                prepared=self.dossier_loader(history.league_family_id, current)
+                if prepared is not None:
+                    profiles=enrich_current_profiles(profiles,events=all_events,prepared=prepared)
+            except Exception:
+                # Optional historical attachment cannot suppress the current
+                # descriptive history refresh. Keep valid persisted facts below.
+                logging.getLogger(__name__).exception('Admitted owner dossier attachment unavailable')
         profiles = self.store.put_refreshed_profiles(profiles, events=all_events)
 
         reused = tuple(league_id for league_id in history.league_chain if league_id in completed)

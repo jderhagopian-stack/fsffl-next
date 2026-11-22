@@ -141,3 +141,26 @@ def test_real_service_consumes_staged_dossier_in_owned_sync(tmp_path):
     service.dossier_loader=lambda *_:None
     again=service.sync_sleeper_league(state,sleeper_league_external_id=bundle.current_provider_league_id)
     assert sum(len(p.historical_trade_cases)for p in again.profiles)==1
+    def broken_loader(*_):raise ValueError('invalid staged identity')
+    service.dossier_loader=broken_loader
+    intact=service.sync_sleeper_league(state,sleeper_league_external_id=bundle.current_provider_league_id)
+    assert sum(len(p.historical_trade_cases)for p in intact.profiles)==1
+    assert tuple(p.trade_count for p in intact.profiles)==tuple(p.trade_count for p in profiles)
+
+
+
+def test_future_evidence_waits_for_a_newer_state_cutoff(tmp_path):
+    from fsffl.behavioral.owner_resume import OwnerFranchiseResume
+    from fsffl.behavioral.dossier_publication import enrich_current_profiles
+    store,bundle,profiles,events=fixture(tmp_path,None)
+    later=OBS+timedelta(days=1)
+    case=bundle.cases[0].model_copy(update={'evidence_as_of':later})
+    resume=OwnerFranchiseResume(league_family_id=bundle.league_family_id,owner_id=case.owner_id,
+        evidence_as_of=later,tenure_reference='new-confirmation')
+    bundle=bundle.model_copy(update={'cases':(case,),'resumes':(resume,)})
+    old=enrich_current_profiles(profiles,events=events,prepared=bundle)
+    assert all(not p.historical_trade_cases and p.franchise_resume is None for p in old)
+    fresh=tuple(p.model_copy(update={'as_of':later}) for p in profiles)
+    admitted=enrich_current_profiles(fresh,events=events,prepared=bundle)
+    assert sum(len(p.historical_trade_cases) for p in admitted)==1
+    assert sum(p.franchise_resume is not None for p in admitted)==1
