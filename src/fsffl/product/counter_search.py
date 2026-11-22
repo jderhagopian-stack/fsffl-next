@@ -80,9 +80,12 @@ def order_counter_hypotheses(seed, neighbors, *, seed_effects, published, starte
     # Round robin avoids allowing one horizon or franchise to consume the budget.
     # A generic lane keeps alternative structures reachable, not only hypotheses.
     if history_matches:
-        # Positive precedents are a separate lane after cost-repair questions.
-        # No observed precedent does not exclude an unfamiliar package.
-        queues.append(deque(p for p in ordered if history_matches.get(p.point_id)))
+        # A universal match duplicates the structural queue and takes another
+        # round-robin turn without adding an independent search question.
+        # Keep selective precedents; absence never excludes an unfamiliar deal.
+        observed = [p for p in ordered if history_matches.get(p.point_id)]
+        if 0 < len(observed) < len(ordered):
+            queues.append(deque(observed))
     queues.append(deque(ordered))
     result = []
     seen = set()

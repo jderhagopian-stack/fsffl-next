@@ -1,3 +1,19 @@
+## November 21 execution priority
+
+1. Reliable refresh, bounded memory and correct horizon-specific freshness on
+   existing Render/Supabase capacity; no additional recurring expenses.
+2. Complete the Explore → Trade Center → package adjustment/counteroffer journey.
+3. Reuse Reports research PRs #575–581 and supplied Almanac/GM Files, weekly and
+   Trade Report prototypes for a small native mobile reading milestone. Research
+   methods are not promoted by adopting their editorial templates.
+4. Validate weekly availability and compatible frozen forecast receipts before
+   promoting a new Power Rankings estimator. Preserve accepted model authority.
+
+All surfaces inherit the November 21 app-wide language standard in
+NORTH_STAR_PRODUCT_DIRECTIVE.md. Internal methodology remains internal; product
+detail serves owner decisions. Physical mobile acceptance and deployed evidence
+remain separate from code/test completion.
+
 ## 2026-11-07 — Reliability correction deployed for hosted verification
 
 PR #489 is merged and live on Render at `02ffb963218d2a1408ecb58b1c07a563e9845054` after exact-head CI, clean review and 2,660-test Stable pass. Bounded Career inputs, complete saved-roster identity retention, bounded real fumbles-schema witnesses and removal of GET-triggered Current Intrinsic builds are deployed. Startup fits the memory budget but restored intelligence remains partial because its October 28 State does not match current inputs. One authenticated refresh and its full resource/output acceptance remain the next gate; do not mark the recurring incident or Career/3-Year coverage complete from deployment alone. See [release checkpoint](workstreams/RELIABILITY_RELEASE_CANDIDATE_20261107.md). No plan/provider/worker/storage migration occurred.
@@ -341,3 +357,17 @@ For a player this should support comparisons such as preseason projected full-se
 For a team/league, the same historical State + Forecast replay should eventually support frozen preseason projected scoring/standings/playoff/title expectations and a week-by-week "how the outlook changed" history using only evidence that existed at each PIT timestamp. Historical realized outcomes may be overlaid for comparison but may not leak backward into the reconstructed forecast.
 
 This belongs in the accepted Phase 2 historical-intelligence foundation (`historical State reconstruction -> lineage/provenance -> dated Forecast/Simulation snapshots`) and should be implemented before broad historical/storytelling UI. It does not interrupt the currently active Simulation 2.0 sequence.
+
+## Contextual Owner Intelligence continuation — 2026-11-22
+
+The accepted direction remains explaining observed choices relative to historical
+roster need, league opportunity and supported competitive circumstances, then
+validating repeatable owner tendencies for future Decision/Search. Binary
+completed-trade precedents and clearer prose do not complete this capability.
+Reuse NEXT context/residual models and historical replay; preserve explicit user
+direction and uncertainty. The [reconciliation and next acceptance gates](../product/contextual-owner-intelligence-continuation.md)
+trace the predecessor concepts, safeguards against its heuristic formulas, and
+the bounded sequence from field admission through chronological validation to
+owner-reviewed trade usefulness. No legacy model promotion, acceptance odds,
+valuation change, paid infrastructure or new preference weights are authorized
+by this roadmap update.
