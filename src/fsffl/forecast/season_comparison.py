@@ -169,7 +169,7 @@ def apply_participation_exceptions(state, result, *, as_of, verified_roles=None,
             if receipt is None:
                 continue
             receipt.validate()
-            kind = "ir_no_projection" if receipt.source == "fsffl:exact-state-ir-no-projection" else "approved_role"
+            kind = "ir_no_projection" if receipt.source in {"fsffl:exact-state-ir-no-projection", "fsffl:exact-state-nfl-ir-no-projection"} else "approved_role"
             if receipt.source_version.startswith(PRACTICE_SQUAD_POLICY_VERSION):
                 kind = "practice_squad_no_projection"
             if receipt.source == "fsffl:completed-week-sparse-production-no-projection":

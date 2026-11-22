@@ -476,6 +476,8 @@ class PlayerState(FrozenModel):
     age_years: float | None = Field(default=None, ge=0)
     nfl_team: str | None = None
     status: PlayerStatus = PlayerStatus.UNKNOWN
+    # Explicit provider fact; a coarse injury flag does not establish NFL IR.
+    nfl_injured_reserve: bool | None = None
     provenance: Provenance
 
     @field_validator("as_of")
