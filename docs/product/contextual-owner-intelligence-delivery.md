@@ -130,3 +130,39 @@ records independently reconcile to the eligible weekly matchup results. The arch
 unfinished season has zero games recorded; it is not shown as today's team performance.
 Aggregate profile JSON is about 331 KiB, below the bounded 500 KB dossier review budget.
 This is source and local product evidence, not production publication or learned policy.
+
+## Production materialization
+
+The existing owned Behavioral refresh reads an explicitly admitted compact dossier
+revision from the existing reusable artifact store, scoped to family and current
+provider league. Its content fingerprint is checked before attachment. No GET
+fetches source history, reads this bundle or publishes profiles. The hosted app
+passes its existing persistence adapter; no additional connection pool or service.
+
+The refresh builds current profiles from current stored events, attaches matching
+historical facts, and persists through a transaction that preserves newer dossier
+attachments. Administrative publication is dry-run by default and uses an atomic
+profile/event snapshot check. Changed inputs require preparation again; publication
+cannot change membership, counts, cutoffs, current team mappings or model fields.
+A late earlier event invalidates affected cases. Valid later activity preserves them.
+
+The staged revision is about 569 KiB once per admitted source revision. Profile JSON
+remains about 332 KiB for the full 12-owner cohort. One bounded artifact read occurs
+per owned Behavioral refresh; it does not create repeated presentation generations.
+Publication adds no source acquisition, model fitting or historical recomputation.
+The test workflow uses an ephemeral PostgreSQL 17 container on existing public
+GitHub Actions capacity, without production secrets or new hosted services.
+
+An archive observed or a tenure confirmation recorded after a saved State cutoff
+cannot be made contemporaneous by rewriting its clock. The next normally refreshed
+State must admit that evidence before its dossier is attached. Historical source
+facts remain factual retrospective evidence; no original forecast is invented.
+
+### Predictive validation disposition for this release
+
+The accepted expectation/residual model and 21-input native contract are preserved.
+These archives do not supply all required original inputs or rejected offers.
+Accordingly, no new learned owner preferences, model weights, acceptance likelihoods
+or ranking policy are promoted. Chronological predictive comparison remains blocked
+on genuinely admissible inputs. This release may deliver verified descriptive owner
+history without representing that as predictive-model acceptance.

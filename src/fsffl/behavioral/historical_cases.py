@@ -200,7 +200,11 @@ def attach_historical_owner_cases(profiles: Sequence[OwnerBehaviorProfile], *,
     results=[];activity_digests={}
     for profile in profiles:
         candidates={c.event_id:c for c in profile.historical_trade_cases}
-        candidates.update({c.event_id:c for c in cases if c.owner_id==profile.owner_id and c.league_family_id==profile.league_family_id})
+        for case in cases:
+            if case.owner_id!=profile.owner_id or case.league_family_id!=profile.league_family_id:continue
+            previous=candidates.get(case.event_id)
+            if previous is None or case.evidence_as_of>=previous.evidence_as_of:
+                candidates[case.event_id]=case
         kept=[]
         for case in candidates.values():
             scope=(case.league_family_id,case.provider_league_id,case.activity_through)
@@ -231,7 +235,9 @@ def preserve_historical_owner_cases(profiles, *, previous_profiles, events):
     result=[]
     for profile in enriched:
         old=previous.get((profile.league_family_id,profile.owner_id))
-        resume=profile.franchise_resume or (old.franchise_resume if old is not None else None)
+        choices=[r for r in (profile.franchise_resume,old.franchise_resume if old is not None else None)
+            if r is not None and r.evidence_as_of<=profile.as_of]
+        resume=max(choices,key=lambda r:r.evidence_as_of) if choices else None
         if resume is not None and resume.evidence_as_of<=profile.as_of:
             payload=profile.model_dump();payload['franchise_resume']=resume
             profile=OwnerBehaviorProfile.model_validate(payload)

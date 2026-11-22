@@ -7,7 +7,6 @@ from fsffl.state.models import LeagueState
 
 from .models import OwnerBehaviorProfile
 from .profiles import build_owner_behavior_profiles
-from .historical_cases import preserve_historical_owner_cases
 from .sleeper_history import SleeperBehaviorHistorySource
 from .store import BehavioralIntelligenceStore
 
@@ -32,9 +31,11 @@ class BehavioralIntelligenceService:
         *,
         source: SleeperBehaviorHistorySource,
         store: BehavioralIntelligenceStore,
+        dossier_loader=None,
     ) -> None:
         self.source = source
         self.store = store
+        self.dossier_loader = dossier_loader
 
     def sync_sleeper_league(
         self,
@@ -79,8 +80,12 @@ class BehavioralIntelligenceService:
         all_events = self.store.load_events(history.league_family_id)
         cutoff = as_of or league_state.as_of
         profiles = build_owner_behavior_profiles(all_events, as_of=cutoff)
-        profiles = preserve_historical_owner_cases(profiles,previous_profiles=self.store.load_profiles(history.league_family_id),events=all_events)
-        self.store.put_profiles(profiles)
+        if self.dossier_loader is not None:
+            from .dossier_publication import enrich_current_profiles
+            prepared=self.dossier_loader(history.league_family_id, current)
+            if prepared is not None:
+                profiles=enrich_current_profiles(profiles,events=all_events,prepared=prepared)
+        profiles = self.store.put_refreshed_profiles(profiles, events=all_events)
 
         reused = tuple(league_id for league_id in history.league_chain if league_id in completed)
         scanned = tuple(league_id for league_id in history.league_chain if league_id not in completed)
