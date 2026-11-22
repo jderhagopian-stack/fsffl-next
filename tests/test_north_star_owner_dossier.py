@@ -2,6 +2,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import json
+from hashlib import sha1
 import re
 
 import pytest
@@ -83,7 +84,9 @@ def test_behavioral_lazy_asset_has_current_release_token() -> None:
     assert script_version == shell_version
     loader = shell.split("function ensureBehavioralIntelligenceScript()",1)[1].split("\n",1)[0]
     assert "ownerHistoryStaticVersion" in loader
-    assert "c=contextual-owner-20261122" in _text("index.html")
+    shell_bytes=(STATIC/"product_shell.js").read_bytes()
+    prefix=sha1(b"blob "+str(len(shell_bytes)).encode()+b"\0"+shell_bytes).hexdigest()[:12]
+    assert f"product_shell.js?v=20261004-safari-restore380&c=git-{prefix}" in _text("index.html")
 
 
 def test_owner_dossier_browser_script_parses() -> None:
