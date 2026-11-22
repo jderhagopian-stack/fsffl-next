@@ -20,7 +20,7 @@ from fsffl.value.long_term_intrinsic import (
 from fsffl.value.shapley_intrinsic import FROZEN_SHAPLEY_SEED, clear_shapley_execution_caches
 from .resource_coordinator import reclaim_before_heavy_allocation
 
-_logger = logging.getLogger("fsffl.product.performance")
+_logger = logging.getLogger("uvicorn.error")
 
 
 class LongTermIntrinsicReuse:
