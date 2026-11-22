@@ -112,9 +112,10 @@ unknown. Draft selections retain the actual selecting roster and account; draft
 purpose is labeled only where admitted. A selection is not a successful draft grade,
 and a traded-pick movement is not necessarily a distinct pick.
 
-The archive currently lacks playoff brackets. Do not invent championships, playoff
-finishes or title counts from regular-season standings. Add those only after their
-own source admission. Full pick inventory, draft outcomes, predictive owner tendencies
+The archive lacks playoff brackets but completed seasons include an explicit provider
+season-winner field. Use it for championship history only on a completed season and
+with an admitted roster/account binding. Never infer titles or finishes from standings.
+Detailed playoff finishes remain unavailable without their own result evidence. Full pick inventory, draft outcomes, predictive owner tendencies
 and contemporary historical trade grades remain separate gates.
 
 Added acceptance checks: wrong/future/foreign tenure scopes cannot authorize

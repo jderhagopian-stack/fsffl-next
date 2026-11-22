@@ -408,8 +408,8 @@ never authorize invented context. No additional recurring expense.
 
 Complete the existing integrated owner milestone as a franchise dossier: compact
 records and trends, admitted draft selections, roster-building activity and contextual
-past decisions. Keep deeper history on expansion. Source-backed championships and
-finishes require bracket/result evidence; standings alone do not qualify. Preserve
+past decisions. Keep deeper history on expansion. Championships require explicit completed-season winner evidence; detailed playoff
+finishes require their own result evidence. Standings alone do not qualify. Preserve
 source-scoped owner tenure attestations, unknown data and current-team/owner-preference
 boundaries. This expands the same draft delivery track, not another history rewrite
 or independently promoted helper release. Production and mobile acceptance remain

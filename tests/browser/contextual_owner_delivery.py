@@ -22,12 +22,14 @@ def main():
         page.goto(args.url);page.wait_for_selector('.behavior-history-case')
         owners=page.locator('[data-behavior-owner]').count()
         assert owners>0
+        championship_rows=0
         for i in range(owners):
             page.locator('[data-behavior-owner]').nth(i).click()
             assert page.locator('.behavior-history-case').count()>0
             assert page.locator('.behavior-resume').count()==1
             page.get_by_text('Season by season',exact=True).click()
             assert page.locator('.behavior-season-row').count()==5
+            championship_rows+=page.locator('.behavior-season-row strong').filter(has_text='Champion').count()
             page.locator('.behavior-resume-detail > summary').nth(1).click()
             page.locator('.behavior-draft-class > summary').first.click()
             assert page.locator('.behavior-draft-class[open] li').count()>0
@@ -38,6 +40,7 @@ def main():
             more=page.locator('.behavior-history-more > summary')
             if more.count():
                 more.click();assert page.locator('.behavior-history-more[open]').count()==1
+        assert championship_rows==4
         # Capture an actual league profile, with the first expanded case visible.
         page.locator('[data-behavior-owner]').first.click()
         page.locator('.behavior-history-case summary').first.click()
@@ -48,7 +51,7 @@ def main():
         assert not errors,errors
         browser.close()
     summary={'rendered_real_profiles':owners,'mobile_width':390,'owner_switches':owners,
-        'case_drilldowns':owners,'resume_and_draft_drilldowns':owners,'more_history_control':True,'body_overflow':False,'javascript_errors':len(errors),
+        'case_drilldowns':owners,'resume_and_draft_drilldowns':owners,'recorded_championships':championship_rows,'more_history_control':True,'body_overflow':False,'javascript_errors':len(errors),
         'local_review_only':True,'physical_iphone_tested':False}
     (args.output_dir/'browser-acceptance.json').write_text(json.dumps(summary,indent=2)+'\n')
     print(json.dumps(summary,sort_keys=True))

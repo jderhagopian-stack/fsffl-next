@@ -37,6 +37,7 @@ def test_resume_observed_records_drafts_and_refresh(tmp_path):
     binding=next(b for b in source.roster_bindings if b.provider_manager_id==events[0].owner_id)
     rid=int(binding.provider_roster_id)
     data['league']['status']='complete'
+    data['league']['metadata']={'latest_league_winner_roster_id':str(rid)}
     raw=next(r for r in data['rosters'] if r['roster_id']==rid)
     raw.update(owner_id=events[0].owner_id,settings={'wins':8,'losses':6,'ties':0,'fpts':1234,'fpts_decimal':56})
     data['drafts']=[{'draft':{'draft_id':'draft-a','status':'complete','last_picked':int(OBS.timestamp()*1000)-1},
@@ -47,7 +48,8 @@ def test_resume_observed_records_drafts_and_refresh(tmp_path):
         evidence_as_of=OBS,tenure_attestation=attestation(source))
     resume=compile_owner_resumes(**args)[events[0].owner_id]
     assert resume.seasons[0].points_for==1234.56 and resume.seasons[0].points_against is None
-    assert resume.seasons[0].season_complete and resume.draft_selections[0].player_name=='Drafted Player'
+    assert resume.seasons[0].season_complete and resume.seasons[0].champion is True
+    assert resume.draft_selections[0].player_name=='Drafted Player'
     assert resume.draft_selections[0].draft_kind=='other'
     profile=next(p for p in build_owner_behavior_profiles(events,as_of=OBS) if p.owner_id==resume.owner_id)
     enriched=OwnerBehaviorProfile.model_validate({**profile.model_dump(),'franchise_resume':resume})
@@ -63,7 +65,8 @@ def test_resume_observed_records_drafts_and_refresh(tmp_path):
 
 
 def test_pinned_dossier_all_participant_sides_records_and_drafts():
-    import os
+    import os,json
+    from pathlib import Path
     from fsffl.product.historical_owner_delivery import build_historical_owner_delivery
     from tests.historical_circumstances_fixture import pinned_delivery_inputs
     root=os.getenv('FSFFL_RESEARCH_CIRCUMSTANCE_SOURCE')
@@ -94,6 +97,17 @@ def test_pinned_dossier_all_participant_sides_records_and_drafts():
         for binding in source.roster_bindings:
             record=next(s for s in profiles[binding.provider_manager_id].franchise_resume.seasons if s.season==source.season.season)
             assert [record.wins,record.losses,record.ties]==by_team[binding.canonical_team_id]
+            if record.champion:
+                # This pinned fixture has a one-week final in Week 17. A final
+                # win corroborates the explicit winner field; it cannot replace it.
+                finals=json.loads((Path(root)/f'matchups-{record.season}.json').read_text())['17']
+                team=next(t for t in finals if str(t['roster_id'])==binding.provider_roster_id)
+                opponent=next(t for t in finals if t.get('matchup_id') is not None
+                    and t['matchup_id']==team['matchup_id'] and t['roster_id']!=team['roster_id'])
+                def points(t):return t['custom_points'] if t.get('custom_points') is not None else t['points']
+                assert points(team)>points(opponent)
+    assert sum(s.champion is True for p in delivery.profiles for s in p.franchise_resume.seasons)==4
+    assert all(s.champion is None for p in delivery.profiles for s in p.franchise_resume.seasons if not s.season_complete)
     assert not delivery.model_policy_promoted
     total=sum(len(p.model_dump_json().encode()) for p in delivery.profiles)
     assert total<500_000

@@ -48,6 +48,7 @@ class OwnerSeasonRecord(FrozenModel):
     points_for: float | None = None
     points_against: float | None = None
     season_complete: bool
+    champion: bool | None = None
     source_sha256: str
 
 
@@ -70,12 +71,14 @@ class OwnerFranchiseResume(FrozenModel):
     tenure_reference: str
     seasons: tuple[OwnerSeasonRecord,...] = ()
     draft_selections: tuple[OwnerDraftSelection,...] = ()
-    # Titles/finishes require bracket evidence; regular-season rank is insufficient.
+    # Titles require explicit season-winner evidence; standings are insufficient.
     model_version: Literal['owner-franchise-resume-v1'] = 'owner-franchise-resume-v1'
 
     @model_validator(mode='after')
     def coherent(self):
         if self.evidence_as_of.tzinfo is None:raise ValueError('resume requires an aware evidence clock')
+        if any(s.champion is not None and not s.season_complete for s in self.seasons):
+            raise ValueError('unfinished seasons cannot have a champion result')
         if len({s.season for s in self.seasons})!=len(self.seasons):raise ValueError('duplicate season record')
         if len({(d.draft_id,d.pick_no) for d in self.draft_selections})!=len(self.draft_selections):raise ValueError('duplicate draft selection')
         for s in self.seasons:
@@ -103,6 +106,10 @@ def compile_owner_resumes(*, seasons, lineage, rookie_drafts, tenure_attestation
             raw=raw_rosters.get(rid,{})
             if str(raw.get('owner_id')or'')!=owner:raise ValueError('resume owner binding contradicts source')
             settings=raw.get('settings')or{}
+            complete=data.get('league',{}).get('status')=='complete'
+            winner=str((data.get('league',{}).get('metadata')or{}).get('latest_league_winner_roster_id')or'')
+            # Sleeper completed-season winner field only; never infer from rank.
+            champion=(int(winner)==rid) if complete and winner.isdigit() and int(winner) in bindings else None
             counts=[settings.get(k) for k in ('wins','losses','ties')]
             if all(type(n) is int and n>=0 for n in counts):
                 def score(key):
@@ -112,7 +119,7 @@ def compile_owner_resumes(*, seasons, lineage, rookie_drafts, tenure_attestation
                     return value if isfinite(value) else None
                 records.setdefault(owner,[]).append(OwnerSeasonRecord(season=source.season.season,
                     wins=counts[0],losses=counts[1],ties=counts[2],points_for=score('fpts'),points_against=score('fpts_against'),
-                    season_complete=data.get('league',{}).get('status')=='complete',source_sha256=source.source_content_sha256))
+                    season_complete=complete,champion=champion,source_sha256=source.source_content_sha256))
         for bundle in data.get('drafts',()):
             draft=bundle.get('draft')or{};did=str(draft.get('draft_id')or'')
             completion=draft.get('last_picked')
