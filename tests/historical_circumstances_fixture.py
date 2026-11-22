@@ -41,3 +41,43 @@ def accepted_2023_supplement(records):
         player_id=issue.asset_id,provider_roster_id=issue.provider_roster_id,kind='dropped_to_waivers',
         effective_date=date(2023,8,23),date_precision='date_only',receipt=receipt)
     return {identity:(movement,)}
+
+
+def pinned_delivery_inputs(root):
+    """One disposable fixture manifest for source, persistence and browser gates."""
+    import json
+    from hashlib import sha1
+    from fsffl.state.historical_coverage import HistoricalEvidenceReceipt
+    from fsffl.state.historical_roster_context import _digest
+    from fsffl.providers.sleeper_historical_circumstances import normalize_legacy_historical_production,normalize_sleeper_historical_results
+    from tests.historical_archive_context_fixture import declared_archive_context_inputs
+    from tests.test_historical_circumstances_pinned import BLOBS
+    root=Path(root);data={}
+    for name,blob in BLOBS.items():
+        raw=(root/name).read_bytes()
+        assert sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()==blob,'pinned source changed'
+        data[name]=json.loads(raw)
+    bounds=completion_bounds(root/'nfl-games.csv')
+    observed=datetime(2026,11,17,tzinfo=UTC)
+    records,lineage,drafts=declared_archive_context_inputs(data['league_history.json'],observed=observed,source_revision='pinned-owner-delivery')
+    sources={s.season:s for s in lineage.sources};identities={s.season:s for s in records}
+    production={};results=[];names={}
+    for year in range(2022,2026):
+        identity=identities[year]
+        def receipt(kind,eid,at):return HistoricalEvidenceReceipt(season=identity,kind=kind,evidence_id=eid,effective_at=at,
+            source='pinned-legacy-archive',source_version='calendar-completion-upper-bound:'+CALENDAR_SHA256)
+        rows=data[f'actuals-{year}.json']
+        names.update({str(p['player_id']):p['player_name']for p in rows if p.get('player_name')})
+        production[year]=normalize_legacy_historical_production(rows,
+            receipt=receipt('player_production',f'actuals-{year}',bounds[(year,18)]),
+            scoring_rules_sha256=_digest(records[identity]['league']['scoring_settings']))
+        end=int(records[identity]['league']['settings']['playoff_week_start'])-1
+        for week in range(1,end+1):results.append(normalize_sleeper_historical_results(data[f'matchups-{year}.json'][str(week)],
+            week=week,source=sources[identity],receipt=receipt('matchups',f'results-{year}-{week}',bounds[(year,week)])))
+    for season in records.values():
+        for draft in season.get('drafts',()):
+            for pick in draft.get('picks',()):
+                m=pick.get('metadata')or{};name=(str(m.get('first_name')or'')+' '+str(m.get('last_name')or'')).strip()
+                if name:names[str(pick['player_id'])]=name
+    return dict(seasons=records,lineage=lineage,rookie_drafts=drafts,source_revision='pinned-owner-delivery',source_observed_at=observed,
+        production_by_previous_season=production,results=tuple(results),player_names=names,supplemental_movements=accepted_2023_supplement(records))

@@ -390,3 +390,15 @@ owner-visible acceptance and explicit unfinished work; a merged PR alone is not
 completion. Routine implementation choices stay within this plan. Material scope
 or sequence changes require agreement, not silent reprioritization. No added
 recurring expense without explicit approval.
+
+
+## Active delivery unit: contextual Owner Intelligence
+
+The agreed delivery sequence is unchanged. Complete one connected outcome from
+a historical decision through supported circumstances, validated interpretation
+and a useful owner-profile journey. Individual adapters/PRs are implementation
+steps, not separate product milestones. See
+[the integrated delivery gate](../product/contextual-owner-intelligence-delivery.md).
+Keep the consolidated implementation draft until its end-to-end acceptance is
+met. Stronger preferences remain gated by chronological evidence; missing facts
+never authorize invented context. No additional recurring expense.
