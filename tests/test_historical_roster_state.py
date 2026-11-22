@@ -294,3 +294,15 @@ def test_normalized_replay_cannot_claim_complete_pick_universe_without_archive_c
     assert result.status == Status.BLOCKED
     assert result.state is None
     assert "replay_pick_universe_incomplete" in result.blockers
+
+
+def test_draft_membership_uncertainty_blocks_full_state_even_without_named_players():
+    inputs = _inputs()
+    old = inputs['snapshot']
+    new = old.model_copy(update={'membership_uncertainty_reasons':('draft_player_details_incomplete',)})
+    inputs['snapshot'] = new
+    inputs['history'] = inputs['history'].model_copy(update={'snapshots':tuple(
+        new if s == old else s for s in inputs['history'].snapshots)})
+    result = materialize_historical_roster_state(**inputs)
+    assert result.status == Status.BLOCKED
+    assert result.state is None

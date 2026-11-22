@@ -44,7 +44,11 @@ def test_cross_season_pick_join_and_trade_field_coverage_on_pinned_archive():
         "joined_terminal_uses": len(result.picks.inventory.uses), "end_pick_issue_codes": end.issues,
         "identity_scope": "declared_retrospective_fixture_crosswalk_not_independent_at_time_certification"}, sort_keys=True))
     assert summary["trade_rows"] == summary["pre_completion_snapshot_rows"] == 144, summary
-    assert summary["membership_context_rows"] == 96, summary
+    # Seven previously counted clean-year boundaries fall inside drafts with
+    # no exact selection clocks. Keep those partial instead of asserting roster
+    # completion. Eight other in-draft boundaries already belong to the2023gap.
+    assert summary["membership_context_rows"] == 89, summary
+    assert result.trades.issue_counts()["draft_allocation_interval"] == 15
     assert summary["archived_full_model_input_rows"] == 0
     assert summary["complete_pick_count_rows"] == 0
     assert len(result.picks.inventory.rights) == len(result.picks.inventory.uses) == 144
@@ -186,3 +190,55 @@ def test_all_retained_seasons_produce_rule_scoped_roster_context_snapshots():
     assert {2022, 2024}.issubset({history.season for history in histories if history.faab_issues})
     assert all(history.membership_status == "provisionally_consistent"
                for history in histories if history.season in {2022, 2024})
+
+
+def test_real_draft_allocations_correct_pre_draft_membership_without_erasing_veterans(monkeypatch):
+    """Exact public fixture; print counts only, not private ownership payloads."""
+    import fsffl.providers.sleeper_historical_context as module
+    from tests.historical_archive_context_fixture import declared_archive_context_inputs
+    path=os.getenv('FSFFL_RESEARCH_HISTORICAL_ARCHIVE')
+    if not path:
+        pytest.skip('original pinned archive not mounted; no real-source claim')
+    raw=Path(path).read_bytes()
+    assert sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()==PINNED_BLOB
+    observed=datetime(2026,11,17,tzinfo=UTC)
+    records,lineage,drafts=declared_archive_context_inputs(json.loads(raw),observed=observed,
+        source_revision='git-blob:'+PINNED_BLOB)
+    captured={}; native=module.reconstruct_sleeper_roster_context
+    def retain(*args,**kwargs):
+        h=native(*args,**kwargs);captured[h.season]=h;return h
+    monkeypatch.setattr(module,'reconstruct_sleeper_roster_context',retain)
+    module.build_sleeper_historical_context(seasons=records,lineage=lineage,rookie_drafts=drafts,
+        source_revision='git-blob:'+PINNED_BLOB,source_observed_at=observed)
+    assert len(captured)==5
+    counts=[]
+    for identity,data in records.items():
+        year=identity.season
+        if year not in (2024,2025,2026):
+            continue
+        corrected=captured[year]
+        assert not corrected.membership_issues, corrected.membership_issues
+        original=native(data,source_revision='git-blob:'+PINNED_BLOB)
+        draft=data['drafts'][0];start=int(draft['draft']['start_time'])
+        trades=sorted((t for t in data['transactions'] if t.get('status')=='complete' and t.get('type')=='trade'),
+            key=lambda t:int(t['status_updated']))
+        candidates=[t for t in trades if int(t['status_updated'])<start]
+        tx=max(candidates,key=lambda t:len(t.get('draft_picks')or[])) if year==2025 else candidates[0]
+        def pre(h,event):return next(s for s in h.snapshots if str(event['transaction_id']) in s.transaction_ids
+            and s.boundary=='before_completed_event_batch')
+        before=pre(corrected,tx);old=pre(original,tx)
+        owners={t.provider_roster_id:set(t.player_ids)for t in before.teams}
+        changes=sum(len(set(t.player_ids)^owners[t.provider_roster_id])for t in old.teams)
+        assert changes==36, 'expected one corrected allocation per original draft selection'
+        assert not before.uncertain_player_ids and not before.membership_uncertainty_reasons
+        if year in (2024,2026):
+            name='Kadarius Toney' if year==2024 else 'Stefon Diggs'
+            pid=next(str(p['player_id'])for p in draft['picks']if
+                ((p.get('metadata')or{}).get('first_name','')+' '+(p.get('metadata')or{}).get('last_name',''))==name)
+            assert sum(pid in players for players in owners.values())==1, 'earlier veteran ownership must survive'
+        if year==2024:
+            post=next(t for t in trades if int(t['status_updated'])>int(draft['draft']['last_picked']) and len(t.get('adds')or{})>=2)
+            after={t.provider_roster_id:set(t.player_ids)for t in pre(corrected,post).teams}
+            assert sum(len(set(t.player_ids)^after[t.provider_roster_id])for t in pre(original,post).teams)==0
+        counts.append({'season':year,'corrected_assignments':changes})
+    print(json.dumps({'draft_player_allocation_regression':counts,'raw_ownership_printed':False},sort_keys=True))
