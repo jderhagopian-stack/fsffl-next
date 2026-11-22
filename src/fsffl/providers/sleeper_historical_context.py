@@ -10,7 +10,7 @@ from fsffl.state.historical_coverage import HistoricalSeasonIdentity
 from fsffl.state.historical_pick_lineage import (
     HistoricalPickLineage, HistoricalSeasonPickInventory, reconcile_historical_pick_lineage,
 )
-from fsffl.state.historical_roster_context import reconstruct_sleeper_roster_context
+from fsffl.state.historical_roster_context import HistoricalRosterContextHistory, reconstruct_sleeper_roster_context
 from fsffl.state.historical_season_lineage import HistoricalSeasonLineage
 from fsffl.state.historical_supplemental_evidence import HistoricalSupplementalPlayerMovement
 from fsffl.state.historical_trade_context_coverage import (
@@ -34,6 +34,7 @@ class HistoricalRookieDraftEvidence:
 class SleeperHistoricalContextIntegration:
     picks: HistoricalPickLineage
     trades: HistoricalTradeContextCoverage
+    roster_histories: tuple[HistoricalRosterContextHistory, ...] = ()
 
 
 def build_sleeper_historical_context(*, seasons: Mapping[HistoricalSeasonIdentity, Mapping[str, Any]],
@@ -128,4 +129,4 @@ def build_sleeper_historical_context(*, seasons: Mapping[HistoricalSeasonIdentit
     joined = reconcile_historical_pick_lineage(lineage=lineage, seasons=tuple(inputs))
     coverage = build_historical_trade_context_coverage(requests=tuple(requests), lineage=lineage,
         roster_histories=histories, picks=joined)
-    return SleeperHistoricalContextIntegration(joined, coverage)
+    return SleeperHistoricalContextIntegration(joined, coverage, tuple(histories.values()))
