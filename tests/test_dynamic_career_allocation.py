@@ -1,6 +1,7 @@
 """Keep accepted Career inputs identical while releasing discarded graphs."""
 from types import SimpleNamespace as NS
 import weakref
+import pytest
 
 from fsffl.product import dynamic_career_composition as bridge
 from fsffl.product.foundation4_shadow_inputs import (
@@ -11,7 +12,8 @@ from fsffl.forecast.long_horizon_contract import LongHorizonForecastAuthorityCon
 from fsffl.state.models import LeagueRules
 
 
-def test_composition_preserves_validated_board_without_serializing_discarded_rows(monkeypatch):
+@pytest.mark.parametrize("use_loader", [False, True])
+def test_composition_preserves_validated_board_without_serializing_discarded_rows(monkeypatch, use_loader):
     rules = LeagueRules(team_count=12, roster_size=18, lineup=(),
                         scoring=FOUNDATION4_FSFFL_PLAYER_OFFENSE_SCORING)
     frozen = provide_foundation4_long_horizon_forecast_contract_for_rules(rules)
@@ -49,7 +51,10 @@ def test_composition_preserves_validated_board_without_serializing_discarded_row
         board_ref.append(weakref.ref(board))
         return long_result
 
-    monkeypatch.setattr(bridge, 'build_long_term_intrinsic_shadow', long_value)
+    def forbidden(*args, **kwargs):
+        pytest.fail('Injected reuse owner must handle expanded Value calculation')
+    monkeypatch.setattr(bridge, 'build_long_term_intrinsic_shadow',
+                        forbidden if use_loader else long_value)
     candidate_tail = object()
     final_result = object()
     expanded_current = NS(estimates=[NS(player_id=p) for p in base_ids | {'candidate'}])
@@ -68,6 +73,7 @@ def test_composition_preserves_validated_board_without_serializing_discarded_row
         context=NS(league_state=NS(league=NS(rules=rules))),
         frozen_reference=NS(estimates=[NS(player_id=p) for p in base_ids]),
         expanded_current=expanded_current, candidate_ids=('candidate',),
+        long_term_loader=long_value if use_loader else None,
         components=bridge.DynamicCareerComponents(
             y4_y7={'candidate': candidate_rows},
             y8_plus={'candidate': candidate_tail}, failures={}),

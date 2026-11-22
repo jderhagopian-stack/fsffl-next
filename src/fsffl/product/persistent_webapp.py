@@ -35,6 +35,7 @@ from .forecast_resilience import (
     make_preseason_comparison_loader,
 )
 from .season_comparison_runtime import SeasonComparisonService
+from .long_term_intrinsic_reuse import LongTermIntrinsicReuse
 from .foundation4_career_forward_runtime import (
     CareerIntrinsicLoader,
     validate_foundation4_expanded_acceptance_cohort,
@@ -330,6 +331,10 @@ def _release_current_contract_for_career(context, contract) -> bool:
     return True
 
 
+
+_expanded_long_term_reuse = (LongTermIntrinsicReuse(_persistence_store)
+                             if _persistence_store is not None else None)
+
 _career_intrinsic_loader = CareerIntrinsicLoader(
     current_intrinsic_loader=_shapley_intrinsic_loader,
     heavy_work_coordinator=_heavy_work_coordinator,
@@ -344,6 +349,7 @@ _career_intrinsic_loader = CareerIntrinsicLoader(
             frozen,
             current_intrinsic_loader=_shapley_intrinsic_loader,
             materializer=materialize_foundation4_dynamic_candidates,
+            long_term_loader=_expanded_long_term_reuse,
             candidate_builder=_hosted_career_candidate_builder,
         )
     ),
