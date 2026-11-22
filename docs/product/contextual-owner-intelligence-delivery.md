@@ -6,8 +6,8 @@ it does not start a history rewrite, new valuation method or paid service.
 
 ## Owner-visible outcome
 
-Open an owner's profile, inspect a real past trade, understand the supported
-circumstances, and see exactly what the completed decision establishes. The
+Open an owner's franchise dossier: season records and trends, draft history,
+roster-building activity, and real past decisions in their supported circumstances. The
 product leads with the exchange, recorded team situation and useful roster facts.
 Research lineage stays internal. A single precedent does not become a durable
 preference or an acceptance percentage.
@@ -58,7 +58,7 @@ Use existing Render/Supabase/GitHub resources. No new recurring expense, service
 connection adapter, cache or infrastructure change is authorized. Do not expose
 research fixture data as production evidence or store raw sources in public PRs.
 
-## Consolidated implementation checkpoint
+## Earlier case-only checkpoint (superseded in scope below)
 
 The current draft contains the connected source-to-profile path, not independently
 promoted helper work:
@@ -91,3 +91,41 @@ uses supplied API-shaped profiles with the actual browser component for local
 review; it is not a new hosted service or a source of live league data. The
 existing profile store and read API remain the delivery owners. No raw fixture,
 profile payload, SQLite review database or screenshot is committed to this PR.
+
+
+## Franchise dossier expansion
+
+The same milestone includes a compact franchise résumé, season-by-season records,
+draft classes, trading relationships, roster-building activity and contextual trade
+examples. Deeper tables and packages open on tap. Readable football language leads;
+source hashes and research machinery stay internal.
+
+Both sides of a past trade may be attributed only with an explicit source-scoped
+owner-tenure attestation or the narrower existing initiating-account witness.
+A supplied attestation retains its reference, recording time, family, season,
+provider league, roster/account binding and source hash. User confirmation is not
+represented as independent provider proof or inferred for another league.
+
+Season records are archived provider standings, not historical forecasts. Completed
+season totals stay separate from an in-progress season. Unknown scores remain
+unknown. Draft selections retain the actual selecting roster and account; draft
+purpose is labeled only where admitted. A selection is not a successful draft grade,
+and a traded-pick movement is not necessarily a distinct pick.
+
+The archive currently lacks playoff brackets. Do not invent championships, playoff
+finishes or title counts from regular-season standings. Add those only after their
+own source admission. Full pick inventory, draft outcomes, predictive owner tendencies
+and contemporary historical trade grades remain separate gates.
+
+Added acceptance checks: wrong/future/foreign tenure scopes cannot authorize
+counterparty attribution; résumé family/owner/cutoff isolation; source hash and
+missing-score rules; store/refresh round-trip; real source participant coverage;
+all-owner mobile season/draft/case drill-downs without overflow. Continue the same
+draft PR until production materialization and final hosted acceptance are complete.
+
+Expanded local source gate: all 291 participant sides across 144 trades, 60 archived
+season records and 384 draft selections across 12 profiles. Archived completed-season
+records independently reconcile to the eligible weekly matchup results. The archive's
+unfinished season has zero games recorded; it is not shown as today's team performance.
+Aggregate profile JSON is about 331 KiB, below the bounded 500 KB dossier review budget.
+This is source and local product evidence, not production publication or learned policy.

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from fsffl.behavioral.historical_cases import compile_historical_owner_case,attach_historical_owner_cases,historical_activity_witness
 from fsffl.behavioral.historical_circumstances import build_historical_trade_circumstances
 from fsffl.behavioral.profiles import build_owner_behavior_profiles
+from fsffl.behavioral.owner_resume import compile_owner_resumes
+from fsffl.behavioral.models import OwnerBehaviorProfile
 from fsffl.behavioral.sleeper_history import normalize_sleeper_behavior_transaction
 from fsffl.providers.sleeper_historical_context import build_sleeper_historical_context
 
@@ -23,7 +25,7 @@ class HistoricalOwnerDelivery:
 
 def build_historical_owner_delivery(*,seasons,lineage,rookie_drafts,source_revision,source_observed_at,
         production_by_previous_season,results,player_names,supplemental_movements=None,
-        observed_events=None,profiles=None):
+        observed_events=None,profiles=None,tenure_attestation=None):
     """One bounded path from sources through cases to the existing profile model.
 
     Research callers may create descriptive profiles from the supplied archive.
@@ -72,13 +74,20 @@ def build_historical_owner_delivery(*,seasons,lineage,rookie_drafts,source_revis
             if event is None:blockers['observed_event_unavailable']+=1;continue
             compiled=compile_historical_owner_case(event=event,circumstances=circumstances,history=history,
                 source=source,season_data=seasons[identity],player_names=player_names,evidence_as_of=source_observed_at,
-                activity_witness=activity_witnesses[identity])
+                activity_witness=activity_witnesses[identity],tenure_attestation=tenure_attestation)
             if compiled.case is not None:cases.append(compiled.case)
             blockers.update(compiled.blockers)
     base_profiles=tuple(profiles)if profiles is not None else build_owner_behavior_profiles(events,as_of=source_observed_at)
     if any(p.league_family_id not in family_ids for p in base_profiles):raise ValueError('foreign profile family in delivery')
     enriched=attach_historical_owner_cases(base_profiles,events=events,cases=cases)
-    coverage={**integration.trades.summary(),'compiled_initiator_cases':len(cases),
+    resumes=compile_owner_resumes(seasons=seasons,lineage=lineage,rookie_drafts=rookie_drafts,
+        tenure_attestation=tenure_attestation,evidence_as_of=source_observed_at)
+    enriched=tuple(OwnerBehaviorProfile.model_validate({**p.model_dump(),'franchise_resume':resumes.get(p.owner_id,p.franchise_resume)}) for p in enriched)
+    coverage={**integration.trades.summary(),'compiled_initiator_cases':sum(c.attribution_basis=='initiating_account_and_admitted_roster_binding' for c in cases),
+        'compiled_attested_cases':sum(c.attribution_basis=='user_attested_tenure_and_admitted_roster_binding' for c in cases),
+        'compiled_cases':len(cases),'profiles_with_resume':sum(p.franchise_resume is not None for p in enriched),
+        'recorded_season_rows':sum(len(r.seasons) for r in resumes.values()),
+        'recorded_draft_selections':sum(len(r.draft_selections) for r in resumes.values()),
         'profile_cases':sum(len(p.historical_trade_cases)for p in enriched),
         'profiles_with_cases':sum(bool(p.historical_trade_cases)for p in enriched),
         'case_blocker_counts':dict(sorted(blockers.items())),

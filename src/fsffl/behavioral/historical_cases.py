@@ -70,10 +70,10 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
         circumstances: HistoricalTradeCircumstances, history: HistoricalRosterContextHistory,
         source: HistoricalSeasonSource, season_data: Mapping,
         player_names: Mapping[str,str], evidence_as_of: datetime,
-        activity_witness: HistoricalActivityWitness | None = None) -> HistoricalCaseCompilation:
-    """Only an initiating-account witness plus admitted season roster binding.
+        activity_witness: HistoricalActivityWitness | None = None, tenure_attestation=None) -> HistoricalCaseCompilation:
+    """Require an initiating-account witness or explicit source-scoped tenure.
 
-    This says nothing about rejected offers, all counterparties or full tenure.
+    User tenure attestation remains distinct from independent provider proof.
     Raw-source direction is checked by the same normalizer used for live scans.
     Every narrative is a factual composition; no model interpretation is inserted.
     """
@@ -95,8 +95,11 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
     raw=rows[0]
     if event.kind!=BehavioralEventKind.TRADE:return HistoricalCaseCompilation(None,('not_a_trade',))
     owner_map={int(b.provider_roster_id):b.provider_manager_id for b in source.roster_bindings if b.provider_manager_id is not None}
-    if str(raw.get('creator')or'')!=event.owner_id:
+    attested=tenure_attestation is not None and tenure_attestation.covers(source,event.roster_id,event.owner_id,evidence_as_of)
+    if str(raw.get('creator')or'')!=event.owner_id and not attested:
         return HistoricalCaseCompilation(None,('initiating_account_not_witnessed',))
+    attribution='user_attested_tenure_and_admitted_roster_binding' if attested else 'initiating_account_and_admitted_roster_binding'
+    tenure_reference=tenure_attestation.reference if attested else None
     if owner_map.get(event.roster_id)!=event.owner_id:
         return HistoricalCaseCompilation(None,('admitted_roster_account_binding_unavailable',))
     normalized=normalize_sleeper_behavior_transaction(raw,family_id=event.league_family_id,
@@ -173,6 +176,7 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
     identity=_digest({'event':fingerprint,'history':history.history_id,'snapshot':snapshot.snapshot_id,
         'circumstance_sources':circumstances.evidence_source_sha256,'evidence_as_of':evidence_as_of.isoformat(),
         'activity':activity_witness.sha256,'activity_through':activity_through.isoformat(),
+        'attribution':attribution,'tenure_reference':tenure_reference,
         'sent':sent,'received':received,'sentences':sentences,'owner_label':users.get(event.owner_id,{}).get('display_name'),'version':'owner-historical-trade-case-v1'})
     return HistoricalCaseCompilation(OwnerHistoricalTradeCase(case_id='hcase_'+identity,event_id=event.event_id,
         event_sha256=fingerprint,league_family_id=event.league_family_id,owner_id=event.owner_id,
@@ -183,7 +187,8 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
         situation=situation,retained_players=retained,context_sentences=tuple(sentences),
         history_id=history.history_id,snapshot_id=snapshot.snapshot_id,source_sha256=history.source_sha256,
         circumstance_evidence_sha256=_digest(circumstances.evidence_source_sha256),
-        owner_display_name=users.get(event.owner_id,{}).get('display_name')))
+        owner_display_name=users.get(event.owner_id,{}).get('display_name'),
+        attribution_basis=attribution,tenure_reference=tenure_reference))
 
 
 def attach_historical_owner_cases(profiles: Sequence[OwnerBehaviorProfile], *,
@@ -222,4 +227,13 @@ def preserve_historical_owner_cases(profiles, *, previous_profiles, events):
     for profile in profiles:
         old=previous.get((profile.league_family_id,profile.owner_id))
         if old is not None:cases.extend(old.historical_trade_cases)
-    return attach_historical_owner_cases(profiles,events=events,cases=cases)
+    enriched=attach_historical_owner_cases(profiles,events=events,cases=cases)
+    result=[]
+    for profile in enriched:
+        old=previous.get((profile.league_family_id,profile.owner_id))
+        resume=profile.franchise_resume or (old.franchise_resume if old is not None else None)
+        if resume is not None and resume.evidence_as_of<=profile.as_of:
+            payload=profile.model_dump();payload['franchise_resume']=resume
+            profile=OwnerBehaviorProfile.model_validate(payload)
+        result.append(profile)
+    return tuple(result)

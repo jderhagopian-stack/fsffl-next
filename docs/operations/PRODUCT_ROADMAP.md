@@ -402,3 +402,15 @@ steps, not separate product milestones. See
 Keep the consolidated implementation draft until its end-to-end acceptance is
 met. Stronger preferences remain gated by chronological evidence; missing facts
 never authorize invented context. No additional recurring expense.
+
+
+### Owner Intelligence dossier scope — 2026-11-22
+
+Complete the existing integrated owner milestone as a franchise dossier: compact
+records and trends, admitted draft selections, roster-building activity and contextual
+past decisions. Keep deeper history on expansion. Source-backed championships and
+finishes require bracket/result evidence; standings alone do not qualify. Preserve
+source-scoped owner tenure attestations, unknown data and current-team/owner-preference
+boundaries. This expands the same draft delivery track, not another history rewrite
+or independently promoted helper release. Production and mobile acceptance remain
+separate from local source/browser verification.

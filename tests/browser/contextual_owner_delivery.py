@@ -25,6 +25,12 @@ def main():
         for i in range(owners):
             page.locator('[data-behavior-owner]').nth(i).click()
             assert page.locator('.behavior-history-case').count()>0
+            assert page.locator('.behavior-resume').count()==1
+            page.get_by_text('Season by season',exact=True).click()
+            assert page.locator('.behavior-season-row').count()==5
+            page.locator('.behavior-resume-detail > summary').nth(1).click()
+            page.locator('.behavior-draft-class > summary').first.click()
+            assert page.locator('.behavior-draft-class[open] li').count()>0
             assert page.evaluate('document.documentElement.scrollWidth<=window.innerWidth')
             page.locator('.behavior-history-case summary').first.click()
             assert page.locator('.behavior-history-case[open]').count()==1
@@ -42,7 +48,7 @@ def main():
         assert not errors,errors
         browser.close()
     summary={'rendered_real_profiles':owners,'mobile_width':390,'owner_switches':owners,
-        'case_drilldowns':owners,'more_history_control':True,'body_overflow':False,'javascript_errors':len(errors),
+        'case_drilldowns':owners,'resume_and_draft_drilldowns':owners,'more_history_control':True,'body_overflow':False,'javascript_errors':len(errors),
         'local_review_only':True,'physical_iphone_tested':False}
     (args.output_dir/'browser-acceptance.json').write_text(json.dumps(summary,indent=2)+'\n')
     print(json.dumps(summary,sort_keys=True))

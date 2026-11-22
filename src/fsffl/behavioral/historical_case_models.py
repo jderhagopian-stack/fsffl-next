@@ -30,7 +30,8 @@ class OwnerHistoricalTradeCase(FrozenModel):
     source_sha256: str
     circumstance_evidence_sha256: str
     owner_display_name: str | None = None
-    attribution_basis: Literal['initiating_account_and_admitted_roster_binding'] = 'initiating_account_and_admitted_roster_binding'
+    attribution_basis: Literal['initiating_account_and_admitted_roster_binding','user_attested_tenure_and_admitted_roster_binding'] = 'initiating_account_and_admitted_roster_binding'
+    tenure_reference: str | None = None
     context_clock: Literal['before_completion'] = 'before_completion'
     learned_preference: Literal[False] = False
     model_version: str = 'owner-historical-trade-case-v1'
@@ -49,5 +50,7 @@ class OwnerHistoricalTradeCase(FrozenModel):
             if len(digest)!=64 or any(c not in '0123456789abcdef'for c in digest):raise ValueError('case source hash required')
         if self.completed_at<self.created_at or self.evidence_as_of<self.completed_at or self.roster_id<1:raise ValueError('invalid historical case boundary')
         if self.activity_through<self.completed_at or self.activity_through>self.evidence_as_of:raise ValueError('invalid historical activity window')
+        if self.attribution_basis=='user_attested_tenure_and_admitted_roster_binding' and not (self.tenure_reference or '').strip():
+            raise ValueError('attested case requires tenure reference')
         if not self.sent and not self.received:raise ValueError('historical case requires an exchange')
         return self

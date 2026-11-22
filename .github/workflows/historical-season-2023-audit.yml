@@ -8,6 +8,8 @@ on:
       - 'src/fsffl/behavioral/historical_circumstances.py'
       - 'src/fsffl/behavioral/historical_cases.py'
       - 'src/fsffl/behavioral/historical_case_models.py'
+      - 'src/fsffl/behavioral/owner_resume.py'
+      - 'tests/test_owner_franchise_resume.py'
       - 'src/fsffl/behavioral/sleeper_history.py'
       - 'src/fsffl/behavioral/service.py'
       - 'src/fsffl/behavioral/models.py'
@@ -111,7 +113,7 @@ jobs:
       - name: Prove bounded historical circumstance joins (not model promotion)
         env:
           FSFFL_RESEARCH_CIRCUMSTANCE_SOURCE: ${{ runner.temp }}/historical-circumstances
-        run: python -m pytest -q -s tests/test_historical_circumstances_pinned.py tests/test_contextual_owner_delivery_pinned.py
+        run: python -m pytest -q -s tests/test_historical_circumstances_pinned.py tests/test_contextual_owner_delivery_pinned.py tests/test_owner_franchise_resume.py
       - name: Prove yearwide source discrepancy is surfaced (not guessed away)
         env:
           FSFFL_RESEARCH_HISTORICAL_ARCHIVE: ${{ runner.temp }}/historical-archive.json

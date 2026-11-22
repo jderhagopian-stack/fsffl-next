@@ -33,3 +33,18 @@
 .behavior-case-package ul{margin:.5rem 0;padding-left:1.1rem;color:#c3d5df;font-size:.9rem}
 .behavior-case-package li{margin:.3rem 0;overflow-wrap:anywhere}
 @media(max-width:760px){.behavior-shell>.panel>.panel-header{align-items:flex-start}.behavior-shell h1{font-size:1.7rem;line-height:1.15}.behavior-case-package{grid-template-columns:minmax(0,1fr)}}
+
+/* Franchise facts stay compact; season and draft depth open on demand. */
+.behavior-resume{min-width:0}
+.behavior-resume-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.behavior-resume-stats strong,.behavior-resume-stats span{display:block}
+.behavior-resume-stats strong{font-size:1.45rem;color:var(--text-primary,#edf6fa)}
+.behavior-resume-stats span{font-size:.8rem;color:var(--text-secondary,#a2b8c4);margin-top:5px}
+.behavior-resume-detail{border-top:1px solid rgba(150,190,210,.18);padding:14px 0}
+.behavior-resume-detail>summary,.behavior-draft-class>summary{cursor:pointer;color:#9ad8e5}
+.behavior-season-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;padding:12px 0;border-bottom:1px solid rgba(150,190,210,.12);font-size:.85rem}
+.behavior-draft-class{padding:12px 0}
+.behavior-draft-class ol{padding:0;list-style:none}
+.behavior-draft-class li{display:flex;flex-wrap:wrap;gap:5px 12px;padding:10px 0}
+.behavior-draft-class li>span{width:100%;color:#a2b8c4;font-size:.8rem}
+.behavior-draft-class strong{overflow-wrap:anywhere}

@@ -16,7 +16,7 @@
  * Unavailable inference is labeled Awaiting PIT history rather than rendered as a score.
  */
 
-const fsfflBehaviorUiVersion='20261122-contextual-owner1';
+const fsfflBehaviorUiVersion='20261122-owner-dossier2';
 let fsfflBehaviorSelectedOwnerId=null;
 let fsfflBehaviorRouteGuardInstalled=false;
 let fsfflBehaviorProfiles=[];
@@ -51,12 +51,27 @@ function fsfflBehaviorHistoryCases(profile){
   if(!rows.length)return '';
   function labels(items){const xs=items||[];return xs.slice(0,2).map(item=>escapeHtml(String(item))).join(' + ')+(xs.length>2?` + ${xs.length-2} more`:'')||'No assets'}
   function packageList(label,items){return `<div><span class="behavior-case-label">${label}</span><ul>${(items||[]).map(item=>`<li>${escapeHtml(String(item))}</li>`).join('')||'<li>No assets</li>'}</ul></div>`}
-  function card(row){return `<details class="behavior-history-case"><summary><span class="behavior-case-date">${escapeHtml(fsfflBehaviorDate(row.completed_at))} · Trade they initiated</span><span class="behavior-case-exchange"><span>${labels(row.sent)}</span><b aria-label="in exchange for">→</b><span>${labels(row.received)}</span></span>${row.situation?`<span class="behavior-case-context">${escapeHtml(row.situation)}</span>`:''}</summary><div class="behavior-case-details"><div class="behavior-case-package">${packageList('They sent',row.sent)}${packageList('They received',row.received)}</div><span class="behavior-case-label">Before the deal</span>${(row.context_sentences||[]).length?(row.context_sentences||[]).map(text=>`<p>${escapeHtml(text)}</p>`).join(''):'<p>The exchange is recorded; earlier roster context is incomplete.</p>'}</div></details>`}
+  function card(row){return `<details class="behavior-history-case"><summary><span class="behavior-case-date">${escapeHtml(fsfflBehaviorDate(row.completed_at))} · Completed trade</span><span class="behavior-case-exchange"><span>${labels(row.sent)}</span><b aria-label="in exchange for">→</b><span>${labels(row.received)}</span></span>${row.situation?`<span class="behavior-case-context">${escapeHtml(row.situation)}</span>`:''}</summary><div class="behavior-case-details"><div class="behavior-case-package">${packageList('They sent',row.sent)}${packageList('They received',row.received)}</div><span class="behavior-case-label">Before the deal</span>${(row.context_sentences||[]).length?(row.context_sentences||[]).map(text=>`<p>${escapeHtml(text)}</p>`).join(''):'<p>The exchange is recorded; earlier roster context is incomplete.</p>'}</div></details>`}
   return `<section class="panel behavior-history-cases"><p class="eyebrow">Past decisions, in context</p><h3>${escapeHtml(fsfflBehaviorName(profile))}</h3><p class="behavior-case-context">History through ${escapeHtml(fsfflBehaviorDate(profile.as_of))}.</p>${rows.slice(0,3).map(card).join('')}${rows.length>3?`<details class="behavior-history-more"><summary>More past trades (${rows.length-3})</summary>${rows.slice(3).map(card).join('')}</details>`:''}</section>`;
+}
+
+function fsfflBehaviorResume(profile){
+  const resume=profile?.franchise_resume;if(!resume)return '';
+  const seasons=resume.seasons||[],complete=seasons.filter(s=>s.season_complete),latest=complete.at(-1)||seasons.at(-1);
+  const wins=complete.reduce((n,s)=>n+s.wins,0),losses=complete.reduce((n,s)=>n+s.losses,0),ties=complete.reduce((n,s)=>n+s.ties,0);
+  const record=s=>`${s.wins}–${s.losses}${s.ties?`–${s.ties}`:''}`;
+  const number=n=>n===null||n===undefined?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:1});
+  const drafts=new Map();for(const p of resume.draft_selections||[]){const key=String(p.season)+':'+p.draft_id;if(!drafts.has(key))drafts.set(key,[]);drafts.get(key).push(p)}
+  const recent=[...drafts.values()].sort((a,b)=>b[0].season-a[0].season);
+  let takeaway='';if(complete.length>1){const a=complete.at(-2),b=complete.at(-1);if(a.wins+a.losses+a.ties===b.wins+b.losses+b.ties&&a.wins!==b.wins)takeaway=`Won ${Math.abs(b.wins-a.wins)} ${b.wins>a.wins?'more':'fewer'} games in ${b.season} than in ${a.season}.`}
+  return `<section class="panel behavior-resume"><p class="eyebrow">Franchise résumé</p><h2>${escapeHtml(fsfflBehaviorName(profile))}</h2><div class="behavior-resume-stats"><div><strong>${wins}–${losses}${ties?`–${ties}`:''}</strong><span>${complete.length} completed seasons</span></div>${latest?`<div><strong>${escapeHtml(record(latest))}</strong><span>${latest.season}${latest.season_complete?' record':' · season in progress'}</span></div>`:''}<div><strong>${fsfflBehaviorNum(profile.trade_count)}</strong><span>completed trades</span></div></div>${takeaway?`<p>${escapeHtml(takeaway)}</p>`:''}
+  ${seasons.length?`<details class="behavior-resume-detail"><summary>Season by season</summary><div class="behavior-season-list">${[...seasons].reverse().map(s=>`<div class="behavior-season-row"><strong>${s.season}${s.season_complete?'':' · archived'}</strong><span>${s.wins+s.losses+s.ties?escapeHtml(record(s)):'No games recorded'}</span><span>${s.wins+s.losses+s.ties?number(s.points_for)+' scored':''}</span></div>`).join('')}</div></details>`:''}
+  ${recent.length?`<details class="behavior-resume-detail"><summary>Draft history · ${recent.length} classes</summary>${recent.map(rows=>`<details class="behavior-draft-class"><summary>${rows[0].season} ${rows[0].draft_kind==='rookie'?'rookie draft':rows[0].draft_kind==='startup'?'startup draft':'league draft'} · ${rows.length} selections</summary><ol>${rows.map(d=>`<li><span>Round ${d.round} · #${d.pick_no}</span><strong>${escapeHtml(d.player_name)}</strong>${d.position?`<small>${escapeHtml(d.position)}</small>`:''}</li>`).join('')}</ol></details>`).join('')}</details>`:''}</section>`;
 }
 
 function fsfflBehaviorDossier(profile){if(!profile)return'<article class="panel"><h2>No owner selected</h2></article>';const activity=profile.completed_trade_activity;return`<div class="behavior-dossier">
 ${(profile.historical_trade_cases||[]).length?'':`<article class="panel behavior-owner-header"><div><p class="eyebrow">Owner history</p><h2>${escapeHtml(fsfflBehaviorName(profile))}</h2><p class="lead">History through ${escapeHtml(fsfflBehaviorDate(profile.as_of))}.</p></div></article>`}
+${fsfflBehaviorResume(profile)}
 ${fsfflBehaviorHistoryCases(profile)}
 <details class="panel behavior-activity-evidence" ${(profile.historical_trade_cases||[]).length?'':'open'}><summary>Trading history at a glance</summary>${fsfflBehaviorScan(profile)}<div class="dashboard-grid behavior-grid">${fsfflBehaviorTradeStyle(profile)}${fsfflBehaviorCounterparties(profile)}</div>${activity?`<div class="dashboard-grid behavior-grid">${fsfflBehaviorPositionTable('Players acquired in trades',activity.acquired_positions)}${fsfflBehaviorPositionTable('Players sent in trades',activity.disposed_positions)}</div>`:''}${fsfflBehaviorActivityEvidence(profile)}</details>
 <button type="button" class="secondary-button" data-behavior-open-trade>Open Trade Center</button>
@@ -64,7 +79,7 @@ ${fsfflBehaviorHistoryCases(profile)}
 // Inference remains not shown as blank scores. Completed actions only support
 // source-grounded observations; unavailable inference is not a substitute score.
 
-function fsfflBehaviorShell(profiles,status){const selected=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId)||profiles[0];return`<div class="behavior-shell behavior-workspace"><article class="panel"><div class="panel-header"><div><p class="eyebrow">Behavioral Intelligence</p><h1>Past trades, in context.</h1><p class="lead">What they gave up, what they got, and the roster they kept.</p></div><span class="status-chip">${escapeHtml(status==='ready'?'Ready':'Updating')}</span></div>${fsfflBehaviorOwnerTabs(profiles)}</article><div id="behavior-owner-dossier">${fsfflBehaviorDossier(selected)}</div></div>`}
+function fsfflBehaviorShell(profiles,status){const selected=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId)||profiles[0];return`<div class="behavior-shell behavior-workspace"><article class="panel"><div class="panel-header"><div><p class="eyebrow">Behavioral Intelligence</p><h1>Know your league.</h1><p class="lead">Their track record. How they build. The moves that shaped their team.</p></div><span class="status-chip">${escapeHtml(status==='ready'?'Ready':'Updating')}</span></div>${fsfflBehaviorOwnerTabs(profiles)}</article><div id="behavior-owner-dossier">${fsfflBehaviorDossier(selected)}</div></div>`}
 function fsfflBehaviorWireTradeLink(){document.querySelectorAll('[data-behavior-open-trade]').forEach(button=>button.addEventListener('click',()=>{if(typeof setRoute==='function')setRoute('trade_center')}))}
 function fsfflBehaviorWire(profiles){document.querySelectorAll('[data-behavior-owner]').forEach(button=>button.addEventListener('click',()=>{fsfflBehaviorSelectedOwnerId=button.dataset.behaviorOwner;document.querySelectorAll('[data-behavior-owner]').forEach(item=>item.classList.toggle('active',item.dataset.behaviorOwner===fsfflBehaviorSelectedOwnerId));const profile=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId);const host=document.querySelector('#behavior-owner-dossier');if(host)host.innerHTML=fsfflBehaviorDossier(profile);fsfflBehaviorWireTradeLink()}));fsfflBehaviorWireTradeLink()}
 
