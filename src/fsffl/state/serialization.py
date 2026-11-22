@@ -56,6 +56,10 @@ def _sorted_payload(state: LeagueState) -> dict[str, Any]:
         )
     payload["players"] = sorted(payload["players"], key=lambda item: item["player_id"])
     payload["player_states"] = sorted(payload["player_states"], key=lambda item: item["player_id"])
+    for player_state in payload["player_states"]:
+        # Unknown additive NFL reserve evidence must not re-key saved States.
+        if player_state.get("nfl_injured_reserve") is None:
+            player_state.pop("nfl_injured_reserve", None)
     payload["draft_picks"] = sorted(payload["draft_picks"], key=lambda item: item["pick_id"])
     payload["pick_ownership"] = sorted(payload["pick_ownership"], key=lambda item: item["pick_id"])
     payload["provenance"] = sorted(

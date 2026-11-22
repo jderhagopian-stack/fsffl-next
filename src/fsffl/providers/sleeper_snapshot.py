@@ -8,6 +8,7 @@ from fsffl.providers.sleeper import (
     SleeperNormalizer,
     SleeperPayloadBundle,
     _normalize_sleeper_player_status,
+    _normalize_sleeper_nfl_ir,
     _owned_provider_text,
 )
 from fsffl.state.models import (
@@ -231,6 +232,7 @@ def _attach_current_fantasy_player_universe(
             age_years=_age_years(raw.get("age")),
             nfl_team=nfl_team,
             status=status,
+            nfl_injured_reserve=_normalize_sleeper_nfl_ir(raw),
             provenance=provenance,
         )
 

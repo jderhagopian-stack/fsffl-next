@@ -37,6 +37,16 @@ def _owned_provider_text(value: str) -> str:
     return (" " + value)[1:]
 
 
+def _normalize_sleeper_nfl_ir(raw: Mapping[str, Any]) -> bool | None:
+    """Retain explicit NFL reserve status without inferring it from Out/Q/D."""
+    ir_labels = {"ir", "injured reserve", "reserve/injured", "reserve injured"}
+    for key in ("injury_status", "status"):
+        value = " ".join(str(raw.get(key) or "").lower().replace("_", " ").replace("-", " ").split())
+        if value in ir_labels:
+            return True
+    return None
+
+
 def _normalize_sleeper_player_status(raw: Mapping[str, Any]) -> PlayerStatus:
     """Normalize available NFL status facts without inferring season-long absence."""
     injury = str(raw.get("injury_status") or "").strip().lower()
@@ -442,6 +452,7 @@ class SleeperNormalizer:
                     age_years=self._age_years(raw.get("age")),
                     nfl_team=nfl_team,
                     status=status,
+                    nfl_injured_reserve=_normalize_sleeper_nfl_ir(raw),
                     provenance=provenance,
                 )
             )

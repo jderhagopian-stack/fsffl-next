@@ -205,27 +205,50 @@ def recorded_ytd_only_year_one_evidence(
     return result
 
 
+NFL_IR_NO_PROJECTION_POLICY_VERSION = "nfl-ir-no-projection-v1:explicit-reserve-fact"
+NFL_IR_NO_PROJECTION_POLICY_APPROVED_AT = datetime(2026, 11, 22, 5, 59, 44, tzinfo=UTC)
+
+
 def recorded_ir_no_projection_year_one_evidence(
     league_state: LeagueState, *, player_id: str, as_of: datetime,
     available_projection_rows: tuple[object, ...],
 ) -> YtdOnlyYearOneEvidence | None:
-    """Use the exact-State IR slot as low-confidence zero-ROS evidence only when no projection exists."""
+    """Explicit IR + absent projections supports the existing low-confidence assumption.
+
+    Fantasy-slot eligibility is preserved. NFL IR is a separate canonical fact,
+    not an interpretation of generic injury or a claim of season-ending absence.
+    """
     if as_of.tzinfo is None or as_of < IR_NO_PROJECTION_POLICY_APPROVED_AT:
         return None
     if any(row.player_id == player_id for row in available_projection_rows):
+        return None
+    if player_id not in {player.player_id for player in league_state.players}:
         return None
     on_ir = any(
         entry.player_id == player_id
         and getattr(entry.slot, "value", entry.slot) == "IR"
         for team in league_state.team_states for entry in team.roster
     )
-    if not on_ir or player_id not in {player.player_id for player in league_state.players}:
+    if on_ir:
+        return YtdOnlyYearOneEvidence(
+            player_id=player_id, season=league_state.league.season,
+            source="fsffl:exact-state-ir-no-projection",
+            source_version=f"{IR_NO_PROJECTION_POLICY_VERSION}:{league_state.as_of.isoformat()}",
+            observed_at=as_of,
+        )
+    if as_of < NFL_IR_NO_PROJECTION_POLICY_APPROVED_AT:
+        return None
+    status = next((row for row in league_state.player_states if row.player_id == player_id), None)
+    if status is None or status.nfl_injured_reserve is not True:
+        return None
+    observed = max(status.as_of, status.provenance.retrieved_at, status.provenance.effective_at)
+    if observed > as_of:
         return None
     return YtdOnlyYearOneEvidence(
         player_id=player_id, season=league_state.league.season,
-        source="fsffl:exact-state-ir-no-projection",
-        source_version=f"{IR_NO_PROJECTION_POLICY_VERSION}:{league_state.as_of.isoformat()}",
-        observed_at=as_of,
+        source="fsffl:exact-state-nfl-ir-no-projection",
+        source_version=f"{NFL_IR_NO_PROJECTION_POLICY_VERSION}:{observed.isoformat()}",
+        observed_at=observed,
     )
 
 

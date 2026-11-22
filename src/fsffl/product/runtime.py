@@ -67,6 +67,8 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
                 "age_years": state.age_years,
                 "nfl_team": state.nfl_team,
                 "status": state.status.value,
+                **({"nfl_injured_reserve": state.nfl_injured_reserve}
+                   if state.nfl_injured_reserve is not None else {}),
             }
             for state in sorted(league_state.player_states, key=lambda item: item.player_id)
         ],
