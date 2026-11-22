@@ -371,3 +371,22 @@ the bounded sequence from field admission through chronological validation to
 owner-reviewed trade usefulness. No legacy model promotion, acceptance odds,
 valuation change, paid infrastructure or new preference weights are authorized
 by this roadmap update.
+
+## Standing delivery sequence — agreed 2026-11-22
+
+Keep this order unless Management and the user agree a material deviation:
+1. Protect the working reliability baseline; target measured bottlenecks.
+2. Complete contextual Owner Intelligence, using supported historical decisions
+   and the existing models, then validate their value for future trade choices.
+3. Accept the integrated search/evaluate/counteroffer owner journey.
+4. Productize supported historical outcomes, lineage and distinct at-time grades.
+5. Deliver Reports/History from the shared intelligence and approved prototypes.
+6. Expand broader strategy and rollout after core usefulness is demonstrated.
+
+Historical reconstruction supplies the particular evidence needed by2and4;
+perfect reconstruction is not a separate universal prerequisite. Language/mobile
+usefulness is part of every milestone. One primary milestone at a time, concrete
+owner-visible acceptance and explicit unfinished work; a merged PR alone is not
+completion. Routine implementation choices stay within this plan. Material scope
+or sequence changes require agreement, not silent reprioritization. No added
+recurring expense without explicit approval.

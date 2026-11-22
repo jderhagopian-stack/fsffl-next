@@ -72,32 +72,9 @@ class BehavioralMulticlassContextExpectationModel(FrozenModel):
 
 
 def _full_context_features(context: BehavioralActionContext) -> tuple[float, ...]:
-    """Represent the full pre-action roster state without owner identity or outcomes."""
-
-    by_position = {row.position: row for row in context.positions}
-    values: list[float] = []
-    for position in _CONTEXT_POSITIONS:
-        row = by_position.get(position)
-        if row is None:
-            raise ValueError(f"full-roster context is missing {position.value}")
-        values.extend(
-            (
-                row.rostered_count - row.league_average_rostered_count,
-                row.active_rostered_count - row.league_average_active_rostered_count,
-                row.active_rostered_count - row.direct_starter_requirement,
-                float(row.direct_starter_requirement),
-            )
-        )
-    values.extend(
-        (
-            float(context.flex_slot_count),
-            float(context.superflex_slot_count),
-            float(context.roster_size),
-            float(context.active_roster_size),
-            float(context.owned_pick_count),
-        )
-    )
-    return tuple(values)
+    """Reuse the model-specific projection; a full context must be complete."""
+    from .context_inputs import context_feature_readiness
+    return context_feature_readiness(context).require_complete()
 
 
 def fit_behavioral_multiclass_context_expectation_model(
