@@ -8,6 +8,27 @@
     if(row.status==='unavailable')return ['Unavailable for this league snapshot.'];
     if(row.status==='no_completed_trades')return ['No completed trades are recorded for this owner.'];
     if(row.status!=='observed')return [];
+    // Package-specific observations come before generic shape. Counts of players
+    // must not be described as counts of trades or inferred owner preferences.
+    if(row.observations_version==='package-observations-v1'&&Array.isArray(row.observations)){
+      const subject=focal?'You':'They',possessive=focal?'your':'their',recipient=focal?'you':'them';
+      const positive=n=>Number.isInteger(n)&&n>0;
+      const positions={QB:['quarterback','quarterbacks'],RB:['running back','running backs'],WR:['receiver','receivers'],TE:['tight end','tight ends']};
+      const facts=row.observations.map(o=>{
+        if(!positive(o.count))return null;
+        const deals=positive(o.trade_count)&&o.count<=o.trade_count?`${o.count} of ${o.trade_count} completed trades`:null;
+        if(o.kind==='acquire_picks'&&deals)return `${subject} have traded for draft picks in ${deals}. This offer brings ${recipient} more picks.`;
+        if(o.kind==='send_picks'&&deals)return `${subject} have given up draft picks in ${deals}. This offer uses ${possessive} picks to bring back help.`;
+        if(o.kind==='acquire_position'&&positions[o.position])return `${subject} have traded for ${o.count} ${positions[o.position][o.count===1?0:1]}. This offer brings ${recipient} another ${positions[o.position][0]}.`;
+        if(o.kind==='counterparty')return `${focal?'You two':'These owners'} have completed ${o.count} ${o.count===1?'trade':'trades'} together.`;
+        if(o.kind==='package_shape'&&deals){
+          const shape={consolidation:'sending several assets for fewer in return',diversification:'receiving more assets than '+(focal?'you send':'they send'),balanced:'exchanging the same number of assets'}[o.shape];
+          return shape?`${subject} have made ${deals} by ${shape}, as ${focal?'you would':'they would'} here.`:null;
+        }
+        return null;
+      }).filter(Boolean);
+      if(facts.length)return facts.slice(0,3);
+    }
     const facts=row.facts?.length?row.facts:[`${row.completed_trade_count} completed trades recorded.`];
     return facts.slice(0,3).map(fact=>focal?fact.replaceAll('They ','You ').replaceAll('their ','your ').replaceAll('they would','you would').replaceAll('them','you'):fact);
   };
