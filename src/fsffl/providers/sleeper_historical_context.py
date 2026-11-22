@@ -16,6 +16,7 @@ from fsffl.state.historical_supplemental_evidence import HistoricalSupplementalP
 from fsffl.state.historical_trade_context_coverage import (
     HistoricalTradeContextCoverage, HistoricalTradeContextRequest, build_historical_trade_context_coverage,
 )
+from .sleeper_historical_draft_players import normalize_sleeper_draft_player_allocation
 from .sleeper_historical_pick_inventory import (
     _ms, normalize_sleeper_historical_pick_inventory, sleeper_linear_draft_allotment,
 )
@@ -62,11 +63,6 @@ def build_sleeper_historical_context(*, seasons: Mapping[HistoricalSeasonIdentit
         if any(b.provider_manager_id is not None and str(raw_rosters[r].get("owner_id")) != b.provider_manager_id
                for r, b in bindings.items()):
             raise ValueError("recorded season owner differs from admitted crosswalk")
-        provider_identity = identity.model_copy(update={"league_id": source.provider_ref.external_id})
-        histories[identity] = reconstruct_sleeper_roster_context(data, source_revision=source_revision,
-            season_identity=provider_identity, supplemental_movements=(supplemental_movements or {}).get(identity, ()))
-        if source.source_content_sha256 != histories[identity].source_sha256:
-            raise ValueError("source fingerprint is absent or differs from admitted archive")
     cohort_rights = {}
     bindings_by_season = {}
     for spec in rookie_drafts:
@@ -81,6 +77,25 @@ def build_sleeper_historical_context(*, seasons: Mapping[HistoricalSeasonIdentit
         bindings_by_season[spec.season] = bindings
     if not cohort_rights:
         raise ValueError("explicit draft allotment evidence required")
+    for identity, data in seasons.items():
+        source = sources[identity]
+        provider_identity = identity.model_copy(update={"league_id": source.provider_ref.external_id})
+        allocations = []
+        for spec in rookie_drafts:
+            if spec.season != identity:
+                continue
+            allocation = normalize_sleeper_draft_player_allocation(data, draft_id=spec.draft_id,
+                purpose_source_ref=spec.purpose_source_ref, roster_identity_source_ref=spec.roster_identity_source_ref,
+                source_revision=source_revision, source_observed_at=source_observed_at,
+                expected_selection_keys=frozenset((round_, slot) for (did, round_, slot) in bindings_by_season.get(identity, {})
+                    if did == spec.draft_id))
+            if allocation is not None:
+                allocations.append(allocation)
+        histories[identity] = reconstruct_sleeper_roster_context(data, source_revision=source_revision,
+            draft_allocations=tuple(allocations),
+            season_identity=provider_identity, supplemental_movements=(supplemental_movements or {}).get(identity, ()))
+        if source.source_content_sha256 != histories[identity].source_sha256:
+            raise ValueError("source fingerprint is absent or differs from admitted archive")
     inputs = []
     requests = []
     for identity, data in seasons.items():

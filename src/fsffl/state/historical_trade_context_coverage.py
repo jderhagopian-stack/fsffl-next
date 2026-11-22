@@ -135,7 +135,9 @@ def build_historical_trade_context_coverage(*, requests: tuple[HistoricalTradeCo
         bindings = {r.provider_roster_id: r for r in source.roster_bindings}
         owners = all(r in bindings and bindings[r].provider_manager_id is not None for r in request.participant_roster_ids)
         membership = bool(available and source_verified and set(request.participant_roster_ids) <= rosters
-                          and history.membership_status == "provisionally_consistent" and not snapshot.uncertain_player_ids)
+                          and history.membership_status == "provisionally_consistent" and not snapshot.uncertain_player_ids and not snapshot.membership_uncertainty_reasons)
+        if available:
+            issues.update(snapshot.membership_uncertainty_reasons)
         if not membership:
             issues.add("player_membership_context_unavailable")
         if not owners:

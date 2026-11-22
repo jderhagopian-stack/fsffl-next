@@ -26,6 +26,7 @@ from .historical_supplemental_evidence import (
     SupplementalPlayerMovementKind,
     reconcile_supplemental_player_movements,
 )
+from .historical_draft_allocation import HistoricalDraftPlayerAllocation
 from .models import FrozenModel
 from .historical_roster_replay import (
     BudgetUsageMovement,
@@ -79,6 +80,7 @@ class HistoricalRosterContextSnapshot(FrozenModel):
     uncertain_player_ids: tuple[str, ...] = ()
     supplemental_evidence_ids: tuple[str, ...] = ()
     roster_slot_coverage: Literal["unknown"] = "unknown"
+    membership_uncertainty_reasons: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def valid_identity(self) -> "HistoricalRosterContextSnapshot":
@@ -129,7 +131,8 @@ class HistoricalRosterContextHistory(FrozenModel):
     pick_scope: Literal["archived_traded_pick_records_only"] = "archived_traded_pick_records_only"
     faab_scope: Literal["conditional_archive_waiver_usage"] = "conditional_archive_waiver_usage"
     eligible_for_pit_decision_grade: Literal[False] = False
-    model_version: Literal["historical-roster-context-v3"] = "historical-roster-context-v3"
+    draft_allocation_bounds: tuple[tuple[str, datetime | None, datetime], ...] = ()
+    model_version: Literal["historical-roster-context-v3", "historical-roster-context-v4:draft-allocations"] = "historical-roster-context-v3"
 
     @model_validator(mode="after")
     def consistent(self) -> "HistoricalRosterContextHistory":
@@ -211,6 +214,7 @@ def reconstruct_sleeper_roster_context(
     season_data: Mapping[str, Any], *, source_revision: str,
     supplemental_movements: tuple[HistoricalSupplementalPlayerMovement, ...] = (),
     season_identity: HistoricalSeasonIdentity | None = None,
+    draft_allocations: tuple[HistoricalDraftPlayerAllocation, ...] = (),
 ) -> HistoricalRosterContextHistory:
     """Build roster-membership snapshots for every timestamped completed event.
 
@@ -332,8 +336,67 @@ def reconstruct_sleeper_roster_context(
         supplemental_evidence_payload,
         key=lambda row: json.dumps(row, sort_keys=True, separators=(",", ":")),
     ))
-    model_version = "historical-roster-context-v3"
-    history_id = "hctx_" + _digest({
+    # A bare archive caller may not have supplied admitted draft semantics.
+    # Retain its facts, but do not certify pre-draft membership from a ledger
+    # that still contains later allocations.
+    admitted_draft_ids = {a.draft_id for a in draft_allocations}
+    unadmitted_draft_windows = []
+    for raw_entry in season_data.get("drafts", ()):
+        if not isinstance(raw_entry, Mapping):
+            continue
+        raw_draft = raw_entry.get("draft") or {}
+        if not isinstance(raw_draft, Mapping) or str(raw_draft.get("draft_id")) in admitted_draft_ids:
+            continue
+        if raw_draft.get("status") != "complete" and not raw_entry.get("picks"):
+            continue
+        upper = raw_draft.get("last_picked")
+        upper = int(upper) if type(upper) in (int, float) and upper > 0 else None
+        unadmitted_draft_windows.append((str(raw_draft.get("draft_id") or "unknown"), upper))
+    draft_by_sweep = defaultdict(list)
+    draft_uncertain = []
+    draft_identities = []
+    seen_drafts = set()
+    for allocation in draft_allocations:
+        if (allocation.provider_league_id != league_id or allocation.season != season
+                or allocation.source_sha256 != source_sha256):
+            raise ValueError("draft allocation does not match historical source cohort")
+        if allocation.draft_id in seen_drafts:
+            raise ValueError("duplicate admitted draft allocation")
+        seen_drafts.add(allocation.draft_id)
+        if any(p.to_team_id not in owners for p in allocation.player_transfers):
+            raise ValueError("draft allocation recipient is absent from source roster anchors")
+        lo = int(allocation.not_before.timestamp()*1000) if allocation.not_before is not None else None
+        hi = int(allocation.by.timestamp()*1000)
+        selected = {p.player_id for p in allocation.player_transfers}
+        ambiguous = set()
+        for tx in transactions:
+            if not isinstance(tx, Mapping) or tx.get("status") != "complete":
+                continue
+            touches = selected & (set(tx.get("adds") or {}) | set(tx.get("drops") or {}))
+            at = _timestamp(tx)
+            if at is None or ((lo is None or lo <= at) and at <= hi):
+                ambiguous.update(touches)
+        for other in draft_allocations:
+            if other is allocation:
+                continue
+            if ((allocation.not_before is None or allocation.not_before <= other.by)
+                    and (other.not_before is None or other.not_before <= allocation.by)):
+                ambiguous.update(selected & {p.player_id for p in other.player_transfers})
+        # Uncertain supplemental ordering must not be resolved by a sweep time.
+        for movement in supplemental_movements:
+            if movement.source_player_id in selected:
+                if ((allocation.not_before is None or allocation.not_before.date()-timedelta(days=1) <= movement.effective_date)
+                        and movement.effective_date <= allocation.by.date()+timedelta(days=1)):
+                    ambiguous.add(movement.source_player_id)
+        draft_by_sweep[hi].append(tuple(p for p in allocation.player_transfers if p.player_id not in ambiguous))
+        draft_uncertain.append((lo, hi, selected, ambiguous, allocation.player_details_complete))
+        draft_identities.append({"draft_id": allocation.draft_id, "source_ref": allocation.source_ref,
+            "not_before": allocation.not_before.isoformat() if allocation.not_before is not None else None, "by": allocation.by.isoformat(),
+            "observed_at": allocation.source_observed_at.isoformat(),
+            "players": [(p.player_id, p.to_team_id) for p in allocation.player_transfers],
+            "player_details_complete": allocation.player_details_complete})
+    model_version = "historical-roster-context-v4:draft-allocations" if draft_allocations or unadmitted_draft_windows else "historical-roster-context-v3"
+    history_identity = {
         "provider": "sleeper",
         "provider_league_id": league_id,
         "league_family_id": league_family_id,
@@ -342,7 +405,10 @@ def reconstruct_sleeper_roster_context(
         "source_sha256": source_sha256,
         "league_rules_sha256": rules_digest,
         "model_version": model_version,
-    })
+    }
+    if draft_allocations:
+        history_identity["draft_allocations"] = sorted(draft_identities, key=lambda d:d["draft_id"])
+    history_id = "hctx_" + _digest(history_identity)
 
     def snapshot(at: int | None, boundary: str, events: list[tuple[str, Mapping[str, Any]]] | None = None) -> HistoricalRosterContextSnapshot:
         picks_by_roster: dict[str, list[str]] = {roster_id: [] for roster_id in owners}
@@ -376,6 +442,20 @@ def reconstruct_sleeper_roster_context(
             and instant is not None
             and abs((movement.effective_date - instant.date()).days) <= 1
         }))
+        uncertainty_reasons = set()
+        if at is not None:
+            draft_unknown = {pid for lo, hi, selected, ambiguous, complete in draft_uncertain
+                             for pid in (selected if (lo is None or lo <= at) and at <= hi else ambiguous if at <= hi else ())}
+            uncertain = tuple(sorted(set(uncertain) | draft_unknown))
+            if any(upper is None or at <= upper for _, upper in unadmitted_draft_windows):
+                uncertainty_reasons.add("draft_player_allocation_not_admitted")
+            for lo, hi, selected, ambiguous, complete in draft_uncertain:
+                if (lo is None or lo <= at) and at <= hi and (selected or not complete):
+                    uncertainty_reasons.add("draft_allocation_interval")
+                if at <= hi and ambiguous:
+                    uncertainty_reasons.add("draft_player_movement_order_unknown")
+                if at <= hi and not complete:
+                    uncertainty_reasons.add("draft_player_details_incomplete")
         applied_evidence_payload = [
             movement.model_dump(mode="json")
             for movement in supplemental_movements
@@ -396,6 +476,8 @@ def reconstruct_sleeper_roster_context(
             "supplemental_evidence_ids": tuple(sorted(applied_evidence_ids)),
             "applied_supplemental_evidence_sha256": applied_evidence_sha256,
         }
+        if draft_allocations or unadmitted_draft_windows:
+            snapshot_identity["membership_uncertainty_reasons"] = tuple(sorted(uncertainty_reasons))
         return HistoricalRosterContextSnapshot(
             history_id=history_id,
             snapshot_id="hsnap_" + _digest(snapshot_identity),
@@ -403,6 +485,7 @@ def reconstruct_sleeper_roster_context(
             event_types=types, teams=teams,
             uncertain_player_ids=uncertain,
             supplemental_evidence_ids=tuple(sorted(applied_evidence_ids)),
+            membership_uncertainty_reasons=tuple(sorted(uncertainty_reasons)),
         )
 
     provider_audit: RetrospectiveSeasonAudit | None = None
@@ -484,7 +567,7 @@ def reconstruct_sleeper_roster_context(
     # Work backward from the retained season-end anchor. A same-time group is
     # one boundary because the source does not establish order within the group.
     day_groups: dict[date, list[int]] = defaultdict(list)
-    for at in grouped:
+    for at in set(grouped) | set(draft_by_sweep):
         day_groups[datetime.fromtimestamp(at / 1000, tz=UTC).date()].append(at)
     supplements_by_day: dict[date, list[HistoricalSupplementalPlayerMovement]] = defaultdict(list)
     for movement in supported:
@@ -496,8 +579,9 @@ def reconstruct_sleeper_roster_context(
     replay_conflict = False
     for event_date in sorted(set(day_groups) | set(supplements_by_day), reverse=True):
         for at in sorted(day_groups.get(event_date, ()), reverse=True):
-            events = sorted(grouped[at], key=lambda pair: pair[0])
-            snapshots.append(snapshot(at, "after_completed_event_batch", events))
+            events = sorted(grouped.get(at, ()), key=lambda pair: pair[0])
+            if events:
+                snapshots.append(snapshot(at, "after_completed_event_batch", events))
 
             touched: set[tuple[str, str]] = set()
             ambiguous_pick_ids: set[str] = set()
@@ -592,7 +676,14 @@ def reconstruct_sleeper_roster_context(
                                 issues.add("unreconstructable_waiver_bid")
                                 faab_uncertain.add(roster_id)
 
-            snapshots.append(snapshot(at, "before_completed_event_batch", events))
+            # The upper bound is an internal sweep boundary, not a fabricated
+            # provider event or asserted per-pick timestamp.
+            for transfers in draft_by_sweep.get(at, ()):
+                allocation_issues = reverse_player_transfer_batch(owners, transfers)
+                if allocation_issues:
+                    issues.add("draft_player_allocation_reverse_conflict")
+            if events:
+                snapshots.append(snapshot(at, "before_completed_event_batch", events))
 
         # A date-only drop is applied only after reversing the earliest
         # plausible UTC date. Snapshots within its uncertainty window stay
@@ -650,7 +741,8 @@ def reconstruct_sleeper_roster_context(
         provider_league_id=league_id, season=season, source_revision=source_revision,
         source_sha256=source_sha256, league_rules_sha256=rules_digest,
         raw_roster_slots=slots, observed_team_count=len(owners), completed_event_count=completed_count,
-        snapshots=tuple(snapshots), issues=issue_tuple,
+        snapshots=tuple(snapshots), issues=issue_tuple, model_version=model_version,
+        draft_allocation_bounds=tuple(sorted((a.draft_id, a.not_before, a.by) for a in draft_allocations)),
         provider_audit=provider_audit,
         provider_audit_status=provider_audit_status,
         supplemental_reconciliation=reconciliation,

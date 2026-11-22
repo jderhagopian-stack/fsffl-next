@@ -208,7 +208,8 @@ def _source_views(
             provider_league_id=history.provider_league_id,
             season=history.season,
             league_family_id=history.league_family_id,
-            membership_complete=history.membership_status == "provisionally_consistent",
+            membership_complete=(history.membership_status == "provisionally_consistent"
+                and not snapshot.membership_uncertainty_reasons),
             snapshot_ids=frozenset(row.snapshot_id for row in history.snapshots),
         )
         source_snapshot = _SourceSnapshot(
