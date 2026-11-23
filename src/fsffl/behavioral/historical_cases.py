@@ -261,5 +261,16 @@ def preserve_historical_owner_cases(profiles, *, previous_profiles, events):
         if resume is not None and resume.evidence_as_of<=profile.as_of:
             payload=profile.model_dump();payload['franchise_resume']=resume
             profile=OwnerBehaviorProfile.model_validate(payload)
+        if old is not None and old.current_season_activity is not None and profile.current_season_activity is not None:
+            previous_activity=old.current_season_activity;current=profile.current_season_activity
+            if previous_activity.league_external_id==current.league_external_id and previous_activity.season==current.season:
+                receipts={(m.event.event_id,m.source_sha256):m for m in (*previous_activity.recent_moves,*previous_activity.trade_examples)}
+                def earliest(m):
+                    prior=receipts.get((m.event.event_id,m.source_sha256))
+                    return m.model_copy(update={'observed_at':min(m.observed_at,prior.observed_at)}) if prior else m
+                payload=profile.model_dump();payload['current_season_activity']=current.model_copy(update={
+                    'recent_moves':tuple(map(earliest,current.recent_moves)),
+                    'trade_examples':tuple(map(earliest,current.trade_examples))})
+                profile=OwnerBehaviorProfile.model_validate(payload)
         result.append(profile)
     return tuple(result)

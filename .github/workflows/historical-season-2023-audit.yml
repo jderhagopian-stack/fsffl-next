@@ -12,6 +12,9 @@ on:
       - 'src/fsffl/trade_decision/owner_history.py'
       - 'src/fsffl/product/owner_history_runtime.py'
       - 'tests/test_contextual_trade_precedents.py'
+      - 'tests/test_owner_current_season.py'
+      - 'src/fsffl/behavioral/current_season.py'
+      - 'src/fsffl/product/owner_current_season.py'
       - 'tests/test_contextual_precedents_pinned.py'
       - 'src/fsffl/behavioral/historical_case_models.py'
       - 'src/fsffl/behavioral/owner_resume.py'
@@ -89,7 +92,7 @@ jobs:
         run: python -m pip install -e '.[dev,web]'
       - name: Focused season and inherited historical contracts
         run: |
-          python -m pytest -q tests/test_contextual_owner_delivery.py tests/test_contextual_trade_precedents.py \
+          python -m pytest -q tests/test_contextual_owner_delivery.py tests/test_contextual_trade_precedents.py tests/test_owner_current_season.py \
             tests/test_historical_circumstances.py \
             tests/test_historical_draft_players.py \
             tests/test_historical_roster_state.py \

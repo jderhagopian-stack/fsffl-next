@@ -85,3 +85,33 @@ def precedent_category(features):
     """Ordering within existing economic/search gates, never a value score."""
     if not isinstance(features,(str,tuple,list,set,frozenset)):return 2
     return 0 if 'contextual_precedent'in features else 1 if 'directional_precedent'in features else 2
+
+
+def current_season_precedents(*, profile, acquired, disposed, as_of):
+    """Receipt-backed pick direction only; no fabricated at-trade circumstances.
+
+    Current metadata cannot prove historical positions. Observation clocks are
+    strict: first-seen-after-State examples wait for a subsequent State.
+    """
+    activity=profile.current_season_activity
+    if activity is None or activity.cutoff>as_of:return []
+    def kinds(items):return frozenset(a.kind for a in items if a.kind in ('player','pick'))
+    incoming,outgoing=kinds(acquired),kinds(disposed)
+    if 'pick' not in incoming|outgoing:return []
+    found=[]
+    for m in activity.trade_examples:
+        if m.observed_at>as_of or m.completed_at>as_of:continue
+        event=m.event
+        if event.owner_id!=profile.owner_id or event.league_family_id!=profile.league_family_id:continue
+        if kinds(event.acquired)!=incoming or kinds(event.disposed)!=outgoing:continue
+        def compact(items):
+            players=sum(a.kind=='player' for a in items);picks=sum(a.kind=='pick' for a in items)
+            return ' + '.join(f'{n} {word}'+('s' if n!=1 else '') for n,word in ((players,'player'),(picks,'draft pick')) if n)
+        found.append({'case_id':event.event_id,'event_id':event.event_id,
+            'completed_at':m.completed_at.isoformat(),'season':event.season,'football_season':None,
+            'trade_phase':'unknown','situation':None,'record_context':None,
+            'match_basis':['draft_pick_direction'],'match_type':'directional',
+            'sent_summary':compact(event.disposed),'received_summary':compact(event.acquired),
+            'retained_players':[],'evidence_basis':'completed_current_season_action',
+            'source_observed_at':m.observed_at.isoformat()})
+    return sorted(found,key=lambda p:(p['completed_at'],p['event_id']),reverse=True)[:2]

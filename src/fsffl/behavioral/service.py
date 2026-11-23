@@ -81,6 +81,9 @@ class BehavioralIntelligenceService:
         all_events = self.store.load_events(history.league_family_id)
         cutoff = as_of or league_state.as_of
         profiles = build_owner_behavior_profiles(all_events, as_of=cutoff)
+        present={p.owner_id for p in profiles}
+        profiles=tuple(sorted((*profiles,*(OwnerBehaviorProfile(league_family_id=history.league_family_id,
+            owner_id=owner,as_of=cutoff) for _,owner in history.current_owner_by_roster if owner not in present)),key=lambda p:p.owner_id))
         if self.dossier_loader is not None:
             from .dossier_publication import enrich_current_profiles
             try:
@@ -91,6 +94,9 @@ class BehavioralIntelligenceService:
                 # Optional historical attachment cannot suppress the current
                 # descriptive history refresh. Keep valid persisted facts below.
                 logging.getLogger(__name__).exception('Admitted owner dossier attachment unavailable')
+        from .current_season import attach_current_season_activity
+        profiles=attach_current_season_activity(profiles, history=history,
+            season=league_state.league.season, cutoff=cutoff)
         profiles = self.store.put_refreshed_profiles(profiles, events=all_events)
 
         reused = tuple(league_id for league_id in history.league_chain if league_id in completed)

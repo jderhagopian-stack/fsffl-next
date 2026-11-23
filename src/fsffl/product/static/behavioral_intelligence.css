@@ -48,3 +48,9 @@
 .behavior-draft-class li{display:flex;flex-wrap:wrap;gap:5px 12px;padding:10px 0}
 .behavior-draft-class li>span{width:100%;color:#a2b8c4;font-size:.8rem}
 .behavior-draft-class strong{overflow-wrap:anywhere}
+
+.behavior-live-move{padding:.75rem 0;border-bottom:1px solid var(--border,#284552)}
+.behavior-live-move p{margin:.3rem 0;overflow-wrap:anywhere}
+.behavior-live-move span,.behavior-live-move small{color:var(--muted,#94a8b6)}
+.behavior-live-activity{margin-top:1rem}
+.behavior-current-season details{margin-top:.75rem}

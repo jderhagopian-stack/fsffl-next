@@ -426,3 +426,13 @@ protected assets and user direction retain authority. Generic activity counts ar
 not a substitute for a relevant precedent once a casebook is available. No inferred
 acceptance percentage, owner intent or unvalidated preference weight. Preserve the
 existing publication/cache/persistence path and explicit missing historical coverage.
+
+### Complete the current-season owner connection — 2026-11-23
+
+Deliver current record, pick holdings, draft selections and completed activity
+alongside the archived dossier. Connect supported current exchange precedents to
+the shared trade-tool reader without promoting preferences or relaxing historical
+admission. Reuse existing source scans, profiles and behavioral job ownership.
+Evaluate the connected owner-to-trade experience; populated panels alone do not
+complete contextual owner intelligence. See current-season-owner-intelligence.md
+under docs/product for evidence boundaries and acceptance.

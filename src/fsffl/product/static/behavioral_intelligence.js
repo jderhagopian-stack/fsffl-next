@@ -16,10 +16,11 @@
  * Unavailable inference is labeled Awaiting PIT history rather than rendered as a score.
  */
 
-const fsfflBehaviorUiVersion='20261122-owner-context3';
+const fsfflBehaviorUiVersion='20261123-owner-live1';
 let fsfflBehaviorSelectedOwnerId=null;
 let fsfflBehaviorRouteGuardInstalled=false;
 let fsfflBehaviorProfiles=[];
+let fsfflBehaviorSeasonRefreshPending=false;
 
 function fsfflBehaviorInstallStyles(){if(document.querySelector('link[data-fsffl-behavior-css]'))return;const link=document.createElement('link');link.rel='stylesheet';link.dataset.fsfflBehaviorCss='true';link.href=`/static/behavioral_intelligence.css?v=${fsfflBehaviorUiVersion}`;document.head.appendChild(link)}
 function fsfflBehaviorNum(value){const parsed=Number(value);return Number.isFinite(parsed)?parsed:0}
@@ -76,8 +77,25 @@ function fsfflBehaviorResume(profile){
   ${recent.length?`<details class="behavior-resume-detail"><summary>Draft history · ${recent.length} classes</summary>${recent.map(rows=>`<details class="behavior-draft-class"><summary>${rows[0].season} ${rows[0].draft_kind==='rookie'?'rookie draft':rows[0].draft_kind==='startup'?'startup draft':'league draft'} · ${rows.length} selections</summary><ol>${rows.map(d=>`<li><span>Round ${d.round} · #${d.pick_no}</span><strong>${escapeHtml(d.player_name)}</strong>${d.position?`<small>${escapeHtml(d.position)}</small>`:''}</li>`).join('')}</ol></details>`).join('')}</details>`:''}</section>`;
 }
 
+function fsfflBehaviorCurrentSeason(profile){
+  const c=profile?.current_season;if(!c)return '';
+  const r=c.record,counts=c.counts,groups=new Map();
+  for(const p of c.picks||[]){const k=`${p.season} · Round ${p.round}`;groups.set(k,(groups.get(k)||0)+1)}
+  const record=r?`${r.wins}–${r.losses}${r.ties?`–${r.ties}`:''}`:'—';
+  const list=items=>(items||[]).map(escapeHtml).join(' + ')||'—';
+  function move(m){return `<div class="behavior-live-move"><small>${escapeHtml(fsfflBehaviorDate(m.completed_at))} · ${escapeHtml({trade:'Trade',waiver:'Waiver',free_agent:'Free agent'}[m.kind]||'Move')}</small><p><strong>${list(m.received)}</strong>${m.sent?.length?`<br><span>${m.kind==='trade'?'Sent':'Dropped'} ${list(m.sent)}</span>`:''}</p></div>`}
+  const moves=c.recent_moves||[],drafts=c.draft_selections||[];
+  return `<section class="panel behavior-current-season"><p class="eyebrow">${c.season} · This season</p><h2>Where things stand</h2><button type="button" class="secondary-button" data-behavior-refresh-season>Update season activity</button><div class="behavior-resume-stats"><div><strong>${escapeHtml(record)}</strong><span>${r?`Head-to-head · through Week ${r.through_week}`:'Record unavailable'}</span></div><div><strong>${counts?counts.trades:'—'}</strong><span>completed trades</span></div><div><strong>${(c.picks||[]).length}</strong><span>draft picks held</span></div></div>
+  ${(c.insights||[]).map(t=>`<p>${escapeHtml(t)}</p>`).join('')}
+  <details class="behavior-resume-detail"><summary>Draft capital · ${(c.picks||[]).length} picks</summary>${[...groups].map(([k,n])=>`<p><strong>${escapeHtml(k)}</strong> · ${n}</p>`).join('')||'<p>No current picks recorded.</p>'}</details>
+  ${drafts.length?`<details class="behavior-resume-detail" open><summary>${c.season} draft · ${drafts.length} selections</summary>${drafts.map(d=>`<p><strong>${escapeHtml(d.player_name)}</strong> · Round ${d.round}, #${d.pick_no}</p>`).join('')}</details>`:''}
+  ${counts?`<div class="behavior-live-activity"><h3>Recent moves</h3><small>${counts.waivers} waiver moves · ${counts.free_agents} free-agent moves</small>${moves.slice(0,3).map(move).join('')}${moves.length>3?`<details><summary>More recent moves</summary>${moves.slice(3).map(move).join('')}</details>`:''}${!moves.length?'<p>No completed moves recorded this season.</p>':''}</div>`:'<p>Current-season activity is updating.</p>'}
+  </section>`;
+}
+
 function fsfflBehaviorDossier(profile){if(!profile)return'<article class="panel"><h2>No owner selected</h2></article>';const activity=profile.completed_trade_activity;return`<div class="behavior-dossier">
 ${(profile.historical_trade_cases||[]).length?'':`<article class="panel behavior-owner-header"><div><p class="eyebrow">Owner history</p><h2>${escapeHtml(fsfflBehaviorName(profile))}</h2><p class="lead">History through ${escapeHtml(fsfflBehaviorDate(profile.as_of))}.</p></div></article>`}
+${fsfflBehaviorCurrentSeason(profile)}
 ${fsfflBehaviorResume(profile)}
 ${fsfflBehaviorHistoryCases(profile)}
 <details class="panel behavior-activity-evidence" ${(profile.historical_trade_cases||[]).length?'':'open'}><summary>Trading history at a glance</summary>${fsfflBehaviorScan(profile)}<div class="dashboard-grid behavior-grid">${fsfflBehaviorTradeStyle(profile)}${fsfflBehaviorCounterparties(profile)}</div>${activity?`<div class="dashboard-grid behavior-grid">${fsfflBehaviorPositionTable('Players acquired in trades',activity.acquired_positions)}${fsfflBehaviorPositionTable('Players sent in trades',activity.disposed_positions)}</div>`:''}${fsfflBehaviorActivityEvidence(profile)}</details>
@@ -87,7 +105,22 @@ ${fsfflBehaviorHistoryCases(profile)}
 // source-grounded observations; unavailable inference is not a substitute score.
 
 function fsfflBehaviorShell(profiles,status){const selected=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId)||profiles[0];return`<div class="behavior-shell behavior-workspace"><article class="panel"><div class="panel-header"><div><p class="eyebrow">Behavioral Intelligence</p><h1>Know your league.</h1><p class="lead">Their track record. How they build. The moves that shaped their team.</p></div><span class="status-chip">${escapeHtml(status==='ready'?'Ready':'Updating')}</span></div>${fsfflBehaviorOwnerTabs(profiles)}</article><div id="behavior-owner-dossier">${fsfflBehaviorDossier(selected)}</div></div>`}
-function fsfflBehaviorWireTradeLink(){document.querySelectorAll('[data-behavior-open-trade]').forEach(button=>button.addEventListener('click',()=>{if(typeof setRoute==='function')setRoute('trade_center')}))}
+async function fsfflBehaviorRefreshSeason(button){
+  if(fsfflBehaviorSeasonRefreshPending)return;
+  fsfflBehaviorSeasonRefreshPending=true;button.disabled=true;button.textContent='Updating activity…';
+  try{
+    await api('/api/behavioral/refresh',{method:'POST'});
+    for(let n=0;n<30;n++){
+      await new Promise(resolve=>setTimeout(resolve,2000));
+      const status=await api('/api/behavioral/status');
+      if(status.status==='failed')throw new Error('Season activity could not be updated. Try again.');
+      if(status.status==='ready'){await renderFsfflBehavioralIntelligence();return}
+    }
+    button.textContent='Still updating — reopen this page shortly';
+  }catch(error){button.textContent=String(error.message||error);button.disabled=false}
+  finally{fsfflBehaviorSeasonRefreshPending=false}
+}
+function fsfflBehaviorWireTradeLink(){document.querySelectorAll('[data-behavior-refresh-season]').forEach(button=>button.addEventListener('click',()=>fsfflBehaviorRefreshSeason(button)));document.querySelectorAll('[data-behavior-open-trade]').forEach(button=>button.addEventListener('click',()=>{if(typeof setRoute==='function')setRoute('trade_center')}))}
 function fsfflBehaviorWire(profiles){document.querySelectorAll('[data-behavior-owner]').forEach(button=>button.addEventListener('click',()=>{fsfflBehaviorSelectedOwnerId=button.dataset.behaviorOwner;document.querySelectorAll('[data-behavior-owner]').forEach(item=>item.classList.toggle('active',item.dataset.behaviorOwner===fsfflBehaviorSelectedOwnerId));const profile=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId);const host=document.querySelector('#behavior-owner-dossier');if(host)host.innerHTML=fsfflBehaviorDossier(profile);fsfflBehaviorWireTradeLink()}));fsfflBehaviorWireTradeLink()}
 
 async function renderFsfflBehavioralIntelligence(){fsfflBehaviorInstallStyles();fsfflBehaviorInstallRouteGuard();const shell=document.querySelector('#generic-screen');if(!shell)return;if(!state?.context?.league_id){shell.innerHTML='<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Connect a league to build owner history.</h2><p class="lead">Historical owner evidence will load in the background after the league is connected.</p></article>';return}shell.innerHTML='<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Loading owner history…</h2><p class="lead">The rest of FSFFL NEXT remains usable while Behavioral evidence loads.</p></article>';try{const payload=await api('/api/behavioral/profiles');const profiles=payload?.profiles||[];fsfflBehaviorProfiles=profiles;if(!profiles.length){shell.innerHTML=`<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>${payload?.status==='failed'?'Owner history unavailable':'Owner history is still updating.'}</h2><p class="lead">FSFFL has your league available. Behavioral history is rebuilding from durable evidence in the background rather than blocking the rest of the product.</p></article>`;return}const pending=window.fsfflConsumeDeepLinkIntent?.('behavioral_intelligence');const linked=pending?.ownerTeamId?profiles.find(item=>String(item.current_team_id||'')===String(pending.ownerTeamId)):null;const managed=profiles.find(fsfflBehaviorManaged);if(linked)fsfflBehaviorSelectedOwnerId=linked.owner_id;else if(!fsfflBehaviorSelectedOwnerId||!profiles.some(item=>item.owner_id===fsfflBehaviorSelectedOwnerId))fsfflBehaviorSelectedOwnerId=(managed||profiles[0]).owner_id;shell.innerHTML=fsfflBehaviorShell(profiles,payload?.status);fsfflBehaviorWire(profiles)}catch(error){shell.innerHTML=`<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Unable to load owner history.</h2><p class="lead">${escapeHtml(String(error.message||error))}</p><p>Other FSFFL sections remain available.</p></article>`}}
