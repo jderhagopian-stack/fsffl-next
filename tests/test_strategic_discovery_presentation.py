@@ -109,3 +109,12 @@ def test_future_gains_do_not_erase_market_feasibility_constraints(band):
     example=row(goals_a=('current_competitiveness',),goals_b=('career_contribution',),current=(8,-3))
     example['preliminary_economic_band']=band
     assert discovery_display_context(example)['group']=='priority_concern'
+
+
+def test_both_harmed_cannot_be_promoted_by_removing_narrow_veto():
+    example=row(current=(-3,-2),three=(-20,-10),career=(-40,-30))
+    for side in ('focal','counterparty'):example['preliminary_decision_screen'][side]['shape']='dominated'
+    result=discovery_display_context(example)
+    assert result['group']=='priority_concern'
+    assert result['limiting_gate']=='priority_loss_without_offset'
+    assert not result['current_market_veto_removed']

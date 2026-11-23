@@ -114,8 +114,9 @@ class ProgressiveDiscovery:
         comparison={label:{g:int((prior.get('priority_comparison',{}).get(label) or {}).get(g,0)) for g in _GROUPS}
             for label in ('before','after')}
         gates=dict(prior.get('limiting_gates',{}))
+        prior_ids=set(prior['screened'])
         new_rows={r['point_id']:r for r in rows if r.get('evaluation_kind') in ('root','repair')
-            and r['point_id'] not in set(prior['screened'])}
+            and r['point_id'] not in prior_ids}
         for row in new_rows.values():
             display=row.get('display_context') or {}
             gate=display.get('limiting_gate','unspecified')
@@ -137,7 +138,7 @@ class ProgressiveDiscovery:
             'priority_comparison':comparison,'limiting_gates':gates,
             'priority_tradeoff_count':comparison['after']['priority_tradeoff'],
             'max_total_screens':MAX_TOTAL_SCREENS,'preliminary_fit_count':len(fits),'shortlist_target':SHORTLIST_TARGET,
-            'model_version':'bounded-discovery-continuation-v2','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
+            'model_version':'bounded-discovery-continuation-v3:priority-comparison','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
             'next_token':self._encode(payload) if has_more else None,
             'interpretation':'Bounded preliminary screening; fits are not confirmed mutual benefits. No Simulation is run.'}}
         size=_bytes(result)+_bytes(cache_key)
