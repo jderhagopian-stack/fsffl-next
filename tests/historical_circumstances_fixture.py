@@ -61,6 +61,11 @@ def pinned_delivery_inputs(root):
     observed=datetime(2026,11,17,tzinfo=UTC)
     records,lineage,drafts=declared_archive_context_inputs(data['league_history.json'],observed=observed,source_revision='pinned-owner-delivery')
     sources={s.season:s for s in lineage.sources};identities={s.season:s for s in records}
+    from fsffl.providers.sleeper_historical_circumstances import normalize_historical_season_window
+    calendar=list(csv.DictReader((root/'nfl-games.csv').read_text().splitlines()))
+    # Explicit FSFFL fixture admission: three one-week rounds, final in Week 17.
+    windows=tuple(normalize_historical_season_window(calendar,season=year,regular_season_end_week=14,
+        season_end_week=17,source_sha256=CALENDAR_SHA256)for year in range(2022,2027))
     production={};results=[];names={}
     for year in range(2022,2026):
         identity=identities[year]
@@ -79,5 +84,5 @@ def pinned_delivery_inputs(root):
             for pick in draft.get('picks',()):
                 m=pick.get('metadata')or{};name=(str(m.get('first_name')or'')+' '+str(m.get('last_name')or'')).strip()
                 if name:names[str(pick['player_id'])]=name
-    return dict(seasons=records,lineage=lineage,rookie_drafts=drafts,source_revision='pinned-owner-delivery',source_observed_at=observed,
+    return dict(season_windows=windows,seasons=records,lineage=lineage,rookie_drafts=drafts,source_revision='pinned-owner-delivery',source_observed_at=observed,
         production_by_previous_season=production,results=tuple(results),player_names=names,supplemental_movements=accepted_2023_supplement(records))

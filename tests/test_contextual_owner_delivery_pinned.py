@@ -31,6 +31,6 @@ def test_pinned_sources_to_grounded_cases_profiles_persistence_and_refresh(tmp_p
         previous_profiles=restored,events=delivery.events)
     assert _digest([p.model_dump(mode='json')for p in refreshed])==_digest([p.model_dump(mode='json')for p in restored])
     total_bytes=sum(len(p.model_dump_json().encode())for p in restored)
-    assert total_bytes<250_000,'compact profile payload budget exceeded'
+    assert total_bytes<1_000_000,'compact profile payload budget exceeded'
     print(json.dumps({'owner_delivery':delivery.coverage,'profile_json_bytes':total_bytes,
         'profiles_restored':len(restored),'raw_owner_or_trade_payload_printed':False},sort_keys=True))

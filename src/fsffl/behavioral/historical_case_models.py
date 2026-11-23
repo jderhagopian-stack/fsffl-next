@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Literal
 from pydantic import field_validator,model_validator
 from fsffl.state.models import FrozenModel
+from .historical_trade_context import HistoricalCaseRecord,HistoricalCaseAsset
 
 
 class OwnerHistoricalTradeCase(FrozenModel):
@@ -23,6 +24,12 @@ class OwnerHistoricalTradeCase(FrozenModel):
     sent: tuple[str,...]
     received: tuple[str,...]
     situation: str | None = None
+    football_season: int | None = None
+    trade_phase: Literal['offseason','regular_season','postseason','unknown'] = 'unknown'
+    calendar_source_sha256: tuple[str,...] = ()
+    record_context: HistoricalCaseRecord | None = None
+    acquired_assets: tuple[HistoricalCaseAsset,...] = ()
+    disposed_assets: tuple[HistoricalCaseAsset,...] = ()
     retained_players: tuple[str,...] = ()
     context_sentences: tuple[str,...] = ()
     history_id: str
@@ -46,11 +53,15 @@ class OwnerHistoricalTradeCase(FrozenModel):
     def valid(self):
         for s in (self.case_id,self.event_id,self.league_family_id,self.owner_id,self.provider_league_id,self.transaction_id):
             if not s.strip():raise ValueError('historical case identity required')
-        for digest in (self.event_sha256,self.source_sha256,self.circumstance_evidence_sha256,self.activity_sha256):
+        for digest in (self.event_sha256,self.source_sha256,self.circumstance_evidence_sha256,self.activity_sha256,*self.calendar_source_sha256):
             if len(digest)!=64 or any(c not in '0123456789abcdef'for c in digest):raise ValueError('case source hash required')
         if self.completed_at<self.created_at or self.evidence_as_of<self.completed_at or self.roster_id<1:raise ValueError('invalid historical case boundary')
         if self.activity_through<self.completed_at or self.activity_through>self.evidence_as_of:raise ValueError('invalid historical activity window')
         if self.attribution_basis=='user_attested_tenure_and_admitted_roster_binding' and not (self.tenure_reference or '').strip():
             raise ValueError('attested case requires tenure reference')
+        if self.record_context is not None and self.record_context.season>self.season:
+            raise ValueError('future season cannot describe a past trade')
+        if self.trade_phase!='unknown' and not self.calendar_source_sha256:
+            raise ValueError('trade phase requires calendar evidence')
         if not self.sent and not self.received:raise ValueError('historical case requires an exchange')
         return self

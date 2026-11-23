@@ -110,6 +110,6 @@ def test_pinned_dossier_all_participant_sides_records_and_drafts():
     assert all(s.champion is None for p in delivery.profiles for s in p.franchise_resume.seasons if not s.season_complete)
     assert not delivery.model_policy_promoted
     total=sum(len(p.model_dump_json().encode()) for p in delivery.profiles)
-    assert total<500_000
+    assert total<1_500_000
     print({'cases':len(delivery.cases),'season_records':delivery.coverage['recorded_season_rows'],
         'draft_selections':delivery.coverage['recorded_draft_selections'],'profile_bytes':total})

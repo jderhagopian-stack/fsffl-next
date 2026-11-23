@@ -116,7 +116,7 @@ def load_admitted_dossier(artifact_store, *, family_id, current_provider_league_
     if record is None:return None
     prepared=PreparedOwnerDossier.model_validate(record.payload)
     if (prepared.league_family_id!=family_id or prepared.current_provider_league_id!=current_provider_league_id
-            or record.key.input_fingerprint!=_digest(prepared.model_dump(mode='json'))):
+            or record.key.input_fingerprint!=_digest(record.payload)):
         raise ValueError('admitted dossier artifact identity mismatch')
     return prepared
 

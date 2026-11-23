@@ -7,10 +7,11 @@ from fsffl.state.historical_roster_context import HistoricalRosterContextHistory
 from fsffl.state.historical_season_lineage import HistoricalSeasonSource
 from .historical_circumstances import HistoricalTradeCircumstances
 from .historical_case_models import OwnerHistoricalTradeCase
+from .historical_trade_context import HistoricalCaseRecord,HistoricalCaseAsset,historical_trade_timing,historical_record_text
 from .models import BehavioralAssetKind,BehavioralEventKind,OwnerBehaviorEvent,OwnerBehaviorProfile
 from .sleeper_history import normalize_sleeper_behavior_transaction
 
-MAX_PROFILE_CASES=12  # Compact product window; source events/history are not deleted.
+MAX_PROFILE_CASES=64  # Compact product window; source events/history are not deleted.
 
 
 @dataclass(frozen=True)
@@ -70,7 +71,8 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
         circumstances: HistoricalTradeCircumstances, history: HistoricalRosterContextHistory,
         source: HistoricalSeasonSource, season_data: Mapping,
         player_names: Mapping[str,str], evidence_as_of: datetime,
-        activity_witness: HistoricalActivityWitness | None = None, tenure_attestation=None) -> HistoricalCaseCompilation:
+        activity_witness: HistoricalActivityWitness | None = None, tenure_attestation=None,
+        season_windows=(),regular_season_end_by_year=None) -> HistoricalCaseCompilation:
     """Require an initiating-account witness or explicit source-scoped tenure.
 
     User tenure attestation remains distinct from independent provider proof.
@@ -126,17 +128,18 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
         raise ValueError('historical case roster facts differ from source snapshot')
     if team.roster_size is None and team.prior_production:
         raise ValueError('unknown membership cannot support roster retention prose')
-    situation=None;sentences=[]
+    situation=None;sentences=[];record_context=None
+    phase,football_season=historical_trade_timing(circumstances.completed_at,season=event.season,windows=season_windows)
+    calendar_hashes=tuple(sorted({w.source_sha256 for w in season_windows if abs(w.season-event.season)<=1}))
     records=sorted(team.records,key=lambda r:r.season.season,reverse=True)
     for record in records:
-        # Do not imply a complete season-to-date record from a gapped week set.
         if not record.weeks or record.weeks!=tuple(range(1,max(record.weeks)+1)):continue
         if record.wins+record.losses+record.ties!=len(record.weeks):continue
-        standing=f'{record.wins}–{record.losses}'+(f'–{record.ties}'if record.ties else '')
-        prefix=''if record.season.season==event.season else f'{record.season.season}: '
-        situation=f'{prefix}{standing} through Week {max(record.weeks)}'
-        if record.season.season==event.season:sentences.append(f'They were {standing} through Week {max(record.weeks)}.')
-        else:sentences.append(f'In {record.season.season}, they were {standing} through Week {max(record.weeks)}.')
+        end=(regular_season_end_by_year or {}).get(record.season.season)
+        record_context=HistoricalCaseRecord(season=record.season.season,wins=record.wins,losses=record.losses,
+            ties=record.ties,through_week=max(record.weeks),regular_season_complete=end==max(record.weeks))
+        situation,sentence=historical_record_text(record_context,trade_season=football_season or event.season)
+        sentences.append(sentence)
         break
     disposed={a.asset_ref.removeprefix('sleeper:player:')for a in event.disposed if a.kind==BehavioralAssetKind.PLAYER}
     acquired={a.asset_ref.removeprefix('sleeper:player:')for a in event.acquired if a.kind==BehavioralAssetKind.PLAYER}
@@ -164,6 +167,12 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
     if (activity_witness.league_family_id!=event.league_family_id
             or activity_witness.provider_league_id!=event.league_external_id
             or activity_witness.through!=activity_through):raise ValueError('case activity scope mismatch')
+    historical_positions={p.player_id:p.position for t in circumstances.teams for p in t.prior_production}
+    def case_assets(assets):
+        return tuple(HistoricalCaseAsset(kind=a.kind.value,asset_ref=a.asset_ref,
+            position=historical_positions.get(a.asset_ref.removeprefix('sleeper:player:'))
+                if a.kind==BehavioralAssetKind.PLAYER else None) for a in assets)
+    acquired_assets=case_assets(event.acquired);disposed_assets=case_assets(event.disposed)
     fingerprint=historical_event_fingerprint(event)
     users={str(u.get('user_id')):u for u in season_data.get('users',())}
     origins={}
@@ -176,8 +185,11 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
     identity=_digest({'event':fingerprint,'history':history.history_id,'snapshot':snapshot.snapshot_id,
         'circumstance_sources':circumstances.evidence_source_sha256,'evidence_as_of':evidence_as_of.isoformat(),
         'activity':activity_witness.sha256,'activity_through':activity_through.isoformat(),
+        'phase':phase,'football_season':football_season,'calendar_hashes':calendar_hashes,
+        'record_context':record_context.model_dump(mode='json') if record_context else None,
+        'acquired_assets':[a.model_dump() for a in acquired_assets],'disposed_assets':[a.model_dump() for a in disposed_assets],
         'attribution':attribution,'tenure_reference':tenure_reference,
-        'sent':sent,'received':received,'sentences':sentences,'owner_label':users.get(event.owner_id,{}).get('display_name'),'version':'owner-historical-trade-case-v1'})
+        'sent':sent,'received':received,'sentences':sentences,'owner_label':users.get(event.owner_id,{}).get('display_name'),'version':'owner-historical-trade-case-v2'})
     return HistoricalCaseCompilation(OwnerHistoricalTradeCase(case_id='hcase_'+identity,event_id=event.event_id,
         event_sha256=fingerprint,league_family_id=event.league_family_id,owner_id=event.owner_id,
         provider_league_id=event.league_external_id,transaction_id=circumstances.transaction_id,
@@ -185,8 +197,11 @@ def compile_historical_owner_case(*,event: OwnerBehaviorEvent,
         completed_at=circumstances.completed_at,evidence_as_of=evidence_as_of,
         activity_through=activity_through,activity_sha256=activity_witness.sha256,sent=sent,received=received,
         situation=situation,retained_players=retained,context_sentences=tuple(sentences),
+        trade_phase=phase,football_season=football_season,calendar_source_sha256=calendar_hashes,record_context=record_context,
+        acquired_assets=acquired_assets,disposed_assets=disposed_assets,
         history_id=history.history_id,snapshot_id=snapshot.snapshot_id,source_sha256=history.source_sha256,
         circumstance_evidence_sha256=_digest(circumstances.evidence_source_sha256),
+        model_version='owner-historical-trade-case-v2',
         owner_display_name=users.get(event.owner_id,{}).get('display_name'),
         attribution_basis=attribution,tenure_reference=tenure_reference))
 
@@ -203,7 +218,12 @@ def attach_historical_owner_cases(profiles: Sequence[OwnerBehaviorProfile], *,
         for case in cases:
             if case.owner_id!=profile.owner_id or case.league_family_id!=profile.league_family_id:continue
             previous=candidates.get(case.event_id)
-            if previous is None or case.evidence_as_of>=previous.evidence_as_of:
+            # Source observation time need not change when the same admitted
+            # facts gain a newer, structured representation. Never let the
+            # persisted legacy representation undo a newly attached revision.
+            revision={'owner-historical-trade-case-v1':1,'owner-historical-trade-case-v2':2}
+            key=lambda c:(c.evidence_as_of,revision.get(c.model_version,0))
+            if previous is None or key(case)>key(previous):
                 candidates[case.event_id]=case
         kept=[]
         for case in candidates.values():

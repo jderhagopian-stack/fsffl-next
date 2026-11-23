@@ -11,6 +11,7 @@ class TradeOwnerHistoryContext:
     source_state_id: str
     profiles: object
     player_positions: object
+    records_by_team: object
 
 
 def cached_trade_profiles(runtime, proposal):
@@ -26,8 +27,10 @@ def prepare_trade_owner_history(runtime, proposal=None, *, profiles=None, player
     positions=player_positions if player_positions is not None else (
         {p.player_id:p.position.value for p in runtime.league_state.players}
         if any(p is not None and p.completed_trade_activity is not None for p in profiles.values()) else {})
+    from fsffl.trade_decision.contextual_precedents import current_record_context
+    records={team:current_record_context(runtime.league_state,team)for team in profiles}
     return TradeOwnerHistoryContext(runtime.league_state,runtime.league_state.state_id,
-        MappingProxyType(dict(profiles)),MappingProxyType(dict(positions)))
+        MappingProxyType(dict(profiles)),MappingProxyType(dict(positions)),MappingProxyType(records))
 
 
 def build_trade_owner_history(runtime, proposal, *, profiles=None, player_positions=None, context=None):
@@ -39,5 +42,6 @@ def build_trade_owner_history(runtime, proposal, *, profiles=None, player_positi
         other=context.profiles.get(next(l.team_id for l in (proposal.side_a,proposal.side_b) if l.team_id!=leg.team_id))
         result[leg.team_id]=describe_owner_package_history(proposal,team_id=leg.team_id,
             profile=context.profiles.get(leg.team_id),player_positions=context.player_positions,
-            source_state_id=context.source_state_id,other_owner_id=other.owner_id if other else None)
+            source_state_id=context.source_state_id,other_owner_id=other.owner_id if other else None,
+            current_record=context.records_by_team.get(leg.team_id))
     return result

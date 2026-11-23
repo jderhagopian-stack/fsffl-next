@@ -64,3 +64,20 @@ def normalize_sleeper_historical_results(rows: Sequence[Mapping], *, week: int,
         normalized.extend((HistoricalScoredMatchup(a,b,ap,bp),HistoricalScoredMatchup(b,a,bp,ap)))
     incomplete.update(mappings[r] for r in mappings.keys()-seen)
     return HistoricalResultsEvidence(receipt,_digest(list(rows)),week,tuple(normalized),tuple(sorted(incomplete)))
+
+
+def normalize_historical_season_window(rows, *, season, regular_season_end_week, season_end_week, source_sha256):
+    """Calendar facts plus explicitly admitted league end weeks; no guessed format."""
+    from datetime import date
+    from fsffl.behavioral.historical_trade_context import HistoricalSeasonWindow
+    if not 1<=regular_season_end_week<=season_end_week<=18:
+        raise ValueError('explicit supported fantasy season end weeks required')
+    weeks = defaultdict(list)
+    for row in rows:
+        if str(row.get('season'))==str(season) and row.get('game_type')=='REG':
+            weeks[int(row['week'])].append(date.fromisoformat(row['gameday']))
+    if not all(weeks.get(w) for w in (1,regular_season_end_week,season_end_week)):
+        raise ValueError('season calendar boundaries unavailable')
+    return HistoricalSeasonWindow(season=season,first_game_date=min(weeks[1]),
+        regular_season_end_date=max(weeks[regular_season_end_week]),season_end_date=max(weeks[season_end_week]),
+        source_sha256=source_sha256)

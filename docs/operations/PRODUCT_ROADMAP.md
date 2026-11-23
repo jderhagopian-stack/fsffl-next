@@ -414,3 +414,15 @@ source-scoped owner tenure attestations, unknown data and current-team/owner-pre
 boundaries. This expands the same draft delivery track, not another history rewrite
 or independently promoted helper release. Production and mobile acceptance remain
 separate from local source/browser verification.
+
+### Contextual precedents in trade tools — 2026-11-23
+
+Before another Owner Intelligence redesign, connect admitted historical examples to
+the shared Opportunities/Trade Center/counteroffer consumer. Separate calendar timing,
+provider league year and record campaign; prior-year finishes remain background.
+Use actual asset direction and supported comparable circumstances for economical
+search tie-breaking and bounded examples. Current bilateral economics, timelines,
+protected assets and user direction retain authority. Generic activity counts are
+not a substitute for a relevant precedent once a casebook is available. No inferred
+acceptance percentage, owner intent or unvalidated preference weight. Preserve the
+existing publication/cache/persistence path and explicit missing historical coverage.
