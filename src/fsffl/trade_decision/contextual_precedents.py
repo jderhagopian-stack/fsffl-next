@@ -113,5 +113,5 @@ def current_season_precedents(*, profile, acquired, disposed, as_of):
             'match_basis':['draft_pick_direction'],'match_type':'directional',
             'sent_summary':compact(event.disposed),'received_summary':compact(event.acquired),
             'retained_players':[],'evidence_basis':'completed_current_season_action',
-            'source_observed_at':m.observed_at.isoformat()})
+            'source_observed_at':m.observed_at.isoformat(),'attribution_basis':'current_franchise_activity'})
     return sorted(found,key=lambda p:(p['completed_at'],p['event_id']),reverse=True)[:2]

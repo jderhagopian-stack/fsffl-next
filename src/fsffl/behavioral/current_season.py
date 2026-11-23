@@ -15,7 +15,7 @@ def attach_current_season_activity(profiles, *, history, season, cutoff):
         rows=sorted((m for m in moves if m.event.owner_id==p.owner_id),
             key=lambda m:(m.completed_at,m.event.event_id),reverse=True)
         counts=Counter(m.event.kind for m in rows)
-        ids={m.event.event_id for m in rows}
+        ids={m.event.event_id for m in getattr(history,'current_completed_moves',())}
         missing=sum(e.owner_id==p.owner_id and e.season==season and e.league_external_id==history.current_league_external_id
             and e.occurred_at<=cutoff and e.event_id not in ids for e in history.events)
         trades=[m for m in rows if m.event.kind=='trade']

@@ -12,7 +12,7 @@ def asset_labels(state):
 
 
 def action_labels(assets, labels):
-    return [labels.get(a.asset_ref,'Player '+a.asset_ref.rsplit(':',1)[-1]) if a.kind=='player'
+    return [labels.get(a.asset_ref,'Unlisted player') if a.kind=='player'
         else f'{a.pick_season} Round {a.pick_round}' if a.kind=='pick' else f'{a.faab_amount} FAAB' for a in assets]
 
 

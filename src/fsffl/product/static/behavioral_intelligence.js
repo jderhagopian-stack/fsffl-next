@@ -88,8 +88,8 @@ function fsfflBehaviorCurrentSeason(profile){
   return `<section class="panel behavior-current-season"><p class="eyebrow">${c.season} · This season</p><h2>Where things stand</h2><button type="button" class="secondary-button" data-behavior-refresh-season>Update season activity</button><div class="behavior-resume-stats"><div><strong>${escapeHtml(record)}</strong><span>${r?`Head-to-head · through Week ${r.through_week}`:'Record unavailable'}</span></div><div><strong>${counts?counts.trades:'—'}</strong><span>completed trades</span></div><div><strong>${(c.picks||[]).length}</strong><span>draft picks held</span></div></div>
   ${(c.insights||[]).map(t=>`<p>${escapeHtml(t)}</p>`).join('')}
   <details class="behavior-resume-detail"><summary>Draft capital · ${(c.picks||[]).length} picks</summary>${[...groups].map(([k,n])=>`<p><strong>${escapeHtml(k)}</strong> · ${n}</p>`).join('')||'<p>No current picks recorded.</p>'}</details>
-  ${drafts.length?`<details class="behavior-resume-detail" open><summary>${c.season} draft · ${drafts.length} selections</summary>${drafts.map(d=>`<p><strong>${escapeHtml(d.player_name)}</strong> · Round ${d.round}, #${d.pick_no}</p>`).join('')}</details>`:''}
-  ${counts?`<div class="behavior-live-activity"><h3>Recent moves</h3><small>${counts.waivers} waiver moves · ${counts.free_agents} free-agent moves</small>${moves.slice(0,3).map(move).join('')}${moves.length>3?`<details><summary>More recent moves</summary>${moves.slice(3).map(move).join('')}</details>`:''}${!moves.length?'<p>No completed moves recorded this season.</p>':''}</div>`:'<p>Current-season activity is updating.</p>'}
+  ${drafts.length?`<details class="behavior-resume-detail" open><summary>${c.season} draft · ${drafts.length} selection${drafts.length===1?'':'s'}</summary>${drafts.map(d=>`<p><strong>${escapeHtml(d.player_name)}</strong> · Round ${d.round}, #${d.pick_no}</p>`).join('')}</details>`:''}
+  ${counts?`<div class="behavior-live-activity"><h3>Recent moves</h3><small>${counts.waivers} waiver moves · ${counts.free_agents} free-agent moves</small>${c.missing_completion_count?`<p>${c.missing_completion_count} other moves have incomplete dates.</p>`:''}${moves.slice(0,3).map(move).join('')}${moves.length>3?`<details><summary>More recent moves</summary>${moves.slice(3).map(move).join('')}</details>`:''}${!moves.length?'<p>No completed moves recorded this season.</p>':''}</div>`:'<p>Current-season activity is updating.</p>'}
   </section>`;
 }
 
@@ -112,11 +112,12 @@ async function fsfflBehaviorRefreshSeason(button){
     await api('/api/behavioral/refresh',{method:'POST'});
     for(let n=0;n<30;n++){
       await new Promise(resolve=>setTimeout(resolve,2000));
+      if(!button.isConnected)return;
       const status=await api('/api/behavioral/status');
       if(status.status==='failed')throw new Error('Season activity could not be updated. Try again.');
       if(status.status==='ready'){await renderFsfflBehavioralIntelligence();return}
     }
-    button.textContent='Still updating — reopen this page shortly';
+    button.textContent='Still updating — check again';button.disabled=false;
   }catch(error){button.textContent=String(error.message||error);button.disabled=false}
   finally{fsfflBehaviorSeasonRefreshPending=false}
 }

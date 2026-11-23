@@ -12,6 +12,7 @@ from fsffl.state.models import ProviderRef,PickAsset,PlayerAsset
 from fsffl.trade_decision.models import BilateralTradeProposal,TradeLeg
 from fsffl.trade_decision.owner_history import describe_owner_package_history
 from tests.test_state_foundation import make_state
+from tests.test_owner_dossier_publication import backend
 
 NOW=datetime(2026,11,23,tzinfo=UTC)
 
@@ -31,7 +32,9 @@ def history():
         return []
     result=SleeperBehaviorHistorySource(http_get_json=get,max_workers=2).fetch_history('live')
     assert len(calls)==20  # Existing acquisition only; no extra HTTP requests.
-    return result
+    return replace(result,observed_at=NOW+timedelta(days=1,hours=1),current_completed_moves=tuple(
+        m.model_copy(update={'observed_at':max(NOW+timedelta(hours=1),m.completed_at+timedelta(hours=1))})
+        for m in result.current_completed_moves))
 
 
 def profiles(h=None):
@@ -78,8 +81,12 @@ def test_live_facts_use_shared_consumer_but_never_future_observation_or_fake_con
     assert result['acceptance_probability'] is None and result['decision_effect']=='no_disposition_change'
 
 
-def test_refresh_restore_preserves_first_observation_only_for_same_receipt(tmp_path):
-    h=history();initial=profiles(h);store=BehavioralIntelligenceStore(tmp_path/'owners.sqlite3')
+def test_refresh_restore_preserves_first_observation_only_for_same_receipt(tmp_path,backend):
+    h=history();initial=profiles(h)
+    if backend is None:store=BehavioralIntelligenceStore(tmp_path/'owners.sqlite3')
+    else:
+        from fsffl.behavioral.postgres_store import PostgresBehavioralIntelligenceStore
+        store=PostgresBehavioralIntelligenceStore(backend)
     store.put_events(h.events);store.put_refreshed_profiles(initial,events=h.events)
     later=replace(h,observed_at=h.observed_at+timedelta(days=1),current_completed_moves=tuple(
         m.model_copy(update={'observed_at':m.observed_at+timedelta(days=1)}) for m in h.current_completed_moves))
@@ -136,3 +143,14 @@ def test_completed_matchups_supply_current_record_not_archived_zero():
     view=current_owner_view(state,'team:b',profiles()[0])
     assert (view['record']['wins'],view['record']['losses'],view['record']['through_week'])==(1,1,2)
     assert current_owner_view(state,'team:a',profiles()[0])['record']['wins']==1
+
+
+def test_history_sync_includes_current_franchises_with_no_moves(tmp_path):
+    from fsffl.behavioral.service import BehavioralIntelligenceService
+    h=replace(history(),events=(),current_completed_moves=())
+    class Source:
+        def fetch_history(self,*args,**kwargs):return h
+    service=BehavioralIntelligenceService(source=Source(),store=BehavioralIntelligenceStore(tmp_path/'empty.sqlite3'))
+    result=service.sync_sleeper_league(make_state(NOW),sleeper_league_external_id='live')
+    assert result.profile_count==2
+    assert all(p.event_count==0 and p.current_season_activity.trade_count==0 for p in result.profiles)

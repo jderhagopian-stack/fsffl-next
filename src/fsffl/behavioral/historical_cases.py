@@ -267,7 +267,7 @@ def preserve_historical_owner_cases(profiles, *, previous_profiles, events):
                 receipts={(m.event.event_id,m.source_sha256):m for m in (*previous_activity.recent_moves,*previous_activity.trade_examples)}
                 def earliest(m):
                     prior=receipts.get((m.event.event_id,m.source_sha256))
-                    return m.model_copy(update={'observed_at':min(m.observed_at,prior.observed_at)}) if prior else m
+                    return m.model_copy(update={'observed_at':min(m.observed_at,prior.observed_at)}) if prior and prior.event==m.event else m
                 payload=profile.model_dump();payload['current_season_activity']=current.model_copy(update={
                     'recent_moves':tuple(map(earliest,current.recent_moves)),
                     'trade_examples':tuple(map(earliest,current.trade_examples))})
