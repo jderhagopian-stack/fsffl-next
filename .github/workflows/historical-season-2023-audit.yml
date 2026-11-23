@@ -109,7 +109,7 @@ jobs:
       - name: Real isolated PostgreSQL dossier publication and refresh
         env:
           FSFFL_DOSSIER_TEST_DATABASE_URL: postgresql://postgres:dossier-test-only@127.0.0.1:5432/fsffl_dossier_test
-        run: python -m pytest -q tests/test_owner_dossier_publication.py
+        run: python -m pytest -q tests/test_owner_dossier_publication.py tests/test_owner_current_season.py
       - name: Fetch disposable exact public legacy archive (not committed)
         env:
           SOURCE_URL: https://raw.githubusercontent.com/jderhagopian-stack/sleeper-league-data/1179d3104cbe3330cf27e4173d61df95f2494b1a/data/league_history.json

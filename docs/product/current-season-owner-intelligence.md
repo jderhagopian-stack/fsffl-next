@@ -17,7 +17,8 @@ There are no new tables, source requests, services, caches or economic formulas.
 Canonical State owns current results, roster membership and pick inventory. The
 read-only API assembles these inexpensive facts without fetching sources or running
 models. Draft selections use the admitted résumé where available. Activity can be
-updated explicitly through the existing behavioral coordinator and heavy-work gate;
+updated through the existing behavioral coordinator and heavy-work gate;
+the page initializes missing activity once, with a control for subsequent updates.
 this does not refresh Forecast, Value or Simulation. Older saved profiles remain
 readable before their first activity update.
 
