@@ -74,3 +74,38 @@ def test_discovery_exposes_published_competitive_context_without_overriding_user
     assert result['priority_context']['explicitly_directed']
     assert all(r['display_context']['group']=='needs_evidence' for r in result['candidate_packages'])
     assert result['diagnostics']['changed_state_simulation_calls']==0
+
+
+@pytest.mark.parametrize('future_goal',['three_year_contribution','career_contribution'])
+def test_future_priority_is_not_vetoed_by_current_market_only_dominance(future_goal):
+    example=row(goals_a=('current_competitiveness',),goals_b=(future_goal,),current=(8,-3),three=(-10,10),career=(-20,20))
+    example['preliminary_decision_screen']['counterparty']['shape']='dominated'
+    before=deepcopy(example)
+    result=discovery_display_context(example)
+    assert result['group']=='preliminary_fit'
+    assert result['legacy_group']=='priority_concern' and result['current_market_veto_removed']
+    assert result['authority']=='decision' and result['confirmed_mutual_benefit'] is False
+    assert result['future_roster_utility_estimated'] is False
+    assert example==before
+
+
+def test_balanced_future_sacrifice_stays_a_tradeoff_after_veto_correction():
+    example=row(current=(8,-3),three=(-10,10),career=(-20,20))
+    example['preliminary_decision_screen']['counterparty']['shape']='dominated'
+    assert discovery_display_context(example)['group']=='priority_tradeoff'
+
+
+def test_current_only_loss_and_future_unknown_are_not_promoted():
+    example=row(goals_a=('current_competitiveness',),goals_b=('current_competitiveness',),current=(8,-3))
+    example['preliminary_decision_screen']['counterparty']['shape']='dominated'
+    assert discovery_display_context(example)['group']=='priority_concern'
+    example['objective_assessment']['side_b']['context']['objectives']=['career_contribution']
+    example['objective_assessment']['side_b']['metrics'][1]['authoritative']=False
+    assert discovery_display_context(example)['group']=='needs_evidence'
+
+
+@pytest.mark.parametrize('band',['focal_economic_strain','counterparty_economic_strain'])
+def test_future_gains_do_not_erase_market_feasibility_constraints(band):
+    example=row(goals_a=('current_competitiveness',),goals_b=('career_contribution',),current=(8,-3))
+    example['preliminary_economic_band']=band
+    assert discovery_display_context(example)['group']=='priority_concern'

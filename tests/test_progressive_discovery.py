@@ -203,3 +203,28 @@ def test_long_valid_continuation_fits_request_bound_and_clamps_last_screen(monke
     assert result['search_progress']['total_screened']==80
     assert result['search_progress']['next_token'] is None
     assert len(calls)==1
+
+
+def test_same_search_before_after_counts_are_cumulative_cached_and_cost_no_extra_screens(monkeypatch):
+    from fsffl.product import progressive_discovery as module
+    calls=[]
+    def build(runtime,request,*,read,previously_screened,feedback_already_attempted):
+        available=[f'p{i}' for i in range(24) if f'p{i}' not in previously_screened]
+        picked=available[:request.evaluation_budget];calls.extend(picked)
+        return {'candidate_packages':[{'point_id':p,'evaluation_kind':'root','display_context':{
+            'group':'priority_tradeoff','legacy_group':'priority_concern'}} for p in picked],
+            'diagnostics':{'unexamined_pool_count':len(available)-len(picked),'repair_sequence_attempted':False}}
+    monkeypatch.setattr(module,'build_strategic_discovery',build)
+    runtime,_,_,_=read_fixture();service=ProgressiveDiscovery()
+    first=service.build(runtime,StrategicDiscoveryRequest())
+    second=service.build(runtime,StrategicDiscoveryRequest(continuation_token=first['search_progress']['next_token']))
+    p=second['search_progress']
+    assert p['total_screened']==16 and p['priority_tradeoff_count']==16
+    assert p['priority_comparison']['before']['priority_concern']==16
+    assert p['priority_comparison']['after']['priority_tradeoff']==16
+    assert sum(p['limiting_gates'].values())==16
+    assert p['preliminary_fit_count']==0  # Mixed costs never become no-sacrifice fits.
+    assert all(sum(v.values())==16 for v in p['priority_comparison'].values())
+    replay=service.build(runtime,StrategicDiscoveryRequest(continuation_token=first['search_progress']['next_token']))
+    assert replay['search_progress']['priority_comparison']==p['priority_comparison']
+    assert len(calls)==len(set(calls))==16

@@ -96,7 +96,7 @@ api:(path,options)=>{if(path.endsWith('/browser'))return Promise.resolve({state_
 vm.createContext(c);vm.runInContext(fs.readFileSync('src/fsffl/product/static/strategic_explore.js','utf8'),c);
 const flush=()=>new Promise(r=>setImmediate(r));
 function result(batch){return {league_state_id:'s',focal_team_id:'a',publication_generation_id:'g',
-search_progress:{total_screened:batch*8,max_total_screens:80,preliminary_fit_count:0,next_token:batch<10?'token'+batch:null,stop_reason:batch<10?'continue':'screening_limit'},
+search_progress:{total_screened:batch*8,max_total_screens:80,preliminary_fit_count:0,priority_tradeoff_count:batch*8,next_token:batch<10?'token'+batch:null,stop_reason:batch<10?'continue':'screening_limit'},
 candidate_packages:Array.from({length:8},(_,i)=>({point_id:'p'+((batch-1)*8+i),counterparty_team_id:'b',send:[],receive:[{asset_ref:'player:p'+((batch-1)*8+i),label:'Asset '+((batch-1)*8+i)}],evaluation_kind:'root',display_context:{group:'priority_tradeoff'},evidence_status:'pre_simulation_screened',
 objective_assessment:{side_a:{context:{team_id:'a'}}},position_strength_comparisons:{a:{positions:[{position:'RB',expected_points_delta:5},{position:'WR',expected_points_delta:-1}]}},
 horizon_asset_economics:{career:{roster_adjusted:{side_a:{status:'complete',roster_adjusted_intrinsic_delta:-20}}}}}))};}
