@@ -83,4 +83,5 @@ def relevant_owner_precedents(*,profile,acquired,disposed,player_positions,as_of
 
 def precedent_category(features):
     """Ordering within existing economic/search gates, never a value score."""
+    if not isinstance(features,(str,tuple,list,set,frozenset)):return 2
     return 0 if 'contextual_precedent'in features else 1 if 'directional_precedent'in features else 2

@@ -51,7 +51,7 @@ def describe_owner_package_history(proposal, *, team_id, profile, player_positio
     from .contextual_precedents import relevant_owner_precedents
     precedents=relevant_owner_precedents(profile=profile,acquired=acquired,disposed=disposed,
         player_positions=player_positions,as_of=proposal.as_of,current_record=current_record)
-    if profile.historical_trade_cases:
+    if any(c.acquired_assets or c.disposed_assets for c in profile.historical_trade_cases):
         # Once concrete history is available, generic activity is explanation,
         # not a substitute for a relevant precedent in search/counter ordering.
         matches=['contextual_precedent'if precedents[0]['match_type']=='contextual'else'directional_precedent']if precedents else []

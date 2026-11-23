@@ -145,3 +145,20 @@ def test_generic_activity_does_not_replace_missing_contextual_precedents():
     row=describe(profile=profile,positions={'rb-now':'QB','wr-now':'WR'})
     assert row['facts']  # Descriptive legacy activity remains available.
     assert not row['contextual_precedents'] and row['matching_features']==[]
+
+
+
+def test_legacy_casebook_keeps_existing_aggregate_lane_until_metadata_upgrade():
+    case,profile,proposal,current,describe=example()
+    legacy=case.model_copy(update={'acquired_assets':(),'disposed_assets':(),'model_version':'owner-historical-trade-case-v1'})
+    profile=profile.model_copy(update={'historical_trade_cases':(legacy,),'balanced_trade_count':profile.trade_count,
+        'consolidation_trade_count':0,'diversification_trade_count':0})
+    row=describe(profile=profile)
+    assert not row['contextual_precedents'] and 'package_shape' in row['matching_features']
+
+
+
+def test_optional_legacy_match_flags_are_not_contextual_scores():
+    from fsffl.trade_decision.contextual_precedents import precedent_category
+    assert precedent_category(None)==precedent_category(True)==2
+    assert precedent_category(('directional_precedent',))==1
