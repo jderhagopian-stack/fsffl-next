@@ -11,7 +11,7 @@
     const precedents=(row.contextual_precedents||[]).slice(0,1).map(p=>{
       const d=new Date(p.completed_at);if(Number.isNaN(d.getTime()))return null;
       const when=d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
-      const subject=focal?'you':'they';let text=`In ${when}, ${subject} traded ${p.sent_summary} for ${p.received_summary}.`;
+      const subject=p.attribution_basis==='current_franchise_activity'?(focal?'your franchise':'this franchise'):(focal?'you':'they');let text=`In ${when}, ${subject} traded ${p.sent_summary} for ${p.received_summary}.`;
       const r=p.record_context;
       if(r){const record=`${r.wins}–${r.losses}${r.ties?`–${r.ties}`:''}`;
         if(r.regular_season_complete)text+=` ${focal?'You':'They'} had finished the ${r.season} regular season ${record}.`;

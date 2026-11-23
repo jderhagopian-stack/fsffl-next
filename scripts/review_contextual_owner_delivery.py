@@ -11,12 +11,12 @@ from fsffl.behavioral.models import OwnerBehaviorProfile
 
 
 def write_owner_review(payload,output_dir):
-    allowed=set(OwnerBehaviorProfile.model_fields)|{'current_team_id','current_team_name'}
+    allowed=set(OwnerBehaviorProfile.model_fields)|{'current_team_id','current_team_name','current_season'}
     profiles=[]
     for item in payload.get('profiles',()):
         if set(item)-allowed:raise ValueError('unexpected owner review fields')
         profile=OwnerBehaviorProfile.model_validate({k:v for k,v in item.items()if k in OwnerBehaviorProfile.model_fields})
-        profiles.append({**profile.model_dump(mode='json'),**{k:item[k]for k in ('current_team_id','current_team_name')if k in item}})
+        profiles.append({**profile.model_dump(mode='json'),**{k:item[k]for k in ('current_team_id','current_team_name','current_season')if k in item}})
     if not profiles:raise ValueError('owner review requires real supplied profiles')
     safe={'status':'ready','profiles':profiles}
     encoded=json.dumps(safe,ensure_ascii=True).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')

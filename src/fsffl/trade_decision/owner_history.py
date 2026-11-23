@@ -51,7 +51,12 @@ def describe_owner_package_history(proposal, *, team_id, profile, player_positio
     from .contextual_precedents import relevant_owner_precedents
     precedents=relevant_owner_precedents(profile=profile,acquired=acquired,disposed=disposed,
         player_positions=player_positions,as_of=proposal.as_of,current_record=current_record)
-    if any(c.acquired_assets or c.disposed_assets for c in profile.historical_trade_cases):
+    from .contextual_precedents import current_season_precedents
+    live=current_season_precedents(profile=profile,acquired=acquired,disposed=disposed,as_of=proposal.as_of)
+    by_event={p['event_id']:p for p in live}
+    by_event.update({p['event_id']:p for p in precedents})
+    precedents=sorted(by_event.values(),key=lambda p:(p['match_type']=='contextual',p['completed_at'],p['event_id']),reverse=True)[:2]
+    if profile.current_season_activity is not None or any(c.acquired_assets or c.disposed_assets for c in profile.historical_trade_cases):
         # Once concrete history is available, generic activity is explanation,
         # not a substitute for a relevant precedent in search/counter ordering.
         matches=['contextual_precedent'if precedents[0]['match_type']=='contextual'else'directional_precedent']if precedents else []

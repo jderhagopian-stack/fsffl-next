@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Callable, Mapping, Sequence
 from urllib.request import Request, urlopen
 
-from .models import BehavioralAsset, BehavioralAssetKind, BehavioralEventKind, OwnerBehaviorEvent
+from .models import BehavioralAsset, BehavioralAssetKind, BehavioralEventKind, OwnerBehaviorEvent, CompletedSeasonMove
 
 
 JsonGetter = Callable[[str], Any]
@@ -20,6 +21,8 @@ class SleeperLeagueHistory:
     league_chain: tuple[str, ...]
     current_owner_by_roster: tuple[tuple[int, str], ...]
     events: tuple[OwnerBehaviorEvent, ...]
+    current_completed_moves: tuple[CompletedSeasonMove,...] = ()
+    observed_at: datetime | None = None
 
 
 class SleeperBehaviorHistorySource:
@@ -67,6 +70,7 @@ class SleeperBehaviorHistorySource:
         family_id = f"sleeper-family:{oldest}"
         current_owner_by_roster = self._owner_by_roster(current)
         events: list[OwnerBehaviorEvent] = []
+        receipts = []
         for league in reversed(chain_payloads):
             external_id = str(league.get("league_id") or "").strip()
             if not external_id or external_id in skip_league_ids:
@@ -77,6 +81,7 @@ class SleeperBehaviorHistorySource:
                     league,
                     player_positions=player_positions or {},
                     owner_by_roster=(current_owner_by_roster if external_id == current else None),
+                    completed_moves=receipts if external_id == current else None,
                 )
             )
 
@@ -86,6 +91,7 @@ class SleeperBehaviorHistorySource:
             league_chain=tuple(str(row.get("league_id")) for row in reversed(chain_payloads)),
             current_owner_by_roster=tuple(sorted(current_owner_by_roster.items())),
             events=tuple(sorted(events, key=lambda item: (item.occurred_at, item.event_id))),
+            current_completed_moves=tuple(receipts), observed_at=datetime.now(UTC),
         )
 
     def _owner_by_roster(self, league_external_id: str) -> dict[int, str]:
@@ -110,6 +116,7 @@ class SleeperBehaviorHistorySource:
         *,
         player_positions: Mapping[str, str],
         owner_by_roster: Mapping[int, str] | None = None,
+        completed_moves: list | None = None,
     ) -> list[OwnerBehaviorEvent]:
         external_id = str(league["league_id"])
         season = int(league["season"])
@@ -138,9 +145,20 @@ class SleeperBehaviorHistorySource:
                 if not transaction_id or transaction_id in seen_transactions:
                     continue
                 seen_transactions.add(transaction_id)
-                normalized.extend(normalize_sleeper_behavior_transaction(raw,
+                actions=normalize_sleeper_behavior_transaction(raw,
                     family_id=family_id,league_external_id=external_id,season=season,
-                    owner_by_roster=owner_map,player_positions=player_positions))
+                    owner_by_roster=owner_map,player_positions=player_positions)
+                normalized.extend(actions)
+                # Preserve created and completed clocks separately. Missing completion
+                # receipts stay outside current-season examples, never guessed.
+                if completed_moves is not None and raw.get('status_updated') is not None:
+                    try:
+                        completed_at=datetime.fromtimestamp(float(raw['status_updated'])/1000,UTC)
+                        digest=hashlib.sha256(json.dumps(raw,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+                        completed_moves.extend(CompletedSeasonMove(event=e,completed_at=completed_at,
+                            observed_at=datetime.now(UTC),source_sha256=digest) for e in actions)
+                    except (ValueError,TypeError,OverflowError,OSError):
+                        pass
         return normalized
 
     def _get(self, path: str) -> Any:

@@ -95,6 +95,50 @@ class CompletedTradeActivity(FrozenModel):
         return self
 
 
+class CompletedSeasonMove(FrozenModel):
+    """Completed provider action, not a reconstructed historical State."""
+    event: OwnerBehaviorEvent
+    completed_at: datetime
+    observed_at: datetime
+    source_sha256: str
+
+    @model_validator(mode="after")
+    def valid_receipt(self):
+        if self.completed_at.tzinfo is None or self.completed_at < self.event.occurred_at:
+            raise ValueError("invalid completion clock")
+        if self.observed_at.tzinfo is None or self.observed_at<self.completed_at:
+            raise ValueError("source observation precedes completion")
+        if len(self.source_sha256) != 64 or any(c not in '0123456789abcdef' for c in self.source_sha256):
+            raise ValueError("source receipt hash required")
+        return self
+
+
+class OwnerCurrentSeasonActivity(FrozenModel):
+    league_external_id: str
+    season: int
+    cutoff: datetime
+    observed_at: datetime
+    missing_completion_count: int = Field(default=0,ge=0)
+    trade_count: int = Field(ge=0)
+    waiver_count: int = Field(ge=0)
+    free_agent_count: int = Field(ge=0)
+    picks_acquired_in_trades: int = Field(ge=0)
+    picks_sent_in_trades: int = Field(ge=0)
+    recent_moves: tuple[CompletedSeasonMove, ...] = ()
+    trade_examples: tuple[CompletedSeasonMove, ...] = ()
+
+    @model_validator(mode="after")
+    def valid_window(self):
+        if self.cutoff.tzinfo is None or self.observed_at.tzinfo is None or self.observed_at < self.cutoff:
+            raise ValueError("separate observation and event cutoff required")
+        if len(self.recent_moves)>12 or len(self.trade_examples)>64:
+            raise ValueError("current activity is bounded")
+        for move in (*self.recent_moves,*self.trade_examples):
+            if move.event.league_external_id!=self.league_external_id or move.event.season!=self.season or move.completed_at>self.cutoff:
+                raise ValueError("current action outside scope/cutoff")
+        return self
+
+
 class OwnerBehaviorProfile(FrozenModel):
     """Descriptive historical owner profile with no hidden preference weights.
 
@@ -127,6 +171,7 @@ class OwnerBehaviorProfile(FrozenModel):
     completed_trade_activity: CompletedTradeActivity | None = None
     historical_trade_cases: tuple[OwnerHistoricalTradeCase,...] = ()
     franchise_resume: OwnerFranchiseResume | None = None
+    current_season_activity: OwnerCurrentSeasonActivity | None = None
     model_version: str = "owner-behavior-profile-v1"
 
     @field_validator("as_of", "first_observed_at")
@@ -138,6 +183,11 @@ class OwnerBehaviorProfile(FrozenModel):
 
     @model_validator(mode="after")
     def validate_counts(self) -> "OwnerBehaviorProfile":
+        activity=self.current_season_activity
+        if activity is not None and (activity.cutoff!=self.as_of or any(
+                m.event.owner_id!=self.owner_id or m.event.league_family_id!=self.league_family_id
+                for m in (*activity.recent_moves,*activity.trade_examples))):
+            raise ValueError("current actions must match profile owner/family/cutoff")
         if self.franchise_resume is not None and (self.franchise_resume.owner_id != self.owner_id
                 or self.franchise_resume.league_family_id != self.league_family_id
                 or self.franchise_resume.evidence_as_of > self.as_of):

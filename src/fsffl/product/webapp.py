@@ -1608,6 +1608,18 @@ def create_app(
                 reconcile(user_id)
         return runtime_context_payload(user_id)
 
+    @application.post("/api/behavioral/refresh")
+    def refresh_behavioral_history(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime=store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409,detail="No league is loaded")
+        ids={r.external_id for r in runtime.league_state.league.provider_refs if r.provider=="sleeper"}
+        if len(ids)!=1:
+            raise HTTPException(status_code=422,detail="A Sleeper league is required")
+        record=behavior_jobs.start(user_id=user_id,league_state=runtime.league_state,
+            sleeper_league_external_id=next(iter(ids)))
+        return {"status":record.status.value,"league_state_id":record.league_state_id}
+
     @application.get("/api/behavioral/status")
     def behavioral_status(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
@@ -1630,6 +1642,8 @@ def create_app(
             "cache": "sqlite_configurable_path",
             "hosted_durability": "requires durable deployment storage",
         }
+
+    from .owner_current_season import current_owner_view
 
     @application.get("/api/behavioral/profiles")
     def behavioral_profiles(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -1673,6 +1687,8 @@ def create_app(
                     **profile.model_dump(mode="json"),
                     "current_team_id": owner_to_team[profile.owner_id].team_id if profile.owner_id in owner_to_team else None,
                     "current_team_name": owner_to_team[profile.owner_id].display_name if profile.owner_id in owner_to_team else None,
+                    "current_season": current_owner_view(runtime.league_state,
+                        owner_to_team[profile.owner_id].team_id,profile) if profile.owner_id in owner_to_team else None,
                 }
                 for profile in profiles
             ],
