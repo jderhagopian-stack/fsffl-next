@@ -3,7 +3,7 @@ from collections import Counter
 
 
 def describe_owner_package_history(proposal, *, team_id, profile, player_positions,
-                                   source_state_id, other_owner_id=None):
+                                   source_state_id, other_owner_id=None,current_record=None):
     base = {'team_id':team_id, 'source_state_id':source_state_id,
             'evidence_basis':'completed_trades_only', 'rejected_offers_observed':False,
             'acceptance_probability':None, 'willingness_inferred':False,
@@ -48,6 +48,13 @@ def describe_owner_package_history(proposal, *, team_id, profile, player_positio
                 facts.append(f'They acquired {buys} {position} player(s) in recorded trades. This package also includes {position} players for them.')
                 matches.append('acquire_'+position)
                 observations.append({'kind':'acquire_position','position':position,'count':buys})
+    from .contextual_precedents import relevant_owner_precedents
+    precedents=relevant_owner_precedents(profile=profile,acquired=acquired,disposed=disposed,
+        player_positions=player_positions,as_of=proposal.as_of,current_record=current_record)
+    if profile.historical_trade_cases:
+        # Once concrete history is available, generic activity is explanation,
+        # not a substitute for a relevant precedent in search/counter ordering.
+        matches=['contextual_precedent'if precedents[0]['match_type']=='contextual'else'directional_precedent']if precedents else []
     prior=profile.counterparty_trade_counts.get(other_owner_id,0) if other_owner_id else 0
     if prior:
         facts.append(f'These owners completed {prior} recorded trade(s) with each other.')
@@ -57,7 +64,9 @@ def describe_owner_package_history(proposal, *, team_id, profile, player_positio
             'as_of':profile.as_of.isoformat(),'profile_model_version':profile.model_version,
             'completed_trade_count':profile.trade_count,'proposed_shape':shape,
             'observed_shape_count':count,'trade_asset_detail_available':activity is not None,
-            'facts':facts[:3],'matching_features':matches,
+            'facts':facts[:3],'matching_features':matches,'contextual_precedents':precedents,
+            'historical_cases_reviewed':len(profile.historical_trade_cases),
+            'precedents_version':'historical-exchange-context-v1',
             'observations_version':'package-observations-v1',
             'observations':sorted(observations,key=lambda row: {'acquire_picks':0,'send_picks':0,
                 'acquire_position':1,'counterparty':2,'package_shape':3}[row['kind']])}

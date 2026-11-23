@@ -83,8 +83,10 @@ def order_counter_hypotheses(seed, neighbors, *, seed_effects, published, starte
         # A universal match duplicates the structural queue and takes another
         # round-robin turn without adding an independent search question.
         # Keep selective precedents; absence never excludes an unfamiliar deal.
-        observed = [p for p in ordered if history_matches.get(p.point_id)]
-        if 0 < len(observed) < len(ordered):
+        from fsffl.trade_decision.contextual_precedents import precedent_category
+        observed = sorted((p for p in ordered if history_matches.get(p.point_id)),
+            key=lambda p:(precedent_category(history_matches[p.point_id]),structural(p)))
+        if 0 < len(observed) < len(ordered) or (observed and observed!=ordered):
             queues.append(deque(observed))
     queues.append(deque(ordered))
     result = []

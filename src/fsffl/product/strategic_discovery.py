@@ -248,6 +248,10 @@ def _representative_indices(rows,budget):
         eligible=diverse or eligible
         # Positive completed-trade precedents break otherwise equivalent ties.
         # Absence is never a rejection, preference estimate or economic veto.
+        from fsffl.trade_decision.contextual_precedents import precedent_category
+        best=min(precedent_category(rows[i].get('owner_history',{}).get(rows[i]['counterparty_team_id'],{}).get('matching_features',()))for i in eligible)
+        if best<2:
+            eligible=[i for i in eligible if precedent_category(rows[i].get('owner_history',{}).get(rows[i]['counterparty_team_id'],{}).get('matching_features',()))==best]
         observed=[i for i in eligible if (rows[i].get('owner_history',{}).get(rows[i]['counterparty_team_id'],{}).get('matching_features'))]
         eligible=observed or eligible
         index=eligible[0]

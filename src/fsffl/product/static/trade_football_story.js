@@ -8,6 +8,17 @@
     if(row.status==='unavailable')return ['Unavailable for this league snapshot.'];
     if(row.status==='no_completed_trades')return ['No completed trades are recorded for this owner.'];
     if(row.status!=='observed')return [];
+    const precedents=(row.contextual_precedents||[]).slice(0,1).map(p=>{
+      const d=new Date(p.completed_at);if(Number.isNaN(d.getTime()))return null;
+      const when=d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+      const subject=focal?'you':'they';let text=`In ${when}, ${subject} traded ${p.sent_summary} for ${p.received_summary}.`;
+      const r=p.record_context;
+      if(r){const record=`${r.wins}–${r.losses}${r.ties?`–${r.ties}`:''}`;
+        if(r.regular_season_complete)text+=` ${focal?'You':'They'} had finished the ${r.season} regular season ${record}.`;
+        else if(r.season===p.football_season&&p.trade_phase==='regular_season')text+=` ${focal?'Your':'Their'} record was ${record} at the time.`;
+      }
+      return text;
+    }).filter(Boolean);
     // Package-specific observations come before generic shape. Counts of players
     // must not be described as counts of trades or inferred owner preferences.
     if(row.observations_version==='package-observations-v1'&&Array.isArray(row.observations)){
@@ -27,10 +38,10 @@
         }
         return null;
       }).filter(Boolean);
-      if(facts.length)return facts.slice(0,3);
+      if(facts.length||precedents.length)return [...precedents,...facts].slice(0,3);
     }
     const facts=row.facts?.length?row.facts:[`${row.completed_trade_count} completed trades recorded.`];
-    return facts.slice(0,3).map(fact=>focal?fact.replaceAll('They ','You ').replaceAll('their ','your ').replaceAll('they would','you would').replaceAll('them','you'):fact);
+    return [...precedents,...facts.slice(0,3).map(fact=>focal?fact.replaceAll('They ','You ').replaceAll('their ','your ').replaceAll('they would','you would').replaceAll('them','you'):fact)].slice(0,3);
   };
   window.fsfflTradeFootballStory=function(result,teamId,playerName=()=>null){
     const focal=teamId===result?.focal_team_id,subject=focal?'You':'They',possessive=focal?'your':'their';

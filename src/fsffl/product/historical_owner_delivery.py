@@ -25,7 +25,7 @@ class HistoricalOwnerDelivery:
 
 def build_historical_owner_delivery(*,seasons,lineage,rookie_drafts,source_revision,source_observed_at,
         production_by_previous_season,results,player_names,supplemental_movements=None,
-        observed_events=None,profiles=None,tenure_attestation=None):
+        observed_events=None,profiles=None,tenure_attestation=None,season_windows=()):
     """One bounded path from sources through cases to the existing profile model.
 
     Research callers may create descriptive profiles from the supplied archive.
@@ -55,6 +55,9 @@ def build_historical_owner_delivery(*,seasons,lineage,rookie_drafts,source_revis
     family_ids={identity.league_family_id for identity in seasons}
     if len(family_ids)!=1:raise ValueError('one isolated family per owner delivery')
     if any(e.league_family_id not in family_ids for e in events):raise ValueError('foreign-family event in delivery')
+    regular_ends={identity.season:int(data['league']['settings']['playoff_week_start'])-1
+        for identity,data in seasons.items() if type(data.get('league',{}).get('settings',{}).get('playoff_week_start')) is int
+        and 2<=data['league']['settings']['playoff_week_start']<=19}
     cases=[];blockers=Counter();seen_trade_groups=set();activity_witnesses={}
     for row in integration.trades.rows:
         request=row.request;identity=request.season;source=sources[identity]
@@ -74,7 +77,8 @@ def build_historical_owner_delivery(*,seasons,lineage,rookie_drafts,source_revis
             if event is None:blockers['observed_event_unavailable']+=1;continue
             compiled=compile_historical_owner_case(event=event,circumstances=circumstances,history=history,
                 source=source,season_data=seasons[identity],player_names=player_names,evidence_as_of=source_observed_at,
-                activity_witness=activity_witnesses[identity],tenure_attestation=tenure_attestation)
+                activity_witness=activity_witnesses[identity],tenure_attestation=tenure_attestation,
+                season_windows=season_windows,regular_season_end_by_year=regular_ends)
             if compiled.case is not None:cases.append(compiled.case)
             blockers.update(compiled.blockers)
     base_profiles=tuple(profiles)if profiles is not None else build_owner_behavior_profiles(events,as_of=source_observed_at)

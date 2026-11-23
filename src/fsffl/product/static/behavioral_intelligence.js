@@ -16,7 +16,7 @@
  * Unavailable inference is labeled Awaiting PIT history rather than rendered as a score.
  */
 
-const fsfflBehaviorUiVersion='20261122-owner-dossier2';
+const fsfflBehaviorUiVersion='20261122-owner-context3';
 let fsfflBehaviorSelectedOwnerId=null;
 let fsfflBehaviorRouteGuardInstalled=false;
 let fsfflBehaviorProfiles=[];
@@ -51,7 +51,13 @@ function fsfflBehaviorHistoryCases(profile){
   if(!rows.length)return '';
   function labels(items){const xs=items||[];return xs.slice(0,2).map(item=>escapeHtml(String(item))).join(' + ')+(xs.length>2?` + ${xs.length-2} more`:'')||'No assets'}
   function packageList(label,items){return `<div><span class="behavior-case-label">${label}</span><ul>${(items||[]).map(item=>`<li>${escapeHtml(String(item))}</li>`).join('')||'<li>No assets</li>'}</ul></div>`}
-  function card(row){return `<details class="behavior-history-case"><summary><span class="behavior-case-date">${escapeHtml(fsfflBehaviorDate(row.completed_at))} · Completed trade</span><span class="behavior-case-exchange"><span>${labels(row.sent)}</span><b aria-label="in exchange for">→</b><span>${labels(row.received)}</span></span>${row.situation?`<span class="behavior-case-context">${escapeHtml(row.situation)}</span>`:''}</summary><div class="behavior-case-details"><div class="behavior-case-package">${packageList('They sent',row.sent)}${packageList('They received',row.received)}</div><span class="behavior-case-label">Before the deal</span>${(row.context_sentences||[]).length?(row.context_sentences||[]).map(text=>`<p>${escapeHtml(text)}</p>`).join(''):'<p>The exchange is recorded; earlier roster context is incomplete.</p>'}</div></details>`}
+  function context(row){
+    if(row.record_context)return row.situation||'';
+    // Backward-compatible source text: a dated prior-season result is background.
+    const old=String(row.situation||'').match(/^(\d{4}): (.+)$/);
+    return old?`${Number(old[1])<row.season?'Previous season':'Recorded season'} (${old[1]}): ${old[2]}`:row.situation?`${row.season} record: ${row.situation}`:'';
+  }
+  function card(row){return `<details class="behavior-history-case"><summary><span class="behavior-case-date">${escapeHtml(fsfflBehaviorDate(row.completed_at))} · ${escapeHtml({offseason:'Offseason trade',regular_season:'In-season trade',postseason:'Playoff-period trade'}[row.trade_phase]||'Completed trade')}</span><span class="behavior-case-exchange"><span>${labels(row.sent)}</span><b aria-label="in exchange for">→</b><span>${labels(row.received)}</span></span>${context(row)?`<span class="behavior-case-context">${escapeHtml(context(row))}</span>`:''}</summary><div class="behavior-case-details"><div class="behavior-case-package">${packageList('They sent',row.sent)}${packageList('They received',row.received)}</div><span class="behavior-case-label">Before the deal</span>${(row.context_sentences||[]).length?(row.context_sentences||[]).map(text=>`<p>${escapeHtml(text)}</p>`).join(''):'<p>The exchange is recorded; earlier roster context is incomplete.</p>'}</div></details>`}
   return `<section class="panel behavior-history-cases"><p class="eyebrow">Past decisions, in context</p><h3>${escapeHtml(fsfflBehaviorName(profile))}</h3><p class="behavior-case-context">History through ${escapeHtml(fsfflBehaviorDate(profile.as_of))}.</p>${rows.slice(0,3).map(card).join('')}${rows.length>3?`<details class="behavior-history-more"><summary>More past trades (${rows.length-3})</summary>${rows.slice(3).map(card).join('')}</details>`:''}</section>`;
 }
 
