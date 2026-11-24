@@ -118,3 +118,12 @@ def test_both_harmed_cannot_be_promoted_by_removing_narrow_veto():
     assert result['group']=='priority_concern'
     assert result['limiting_gate']=='priority_loss_without_offset'
     assert not result['current_market_veto_removed']
+
+
+@pytest.mark.parametrize('points',[0,2,None])
+def test_domination_without_known_current_loss_keeps_market_or_evidence_guard(points):
+    example=row(goals_a=('current_competitiveness',),goals_b=('career_contribution',),current=(8,points))
+    example['preliminary_decision_screen']['counterparty']['shape']='dominated'
+    result=discovery_display_context(example)
+    assert result['group']=='priority_concern'
+    assert result['limiting_gate']=='market_or_unresolved_dominance'

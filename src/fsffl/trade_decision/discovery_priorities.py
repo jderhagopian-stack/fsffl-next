@@ -14,6 +14,17 @@ def _priority_group(row):
     if row.get('preliminary_economic_band') in ('focal_economic_strain','counterparty_economic_strain'):
         return {'group':'priority_concern','limiting_gate':'market_feasibility','reason':'The package needs better terms before it is a plausible opportunity.'}
 
+    # A dominated screen with no demonstrated Current loss cannot be a
+    # Current-only veto: its market loss (or unresolved evidence) still applies.
+    # Only a known negative Current coordinate can take the future-priority path.
+    for name in ('focal','counterparty'):
+        narrow=screen.get(name) or {}
+        points=narrow.get('starter_points_delta')
+        known=isinstance(points,(int,float)) and isfinite(points)
+        if narrow.get('shape')=='dominated' and (not known or points>=-1e-9):
+            return {'group':'priority_concern','limiting_gate':'market_or_unresolved_dominance',
+                'reason':'The package needs better terms or complete effects before it is a plausible opportunity.'}
+
     sides = []
     uses_proxy = False
     for key, screen_side in (('side_a', 'focal'), ('side_b', 'counterparty')):

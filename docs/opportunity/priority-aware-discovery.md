@@ -10,7 +10,8 @@ Decision now owns the preliminary priority interpretation. Presentation delegate
 to it; native values, the Current/Market screen itself, final dispositions and
 inferred owner objectives are unchanged. Protected assets, market-feasibility
 constraints, missing evidence and known requested losses without offsets remain
-blocked or unresolved. A Current-only team cannot qualify by losing Current and
+blocked or unresolved. A dominated screen without a known Current loss retains
+its market/evidence guard; it is not a Current-only veto. A Current-only team cannot qualify by losing Current and
 receiving an unrequested future gain. Balanced gains and losses remain tradeoffs.
 No sacrifice is relabeled as a confirmed mutually beneficial recommendation.
 
