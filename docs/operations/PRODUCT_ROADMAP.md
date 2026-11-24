@@ -436,3 +436,12 @@ admission. Reuse existing source scans, profiles and behavioral job ownership.
 Evaluate the connected owner-to-trade experience; populated panels alone do not
 complete contextual owner intelligence. See current-season-owner-intelligence.md
 under docs/product for evidence boundaries and acceptance.
+
+### Priority-aware opportunity evaluation — 2026-11-23
+
+Correct Current/Market-only vetoes of supported future-directed priorities through
+Decision-owned preliminary interpretation. Preserve mixed balanced outcomes,
+protected assets, market feasibility and missing evidence. Measure previous versus
+corrected grouping on the same bounded live searches before expanding generation
+or pick-based repairs. Asset contribution remains distinct from roster utility;
+no new owner policy or universal value. See `docs/opportunity/priority-aware-discovery.md`.

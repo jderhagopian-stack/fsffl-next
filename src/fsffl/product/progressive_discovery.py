@@ -8,6 +8,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import secrets
 import sys
 from threading import RLock
@@ -18,6 +19,8 @@ from .trade_intrinsic_evidence import published_horizons_match_runtime
 
 MAX_TOTAL_SCREENS = 80
 SHORTLIST_TARGET = 4
+_GROUPS=("preliminary_fit","priority_tradeoff","priority_concern","needs_evidence")
+_logger=logging.getLogger("fsffl.product.performance")
 
 
 def _bytes(value):
@@ -108,15 +111,34 @@ class ProgressiveDiscovery:
         screened=list(dict.fromkeys([*prior['screened'],*attempted]))
         fits=list(dict.fromkeys([*prior['fits'],*(r['point_id'] for r in rows
             if (r.get('display_context') or {}).get('group')=='preliminary_fit')]))
+        comparison={label:{g:int((prior.get('priority_comparison',{}).get(label) or {}).get(g,0)) for g in _GROUPS}
+            for label in ('before','after')}
+        gates=dict(prior.get('limiting_gates',{}))
+        prior_ids=set(prior['screened'])
+        new_rows={r['point_id']:r for r in rows if r.get('evaluation_kind') in ('root','repair')
+            and r['point_id'] not in prior_ids}
+        for row in new_rows.values():
+            display=row.get('display_context') or {}
+            gate=display.get('limiting_gate','unspecified')
+            gates[gate]=gates.get(gate,0)+1
+            after=display.get('group','needs_evidence')
+            before=display.get('legacy_group',after)
+            comparison['before'][before if before in _GROUPS else 'needs_evidence']+=1
+            comparison['after'][after if after in _GROUPS else 'needs_evidence']+=1
+        _logger.info('FSFFL discovery priority comparison scope=%s screened=%s before=%s after=%s',
+            scope[:12],len(screened),comparison['before'],comparison['after'])
+        _logger.info('FSFFL discovery priority gates scope=%s gates=%s',scope[:12],gates)
         pending=result['diagnostics']['unexamined_pool_count']
         has_more=bool(attempted and pending and len(screened)<MAX_TOTAL_SCREENS)
         reason=('screening_disabled' if request.evaluation_budget==0 else 'screening_limit' if len(screened)>=MAX_TOTAL_SCREENS
             else 'pool_exhausted' if not has_more else 'shortlist_ready' if len(fits)>=SHORTLIST_TARGET else 'continue')
-        payload={**prior,'screened':screened,'fits':fits,
+        payload={**prior,'screened':screened,'fits':fits,'priority_comparison':comparison,'limiting_gates':gates,
             'repair':prior['repair'] or result['diagnostics']['repair_sequence_attempted'], 'batches':prior['batches']+1}
         result={**result,'search_progress':{'screens_this_batch':len(attempted),'total_screened':len(screened),
+            'priority_comparison':comparison,'limiting_gates':gates,
+            'priority_tradeoff_count':comparison['after']['priority_tradeoff'],
             'max_total_screens':MAX_TOTAL_SCREENS,'preliminary_fit_count':len(fits),'shortlist_target':SHORTLIST_TARGET,
-            'model_version':'bounded-discovery-continuation-v2','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
+            'model_version':'bounded-discovery-continuation-v3:priority-comparison','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
             'next_token':self._encode(payload) if has_more else None,
             'interpretation':'Bounded preliminary screening; fits are not confirmed mutual benefits. No Simulation is run.'}}
         size=_bytes(result)+_bytes(cache_key)
