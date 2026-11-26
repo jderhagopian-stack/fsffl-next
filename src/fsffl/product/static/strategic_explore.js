@@ -109,18 +109,18 @@
     const sentence=(side,label)=>{
       const current=row.preliminary_decision_screen?.[side==='side_a'?'focal':'counterparty']?.starter_points_delta;
       const future=['three_year','career'].map(h=>row.horizon_asset_economics?.[h]?.roster_adjusted?.[side]?.roster_adjusted_intrinsic_delta);
-      if(!Number.isFinite(current)||!future.every(Number.isFinite))return '';
-      let now=Math.abs(current)<.05?'Little change to the lineup':`${current>0?'Adds':'Gives up'} about ${Math.abs(current).toFixed(1)} points a week`;
+      const weekly=row.preliminary_decision_screen?.current_points_basis==='remaining_regular_season_weekly_mean';
+      let now=!Number.isFinite(current)?'Current lineup estimate unavailable':Math.abs(current)<.05?'Little change to the lineup':`${current>0?'Adds':'Gives up'} about ${Math.abs(current).toFixed(1)} ${weekly?'points a week':'total points over the projection period'}`;
       const checked=proof?.material?.[side],change=checked&&proof?.competitive?.[checked.team_id];
       if(change){
         for(const [metric,title] of [['championship_probability','title chances'],['playoff_probability','playoff chances'],['expected_wins','expected wins']]){
-          if(!['material_gain','material_loss'].includes(checked[metric])||!Number.isFinite(change[metric]))continue;
+          if(!Number.isFinite(change[metric])||(metric!=='championship_probability'&&!['material_gain','material_loss'].includes(checked[metric])))continue;
           const delta=change[metric],amount=metric==='expected_wins'?Math.abs(delta).toFixed(2):Math.abs(delta*100).toFixed(1);
           now=`${title[0].toUpperCase()+title.slice(1)} ${delta>0?'rise':'fall'} by ${amount}${metric==='expected_wins'?'':' percentage points'}`;break;
         }
       }
-      if(proof?.roster_supported_future_team_ids?.includes(checked?.team_id))now='Trades bench depth while keeping the current outlook steady';
-      const later=future.every(v=>v>=-1e-9)&&future.some(v=>v>1e-9)?'More long-term upside.':future.every(v=>v<=1e-9)&&future.some(v=>v < -1e-9)?'The price is less future upside.':future.every(v=>Math.abs(v)<=1e-9)?'No projected change to future production.':future[0]>0?'More help over the next few seasons, with a longer-term cost.':'More long-term upside, less help over the next few seasons.';
+      if(!Number.isFinite(change?.championship_probability)&&proof?.roster_supported_future_team_ids?.includes(checked?.team_id))now='Trades bench depth while keeping the current outlook steady';
+      const later=!future.every(Number.isFinite)?future.map((v,i)=>Number.isFinite(v)?`${i===0?'Three-year':'Career'} contribution ${v>=0?'rises':'falls'}.`:`${i===0?'Three-year':'Career'} estimate unavailable.`).join(' '):future.every(v=>v>=-1e-9)&&future.some(v=>v>1e-9)?'More long-term upside.':future.every(v=>v<=1e-9)&&future.some(v=>v < -1e-9)?'The price is less future upside.':future.every(v=>Math.abs(v)<=1e-9)?'No projected change to future production.':future[0]>0?'More help over the next few seasons, with a longer-term cost.':'More long-term upside, less help over the next few seasons.';
       const risk=checked?.largest_single_player_lineup_drop==='material_loss'?' Less cover if a starter is lost.':'';
       return `<p><b>${esc(label)}:</b> ${esc(now)}. ${esc(later)}${esc(risk)}</p>`;
     };

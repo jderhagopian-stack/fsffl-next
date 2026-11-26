@@ -1,3 +1,32 @@
+## Focused Explore follow-up to #603 — 2026-11-26
+
+Base main/live: `10ac5e2f02b4dff9ce4c8d276e911c8ffa13ecb6` (#603).
+Scope recorded locally before implementation: counterparty depth must not conceal
+explicit Current+Career losses; keep full analysis accessible as a tradeoff.
+Keep confirmed title changes when future estimates are missing; label missing
+horizons and distinguish weekly means from projection-period totals.
+
+Reproduction failed on main: explicit focal Current+Career loss plus counterparty
+depth was incorrectly depth_conversion_hypothesis. Mixed priority losses now take
+precedence; depth remains eligible when neither owner has a requested loss.
+Focused checks:84 passed, including executable Node card evidence/unit cases.
+No valuation, Simulation baseline, computation-budget or infrastructure changes.
+
+Same saved #603 State/generation: private 603-focused-three-offers.private.json
+and 603-focused-review.private.md retain exact original/after rows and judgments.
+Original contender route gives5.804pp title gain; cheaper-future alternative
+5.518pp, saving30.00 three-year/102.50 Career contribution (Market128 worse,
+inside existing indifference). The near miss loses10.545743119848566 in the
+counterparty's requested three-year ledger after a mandatory cut. No full title
+result is invented for that near miss. These are retained contender offers,
+not a claim to have run a new explicit combined-goal live search.
+
+Cheaper alternative is a defensible conversation. Some other retained leaders
+remain unrealistic asks: primary residual problem is pricing/terms, amplified
+by inferred-posture willingness assumptions. Stop this patch at that diagnosis;
+no new pricing policy or owner preference model. Private raw packages stay out
+of public GitHub. This follow-up PR is the durable final gate/deployment receipt.
+
 ## Release integration correction — Explore #603 — 2026-11-26
 
 Candidate aff50e535aa9cce312bd637b7c2a2a3362c58623 failed Stable45836757740:
