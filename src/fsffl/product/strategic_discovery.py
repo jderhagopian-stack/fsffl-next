@@ -297,7 +297,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         and runtime.forecast_evidence is not None
         and runtime.forecast_evidence.simulation_forward_forecasts is not None
         and runtime.simulation_analytics is not None)
-    can_compensate=request.offered_asset_ref is None and read is not None and screen_cap>=3
+    can_compensate=read is not None and screen_cap>=3
     reserve=min(8,pool_budget//4) if can_feedback or can_compensate else 0
     visits=FeedbackVisits(reserve)
     generation_limit=pool_budget-reserve

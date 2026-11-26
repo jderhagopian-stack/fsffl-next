@@ -46,7 +46,8 @@ def test_compensation_cannot_bypass_coverage_protection_ownership_or_counted_bud
 
 
 @pytest.mark.parametrize('superflex',[False,True])
-def test_actual_native_cut_lineup_screens_can_turn_a_costly_root_into_a_compensated_fit(monkeypatch,superflex):
+@pytest.mark.parametrize('required_offer',[False,True])
+def test_actual_native_cut_lineup_screens_can_turn_a_costly_root_into_a_compensated_fit(monkeypatch,superflex,required_offer):
     from fsffl.product import strategic_discovery as module,trade_objectives
     from fsffl.product.strategic_discovery import StrategicDiscoveryRequest
     from fsffl.product.trade_intrinsic_evidence import read_published_trade_horizon_values
@@ -91,7 +92,7 @@ def test_actual_native_cut_lineup_screens_can_turn_a_costly_root_into_a_compensa
     monkeypatch.setattr(module,'generate_guided_strategic_packages',lambda *args,**kw:(
         (StrategicSeed(proposal,('controlled',)),),{'pair_visits':1,'shapes':{},'hypotheses':{}}))
     before=state.model_dump(mode='json')
-    result=module.build_strategic_discovery(runtime,StrategicDiscoveryRequest(evaluation_budget=3,max_candidates=3),read=read)
+    result=module.build_strategic_discovery(runtime,StrategicDiscoveryRequest(evaluation_budget=3,max_candidates=3,offered_asset_ref='player:t0-11' if required_offer else None),read=read)
     rows=result['candidate_packages'];d=result['diagnostics']
     assert d['preliminary_decision_errors']==0
     assert len(rows)==2 and d['root_screen_attempts']==d['repair_screen_attempts']==1
@@ -100,6 +101,7 @@ def test_actual_native_cut_lineup_screens_can_turn_a_costly_root_into_a_compensa
     assert rows[1]['display_context']['group']=='preliminary_fit'
     assert rows[1]['shortlist_quality']['status']=='shortlist'
     assert 'pick:pick-t1' in {a['asset_ref'] for a in rows[1]['receive']}
+    assert all('player:t0-11' in {a['asset_ref'] for a in r['send']} for r in rows)
     assert rows[1]['preliminary_decision_screen']['focal']['starter_points_delta']>0
     assert rows[1]['preliminary_decision_screen']['counterparty']['starter_points_delta']>0
     assert all(rows[1]['horizon_asset_economics'][h]['roster_adjusted']['side_a']['roster_adjusted_intrinsic_delta']>0 for h in ('three_year','career'))
