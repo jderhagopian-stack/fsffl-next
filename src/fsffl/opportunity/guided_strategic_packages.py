@@ -121,7 +121,7 @@ def _lane_stream(lane, *, bounds, values, tolerance, pick_rounds=None):
                     if amount >= total-tolerance:
                         break
                     if (extra in group or not known(extra) or amount+values[extra] > total+tolerance
-                        or len(group) >= bounds.max_assets_per_side
+                        or len(group) >= (min(bounds.max_assets_per_side,lane.incoming_asset_limit) if reverse and lane.incoming_asset_limit is not None else bounds.max_assets_per_side)
                         or len(group)+len(target) >= bounds.max_total_assets
                         or isinstance(extra, FaabAsset) and any(isinstance(a, FaabAsset) for a in group)):
                         continue
@@ -137,7 +137,8 @@ def _lane_stream(lane, *, bounds, values, tolerance, pick_rounds=None):
         except StopIteration:
             continue
         if (max(len(send), len(receive)) <= bounds.max_assets_per_side
-            and len(send)+len(receive) <= bounds.max_total_assets):
+            and len(send)+len(receive) <= bounds.max_total_assets
+            and (lane.incoming_asset_limit is None or len(receive) <= lane.incoming_asset_limit)):
             yield send, receive
         streams.append(stream)
 

@@ -76,9 +76,21 @@ def test_position_sweeteners_use_bounded_anchor_lanes_without_replacing_ordinary
     lanes,*_=build_discovery_lanes(runtime,req,None)
     terms=[l for l in lanes if l.name.startswith('position_target_terms:')]
     assert terms and len(terms)<=2*3
+    assert all(l.incoming_asset_limit==3 for l in terms)
     positions={p.player_id:p.position.value for p in runtime.league_state.players}
     assert all(isinstance(l.required_receive,PlayerAsset) and positions[l.required_receive.player_id]=='WR' for l in terms)
     assert all(any(isinstance(a,PickAsset) for a in l.counterparty.assets) for l in terms)
     assert all(all(isinstance(a,PlayerAsset) for a in l.counterparty.assets) for l in lanes if l not in terms)
     player_only=StrategicDiscoveryRequest(target_position='WR',target_asset_kinds=('player',))
     assert not any(l.name.startswith('position_target_terms:') for l in build_discovery_lanes(runtime,player_only,None)[0])
+
+
+def test_position_term_incoming_bound_is_honored_by_guided_and_exploration_lanes():
+    p=PlayerAsset(player_id='premium');rb=PlayerAsset(player_id='rb')
+    picks=tuple(PickAsset(pick_id='pick'+str(i)) for i in range(8))
+    lane=StrategicPackageLane('anchored',TeamTradeInventory(team_id='a',assets=(p,)),TeamTradeInventory(team_id='b',assets=(rb,*picks)),required_receive=rb,incoming_asset_limit=3)
+    values={p:1000.,rb:100.,**{a:100. for a in picks}}
+    seeds,diag=generate_guided_strategic_packages((lane,),as_of=datetime(2026,11,24,tzinfo=timezone.utc),bounds=StrategicSearchBounds(max_candidates=632,max_pair_visits=632),market_values=values,economic_tolerance=237.23160063271538,pick_rounds={a:2 for a in picks})
+    assert seeds and all(len(s.seed.proposal.side_b.sends)<=3 for s in seeds)
+    assert all(rb in s.seed.proposal.side_b.sends for s in seeds)
+    assert diag['pair_visits']<=632

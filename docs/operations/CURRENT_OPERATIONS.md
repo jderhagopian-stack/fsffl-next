@@ -13,17 +13,18 @@ confirmation/memory limits. Existing four-asset screening turns may admit valid
 funded terms; no new blended score or future-price cutoff.
 
 Position searches retain ordinary player inventories; up to2 required matching
-anchors per partner get dedicated pick-sweetener lanes. A broad-pick-inventory
-exploration was discarded after it crowded out credible player coverage. This
+anchors per partner get dedicated pick-sweetener lanes, each limited to3 incoming
+assets (the anchor plus up to2 picks) in guided AND exploration geometry. Broad-pick-inventory and unbounded sweetener-lane
+explorations were discarded after it crowded out credible player coverage. This
 is explicit whole-funnel evidence, not a reason to promote more pick packages.
 Explicit player-only, pick-only, youth, ownership and protections remain binding.
-Focused135 passed. Crowded reproduction retains singleton AND funded terms;
+Focused136 passed. Crowded reproduction retains singleton AND funded terms;
 negative price/missing-round cases and bidirectional/screen selection are tested.
 
 Private paired80-screen Automatic/RB baselines are complete,8 confirmations each;
 final corrected comparisons and browser validation remain pending. Actual offers
 and displaced screens, rather than counts alone, decide promotion. Raw packages
-stay in /workspace/private-explore-integrity-20261126. This PR will carry final
+stay in /workspace/private-explore-integrity-20261126. [PR606](https://github.com/jderhagopian-stack/fsffl-next/pull/606) will carry final
 exact-head Stable/merge/deploy/runtime receipts. No added recurring expense.
 
 Max PF remains separately unresolved: live kernel compiles standard rules only;

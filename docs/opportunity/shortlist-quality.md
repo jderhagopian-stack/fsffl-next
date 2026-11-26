@@ -10,7 +10,8 @@ reserve. The existing four-total-assets direction turn can investigate an
 admissible funded alternative; no shape overrides economics or user constraints.
 
 Position searches preserve ordinary player lanes. Up to2 matching player anchors
-per partner get dedicated sweetener lanes with a required incoming anchor, so
+per partner get dedicated sweetener lanes with a required incoming anchor and
+at most3 incoming assets (the player plus up to2 picks), so
 picks cannot become a stand-in for the requested position. Explicit player-only
 excludes sweeteners. Explicit pick-only retains its prior behavior: a position
 selector does not impose an NFL position on a draft pick. Age constraints apply

@@ -241,7 +241,7 @@ def build_discovery_lanes(runtime, request, read):
                         lanes.append(StrategicPackageLane('position_target_terms:'+_ref(anchor),
                             focal.model_copy(update={'assets':sends}),
                             other.model_copy(update={'assets':(anchor,*sweeteners)}),
-                            required_receive=anchor,required_send=required_send))
+                            required_receive=anchor,required_send=required_send,incoming_asset_limit=3))
         add('roster_surplus', tuple(sorted(roster_fit(focal.assets,team.team_id), key=lambda a: not (isinstance(a,PlayerAsset) and a.player_id in benches.get(focal.team_id,set())))), roster_fit(other.assets,focal.team_id))
         # Explore inferred goal sets without a universal Current-first prefix.
         goals = tuple(dict.fromkeys((*_exploration_goals(context),TradeObjective.THREE_YEAR,TradeObjective.CAREER)))
