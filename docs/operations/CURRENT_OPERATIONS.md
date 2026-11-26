@@ -1,3 +1,14 @@
+## Bilateral inferred choices and Current funding — 2026-11-26
+
+Final candidate preserves the same current/future choice for EITHER inferred
+owner. Search consumes Decision's existing per-owner gain/loss/unknown effects;
+it does not reconstruct priority truth. Explicit selected-priority sacrifices
+remain reviewable. A positive Current gain funding a future-contribution loss
+requires the existing material competitive check even if another future horizon
+improves. Mirrored owner regressions prevent a selected-franchise-only exception.
+Existing accepted depth-conversion semantics below remain intact. No valuation,
+Simulation mathematics, source rule or owner-acceptance model changes.
+
 ## Preserve accepted contender depth-conversion semantics — 2026-11-26
 
 Release-candidate review reconciled the finalist gate with the EXISTING NEXT-5
@@ -900,3 +911,4 @@ First headc6d1c8b6 passed CI39172119400 and Stable39172127140, but review correc
 The P2 cell copy now reads the 3-Year request status and names 3-Year evidence for loading/unavailable/incomplete cells, independently from Career readiness. Node regression executes production cell rendering for each case. No model inputs, Career values, provider acquisition or memory safeguards changed. Exact-head CI/Stable and final review must rerun on the corrected candidate; the earlier passing head is superseded.
 
 Corrected local focused selection:62 passed2.52s; JavaScript syntax and diff whitespace checks pass.
+

@@ -1,3 +1,14 @@
+## Bilateral inferred choices and Current funding — 2026-11-26
+
+Final candidate preserves the same current/future choice for EITHER inferred
+owner. Search consumes Decision's existing per-owner gain/loss/unknown effects;
+it does not reconstruct priority truth. Explicit selected-priority sacrifices
+remain reviewable. A positive Current gain funding a future-contribution loss
+requires the existing material competitive check even if another future horizon
+improves. Mirrored owner regressions prevent a selected-franchise-only exception.
+Existing accepted depth-conversion semantics below remain intact. No valuation,
+Simulation mathematics, source rule or owner-acceptance model changes.
+
 ## Preserve accepted contender depth-conversion semantics — 2026-11-26
 
 Release-candidate review reconciled the finalist gate with the EXISTING NEXT-5
@@ -724,3 +735,4 @@ All authorized non-physical Market work is exhausted. Management must repeat phy
 - retained Board scrolling/sorting, Player Intelligence handoff, and iPhone safe area remain usable.
 
 After that authenticated pass, inspect the emitted production focus/value-lens diagnostics before final Market product closeout. If the currently selected Hodor lifecycle still lacks the governed evidence needed to exercise these surfaces, that prerequisite remains owned by the active Performance workstream rather than Market.
+

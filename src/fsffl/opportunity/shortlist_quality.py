@@ -57,36 +57,25 @@ def unresolved_future_window(row):
 
 
 def inferred_timeline_choice(row):
-    """An inferred balanced lens permits a visible, evidence-backed sacrifice.
+    """Either owner may weigh inferred priorities; explicit sacrifices stay review.
 
-    Explicit directions remain untouched. The other owner still needs a gain
-    without a conflicting requested loss; this is a search choice, not SUPPORT.
+    Consume Decision's existing per-owner directional interpretation, not another
+    priority model. Full Current funding is checked separately before leading.
     """
     if '_inferred_timeline_choice' in row:
         return row['_inferred_timeline_choice'] is True
-    if (row.get('display_context') or {}).get('group') != 'priority_tradeoff':
-        return False
+    display=row.get('display_context') or {}
+    if display.get('group')!='priority_tradeoff':return False
+    effects=display.get('priority_effects') or {}
     assessment=row.get('objective_assessment') or {}
-    context=(assessment.get('side_a') or {}).get('context') or {}
-    if context.get('source')!='calculated_state_posture_hypothesis_v1' or context.get('explicitly_directed'):
-        return False
-    if len(context.get('objectives',()))<2:
-        return False
-    partner=assessment.get('side_b') or {}
-    directions=[]
-    for goal in (partner.get('context') or {}).get('objectives',()):
-        if goal=='current_competitiveness':
-            value=((row.get('preliminary_decision_screen') or {}).get('counterparty') or {}).get('starter_points_delta')
-            if not _number(value):return False
-            directions.append((value>1e-9)-(value < -1e-9))
-        else:
-            metrics=[m for m in partner.get('metrics',()) if m.get('objective')==goal]
-            if not metrics:return False
-            for metric in metrics:
-                value=metric.get('delta')
-                if not metric.get('authoritative') or not _number(value):return False
-                directions.append(((value>1e-9)-(value < -1e-9))*(1 if metric.get('higher_is_better',True) else -1))
-    return bool(directions) and 1 in directions and -1 not in directions
+    if set(effects)!= {'side_a','side_b'}:return False
+    for side,effect in effects.items():
+        if not effect.get('gain') or effect.get('unknown'):return False
+        if not effect.get('loss'):continue
+        context=(assessment.get(side) or {}).get('context') or {}
+        if context.get('source')!='calculated_state_posture_hypothesis_v1' or context.get('explicitly_directed'):
+            return False
+    return True
 
 
 def goal_order(row):

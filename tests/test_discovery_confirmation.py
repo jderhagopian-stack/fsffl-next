@@ -114,3 +114,27 @@ def test_current_confirmation_preserves_existing_contender_depth_conversion():
         owner['transaction_strategy']=bad_strategy
         assert not bad_strategy['depth_conversion_candidate']
         assert _current_case_gates(material,{'side_a':owner},{'contender'})[0]==['contender']
+
+
+def test_either_inferred_balanced_owner_can_fund_current_help_with_future_cost():
+    # The selected franchise gets more future assets AND Current production.
+    # The balanced partner gives up future production for a Current upgrade.
+    # Swapping which owner is selected must not create a one-sided veto.
+    from fsffl.product.strategic_discovery_presentation import discovery_display_context
+    for three,career in [((30,-30),(80,-80)),((-30,30),(-80,80))]:
+        row=inferred_tradeoff(current=(4,3),three=three,career=career)
+        row['objective_assessment']['side_b']['context']['objectives']=['current_competitiveness','three_year_contribution','career_contribution']
+        row['display_context']=discovery_display_context(row)
+        assert row['display_context']['group']=='priority_tradeoff'
+        curate_shortlist([row])
+        assert row['shortlist_quality']['status']=='strategic_tradeoff'
+        cost_side='side_b' if career[0]>0 else 'side_a'
+        assert current_required_teams(row)==(cost_side,)
+        curate_shortlist([row],require_current_confirmation=True)
+        assert row['shortlist_quality']['status']=='review'
+        row['screen_confirmation']={'status':'verified'}
+        curate_shortlist([row],require_current_confirmation=True)
+        assert row['shortlist_quality']['status']=='strategic_tradeoff'
+        row['objective_assessment'][cost_side]['context']['explicitly_directed']=True
+        curate_shortlist([row])
+        assert row['shortlist_quality']['status']=='needs_terms'
