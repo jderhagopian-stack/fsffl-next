@@ -1,3 +1,96 @@
+## RELEASE CANDIDATE — real-league shortlist quality (#601) — 2026-11-26
+
+Priority and acceptance criteria below remain controlling. Base main/live is
+0ebf11b3968634711d663b83c06a3a31f603afbc (#600); branch
+`codex/real-league-discovery-quality-20261126`, PR601. Release is not yet claimed.
+The November18 audit's older deployment and missing wiring are superseded by
+#595–600. Its warning that populated screens/tests do not establish usefulness is
+confirmed by this paired review. No model rewrite, service, migration or expense.
+
+Evidence: seven private paired saved-input searches, 184 roster/cut/weekly screens
+per implementation (four franchise timelines, missing owner history, explicit
+protected/youth/player-or-pick constraints, and a valid Current/picks-only empty
+case). Exact State is
+98771111ad6d9bc649a301e768c23b3d9a5ce0fbeca6b5c4e52c753a83c86eeb,
+as_of 2026-11-24T11:30:02.611384Z; publication
+fd8355727262926206ec995a2645becac9ceb13c0217fbebf8bcc6c75936c5b9.
+Private evidence is in `/workspace/private-fsffl-discovery-20261126`; no raw
+league/owner data or packages are in this public PR. Source artifact IDs and
+request/package/model fingerprints are retained with those private captures.
+
+Findings and corrections:
+- Generation kept only the first price-admissible offer of each size. Retain two
+  bounded alternatives; targeted upgrades interleave bench ingredients and low
+  projected starter-release costs, without excluding an above-average position.
+- Independent position subtraction missed FLEX/replacement effects. At most64
+  pre-cut small-package Team Utility optimizations per batch order hypotheses;
+  the counted weekly/cut screen still owns the actual effects.
+- Root selection favored no losses across all inferred horizons and exhausted
+  singleton structures. Rotate requested native goal directions and small funded
+  shapes within the SAME640 visits, eight screens/batch and80/search limits.
+- The initial economic band ignored subsequent mandatory-cut costs. Reapply the
+  EXISTING cut-aware economic classifier after the roster resolution.
+- Inferred balanced goals now permit visible current/future choices. Explicit
+  instructions, protected assets and final Decision authority remain intact.
+  Exact acquisition variants are linked; native-coordinate ordering rotates
+  goals. Price indifference uses the existing Decision cardinal-MAE threshold;
+  no weighted score, cross-horizon conversion or new player value is introduced.
+- A sign-positive Current buyer can still lack a worthwhile season improvement.
+  Leading Current-funded cases now consume the existing authoritative50k Trade
+  Center Simulation/materiality: at most ONE finalist/batch and EIGHT/search,
+  exact-result reuse, no forecast/intrinsic rebuild. A native-only future case is
+  still directional asset evidence, never optimized future franchise utility.
+  Missing/immaterial/conflicting Current evidence stays reviewable rather than
+  leading. Current losses remain allowed when a selected future goal supplies
+  the case; the loss is shown rather than silently erased.
+- Full checks use the existing serialized HeavyWorkCoordinator, reclaim disposable
+  phase memory and require48MiB working reserve inside its existing memory
+  budget. Insufficient headroom defers confirmation; it never manufactures a fit.
+  Existing scenario persistence/cache identity is reused; at most eight new exact
+  scenario artifacts/search (repeats reuse), no new publication/lifecycle owner.
+- Both-owner summaries describe gains AND prices plainly. Four leading cards at
+  most; more directions, failed checks and package alternatives remain available.
+  History expands hypotheses; activity counts do not imply interest/acceptance.
+
+Direct usefulness evidence (anonymous case IDs, not acceptance predictions):
+- ALL four former managed-team leaders fail the existing Current materiality test
+  for their Current-funded side. They are not credible leading recommendations.
+- Managed Current choice: weekly+4.707/-4.957; title+4.354percentage points for
+  the buyer; Career asset contribution-289.608/+289.608. A defensible win-now vs
+  rebuild exchange with the future price and resilience loss preserved.
+- Managed younger-QB direction: Career+701.162 with title-5.836pp; other owner
+  title+5.244pp. This is a costly future choice, never described as a win-now gain.
+- Managed draft-capital direction: weekly-0.975/+3.749; Career+412.164/-455.036;
+  3-Year-263.059/+235.797 after cuts. Full evaluation: title-0.656pp for managed
+  team, other team's playoffs+2.782pp. The differing windows are explicit.
+- Newly found funded contender package: title+5.518pp; weekly+5.478/+0.554;
+  other owner's Career+167.366. Earlier narrow singleton offers missed this route.
+- A seemingly balanced package with positive weekly effects for both owners was
+  WITHDRAWN after full evaluation: its Current-only counterparty had no material
+  competitive gain. This is why finalist confirmation is necessary.
+- Missing-history replay retains useful ordinary paths; protected youth-directed
+  and Current/picks-only cases truthfully return no leading choice.
+
+Validation: focused214 passed12.30s before the final explanatory-copy-only edit;
+exact-head Stable and final local browser acceptance are pending. Fifty-thousand
+no-trade control outcomes reproduce production EXACTLY under its NumPy2.5.3 /
+PCG64 batch500 settings. Local Python3.12.14 vs production3.12.10 is disclosed;
+no runtime identity is falsified. Early local-default Python-RNG spot checks are
+superseded and excluded from accepted quantitative evidence.
+
+Input limitation: full-season Forecast still uses its preserved preseason
+fallback. Current Simulation consumes separately published current ROS forecasts
+(828 observations dated November24, exact State/source-bound), not a blanket
+assumption that all ROS is stale. Future asset contribution is not future roster
+utility; owner willingness/acceptance is uncalibrated. Search is bounded, not an
+exhaustive proof that no worthwhile deal exists.
+
+Next: complete local mobile/browser handoff, focused regressions and exact-head
+Stable; expected-head squash; manual existing Render deployment and restore/RSS
+verification; only then request a brief physical-iPhone check. Never mark physical
+acceptance complete from Chromium or CI. Keep this recommendation-quality
+milestone primary; no additional paid worker or broad architectural rewrite.
+
 ## PRIMARY PRIORITY — credible real-league Explore opportunities — 2026-11-26
 
 Management directive: complete actual recommendation quality, not another populated

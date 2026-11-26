@@ -247,7 +247,7 @@ def test_later_better_terms_update_prior_shortlist_without_rescreening_or_retain
     token=first['search_progress']['next_token']
     scope=service._scope(runtime,StrategicDiscoveryRequest(),None)
     receipt=service._decode(token,scope)['quality_receipts'][0]
-    assert set(receipt)=={'point_id','display_context','focal_package_family','_shortlist_effects','_inferred_timeline_choice','_unresolved_future_window','_receiving_target','_shortlist_goals'}
+    assert set(receipt)=={'point_id','display_context','focal_package_family','_shortlist_effects','_inferred_timeline_choice','_unresolved_future_window','_receiving_target','_shortlist_goals','_current_required_teams','screen_confirmation','counterparty_team_id','send','receive','roster_legality'}
     assert len(receipt['_shortlist_effects'])==4
     second=service.build(runtime,StrategicDiscoveryRequest(continuation_token=token))
     assert calls==['old','new'] and second['search_progress']['total_screened']==2

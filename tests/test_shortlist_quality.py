@@ -104,7 +104,7 @@ def inferred_tradeoff(point='choice', *, current=(4,-2), three=(-20,20), career=
     r=evaluated(point,current=current,three=three,career=career)
     for side,goals in [('side_a',['current_competitiveness','three_year_contribution','career_contribution']),
                        ('side_b',['career_contribution'])]:
-        r['objective_assessment'][side]['context'].update(objectives=goals,source='calculated_state_posture_hypothesis_v1',explicitly_directed=False)
+        r['objective_assessment'][side]['context'].update(team_id=side,objectives=goals,source='calculated_state_posture_hypothesis_v1',explicitly_directed=False)
     # Use complete native effects for BOTH sides, including cuts, never sign mocks.
     r['horizon_asset_economics']={h:{'roster_adjusted':{side:{'status':'complete','roster_adjusted_intrinsic_delta':d[i]}
         for i,side in enumerate(('side_a','side_b'))}} for h,d in [('three_year',three),('career',career)]}

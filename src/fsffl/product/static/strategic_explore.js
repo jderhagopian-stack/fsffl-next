@@ -101,13 +101,26 @@
   }
   function choiceSummary(row,name){
     if(row.evidence_status!=='pre_simulation_screened')return '';
+    const proof=row.screen_confirmation;
+    if(proof?.status==='not_worthwhile'){
+      const names=(proof.limiting_team_ids||[]).map(id=>id===row.focal_team_id?'your team':teamName(id));
+      return `<p class="se-choice-summary">The season check found no clear competitive gain for ${esc(names.join(' or ')||'both teams')}.</p>`;
+    }
     const sentence=(side,label)=>{
       const current=row.preliminary_decision_screen?.[side==='side_a'?'focal':'counterparty']?.starter_points_delta;
       const future=['three_year','career'].map(h=>row.horizon_asset_economics?.[h]?.roster_adjusted?.[side]?.roster_adjusted_intrinsic_delta);
       if(!Number.isFinite(current)||!future.every(Number.isFinite))return '';
-      const now=Math.abs(current)<.05?'Little change to the lineup':`${current>0?'Adds':'Gives up'} about ${Math.abs(current).toFixed(1)} points a week`;
-      const later=future.every(v=>v>=-1e-9)&&future.some(v=>v>1e-9)?'adds projected production for the future':future.every(v=>v<=1e-9)&&future.some(v=>v < -1e-9)?'gives up projected production for the future':(future[0]>0?'offers more help over the next few seasons, with a longer-term cost':'adds longer-term upside, at a cost over the next few seasons');
-      return `<p><b>${esc(label)}:</b> ${esc(now)}; ${esc(later)}.</p>`;
+      let now=Math.abs(current)<.05?'Little change to the lineup':`${current>0?'Adds':'Gives up'} about ${Math.abs(current).toFixed(1)} points a week`;
+      const checked=proof?.material?.[side],change=checked&&proof?.competitive?.[checked.team_id];
+      if(change){
+        for(const [metric,title] of [['championship_probability','title chances'],['playoff_probability','playoff chances'],['expected_wins','expected wins']]){
+          if(!['material_gain','material_loss'].includes(checked[metric])||!Number.isFinite(change[metric]))continue;
+          const delta=change[metric],amount=metric==='expected_wins'?Math.abs(delta).toFixed(2):Math.abs(delta*100).toFixed(1);
+          now=`${title[0].toUpperCase()+title.slice(1)} ${delta>0?'rise':'fall'} by ${amount}${metric==='expected_wins'?'':' percentage points'}`;break;
+        }
+      }
+      const later=future.every(v=>v>=-1e-9)&&future.some(v=>v>1e-9)?'More long-term upside.':future.every(v=>v<=1e-9)&&future.some(v=>v < -1e-9)?'The price is less future upside.':future.every(v=>Math.abs(v)<=1e-9)?'No projected change to future production.':future[0]>0?'More help over the next few seasons, with a longer-term cost.':'More long-term upside, less help over the next few seasons.';
+      return `<p><b>${esc(label)}:</b> ${esc(now)}. ${esc(later)}</p>`;
     };
     return `<div class="se-choice-summary">${sentence('side_a','You')}${sentence('side_b',name)}</div>`;
   }
@@ -120,8 +133,8 @@
     const fits=rows.filter(r=>r.shortlist_quality?.status==='strategic_tradeoff'||(r.display_context?.group==='preliminary_fit'&&(!r.shortlist_quality||r.shortlist_quality.status==='shortlist'))).sort((a,b)=>(a.shortlist_quality?.rank??999)-(b.shortlist_quality?.rank??999)); 
     const tradeoffs=rows.filter(r=>r.display_context?.group==='priority_tradeoff'&&r.shortlist_quality?.status!=='strategic_tradeoff'&&r.shortlist_quality?.status!=='alternative');
     const concerns=rows.filter(r=>r.display_context?.group==='priority_concern');
-    const others=rows.filter(r=>r.shortlist_quality?.status==='alternative'||!['preliminary_fit','priority_tradeoff','priority_concern'].includes(r.display_context?.group));
-    return `${progressMarkup()}<section class="se-results"><p class="eyebrow">Opportunities to investigate</p><h2>See the upside. Know the cost.</h2>${fits.length?fits.map(r=>card(r,rows)).join(''):'<div class="se-empty"><b>No worthwhile matches found yet.</b><p>Find more, or choose the priority you want to pursue.</p></div>'}${tradeoffs.length?`<details class="se-more" data-se-tradeoffs><summary>${tradeoffs.length} ${tradeoffs.length===1?'tradeoff':'tradeoffs'} needing a closer look</summary>${tradeoffs.map(r=>card(r,rows)).join('')}</details>`:''}${concerns.length?`<details class="se-more" data-se-concerns><summary>${concerns.length} packages needing better terms</summary>${concerns.map(r=>card(r,rows)).join('')}</details>`:''}${others.length?`<details class="se-more"><summary>${others.length} additional candidates to review</summary>${others.map(r=>card(r,rows)).join('')}</details>`:''}<details class="se-evidence"><summary>Search coverage</summary><p>Up to 80 packages per search, checked in batches. Find More continues the same search. Player and pick packages are included, with up to 10 assets combined. Package adjustments can include players and draft picks.</p><p>Fits follow the selected priorities; tradeoffs show the costs. Trade Center checks season outcomes in depth.</p></details></section>`;
+    const others=rows.filter(r=>r.shortlist_quality?.status==='alternative'||(r.shortlist_quality?.status==='review'&&!['priority_tradeoff','priority_concern'].includes(r.display_context?.group))||!['preliminary_fit','priority_tradeoff','priority_concern'].includes(r.display_context?.group));
+    return `${progressMarkup()}<section class="se-results"><p class="eyebrow">Opportunities to investigate</p><h2>See the upside. Know the cost.</h2>${fits.length?fits.slice(0,4).map(r=>card(r,rows)).join(''):'<div class="se-empty"><b>No worthwhile matches found yet.</b><p>Find more, or choose the priority you want to pursue.</p></div>'}${fits.length>4?`<details class="se-more"><summary>${fits.length-4} more directions to explore</summary>${fits.slice(4).map(r=>card(r,rows)).join('')}</details>`:''}${tradeoffs.length?`<details class="se-more" data-se-tradeoffs><summary>${tradeoffs.length} ${tradeoffs.length===1?'tradeoff':'tradeoffs'} needing a closer look</summary>${tradeoffs.map(r=>card(r,rows)).join('')}</details>`:''}${concerns.length?`<details class="se-more" data-se-concerns><summary>${concerns.length} packages needing better terms</summary>${concerns.map(r=>card(r,rows)).join('')}</details>`:''}${others.length?`<details class="se-more"><summary>${others.length} additional candidates to review</summary>${others.map(r=>card(r,rows)).join('')}</details>`:''}<details class="se-evidence"><summary>Search coverage</summary><p>Up to 80 packages per search, checked in batches. Find More continues the same search. Player and pick packages are included, with up to 10 assets combined. Package adjustments can include players and draft picks.</p><p>Fits follow the selected priorities; tradeoffs show the costs. The strongest Current cases get a season check. Trade Center shows the full analysis.</p></details></section>`;
   }
 
   function paint(){
@@ -167,6 +180,7 @@
       const old=merged.get(row.point_id);
       if(!old||!old.evaluation_kind||row.evaluation_kind)merged.set(row.point_id,row);
     }
+    for(const [id,proof] of Object.entries(result.confirmation_updates||{})){const row=merged.get(id);if(row)merged.set(id,{...row,screen_confirmation:proof});}
     for(const [id,quality] of Object.entries(result.shortlist_updates||{})){const row=merged.get(id);if(row)merged.set(id,{...row,shortlist_quality:quality});}
     const all=[...merged.values()],evaluated=all.filter(r=>r.evaluation_kind);
     return {...result,pick_evidence:{...(previous.pick_evidence||{}),...(result.pick_evidence||{})},candidate_packages:[...evaluated,...all.filter(r=>!r.evaluation_kind)].slice(0,80)};
@@ -182,7 +196,7 @@
     if(continueSearch&&!token)return;
     if(!continueSearch)view.result=null;
     view.started=true;view.busy=true;view.inFlight=true;view.pauseRequested=false;view.error='';view.dirty=false;paint();
-    // Sequential distinct batches only: no background polling, retry loop or Simulation.
+    // Sequential bounded batches; finalist checks share the existing Trade Center evaluator.
     try{
       for(let batch=0;batch<4;batch++){
         view.pendingBatch=api('/api/opportunities/strategic-discover',{method:'POST',body:JSON.stringify({...body,...(token?{continuation_token:token}:{})})});

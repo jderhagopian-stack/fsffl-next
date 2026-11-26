@@ -98,7 +98,7 @@ def rank_choices(rows):
     choices=[r for r in rows if r['shortlist_quality']['status'] in ('shortlist','strategic_tradeoff')]
     goals=next((goal_order(r) for r in choices),())
     axes={'current_competitiveness':0,'three_year_contribution':1,'career_contribution':2,'market_capital':3}
-    orders=[sorted(choices,key=lambda r:(-(focal_effects(r) or (float('-inf'),)*4)[axes[g]],r['point_id']))
+    orders=[sorted((r for r in choices if (focal_effects(r) or (float('-inf'),)*4)[axes[g]]>1e-9),key=lambda r:(-(focal_effects(r) or (float('-inf'),)*4)[axes[g]],r['point_id']))
             for g in goals if g in axes]
     seen=set();rank=0
     while any(orders):
@@ -109,13 +109,15 @@ def rank_choices(rows):
             row['shortlist_quality']['rank']=rank;rank+=1
 
 
-def curate_shortlist(rows):
+def curate_shortlist(rows, *, market_tolerance=0.0, require_current_confirmation=False):
     """Lead with priority fits and explicit tradeoff choices under inferred goals.
 
     In particular, no magnitude of gain in one unit automatically pays for a loss
     in another. The existing directional group and final Decision remain intact.
     A focused future direction can qualify with a visible Current sacrifice.
     """
+    if not _number(market_tolerance) or market_tolerance<0:
+        raise ValueError('Market indifference requires a finite nonnegative upstream threshold')
     for row in rows:
         group = (row.get('display_context') or {}).get('group')
         row['shortlist_quality'] = {
@@ -125,8 +127,11 @@ def curate_shortlist(rows):
                       'selected_priority_conflict' if group == 'priority_tradeoff' else 'existing_screen',
             'replaced_by_point_ids': [], 'alternative_point_ids': [],
             'authority': 'search_curation', 'decision_changed': False,
+            'market_indifference_threshold':market_tolerance,
             'model_version': 'discovery-shortlist-v2:inferred-timeline-choices',
         }
+    from .confirmation_quality import apply_confirmation_status
+    apply_confirmation_status(rows,require_confirmation=require_current_confirmation)
     # Counterparty compatibility is a constraint, not a goal to maximize the
     # other owner's gain at the managed owner's expense. Only already fitting
     # alternatives compete; different units remain separate Pareto coordinates.
@@ -135,8 +140,10 @@ def curate_shortlist(rows):
     comparable = [(r, v) for r, v in comparable if v is not None]
     for row, values in comparable:
         better = [other['point_id'] for other, candidate in comparable
-                  if other is not row and all(a >= b - 1e-9 for a, b in zip(candidate, values))
-                  and any(a > b + 1e-9 for a, b in zip(candidate, values))]
+                  if other is not row and all(a >= b - 1e-9 for a, b in zip(candidate[:3], values[:3]))
+                  and candidate[3]>=values[3]-market_tolerance-1e-9
+                  and (any(a > b + 1e-9 for a, b in zip(candidate[:3],values[:3]))
+                       or candidate[3]>values[3]+market_tolerance+1e-9)]
         if better:
             row['shortlist_quality'].update(status='alternative', reason='better_focal_alternative', replaced_by_point_ids=better)
     # Fold identical focal exchanges only AFTER both owners have actually been
@@ -177,7 +184,14 @@ def curate_shortlist(rows):
 
 def shortlist_receipt(row):
     """Small cursor receipt, not a retained State/model/response graph."""
+    from .confirmation_quality import current_required_teams
     return {'point_id': row['point_id'],
+            '_current_required_teams':current_required_teams(row),
+            'screen_confirmation':row.get('screen_confirmation'),
+            'counterparty_team_id':row.get('counterparty_team_id'),
+            'send':[{'asset_ref':a['asset_ref']} for a in row.get('send',())],
+            'receive':[{'asset_ref':a['asset_ref']} for a in row.get('receive',())],
+            'roster_legality':[{'team_id':r['team_id'],'cuts':[{'player_id':c['player_id']} for c in r.get('cuts',())]} for r in row.get('roster_legality',())],
             'display_context': {'group': (row.get('display_context') or {}).get('group')},
             '_inferred_timeline_choice':inferred_timeline_choice(row),
             '_unresolved_future_window':unresolved_future_window(row),

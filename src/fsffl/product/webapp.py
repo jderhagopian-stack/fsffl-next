@@ -2895,7 +2895,16 @@ def create_app(
         from .trade_native_completion import finalize_published_trade_decision
         return finalize_published_trade_decision(runtime, proposal, output)
 
-    progressive_discovery = ProgressiveDiscovery()
+    def confirm_discovery_finalist(runtime,row,read,instructions):
+        from .discovery_confirmation import evaluate_finalist
+        from .resource_coordinator import DEFAULT_MEMORY_LIMIT_BYTES, DEFAULT_MEMORY_HEADROOM_RATIO, release_unused_process_memory
+        budget=(heavy_work_coordinator.memory_budget_bytes if heavy_work_coordinator is not None else
+            int(DEFAULT_MEMORY_LIMIT_BYTES*(1.0-DEFAULT_MEMORY_HEADROOM_RATIO)))
+        return evaluate_finalist(runtime,row,read,instructions,simulation_loader=simulation_loader,
+            memory_budget_bytes=budget,reclaim=(reclaim_phase_memory if phase_memory_reclaimer is not None else
+                lambda label:release_unused_process_memory(label=label)))
+
+    progressive_discovery = ProgressiveDiscovery(finalist_evaluator=confirm_discovery_finalist)
 
     @application.post("/api/opportunities/strategic-discover")
     def discover_strategic_trades(request: StrategicDiscoveryRequest, user_id: str = Depends(require_beta_user)):
