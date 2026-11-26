@@ -60,6 +60,12 @@ def _competitive_context(runtime, team_id):
         'interpretation': 'Calculated competitive state is separate from inferred owner goals; classification is provisional league-relative policy.'}
 
 
+def _exploration_goals(context):
+    from fsffl.opportunity.strategic_goals import exploration_goals
+    return tuple(TradeObjective(g) for g in exploration_goals(context.objectives,
+        inferred=not context.explicitly_directed,team_id=context.team_id))
+
+
 def _ref(asset):
     return f'player:{asset.player_id}' if isinstance(asset,PlayerAsset) else f'pick:{asset.pick_id}'
 
@@ -200,15 +206,15 @@ def build_discovery_lanes(runtime, request, read):
             eligible = {a.asset_ref for a in team.assets if _matches_target(a, request)}
             other = other.model_copy(update={'assets': tuple(a for a in other.assets if _ref(a) in eligible)})
         other_context = objective_context(runtime,team.team_id)
-        other_goal = next((g for g in other_context.objectives if metric_values[g]),TradeObjective.MARKET)
+        other_goal = next((g for g in _exploration_goals(other_context) if metric_values[g]),TradeObjective.MARKET)
         required = next((a for a in other.assets if _ref(a)==request.target_asset_ref),None)
         def add(name,sends,receives):
             if sends and receives:
                 lanes.append(StrategicPackageLane(name,focal.model_copy(update={'assets':sends}),
                     other.model_copy(update={'assets':receives}),required_receive=required,required_send=required_send))
         add('roster_surplus', tuple(sorted(roster_fit(focal.assets,team.team_id), key=lambda a: not (isinstance(a,PlayerAsset) and a.player_id in benches.get(focal.team_id,set())))), roster_fit(other.assets,focal.team_id))
-        # Request order changes which horizon hypotheses receive early exploration.
-        goals = tuple(dict.fromkeys((*context.objectives,TradeObjective.THREE_YEAR,TradeObjective.CAREER)))
+        # Explore inferred goal sets without a universal Current-first prefix.
+        goals = tuple(dict.fromkeys((*_exploration_goals(context),TradeObjective.THREE_YEAR,TradeObjective.CAREER)))
         for goal in goals:
             if goal == TradeObjective.CURRENT:
                 add('roster_fit',roster_fit(focal.assets,team.team_id),roster_fit(other.assets,focal.team_id))
@@ -433,7 +439,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
                     allow_unfilled_slots=True,model_version='discovery-pre-cut-lineup-hint-v1')
                 optimized_hint=sum(a.expected_points for a in after.assignments)-sum(a.expected_points for a in before.assignments)
             except (ValueError,KeyError,AttributeError):pass
-        row['search_objectives']=[g.value for g in context.objectives]
+        row['search_objectives']=[g.value for g in _exploration_goals(context)]
         row['priority_gain_hints']={g.value:((optimized_hint if optimized_hint is not None else current_gain_hint(context.team_id,proposal.side_a.sends,proposal.side_b.sends))
             if g==TradeObjective.CURRENT else ((evidence.get('three_year' if g==TradeObjective.THREE_YEAR else 'career') or {}).get('side_a') or {}).get('mean_delta'))
             for g in context.objectives if g in (TradeObjective.CURRENT,TradeObjective.THREE_YEAR,TradeObjective.CAREER)}

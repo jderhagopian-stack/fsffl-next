@@ -14,6 +14,15 @@ def _priority_group(row):
     if row.get('preliminary_economic_band') in ('focal_economic_strain','counterparty_economic_strain'):
         return {'group':'priority_concern','limiting_gate':'market_feasibility','reason':'The package needs better terms before it is a plausible opportunity.'}
 
+    depth = {}
+    for key in ('side_a','side_b'):
+        owner=assessment.get(key) or {};ctx=owner.get('context') or {}
+        strategy=owner.get('transaction_strategy') or {}
+        depth[key]=bool(ctx.get('source') == 'calculated_state_posture_hypothesis_v1'
+            and not ctx.get('explicitly_directed') and not owner.get('protected_players_lost')
+            and not strategy.get('future_losses') and (strategy.get('depth_conversion_investigation_eligible')
+                or strategy.get('depth_conversion_candidate')))
+
     # A dominated screen with no demonstrated Current loss cannot be a
     # Current-only veto: its market loss (or unresolved evidence) still applies.
     # Only a known negative Current coordinate can take the future-priority path.
@@ -21,7 +30,7 @@ def _priority_group(row):
         narrow=screen.get(name) or {}
         points=narrow.get('starter_points_delta')
         known=isinstance(points,(int,float)) and isfinite(points)
-        if narrow.get('shape')=='dominated' and (not known or points>=-1e-9):
+        if narrow.get('shape')=='dominated' and (not known or points>=-1e-9) and not (known and abs(points)<=1e-9 and depth['side_a' if name=='focal' else 'side_b']):
             return {'group':'priority_concern','limiting_gate':'market_or_unresolved_dominance',
                 'reason':'The package needs better terms or complete effects before it is a plausible opportunity.'}
 
@@ -54,13 +63,16 @@ def _priority_group(row):
                         direction = (value > 0) - (value < 0)
                         directions.append(direction if metric.get('higher_is_better', True) else -direction)
         sides.append({'gain': 1 in directions, 'loss': -1 in directions,
-                      'unknown': not goals or None in directions})
+                      'unknown': not goals or None in directions, 'depth_investigation':depth[key]})
     common = {'current_uses_lineup_proxy': uses_proxy, 'decision_effect': 'no_disposition_change',
               'priority_effects':dict(zip(('side_a','side_b'),sides))}
     if any(s['loss'] and not s['gain'] for s in sides):
         return {**common, 'group': 'priority_concern',
                 'limiting_gate':'priority_loss_without_offset', 'reason': 'Known losses in a franchise’s requested priorities, with no demonstrated offset in those priorities.'}
-    if all(s['gain'] and not s['unknown'] for s in sides):
+    if all((s['gain'] or s['depth_investigation']) and not s['unknown'] for s in sides):
+        if any(s['depth_investigation'] and not s['gain'] for s in sides):
+            return {**common,'group':'depth_conversion_hypothesis','limiting_gate':'depth_conversion_awaits_full_check',
+                'reason':'Projected bench depth may fund future assets; resilience and competitive effects still need checking.'}
         if any(s['loss'] for s in sides):
             # A calendar-window swap between future ledgers does not establish
             # a useful Current-priority franchise improvement. Keep it available

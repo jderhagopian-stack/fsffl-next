@@ -81,6 +81,7 @@ def evaluate_finalist(runtime,row,read,instructions,*,simulation_loader,memory_b
         'cache_hit':result['scenario_computation']['cache_hit'],
         'execution_mode':result['scenario_computation']['execution_mode'],
         'competitive':{d['team_id']:d['competitive'] for d in result['team_deltas']},
+        'resilience':{d['team_id']:(d.get('resilience') or {}).get('largest_single_player_lineup_drop') for d in result['team_deltas']},
         'material':{s:material[s] for s in ('side_a','side_b')},
         'authority':'existing_NEXT4_Simulation_and_NEXT5_materiality',
         'future_franchise_utility_estimated':False,'acceptance_probability':None}

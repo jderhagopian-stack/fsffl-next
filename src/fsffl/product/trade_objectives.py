@@ -95,9 +95,13 @@ def build_trade_objective_assessment(runtime, proposal, result, instructions=Non
         sent = tuple(a.player_id for a in leg.sends if isinstance(a, PlayerAsset))
         assessment = assess_owner_objectives(context, tuple(metrics), sent_player_ids=sent,
             cut_player_ids=cuts.get(leg.team_id, ()))
+        preliminary=result.get('preliminary_bilateral_screen') or {}
+        lineup_delta=((preliminary.get('focal' if label=='side_a' else 'counterparty') or {}).get('starter_points_delta')
+            if preliminary.get('current_points_basis')=='remaining_regular_season_weekly_mean' else None)
         sides[label] = {**assessment.model_dump(mode="json"),
             "metrics": [m.model_dump(mode="json") for m in metrics],
-            "transaction_strategy": assess_transaction_strategy(assessment, tuple(metrics), positions.get(leg.team_id))}
+            "transaction_strategy": assess_transaction_strategy(assessment, tuple(metrics), positions.get(leg.team_id),
+                preliminary_lineup_delta=lineup_delta)}
     return {**sides, "decision_effect": "no_disposition_change",
         "owner_behavior_used_for_priority_inference": False,
         "durable_owner_preference_claimed": False,

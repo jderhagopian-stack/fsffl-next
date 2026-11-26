@@ -72,6 +72,11 @@ class ProgressiveDiscovery:
                 or not set(payload['fits']) <= set(ids)
                 or not isinstance(payload.get('confirmations',0),int)
                 or not 0<=payload.get('confirmations',0)<=MAX_FINALIST_CONFIRMATIONS
+                or not isinstance(payload.get('confirmation_attempts',payload.get('confirmations',0)),int)
+                or not 0<=payload.get('confirmation_attempts',payload.get('confirmations',0))<=MAX_FINALIST_CONFIRMATIONS
+                or not isinstance(payload.get('confirmation_attempted_ids',[]),list)
+                or len(payload.get('confirmation_attempted_ids',[]))>MAX_FINALIST_CONFIRMATIONS
+                or not set(payload.get('confirmation_attempted_ids',[]))<=set(ids)
                 or not isinstance(payload.get('confirmation_targets',[]),list)
                 or len(payload.get('confirmation_targets',[]))>MAX_FINALIST_CONFIRMATIONS
                 or not isinstance(payload.get('quality_receipts',[]),list)
@@ -110,35 +115,45 @@ class ProgressiveDiscovery:
 
     def _build_batch(self,runtime,request,read,scope,prior,cache_key,now):
         remaining=MAX_TOTAL_SCREENS-len(prior['screened'])
-        if remaining<=0:
-            raise ValueError('This search reached its screening limit. Start a new search with different constraints.')
-        limited=request.model_copy(update={'evaluation_budget':min(request.evaluation_budget,remaining)})
-        result=build_strategic_discovery(runtime,limited,read=read,
-            previously_screened=prior['screened'],feedback_already_attempted=prior['repair'])
+        can_screen=remaining>0 and prior.get('screening_has_more',True)
+        if can_screen:
+            limited=request.model_copy(update={'evaluation_budget':min(request.evaluation_budget,remaining)})
+            result=build_strategic_discovery(runtime,limited,read=read,
+                previously_screened=prior['screened'],feedback_already_attempted=prior['repair'])
+        else:
+            # Signed receipts contain sufficient package identities for the
+            # existing full evaluator. Never enumerate or screen a finished pool.
+            result={**prior.get('batch_context',{}),'candidate_packages':[],
+                'diagnostics':{'unexamined_pool_count':0,'repair_sequence_attempted':False,
+                    'preliminary_decision_attempts':0,'generation_pair_visits':0}}
         rows=result['candidate_packages']
         from fsffl.opportunity.shortlist_quality import curate_shortlist,shortlist_receipt,inferred_timeline_choice
         prior_rows=prior.get('quality_receipts',[])
         combined=prior_rows+rows
         from fsffl.trade_decision import live_bounded_materiality_policy
         try:
-            market_tolerance=live_bounded_materiality_policy(as_of=runtime.league_state.as_of).economic.mean_value_abs
+            policy=live_bounded_materiality_policy(as_of=runtime.league_state.as_of)
+            market_tolerance=policy.economic.mean_value_abs
+            competitive_policy=policy.competitive
         except (ValueError,AttributeError):
-            market_tolerance=0.0
-        curate_shortlist(combined,market_tolerance=market_tolerance)
+            market_tolerance=0.0;competitive_policy=None
+        curate_shortlist(combined,market_tolerance=market_tolerance,competitive_policy=competitive_policy)
         confirmations=prior.get('confirmations',0)
         confirmation_targets=list(prior.get('confirmation_targets',[]))
         confirmation_attempts=0
+        attempts_total=prior.get('confirmation_attempts',confirmations)
+        attempted_ids=list(prior.get('confirmation_attempted_ids',[]))
         new_simulations=0
         if self.finalist_evaluator is not None:
             from fsffl.opportunity.confirmation_quality import current_required_teams
             choices=sorted((r for r in combined if r['shortlist_quality']['status'] in ('shortlist','strategic_tradeoff')
-                and current_required_teams(r) and (r.get('screen_confirmation') or {}).get('status') not in ('verified','not_worthwhile','review','unavailable')),
+                and current_required_teams(r) and r['point_id'] not in attempted_ids and (r.get('screen_confirmation') or {}).get('status') not in ('verified','not_worthwhile','review','unavailable')),
                 key=lambda r:r['shortlist_quality'].get('rank',999))
-            if choices and confirmations<MAX_FINALIST_CONFIRMATIONS:
+            if choices and attempts_total<MAX_FINALIST_CONFIRMATIONS:
                 target=lambda r:sorted(a['asset_ref'] for a in r.get('receive',()))
                 fresh=[r for r in choices if target(r) not in confirmation_targets]
                 row=(fresh or choices)[0]
-                confirmation_attempts=1
+                confirmation_attempts=1;attempts_total+=1;attempted_ids.append(row['point_id'])
                 try:
                     row['screen_confirmation']=self.finalist_evaluator(runtime,row,read,request.search_instructions)
                 except Exception as exc:
@@ -148,8 +163,20 @@ class ProgressiveDiscovery:
                 if proof.get('status')!='deferred':
                     confirmations+=1;confirmation_targets.append(target(row))
                 new_simulations=int(proof.get('simulation_count')==50_000 and not proof.get('cache_hit',False) and proof.get('execution_mode')!='reuse_competitive_simulation')
-            curate_shortlist(combined,market_tolerance=market_tolerance,require_current_confirmation=True)
-        quality_receipts=[shortlist_receipt(r) for r in combined if (r.get('display_context') or {}).get('group')=='preliminary_fit' or inferred_timeline_choice(r)]
+            # Recompute after a failed leader, so its previously dominated
+            # alternative can now receive a remaining confirmation.
+            curate_shortlist(combined,market_tolerance=market_tolerance,competitive_policy=competitive_policy)
+            pending_rows=[r for r in combined if r['shortlist_quality']['status'] in ('shortlist','strategic_tradeoff')
+                and current_required_teams(r) and (r.get('screen_confirmation') or {}).get('status')
+                    not in ('verified','not_worthwhile','review','unavailable')]
+            blocked_rows=[r for r in combined if current_required_teams(r)
+                and (r.get('screen_confirmation') or {}).get('status')=='unavailable']
+            pending_confirmations=len(pending_rows)+len(blocked_rows)
+            can_confirm=attempts_total<MAX_FINALIST_CONFIRMATIONS and any(r['point_id'] not in attempted_ids for r in pending_rows)
+            curate_shortlist(combined,market_tolerance=market_tolerance,competitive_policy=competitive_policy,require_current_confirmation=True)
+        else:
+            pending_confirmations=0;can_confirm=False
+        quality_receipts=[shortlist_receipt(r) for r in combined if (r.get('display_context') or {}).get('group') in ('preliminary_fit','depth_conversion_hypothesis') or inferred_timeline_choice(r)]
         attempted=[r['point_id'] for r in rows if r.get('evaluation_kind') in ('root','repair')]
         screened=list(dict.fromkeys([*prior['screened'],*attempted]))
         fits=list(dict.fromkeys(r['point_id'] for r in combined if r['shortlist_quality']['status'] in ('shortlist','strategic_tradeoff')))
@@ -171,13 +198,21 @@ class ProgressiveDiscovery:
             scope[:12],len(screened),comparison['before'],comparison['after'])
         _logger.info('FSFFL discovery priority gates scope=%s gates=%s',scope[:12],gates)
         pending=result['diagnostics']['unexamined_pool_count']
-        has_more=bool(attempted and pending and len(screened)<MAX_TOTAL_SCREENS)
+        screening_has_more=bool(can_screen and attempted and pending and len(screened)<MAX_TOTAL_SCREENS)
+        has_more=screening_has_more or can_confirm
         goals=(result.get('priority_context') or {}).get('objectives') or ()
         minimum_screens=min(24,8*max(1,len(goals)))
-        reason=('screening_disabled' if request.evaluation_budget==0 else 'screening_limit' if len(screened)>=MAX_TOTAL_SCREENS
-            else 'pool_exhausted' if not has_more else 'shortlist_ready' if len(fits)>=SHORTLIST_TARGET and len(screened)>=minimum_screens else 'continue')
+        reason=('screening_disabled' if request.evaluation_budget==0 else
+            'confirmations_pending' if can_confirm and not screening_has_more else
+            'confirmation_incomplete' if pending_confirmations and not has_more else
+            'screening_limit' if len(screened)>=MAX_TOTAL_SCREENS and not has_more else
+            'pool_exhausted' if not has_more else
+            'shortlist_ready' if len(fits)>=SHORTLIST_TARGET and len(screened)>=minimum_screens else 'continue')
+        batch_context={k:result[k] for k in ('league_state_id','publication_generation_id','focal_team_id','priority_context','competitive_context') if k in result}
         payload={**prior,'screened':screened,'fits':fits,'quality_receipts':quality_receipts,'priority_comparison':comparison,'limiting_gates':gates,
-            'confirmations':confirmations,'confirmation_targets':confirmation_targets,'repair':prior['repair'] or result['diagnostics']['repair_sequence_attempted'], 'batches':prior['batches']+1}
+            'confirmations':confirmations,'confirmation_attempts':attempts_total,'confirmation_attempted_ids':attempted_ids,
+            'confirmation_targets':confirmation_targets,'screening_has_more':screening_has_more,'batch_context':batch_context,
+            'repair':prior['repair'] or result['diagnostics']['repair_sequence_attempted'], 'batches':prior['batches']+1}
         result={**result,'diagnostics':{**result['diagnostics'],
                 'finalist_confirmation_attempts':confirmation_attempts,'changed_state_simulation_calls':new_simulations,
                 'maximum_finalist_confirmations_per_batch':1},
@@ -185,8 +220,10 @@ class ProgressiveDiscovery:
             'shortlist_updates':{r['point_id']:r['shortlist_quality'] for r in combined},'search_progress':{'screens_this_batch':len(attempted),'total_screened':len(screened),
             'priority_comparison':comparison,'limiting_gates':gates,
             'priority_tradeoff_count':comparison['after']['priority_tradeoff'],
-            'max_total_screens':MAX_TOTAL_SCREENS,'finalist_confirmations':confirmations,'max_finalist_confirmations':MAX_FINALIST_CONFIRMATIONS,'minimum_direction_screens':minimum_screens,'preliminary_fit_count':sum(r['shortlist_quality']['status']=='shortlist' for r in combined),'shortlisted_choice_count':len(fits),'shortlist_target':SHORTLIST_TARGET,
-            'model_version':'bounded-discovery-continuation-v5:goal-branch-coverage','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
+            'max_total_screens':MAX_TOTAL_SCREENS,'finalist_confirmations':confirmations,
+            'confirmation_attempts':attempts_total,'screening_has_more':screening_has_more,
+            'pending_confirmation_count':pending_confirmations,'confirmation_incomplete':bool(pending_confirmations and not has_more),'max_finalist_confirmations':MAX_FINALIST_CONFIRMATIONS,'minimum_direction_screens':minimum_screens,'preliminary_fit_count':sum(r['shortlist_quality']['status']=='shortlist' for r in combined),'shortlisted_choice_count':len(fits),'shortlist_target':SHORTLIST_TARGET,
+            'model_version':'bounded-discovery-continuation-v6:pending-confirmation-receipts','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
             'next_token':self._encode(payload) if has_more else None,
             'interpretation':'Bounded preliminary discovery with at most one existing Trade Center confirmation per batch; future asset contribution is not franchise utility or owner acceptance.'}}
         size=_bytes(result)+_bytes(cache_key)

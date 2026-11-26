@@ -2,7 +2,7 @@
 from .objectives import ObjectiveDirection as D, TradeObjective as G
 
 
-def assess_transaction_strategy(assessment, metrics, position_context=None):
+def assess_transaction_strategy(assessment, metrics, position_context=None, *, preliminary_lineup_delta=None):
     """Recognize any priority horizon; preserve positional and timeline costs.
 
     This consumes existing evidence. Directional motives are not materiality,
@@ -45,7 +45,21 @@ def assess_transaction_strategy(assessment, metrics, position_context=None):
     depth_conversion = bool(status in ('priority_gain', 'future_gain_current_preserved') and future_gains
         and current_preserved and bench_sent and not starters_sent and role_known
         and resilience_known and not resilience_loss and not coverage_worse)
-    return {'status':status, 'priority_horizons':tuple(g.value for g in assessment.context.objectives),
+    # Admission is deliberately weaker than promotion: existing optimized roles
+    # and the weekly screen can justify checking a hypothesis, never certify
+    # resilience or competitive preservation before Simulation.
+    from math import isfinite
+    lineup_preserved = (isinstance(preliminary_lineup_delta,(int,float))
+        and isfinite(preliminary_lineup_delta) and preliminary_lineup_delta >= -1e-9)
+    native_known = all(any(m.objective == g and m.direction() != D.UNKNOWN for m in metrics) for g in future)
+    investigation = bool(goals == {G.CURRENT} and not assessment.context.explicitly_directed
+        and assessment.context.source == 'calculated_state_posture_hypothesis_v1'
+        and not assessment.protected_players_lost and lineup_preserved and native_known
+        and future_gains and not future_losses and bench_sent and not starters_sent
+        and role_known and not coverage_worse and not resilience_loss)
+    return {'depth_conversion_investigation_eligible':investigation,
+        'depth_conversion_pending_checks':('competitive_effects','resilience') if investigation else (),
+        'status':status, 'priority_horizons':tuple(g.value for g in assessment.context.objectives),
         'current_effects_known':current_known,'current_direction_preserved':current_preserved,
         'current_losses':current_losses,'future_gains':future_gains,'future_losses':future_losses,
         'position_evidence_available':role_known,'outgoing_projected_starter_ids':starters_sent,

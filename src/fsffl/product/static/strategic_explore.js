@@ -119,10 +119,17 @@
           now=`${title[0].toUpperCase()+title.slice(1)} ${delta>0?'rise':'fall'} by ${amount}${metric==='expected_wins'?'':' percentage points'}`;break;
         }
       }
+      if(proof?.roster_supported_future_team_ids?.includes(checked?.team_id))now='Trades bench depth while keeping the current outlook steady';
       const later=future.every(v=>v>=-1e-9)&&future.some(v=>v>1e-9)?'More long-term upside.':future.every(v=>v<=1e-9)&&future.some(v=>v < -1e-9)?'The price is less future upside.':future.every(v=>Math.abs(v)<=1e-9)?'No projected change to future production.':future[0]>0?'More help over the next few seasons, with a longer-term cost.':'More long-term upside, less help over the next few seasons.';
-      return `<p><b>${esc(label)}:</b> ${esc(now)}. ${esc(later)}</p>`;
+      const risk=checked?.largest_single_player_lineup_drop==='material_loss'?' Less cover if a starter is lost.':'';
+      return `<p><b>${esc(label)}:</b> ${esc(now)}. ${esc(later)}${esc(risk)}</p>`;
     };
-    return `<div class="se-choice-summary">${sentence('side_a','You')}${sentence('side_b',name)}</div>`;
+    const comparison=row.shortlist_quality?.reason==='better_focal_alternative'&&row.shortlist_quality?.comparison_basis==='confirmed'?'<p>Another evaluated offer gives you comparable or better results with less sacrifice.</p>':'';
+    return `<div class="se-choice-summary">${sentence('side_a','You')}${sentence('side_b',name)}${comparison}</div>`;
+  }
+  function emptyResult(){
+    const pending=view.result?.search_progress?.pending_confirmation_count;
+    return `<div class="se-empty"><b>${pending?'Promising offers still need checking.':'No worthwhile matches found yet.'}</b><p>${pending?'Continue the search, or open an offer below in Trade Center.':'Find more, or choose the priority you want to pursue.'}</p></div>`;
   }
   function results(){
     if(view.dirty)return '<div class="se-empty" role="status"><b>Your search has changed.</b><p>Run discovery to see opportunities for these settings.</p></div>';
@@ -130,11 +137,11 @@
     if(view.error&&!view.result)return `<div class="se-empty" role="alert"><b>Discovery couldn’t complete.</b><p>${esc(view.error)}</p><p>Your settings are preserved. Try again when intelligence work is available.</p></div>`;
     if(!view.result)return '';
     const rows=view.result.candidate_packages||[];
-    const fits=rows.filter(r=>r.shortlist_quality?.status==='strategic_tradeoff'||(r.display_context?.group==='preliminary_fit'&&(!r.shortlist_quality||r.shortlist_quality.status==='shortlist'))).sort((a,b)=>(a.shortlist_quality?.rank??999)-(b.shortlist_quality?.rank??999)); 
+    const fits=rows.filter(r=>['shortlist','strategic_tradeoff'].includes(r.shortlist_quality?.status)||(!r.shortlist_quality&&r.display_context?.group==='preliminary_fit')).sort((a,b)=>(a.shortlist_quality?.rank??999)-(b.shortlist_quality?.rank??999)); 
     const tradeoffs=rows.filter(r=>r.display_context?.group==='priority_tradeoff'&&r.shortlist_quality?.status!=='strategic_tradeoff'&&r.shortlist_quality?.status!=='alternative');
     const concerns=rows.filter(r=>r.display_context?.group==='priority_concern');
-    const others=rows.filter(r=>r.shortlist_quality?.status==='alternative'||(r.shortlist_quality?.status==='review'&&!['priority_tradeoff','priority_concern'].includes(r.display_context?.group))||!['preliminary_fit','priority_tradeoff','priority_concern'].includes(r.display_context?.group));
-    return `${progressMarkup()}<section class="se-results"><p class="eyebrow">Opportunities to investigate</p><h2>See the upside. Know the cost.</h2>${fits.length?fits.slice(0,4).map(r=>card(r,rows)).join(''):'<div class="se-empty"><b>No worthwhile matches found yet.</b><p>Find more, or choose the priority you want to pursue.</p></div>'}${fits.length>4?`<details class="se-more"><summary>${fits.length-4} more directions to explore</summary>${fits.slice(4).map(r=>card(r,rows)).join('')}</details>`:''}${tradeoffs.length?`<details class="se-more" data-se-tradeoffs><summary>${tradeoffs.length} ${tradeoffs.length===1?'tradeoff':'tradeoffs'} needing a closer look</summary>${tradeoffs.map(r=>card(r,rows)).join('')}</details>`:''}${concerns.length?`<details class="se-more" data-se-concerns><summary>${concerns.length} packages needing better terms</summary>${concerns.map(r=>card(r,rows)).join('')}</details>`:''}${others.length?`<details class="se-more"><summary>${others.length} additional candidates to review</summary>${others.map(r=>card(r,rows)).join('')}</details>`:''}<details class="se-evidence"><summary>Search coverage</summary><p>Up to 80 packages per search, checked in batches. Find More continues the same search. Player and pick packages are included, with up to 10 assets combined. Package adjustments can include players and draft picks.</p><p>Fits follow the selected priorities; tradeoffs show the costs. The strongest Current cases get a season check. Trade Center shows the full analysis.</p></details></section>`;
+    const others=rows.filter(r=>r.shortlist_quality?.status==='alternative'||(r.shortlist_quality?.status==='review'&&!['priority_tradeoff','priority_concern'].includes(r.display_context?.group))||!['preliminary_fit','priority_tradeoff','priority_concern','depth_conversion_hypothesis'].includes(r.display_context?.group));
+    return `${progressMarkup()}<section class="se-results"><p class="eyebrow">Opportunities to investigate</p><h2>See the upside. Know the cost.</h2>${fits.length?fits.slice(0,4).map(r=>card(r,rows)).join(''):emptyResult()}${fits.length>4?`<details class="se-more"><summary>${fits.length-4} more directions to explore</summary>${fits.slice(4).map(r=>card(r,rows)).join('')}</details>`:''}${tradeoffs.length?`<details class="se-more" data-se-tradeoffs><summary>${tradeoffs.length} ${tradeoffs.length===1?'tradeoff':'tradeoffs'} needing a closer look</summary>${tradeoffs.map(r=>card(r,rows)).join('')}</details>`:''}${concerns.length?`<details class="se-more" data-se-concerns><summary>${concerns.length} packages needing better terms</summary>${concerns.map(r=>card(r,rows)).join('')}</details>`:''}${others.length?`<details class="se-more"><summary>${others.length} additional candidates to review</summary>${others.map(r=>card(r,rows)).join('')}</details>`:''}<details class="se-evidence"><summary>Search coverage</summary><p>Up to 80 packages per search, checked in batches. Find More continues the same search. Player and pick packages are included, with up to 10 assets combined. Package adjustments can include players and draft picks.</p><p>Fits follow the selected priorities; tradeoffs show the costs. The strongest Current cases get a season check. Trade Center shows the full analysis.</p></details></section>`;
   }
 
   function paint(){
@@ -170,8 +177,8 @@
   function progressMarkup(){
     const p=view.result?.search_progress;
     if(!p)return '';
-    const stop={shortlist_ready:'',screening_limit:'Search limit reached. Change direction to explore other packages.',pool_exhausted:'No more packages for this search.',screening_disabled:''};
-    return `<div class="se-progress" role="status"><b>${p.total_screened} packages evaluated · ${p.shortlisted_choice_count??p.preliminary_fit_count} ${(p.shortlisted_choice_count??p.preliminary_fit_count)===1?'option':'options'}${Number.isInteger(p.priority_tradeoff_count)?` · ${p.priority_tradeoff_count} ${p.priority_tradeoff_count===1?'tradeoff':'tradeoffs'}`:''}</b>${view.busy?`<p>${view.pauseRequested?'Finishing this batch…':'Finding opportunities…'}</p>`:stop[p.stop_reason]?`<p>${esc(stop[p.stop_reason])}</p>`:''}${view.error?`<p role="alert">${esc(view.error)} Completed results are preserved.</p>`:''}<div class="se-search-actions">${view.busy?'<button type="button" class="text-button" data-se-pause>Pause</button>':p.next_token?'<button type="button" class="secondary-button" data-se-more>Find More</button>':''}</div></div>`;
+    const stop={confirmations_pending:'Checking the remaining promising offers.',confirmation_incomplete:'Some promising offers still need a full check. Open them in Trade Center.',shortlist_ready:'',screening_limit:'Search limit reached. Change direction to explore other packages.',pool_exhausted:'No more packages for this search.',screening_disabled:''};
+    return `<div class="se-progress" role="status"><b>${p.total_screened} packages screened · ${p.shortlisted_choice_count??p.preliminary_fit_count} ${(p.shortlisted_choice_count??p.preliminary_fit_count)===1?'option':'options'}${Number.isInteger(p.priority_tradeoff_count)?` · ${p.priority_tradeoff_count} ${p.priority_tradeoff_count===1?'tradeoff':'tradeoffs'}`:''}</b>${view.busy?`<p>${view.pauseRequested?'Finishing this batch…':'Finding opportunities…'}</p>`:stop[p.stop_reason]?`<p>${esc(stop[p.stop_reason])}</p>`:''}${view.error?`<p role="alert">${esc(view.error)} Completed results are preserved.</p>`:''}<div class="se-search-actions">${view.busy?'<button type="button" class="text-button" data-se-pause>Pause</button>':p.next_token?`<button type="button" class="secondary-button" data-se-more>${p.stop_reason==='confirmations_pending'?'Finish checking':'Find More'}</button>`:''}</div></div>`;
   }
   function mergeBatch(previous,result){
     if(!previous)return result;
@@ -183,7 +190,7 @@
     for(const [id,proof] of Object.entries(result.confirmation_updates||{})){const row=merged.get(id);if(row)merged.set(id,{...row,screen_confirmation:proof});}
     for(const [id,quality] of Object.entries(result.shortlist_updates||{})){const row=merged.get(id);if(row)merged.set(id,{...row,shortlist_quality:quality});}
     const all=[...merged.values()],evaluated=all.filter(r=>r.evaluation_kind);
-    return {...result,pick_evidence:{...(previous.pick_evidence||{}),...(result.pick_evidence||{})},candidate_packages:[...evaluated,...all.filter(r=>!r.evaluation_kind)].slice(0,80)};
+    return {...previous,...result,pick_evidence:{...(previous.pick_evidence||{}),...(result.pick_evidence||{})},candidate_packages:[...evaluated,...all.filter(r=>!r.evaluation_kind)].slice(0,80)};
   }
   async function run({continueSearch=false}={}){
     reconcile();if(view.inFlight||!ctx().team_id||!ctx().state_id)return;
@@ -207,7 +214,7 @@
         view.result=mergeBatch(view.result,result);paint();
         const progress=result.search_progress;
         token=progress?.next_token;
-        if(view.pauseRequested||!token||progress.stop_reason!=='continue')break;
+        if(view.pauseRequested||!token||!['continue','confirmations_pending'].includes(progress.stop_reason))break;
       }
     }catch(error){if(active())view.error=error?.message||'Please retry discovery.';}
     finally{if(view===current&&contextKey()===key){view.inFlight=false;view.pendingBatch=null;view.busy=false;paint();}}
