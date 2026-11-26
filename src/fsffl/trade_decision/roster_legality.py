@@ -25,6 +25,7 @@ class TeamRosterLegalityResolution(FrozenModel):
     roster_limit: int
     required_cut_count: int
     cuts: tuple[MandatoryRosterCut, ...] = ()
+    ir_placements: tuple[str, ...] = ()
     cut_market_value_total: float | None = None
     status: RosterLegalityStatus
     model_version: str = "next5-mandatory-roster-cuts-v2"
@@ -49,6 +50,7 @@ def resolve_mandatory_roster_cuts(
     *,
     protected_player_ids_by_team: Mapping[str, frozenset[str]] | None = None,
     market_values: Mapping[str, float] | None = None,
+    before_state: LeagueState | None = None,
 ) -> ResolvedRosterState:
     """Make post-transaction active rosters legal using upstream evidence.
 
@@ -71,6 +73,9 @@ def resolve_mandatory_roster_cuts(
 
     for team in league_state.teams:
         team_state = team_state_map[team.team_id]
+        old_ir = {r.player_id for t in (before_state.team_states if before_state is not None else ())
+                  if t.team_id == team.team_id for r in t.roster if r.slot == RosterSlot.IR}
+        ir_placements = tuple(sorted(r.player_id for r in team_state.roster if r.slot == RosterSlot.IR and r.player_id not in old_ir)) if before_state is not None else ()
         active = _active_entries(team_state)
         overflow = max(0, len(active) - roster_limit)
         if overflow == 0:
@@ -80,6 +85,7 @@ def resolve_mandatory_roster_cuts(
                     active_roster_before_resolution=len(active),
                     roster_limit=roster_limit,
                     required_cut_count=0,
+                    ir_placements=ir_placements,
                     status=RosterLegalityStatus.NOT_REQUIRED,
                 )
             )
@@ -123,6 +129,7 @@ def resolve_mandatory_roster_cuts(
                 active_roster_before_resolution=len(active),
                 roster_limit=roster_limit,
                 required_cut_count=overflow,
+                ir_placements=ir_placements,
                 cuts=cuts,
                 cut_market_value_total=cut_market_value_total,
                 status=(

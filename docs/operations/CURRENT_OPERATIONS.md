@@ -1,3 +1,59 @@
+## INPUT-CORRECTNESS CANDIDATE — incoming IR plan — 2026-11-26
+
+On the unchanged #604 saved State/forecasts/values, the audited exchange now has
+one focal cut, not two, in Explore, Trade Center analysis and the exact50k
+confirmation. Explicit NFL-IR evidence and a vacant canonical IR slot are
+required; unknown/future evidence, full IR and non-eligible players cannot waive
+cuts. The source snapshot and protected/owned assets remain intact. Raw ownership
+application remains separate from Decision's evaluated roster plan.
+
+The same transition now preserves retained TeamState facts (including Max PF)
+instead of reconstructing a roster-only record. No Value/Forecast coefficients
+or annual pick reference changed. UI accounts for the IR move. Focused77 passed;
+390px browser quick/analyze/full50k passed, no errors/overflow; desktop verification
+and exact-head Stable gate precede promotion. All actual packages/results private
+in /workspace/private-explore-integrity-20261126. This PR will retain final exact
+release/deployment receipts. No production refresh or infrastructure changes.
+
+Max PF activation remains separately gated on explicit FSFFL playoff/tie rules;
+the accepted standard fallback is not silently replaced. Funded generation and
+anchor targeting remain the next authorized independent search change.
+
+## AUTHORIZED — Explore input integrity and funded coverage — 2026-11-26
+
+Base main/live #604: f005ea0973a9524b9e658a8e9ac1ae4c31a74dd8,
+Render dep-dc453h0u01pc73etbsmg. Management authorized proceeding with the
+previously proposed bounded corrections, not another audit. Scope/acceptance
+recorded BEFORE executable changes:
+
+1. Resolve evidence-backed legal incoming IR placement before lineup/cut checks;
+   prove the saved injured-QB/IR-RB exchange needs one cut when eligible, two
+   without legal IR space. Cover full IR, active outgoing, unknown eligibility,
+   protections and unchanged ownership. Preserve canonical team facts through
+   scenario transitions. Expose roster plan consistently in Explore/Trade Center.
+2. Establish exact FSFFL Max PF draft-rule evidence before replacing the governed
+   fallback. Current saved generation uses standard record/H2H/PF fallback;
+   that fallback was explicitly accepted Oct2, not a missing valuation model.
+   Max PF does not alone establish playoff order/tiebreaks or a future Max PF
+   distribution. Rule details requested asynchronously; do independent work while
+   pending. No hard-coded league assumptions or relabeled stale slot evidence.
+   Preserve Value formulas/annual release and published baseline identity.
+3. Bounded funded player+later-pick alternatives must survive an in-range
+   singleton and compete for existing screening turns. Prove crowded fixture,
+   ordinary/pick-direction alternatives and negative legality/price cases;
+   keep80 screens,8 confirmations,632/640 visits and memory reserve unchanged.
+4. Position targeting selects an acquisition anchor; eligible pick sweeteners may
+   surround that anchor. Preserve explicit kind/age/protection constraints and
+   require at least one matching target; repair validation uses the same rule.
+
+Separate saved-input comparisons for roster/input correction versus search
+coverage. Actual offers and displaced screens retained privately, not just counts.
+Historical completed packages remain structural evidence, not hindsight truth.
+Use focused tests then exact-head Stable release gate, reviewed merge and existing
+manual Render deploy. No recurring expense or migrations. This implementation
+PR will serve as durable final release/acceptance receipt, including any blocked
+Max PF publication gate; no claim all four items are complete without evidence.
+
 ## Focused Explore follow-up to #603 — 2026-11-26
 
 Base main/live: `10ac5e2f02b4dff9ce4c8d276e911c8ffa13ecb6` (#603).

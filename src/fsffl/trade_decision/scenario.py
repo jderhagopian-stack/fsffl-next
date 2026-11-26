@@ -75,16 +75,12 @@ def _apply_leg(
 
     faab_sent = sum(asset.amount for asset in sender.sends if isinstance(asset, FaabAsset))
 
-    team_state_map[sender.team_id] = TeamState(
-        team_id=sender.team_id,
-        roster=sender_roster,
-        faab_balance=sender_state.faab_balance - faab_sent,
-    )
-    team_state_map[receiver.team_id] = TeamState(
-        team_id=receiver.team_id,
-        roster=receiver_roster,
-        faab_balance=receiver_state.faab_balance + faab_sent,
-    )
+    team_state_map[sender.team_id] = sender_state.model_copy(update={
+        "roster": sender_roster, "faab_balance": sender_state.faab_balance - faab_sent,
+    })
+    team_state_map[receiver.team_id] = receiver_state.model_copy(update={
+        "roster": receiver_roster, "faab_balance": receiver_state.faab_balance + faab_sent,
+    })
 
     for asset in sender.sends:
         if isinstance(asset, PickAsset):
@@ -146,3 +142,37 @@ def apply_bilateral_trade(
     after = LeagueState.model_validate(after.model_dump(mode="python"))
 
     return AppliedTradeScenario(before=league_state, after=after, proposal=proposal)
+
+
+def apply_bilateral_trade_with_ir_placements(league_state, proposal):
+    """Plan legal incoming NFL-IR placements before any lineup/cut evaluation.
+
+    Raw ownership application remains available independently. Only incoming
+    players with explicit, knowable NFL IR evidence can fill a vacant IR slot,
+    and only to resolve active overflow. No taxi promotion/demotion, medical
+    inference, starter optimization or Value-dependent choice occurs here.
+    """
+    scenario = apply_bilateral_trade(league_state, proposal)
+    state = scenario.after
+    rules = state.league.rules
+    latest = {}
+    for fact in state.player_states:
+        if fact.as_of > league_state.as_of or fact.provenance.effective_at > league_state.as_of or fact.provenance.retrieved_at > league_state.as_of:
+            continue
+        if fact.player_id not in latest or fact.as_of > latest[fact.player_id].as_of:
+            latest[fact.player_id] = fact
+    incoming = {leg.team_id: {a.player_id for a in other.sends if isinstance(a, PlayerAsset)}
+                for leg, other in ((proposal.side_a, proposal.side_b), (proposal.side_b, proposal.side_a))}
+    teams = []
+    for team in state.team_states:
+        active = [r for r in team.roster if r.slot not in (RosterSlot.IR, RosterSlot.TAXI)]
+        needed = max(0, len(active) - rules.roster_size)
+        free = max(0, rules.ir_size - sum(r.slot == RosterSlot.IR for r in team.roster))
+        candidates = sorted(r.player_id for r in active
+            if r.player_id in incoming.get(team.team_id, ())
+            and r.player_id in latest and latest[r.player_id].nfl_injured_reserve is True)
+        moved = set(candidates[:min(needed, free)])
+        teams.append(team.model_copy(update={'roster': tuple(
+            r.model_copy(update={'slot': RosterSlot.IR}) if r.player_id in moved else r for r in team.roster)}))
+    after = state.model_copy(update={'team_states': tuple(teams)})
+    return AppliedTradeScenario(before=league_state, after=LeagueState.model_validate(after.model_dump(mode='python')), proposal=proposal)
