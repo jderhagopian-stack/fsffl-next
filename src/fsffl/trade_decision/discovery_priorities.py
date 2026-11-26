@@ -70,7 +70,8 @@ def _priority_group(row):
         return {**common, 'group': 'priority_concern',
                 'limiting_gate':'priority_loss_without_offset', 'reason': 'Known losses in a franchise’s requested priorities, with no demonstrated offset in those priorities.'}
     if all((s['gain'] or s['depth_investigation']) and not s['unknown'] for s in sides):
-        if any(s['depth_investigation'] and not s['gain'] for s in sides):
+        # Depth is a motive for that owner, not an offset to the other owner's costs.
+        if not any(s['loss'] for s in sides) and any(s['depth_investigation'] and not s['gain'] for s in sides):
             return {**common,'group':'depth_conversion_hypothesis','limiting_gate':'depth_conversion_awaits_full_check',
                 'reason':'Projected bench depth may fund future assets; resilience and competitive effects still need checking.'}
         if any(s['loss'] for s in sides):
