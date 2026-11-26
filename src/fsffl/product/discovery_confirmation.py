@@ -11,6 +11,30 @@ COMPETITIVE_METRICS=('expected_wins','playoff_probability','first_place_probabil
 FINALIST_WORKING_RESERVE_BYTES=48*1024*1024  # Admission reserve, not model materiality.
 
 
+def _current_case_gates(material,assessment,required):
+    """Consume existing materiality OR the existing verified-roster future motive.
+
+    Inferred win-now is not a prohibition on converting real bench depth. The
+    transaction-strategy owner requires known roles, preserved Current effects,
+    resilience and coverage before it exposes that candidate. Explicit directions
+    cannot be relaxed by this Search bridge; future utility stays unestimated.
+    """
+    failures=[];conflicts=[];unknown=[];conversions=[]
+    for side in ('side_a','side_b'):
+        effect=material[side]
+        if effect['team_id'] not in required:continue
+        owner=assessment.get(side) or {};context=owner.get('context') or {}
+        strategy=owner.get('transaction_strategy') or {}
+        if (context.get('source')=='calculated_state_posture_hypothesis_v1'
+                and not context.get('explicitly_directed') and strategy.get('depth_conversion_candidate') is True
+                and not any(effect.get(k)=='material_loss' for k in COMPETITIVE_METRICS)):
+            conversions.append(effect['team_id']);continue
+        if all(effect.get(k) in (None,'unavailable') for k in COMPETITIVE_METRICS):unknown.append(effect['team_id'])
+        elif not any(effect.get(k)=='material_gain' for k in COMPETITIVE_METRICS):failures.append(effect['team_id'])
+        elif any(effect.get(k)=='material_loss' for k in COMPETITIVE_METRICS):conflicts.append(effect['team_id'])
+    return failures,conflicts,unknown,conversions
+
+
 def evaluate_finalist(runtime,row,read,instructions,*,simulation_loader,memory_budget_bytes,reclaim):
     """One exact 50k confirmation, within the existing serialized admission path.
 
@@ -41,15 +65,11 @@ def evaluate_finalist(runtime,row,read,instructions,*,simulation_loader,memory_b
     # or silently promote a protected loss on the strength of the earlier screen.
     if cut_ids(row.get('roster_legality',()))!=cut_ids(result['roster_legality']) or any(assessment[s].get('protected_players_lost') for s in ('side_a','side_b')):
         return {'status':'review','reason':'confirmed_roster_consequences_changed'}
-    material=result['material_assessment'];required=set(current_required_teams(row));failures=[];conflicts=[];unknown=[]
-    for side in ('side_a','side_b'):
-        effect=material[side]
-        if effect['team_id'] not in required:continue
-        if all(effect.get(k) in (None,'unavailable') for k in COMPETITIVE_METRICS):unknown.append(effect['team_id'])
-        elif not any(effect.get(k)=='material_gain' for k in COMPETITIVE_METRICS):failures.append(effect['team_id'])
-        elif any(effect.get(k)=='material_loss' for k in COMPETITIVE_METRICS):conflicts.append(effect['team_id'])
+    material=result['material_assessment'];required=set(current_required_teams(row))
+    failures,conflicts,unknown,conversions=_current_case_gates(material,assessment,required)
     return {'status':'unavailable' if unknown else 'not_worthwhile' if failures else 'review' if conflicts else 'verified',
-        'reason':'competitive_evidence_unavailable' if unknown else 'current_gain_not_demonstrated' if failures else 'competitive_tradeoff_requires_review' if conflicts else 'material_current_case',
+        'reason':'competitive_evidence_unavailable' if unknown else 'current_gain_not_demonstrated' if failures else 'competitive_tradeoff_requires_review' if conflicts else 'material_current_or_roster_supported_future_case' if conversions else 'material_current_case',
+        'roster_supported_future_team_ids':conversions,
         'limiting_team_ids':unknown or failures or conflicts,'source_state_id':runtime.league_state.state_id,
         'publication_generation_id':runtime.publication_generation_id,
         'simulation_count':result['scenario_simulation_count'],

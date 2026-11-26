@@ -53,6 +53,8 @@ def test_one_finalist_per_batch_receipts_preserve_rejections_without_resimulatio
     assert calls==['first'] and first['search_progress']['shortlisted_choice_count']==0
     again=service.build(runtime,StrategicDiscoveryRequest())
     assert again['search_progress']['cache_hit'] and calls==['first']
+    assert again['diagnostics']['changed_state_simulation_calls']==0
+    assert again['diagnostics']['finalist_confirmation_attempts']==0
     second=service.build(runtime,StrategicDiscoveryRequest(continuation_token=first['search_progress']['next_token']))
     assert calls==['first','second']
     assert second['search_progress']['finalist_confirmations']==2
@@ -86,3 +88,29 @@ def test_missing_current_owner_identity_is_not_treated_as_no_confirmation_needed
     assert current_required_teams(row)==('unresolved:side_a','unresolved:side_b')
     curate_shortlist([row],require_current_confirmation=True)
     assert row['shortlist_quality']['status']=='review'
+
+
+def test_current_confirmation_preserves_existing_contender_depth_conversion():
+    from fsffl.product.discovery_confirmation import _current_case_gates,COMPETITIVE_METRICS
+    from tests.test_trade_transaction_strategy import assess,roles
+    from tests.test_trade_objectives import metric
+    from fsffl.trade_decision.objectives import TradeObjective as G
+    values=[metric(G.CURRENT,0),metric(G.THREE_YEAR,20),metric(G.CAREER,50),
+        metric(G.RESILIENCE,0,higher_is_better=False)]
+    strategy=assess((G.CURRENT,),values,roles())
+    assert strategy['depth_conversion_candidate'] and not strategy['surplus_confirmed']
+    material={'side_a':{'team_id':'contender',**{k:'immaterial' for k in COMPETITIVE_METRICS}},
+              'side_b':{'team_id':'partner'}}
+    owner={'context':{'source':'calculated_state_posture_hypothesis_v1','explicitly_directed':False},
+           'transaction_strategy':strategy}
+    assert _current_case_gates(material,{'side_a':owner},{'contender'})==([],[],[],['contender'])
+    lost_title=deepcopy(material);lost_title['side_a']['championship_probability']='material_loss'
+    assert _current_case_gates(lost_title,{'side_a':owner},{'contender'})[3]==[]
+    explicit=deepcopy(owner);explicit['context']['explicitly_directed']=True
+    assert _current_case_gates(material,{'side_a':explicit},{'contender'})[0]==['contender']
+    # Existing Decision-owned roster/resilience evidence prevents a false surplus.
+    for bad_strategy in [assess((G.CURRENT,),values,roles(after_unfilled_slots=1)),
+            assess((G.CURRENT,),values[:-1]+[metric(G.RESILIENCE,2,higher_is_better=False)],roles())]:
+        owner['transaction_strategy']=bad_strategy
+        assert not bad_strategy['depth_conversion_candidate']
+        assert _current_case_gates(material,{'side_a':owner},{'contender'})[0]==['contender']

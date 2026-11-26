@@ -97,7 +97,7 @@ class ProgressiveDiscovery:
             if cache_key in self.cache:
                 self.cache.move_to_end(cache_key)
                 result=self.cache[cache_key][1]
-                return {**result,'search_progress':{**result['search_progress'],'cache_hit':True}}
+                return {**result,'diagnostics':{**result['diagnostics'],'changed_state_simulation_calls':0,'finalist_confirmation_attempts':0},'search_progress':{**result['search_progress'],'cache_hit':True}}
         with self.lock:
             if self.inflight:
                 raise ValueError('A discovery batch is already running. Retry shortly; completed results are preserved.')

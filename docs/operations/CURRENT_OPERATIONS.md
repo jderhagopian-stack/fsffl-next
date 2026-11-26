@@ -1,3 +1,21 @@
+## Preserve accepted contender depth-conversion semantics — 2026-11-26
+
+Release-candidate review reconciled the finalist gate with the EXISTING NEXT-5
+`assess_transaction_strategy` contract. An inferred Current posture must not veto
+a roster-supported bench-to-future conversion solely because season outcomes are
+unchanged. Full checks may retain that directional future case only when the
+existing strategy reports `depth_conversion_candidate`, user direction is not
+explicit, protected/cut checks pass, and no material competitive loss is present.
+That contract already requires known roles, preserved Current effects, resilience
+and positional coverage; `surplus_confirmed` remains false and future franchise
+utility is not claimed. Explicit Current instructions still require the requested
+material Current case. Regression uses the existing Decision strategy producer,
+including damaged coverage, resilience loss and championship-loss counterexamples.
+Numerical model outputs and paired real-league comparisons above are unchanged.
+The prior candidate head3de5145 is superseded; only the final exact-head Stable
+run can authorize release. This is a model-authority preservation fix within the
+same recommendation-quality milestone, not a new preference model or workstream.
+
 ## RELEASE CANDIDATE — real-league shortlist quality (#601) — 2026-11-26
 
 Priority and acceptance criteria below remain controlling. Base main/live is
