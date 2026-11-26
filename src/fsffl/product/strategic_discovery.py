@@ -33,7 +33,7 @@ from .opportunity_posture import calculated_competitive_state, default_posture_f
 from dataclasses import replace
 
 _logger = logging.getLogger("fsffl.product.performance")
-_MODEL_VERSION = "strategic-discovery-v6:purpose-and-owner-expansion"
+_MODEL_VERSION = "strategic-discovery-v7:compensated-priorities-and-alternatives"
 
 class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
@@ -244,9 +244,9 @@ def build_discovery_lanes(runtime, request, read):
     return lanes,context,browser,teams,rank_signals,profiles
 
 
-def _representative_indices(rows,budget):
+def _representative_indices(rows,budget,*,visited_families=()):
     """Categorical coverage, not a composite opportunity score."""
-    remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set(); shapes=set(); paths=set()
+    remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set(); shapes=set(); paths=set(); families=set(visited_families)
     while remaining and len(chosen)<budget:
         # Existing Decision economics precede diversity. Unknowns and strained
         # structures remain available for explicit review, never gain priority
@@ -255,6 +255,10 @@ def _representative_indices(rows,budget):
         eligible=plausible or remaining
         complement=[i for i in eligible if rows[i].get('joint_priority_gain_hypothesis') or rows[i].get('pre_cut_horizon_complement_hypothesis')]
         eligible=complement or eligible
+        native_compatible=[i for i in eligible if rows[i].get('requested_native_compatibility') is True]
+        eligible=native_compatible or eligible
+        varied=[i for i in eligible if rows[i].get('focal_package_family',i) not in families]
+        eligible=varied or eligible
         smallest=min(len(rows[i]['send'])+len(rows[i]['receive']) for i in eligible)
         eligible=[i for i in eligible if len(rows[i]['send'])+len(rows[i]['receive'])==smallest]
         different_path=[i for i in eligible if set(rows[i].get('discovery_paths',('ordinary',)))-paths]
@@ -274,6 +278,7 @@ def _representative_indices(rows,budget):
         index=eligible[0]
         chosen.append(index);remaining.remove(index)
         paths.update(rows[index].get('discovery_paths',('ordinary',)))
+        families.add(rows[index].get('focal_package_family',index))
         teams.add(rows[index]['counterparty_team_id']);hypotheses.update(rows[index]['hypotheses'])
         sent.update(a['asset_ref'] for a in rows[index]['send'])
         shapes.add((len(rows[index]['send']),len(rows[index]['receive'])))
@@ -292,7 +297,8 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         and runtime.forecast_evidence is not None
         and runtime.forecast_evidence.simulation_forward_forecasts is not None
         and runtime.simulation_analytics is not None)
-    reserve=min(8,pool_budget//4) if can_feedback else 0
+    can_compensate=read is not None and screen_cap>=3
+    reserve=min(8,pool_budget//4) if can_feedback or can_compensate else 0
     visits=FeedbackVisits(reserve)
     generation_limit=pool_budget-reserve
     from fsffl.trade_decision import live_bounded_materiality_policy
@@ -338,6 +344,14 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     from .discovery_purposes import purpose_catalog,package_purposes,review_purposes
     purposes=purpose_catalog(lanes)
     ordinary_names={l.name for l in lanes if l.purpose is None}
+    repair_inventories={}
+    for lane in lanes:
+        for inventory in (lane.focal,lane.counterparty):
+            prior=repair_inventories.get(inventory.team_id)
+            assets=tuple(dict.fromkeys((*(prior.assets if prior else ()),*inventory.assets)))
+            repair_inventories[inventory.team_id]=inventory.model_copy(update={'assets':assets})
+    from .discovery_families import focal_package_family
+    picks_by_id={p.pick_id:p for p in runtime.league_state.draft_picks}
     def make_row(proposal, point_id, hypotheses):
         row={'point_id':point_id,'focal_team_id':proposal.side_a.team_id,'counterparty_team_id':proposal.side_b.team_id,
             'hypotheses':list(hypotheses),'send':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_a.sends],
@@ -347,6 +361,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         paths={'ordinary'} if any(h in ordinary_names for h in hypotheses) or not row['discovery_purposes'] else set()
         paths.update('owner_history' if p['kind']=='observed_acquisition' else 'team_purpose' for p in row['discovery_purposes'])
         row['discovery_paths']=sorted(paths)
+        row['focal_package_family']=focal_package_family(row,picks=picks_by_id,read=read)
         row['owner_history']=build_trade_owner_history(runtime,proposal,context=history_context)
         evidence=bind_trade_intrinsic_values(runtime,proposal,read) if read is not None else unavailable_trade_intrinsic('Published native horizon evidence unavailable')
         def raw_priority_gain(team_context,label):
@@ -367,6 +382,9 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             and possible_priority_gain(contexts[proposal.side_b.team_id],'side_b',proposal.side_b.sends,proposal.side_a.sends))
         row['counterparty_horizon_gain_current_pending']=(TradeObjective.CURRENT in context.objectives
             and raw_priority_gain(contexts[proposal.side_b.team_id],'side_b'))
+        future_goals=[g for g in context.objectives if g in (TradeObjective.THREE_YEAR,TradeObjective.CAREER)]
+        native_deltas=[((evidence.get('three_year' if g==TradeObjective.THREE_YEAR else 'career') or {}).get('side_a') or {}).get('mean_delta') for g in future_goals]
+        row['requested_native_compatibility']=(all(d>=-1e-9 for d in native_deltas) if all(d is not None for d in native_deltas) else None)
         row['raw_horizon_trade_deltas']={name:{side:((evidence.get(name) or {}).get(side) or {}).get('mean_delta') for side in ('side_a','side_b')} for name in ('three_year','career')}
         try:
             cheap=evaluate_candidate_economics(runtime,row,profiles=profiles,market_values=market_values,
@@ -387,10 +405,13 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     by_point={row['point_id']:row for row in rows}
     excluded = frozenset(previously_screened)
     roots = [row for row in rows if row['point_id'] not in excluded]
-    root_order=[roots[i] for i in _representative_indices(roots,min(len(roots),screen_cap+2))]
+    root_order=[roots[i] for i in _representative_indices(roots,min(len(roots),screen_cap+2),
+        visited_families={r['focal_package_family'] for r in rows if r['point_id'] in excluded})]
     generated=monotonic()
     screened=[];seen={};root_attempts=repair_attempts=errors=duplicates=existing_repairs=0
-    sequence_used=feedback_already_attempted
+    # One bounded sequence per batch; a previous batch must not disable all
+    # future repairs. Exact screened IDs still prevent duplicate evaluations.
+    sequence_used=False
 
     effective_forecasts=None
     baseline_by_team={}
@@ -450,8 +471,11 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         if len(screened)>=screen_cap: break
         if root['point_id'] in seen: continue
         screen(root,'root')
-        if not can_feedback or sequence_used or screen_cap-len(screened)<2: continue
-        path=repair_path(runtime,root,read,protected_player_ids=context.protected_player_ids,visits=visits)
+        if not (can_feedback or can_compensate) or sequence_used or screen_cap-len(screened)<2: continue
+        from .strategic_compensation import compensation_path
+        from itertools import chain
+        path=chain(compensation_path(runtime,root,read,inventories=repair_inventories,visits=visits,feedback=lambda point_id:seen.get(point_id),market_values=market_values,economic_tolerance=tolerance) if can_compensate else (),
+                   repair_path(runtime,root,read,protected_player_ids=context.protected_player_ids,visits=visits) if can_feedback else ())
         for point,lineage in path:
             if any(not _matches_target(options[_ref(a)],request) for a in point.counterparty_package.assets):
                 visits.skipped['repair_outside_requested_targets'] += 1
@@ -474,7 +498,11 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             row.setdefault('repair_lineages',[]).append(lineage)
             if point.point_id in seen: duplicates+=1
             result=screen(row,'repair')
-            if result is None or (lineage['depth']==1 and not needs_second_step(result)): break
+            if result is None or result.get('evidence_status')!='pre_simulation_screened': break
+            if lineage['move']=='add_native_compensation':
+                if discovery_display_context(result)['group']=='preliminary_fit': break
+                if lineage['depth']>=2: break
+            elif lineage['depth']==1 and not needs_second_step(result): break
     # Keep every evaluated point and failed parent; only then fill unscreened
     # exploration slots. The old 540->80 pruning cannot erase this evidence.
     fillers=[row for row in rows if row['point_id'] not in seen and row['point_id'] not in excluded]
@@ -485,6 +513,8 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     for row in rows:
         review_purposes(row)
         row['display_context'] = discovery_display_context(row)
+    from fsffl.opportunity.shortlist_quality import curate_shortlist
+    curate_shortlist(rows)
     team_contexts = {team.team_id: _competitive_context(runtime, team.team_id) for team in (browser.focal_team, *teams)}
     returned_picks = {a['asset_ref'][5:] for row in rows for a in (*row['send'],*row['receive'])
                       if a['asset_ref'].startswith('pick:')}

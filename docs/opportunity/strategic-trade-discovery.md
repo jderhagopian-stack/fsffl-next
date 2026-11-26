@@ -341,3 +341,13 @@ bilateral screen actually supports. A preliminary asset-contribution gain is not
 optimized future franchise utility. A preserved current lineup is not confirmed
 injury resilience. Owner evidence remains a factual reason to explore; confirmed
 mutual benefit and acceptance remain separate questions.
+
+## Recommendation-quality correction — 2026-11-26
+
+Directional tradeoffs no longer automatically lead the default results. The
+[shortlist-quality contract](shortlist-quality.md) adds counted player/pick
+compensation paths, native-priority-compatible construction, comparable focal
+alternatives, equivalent future-pick family coverage, and bounded cross-batch
+receipts. This supersedes presenting every mixed selected-goal package as a lead
+tradeoff. Preserve opt-in review, explicit future directions, all costs and final
+Decision authority. No new materiality coefficients or cross-unit exchange rates.

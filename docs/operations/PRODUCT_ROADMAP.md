@@ -456,3 +456,13 @@ purposes and bounded observed-acquisition routes through the existing generator,
 then validate different candidates and actual effects rather than more labels.
 Historical youth preferences remain gated by dated age evidence. See
 `docs/opportunity/purpose-discovery-delivery.md` and the strategic discovery contract.
+
+### Discovery quality correction — 2026-11-26
+
+Implement compensation before promotion, compare complete focal alternatives under
+both-owner priority constraints, retain distinct search families, and stop using
+raw acquisition counts as deal justifications. See
+[shortlist-quality](../opportunity/shortlist-quality.md). Exact-head testing,
+existing-service deployment and runtime restore are release gates; real-owner
+usefulness remains a separate acceptance gate. Forecast/Career recalibration is
+not implicitly authorized by a surprising recommendation.
