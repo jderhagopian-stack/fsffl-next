@@ -1,3 +1,13 @@
+## Release compatibility correction — #607 — 2026-11-26
+
+Stable45879500724 correctly rejected28d55f77e67351cc99a2b174f7571bbe19473f24
+at collection: a nested quoted f-string in the new capacity error copy parses on
+local Python3.12 but not supported CI Python3.11. No merge/deploy occurred. PR was
+returned to draft; copy now uses a separate noun variable. All14 changed Python
+files pass the Python3.11 grammar check, and focused settings tests are repeated.
+The next exact stable head must pass the full release gate; earlier failures and
+superseded/cancelled runs do not authorize promotion. No model or policy changes.
+
 ## Roster-integrity release correction — #607 — 2026-11-26
 
 Bounded final review reproduced three unsafe configuration transitions on complete
