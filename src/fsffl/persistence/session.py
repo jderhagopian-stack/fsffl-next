@@ -322,7 +322,7 @@ def persist_runtime_identity(
         durable_state is not None
         and durable_state.state_hash == league_state.state_id
     )
-    if not state_is_durable and league_state.rule_configuration is not None:
+    if not state_is_durable and getattr(league_state, "rule_configuration", None) is not None:
         state_is_durable = restore_account_rule_state(
             store, user_id=user_id, league_id=league_state.league.league_id, state_id=league_state.state_id,
         ) is not None
@@ -382,7 +382,7 @@ def persist_runtime_snapshot(
         provider, external_id = _provider_external_id(league_state)
         now = utc_now()
         state_payload = league_state.model_dump(mode="json")
-        if league_state.rule_configuration is not None:
+        if getattr(league_state, "rule_configuration", None) is not None:
             persist_account_rule_state(store, user_id=user_id, league_state=league_state, payload=state_payload)
         else:
             store.put_league_snapshot(

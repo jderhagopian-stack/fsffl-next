@@ -1,3 +1,15 @@
+## Full-suite compatibility correction — #607 — 2026-11-26
+
+Stable45881123080 completed with3 failures /3,471 passed /19 skipped. Two legacy
+custom-store persistence fixtures omit the new optional rule_configuration field;
+checkpoint branching now treats an absent optional field as None. The third gate
+checks explicit fresh-connect-before-provider-acquisition sequencing; keep provider
+loading and account-rule resolution as separate statements so that standing contract
+remains inspectable. No existing tests weakened, model/input/rule semantics changed,
+or market batch ordering altered. Focused legacy/store/connect/settings regressions
+must pass, then the corrected exact head requires a new full Stable gate. No merge
+or deployment is authorized by the failed run.
+
 ## Personal-rule history isolation correction — #607 — 2026-11-26
 
 Final boundary trace reproduced a personal-rule State entering the shared factual
