@@ -1,3 +1,83 @@
+## RELEASE CANDIDATE — Explore follow-through (#603) — 2026-11-26
+
+The authorized scope/criteria immediately below were recorded in the draft PR
+BEFORE implementation. Current executable base remains#601 (main#602 is docs only).
+The four controlled reproductions failed on that exact code before fixes.
+Final focused suite:211 passed in12.79s; no full suite claimed yet. Candidate is
+not deployed. Keep draft until final browser/source review is complete.
+
+Corrections: screening and pending confirmation are separate signed queues.
+Exhausted pools /80-screen limits can continue one remaining full check per batch,
+up to eight total attempts. Deferrals cannot cause unbounded retries. Incomplete
+checking is distinguished from completed-empty. Exact source/tenant scope,
+publication/handoff identity,4MiB response reuse and48MiB reserve remain intact.
+Full competitive coordinates plus resilience replace weekly proxies for comparable
+confirmed choices; mixed/incomplete sources remain incomparable. Existing Decision
+indifference applies only with matching per-candidate bands, so a material-loss
+boundary cannot disappear inside a pairwise tolerance. Same-target terms with
+genuinely different timeline consequences remain linked choices. Inferred goal
+sets receive stable rotated coverage independent of tuple serialization. No
+Forecast/Value/Simulation baseline or outlook/objective policy changes.
+
+Decision's preliminary depth-investigation flag consumes the existing optimized
+role producer (reusing already computed lineups) and native future evidence;
+Current zero is not an inferred-only veto. Full gates still verify resilience,
+competitive effects, coverage, roles, future losses, cuts and protection. Complete
+path regressions include actual weekly/role production, controlled upstream full
+packets and negative damaged-roster cases. No new real-league depth conversion is
+claimed in the bounded cohort. Explicit Current instructions remain controlling.
+
+Evidence: ten paired identical-input cases,232 real screens PER implementation:
+seven retained cases plus three saved held-out requests frozen before fixes.
+Sources / exact State / generation remain those recorded in#602. Final-code replay
+reuses exact full-confirmation receipts from the frozen real screens; final
+replay adds ZERO full model calls. Source/provenance and per-case receipts are
+private in /workspace/private-fsffl-explore-followthrough-20261126. See
+comparison-index.private.json and reviewable-offers.private.md for exact packages,
+before/after changes and human worth-pursuing / negotiating-start / weak ratings.
+No raw owner/league packages are committed to this public repository.
+
+Concrete results, anonymized here:
+- A finite diagnostic pool of TWO genuine saved screens reproduced the reported
+  termination defect: before1 screen batch /1 full check /0 choices /no token;
+  after the SAME screens /2 bounded full checks /1 future choice, second batch
+  performs ZERO screens. The first package correctly fails. This is a scoped
+  terminal diagnostic, not a claim the original broad search exhausted there.
+- A former contender leader is downgraded:5.804pp vs5.518pp title gain is inside
+  existing Decision indifference, resilience is identical, and the alternative
+  sacrifices30.00 less3-Year /102.50 lessCareer contribution. Existing237.2316
+  Market indifference covers128 difference; no new odds-to-value exchange rate.
+- Preserve a smaller positional future exchange rather than erase it in favor
+  of a larger QB package: their Current effects cross a Decision material-loss
+  boundary. Distinct strategic costs are retained even for a rebuilding owner.
+- The combined Current+3-Year held-out case has a material-current example
+  (+3.892pp title gain plus positive3-Year) and a different retooling example
+  (positive3-Year, only+0.198pp title change, immaterial). Two extra full checks
+  stayed within that case's existing eight-check allowance; no stronger Current
+  claim is made for the latter.
+- Two constrained empty cases stay empty. Several ordinary requests are unchanged.
+  Controlled same-acquisition / tuple-order fixes are not falsely attributed to
+  every real search. Some ambitious multi-asset and distant-pick asks remain weak
+  negotiating terms despite passing model screens; human review explicitly says
+  so. Current materiality is NOT proof that every future price is justified.
+
+Normal390px/1440px and real terminal-pool390px browser journeys passed before the
+last evidence-boundary refinement; final exact-source browser rerun is pending.
+Full analysis, exact owned assets, state/generation handoff, Find More / automatic
+confirmation continuation worked without page errors or overflow. Final browser
+and resource receipts will be recorded in the release PR. Then one exact-head
+Stable candidate, expected-head squash and the existing manual Render deployment.
+Live deployment/runtime receipts belong in PR603 linked from this canonical record;
+post-deploy documentation batching should avoid repeating an application release.
+No new service, worker, migration, production refresh or recurring expense.
+
+Limits retained: Current sources have mixed vintages; pick estimates are
+provisional, future contribution is not optimized franchise utility, and owner
+history has no acceptance/rejection probability. These corrections improve actual
+selection and completeness; they do not certify all ambitious asks as good deals.
+Primary next acceptance is a brief physical iPhone usefulness check after accessible
+validation/deploy. No broader workstream or spending is authorized here.
+
 ## ACTIVE — Explore confirmation, evidence and timeline refinement — 2026-11-26
 
 Management authorizes bounded continuation of recommendation quality after#601

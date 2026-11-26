@@ -33,20 +33,40 @@ Focused future directions can still match while sacrificing Current production;
 all unrequested costs remain visible. This does not require every horizon to
 improve and does not turn inferred competitive state into a permanent owner rule.
 
-Among priority-compatible evaluated packages, compare focal Current weekly points,
-3-Year contribution, Career contribution and Market capital separately. Prefer
-an alternative only when it is at least as good in every complete coordinate and
-better in at least one. Counterparty compatibility is a constraint, not a goal of
-maximizing how much value we give away. Missing channels do not become zeros.
-Fold identical evaluated focal effects into linked alternatives while retaining
-each counterparty's own effects and required cuts. These comparisons grant no
-final recommendation, acceptance estimate or claim of future franchise utility.
+Among priority-compatible evaluated packages, compare native horizons and Market
+separately. Current weekly lineup points are only a preliminary approximation.
+When both exact-input full checks exist, use authoritative expected wins, playoff,
+first-place and championship effects plus resilience. Never compare a full vector
+to a weekly proxy, replace missing evidence with zero, or let the proxy overrule
+the full result. Different input identities remain incomparable.
 
-Small signed continuation receipts retain only fit IDs, four numeric coordinates
-and family identity, bound to the existing exact input/tenant scope. They keep
-counts, alternative folding and new-batch comparisons coherent without retaining
-State/model graphs, rerunning prior screens, or adding persistence. Existing
-80-screen, 4-entry/4-MiB response cache and request-token bounds remain in force.
+Existing Decision materiality can establish comparable competitive benefit when
+the per-candidate Decision bands agree AND pairwise differences are immaterial.
+Crossing a material-loss/gain boundary is not erased by a small pairwise delta.
+Within that existing indifference, less future sacrifice can make an admissible
+alternative preferable; outside it, preserve the independent Pareto choices.
+Market indifference also remains the existing upstream policy. No universal
+Current/future weighting, new player/pick value or future utility is introduced.
+
+Equivalent focal exchanges can be linked, with each partner's own cuts/effects.
+Different payments for the same acquisition remain visible when their timeline
+consequences are genuinely incomparable; a Current-first lexicographic sort is
+not a reason to discard them. Inferred goal sets receive stable rotated coverage
+independent of their tuple order. Explicit instructions remain binding.
+
+Screening and confirmation are separate finite work queues. Signed exact-input
+receipts retain enough package/effect/source identity for a confirmation-only
+batch after the screening pool or80-screen allowance is exhausted. No enumeration
+or rescreening occurs there. At most one full check/batch and eight attempts/search
+(including deferrals) prevent repeated resource-admission retries. Completed-empty,
+still-checking and unable-to-finish are distinct states. Existing4-entry/4MiB cache,
+expiry, tenant scope, memory reserve and exact scenario reuse remain controlling.
+
+A zero-lineup-change contender bench conversion may enter investigation through
+Decision-owned optimized role/future evidence. That preliminary hypothesis does
+not prove surplus or preserved resilience. Full competitive, role, lineup,
+coverage, resilience, future-loss, cut and protected-asset checks still own promotion.
+Explicit Current-only instructions do not silently become future instructions.
 
 ## Consumer experience and limits
 

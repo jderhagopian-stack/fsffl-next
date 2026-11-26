@@ -676,7 +676,10 @@ def evaluate_candidate_path(
             if view.optimized_lineup is not None
         }
 
+    lineup_cache={}
     def lineup(state, team_id):
+        key=(state.state_id,team_id)
+        if key in lineup_cache:return lineup_cache[key]
         baseline = (
             baseline_by_team.get(team_id)
             if state.state_id == league_state.state_id
@@ -684,7 +687,7 @@ def evaluate_candidate_path(
         )
         if baseline is not None:
             return baseline
-        return optimize_team_lineup(
+        value=optimize_team_lineup(
             state,
             effective_forecasts,
             team_id=team_id,
@@ -693,6 +696,8 @@ def evaluate_candidate_path(
             allow_unfilled_slots=True,
             model_version="market-preliminary-screen-lineup-v1",
         )
+        lineup_cache[key]=value
+        return value
 
     after_trade_lineups = {
         team_id: lineup(scenario.after, team_id)
@@ -802,8 +807,15 @@ def evaluate_candidate_path(
     completed = monotonic()
 
     from .simulation_forecasts import current_forecast_identity
+    from fsffl.team_utility.trade_position_context import summarize_trade_position_context
+    positions = [summarize_trade_position_context(league_state, legal_after,
+        lineup(league_state, leg.team_id), final_lineups[leg.team_id], leg,
+        (proposal.side_b if leg is proposal.side_a else proposal.side_a).sends)
+        for leg in (proposal.side_a,proposal.side_b)]
     return {
         **row,
+        "state_id_after":legal_after.state_id,
+        "positional_context":positions,
         "forecast_input": current_forecast_identity(league_state, forecast_evidence),
         "preliminary_decision_screen_evaluated": True,
         "bilateral_decision_evaluated": True,

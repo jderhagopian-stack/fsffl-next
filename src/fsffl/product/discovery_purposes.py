@@ -50,7 +50,10 @@ def pair_purpose_lanes(*,state_id,focal,other,context,other_context,strengths,li
             other.model_copy(update={'assets':tuple(receives)}),required_send=offer or required_send,
             required_receive=target or required_receive,purpose=purpose))
     # Competitive outlook orders motivations; it never excludes another owner.
-    future_other=next((g for g in other_context.objectives if g in (G.THREE_YEAR,G.CAREER)),None)
+    from fsffl.opportunity.strategic_goals import exploration_goals
+    other_goals=tuple(G(g) for g in exploration_goals(other_context.objectives,
+        inferred=not other_context.explicitly_directed,team_id=other_context.team_id))
+    future_other=next((g for g in other_goals if g in (G.THREE_YEAR,G.CAREER)),None)
     supply=(roster_fit(focal.assets,other.team_id) if G.CURRENT in other_context.objectives or future_other is None
         else ranked(focal.assets,metrics[future_other]))
     focal_lineup=lineups.get(focal.team_id)
