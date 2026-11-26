@@ -8,6 +8,11 @@ from .models import (
     DraftOrderPolicyParameter,
 )
 
+# Policy vocabulary is State configuration; Simulation owns execution.
+STANDARD_DRAFT_ORDER_MECHANISM_V1 = "standard_record_h2h_pf_then_playoff_elimination_v1"
+STANDARD_REGULAR_SEASON_TIEBREAK = "worse_record_then_resolvable_head_to_head_then_lower_points_for"
+STANDARD_PLAYOFF_ORDER = "round_eliminated_then_regular_season_tiebreaks_runner_up_champion"
+
 
 def resolve_draft_order_policy(
     policies: tuple[DraftOrderPolicyEvidence, ...],

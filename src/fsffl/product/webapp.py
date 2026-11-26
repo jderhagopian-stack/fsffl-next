@@ -94,6 +94,10 @@ from .progressive_discovery import ProgressiveDiscovery
 from .trade_simulation_runtime import build_post_trade_simulation_comparison
 from .waiver_action_runtime import build_actionable_waiver_comparison
 from .what_if_runtime import build_player_unavailable_scenario
+from .league_rules import (
+    LeagueRulesRequest, LeagueRulesPreviewRequest, build_rule_what_if, league_rules_payload,
+)
+from fsffl.state.account_rules import apply_account_rules, provider_rule_state, LeagueRuleChanges
 
 
 _STATIC_DIR = Path(__file__).with_name("static")
@@ -940,6 +944,9 @@ def create_app(
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
+    if persistence_store is not None and store.account_rule_settings.persistence is None:
+        from fsffl.persistence.account_rules import AccountRuleSettingsStore
+        store.account_rule_settings = AccountRuleSettingsStore(persistence_store)
     jobs = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence_store)
     reconciliation_lock = RLock()
     reconciliation_league_by_user: dict[str, str] = {}
@@ -1141,6 +1148,10 @@ def create_app(
         # resume and evict C-owned execution state.
         with store.lifecycle_operation(user_id):
             previous = store.get(user_id)
+            if store.prepare_account_league_state(user_id, league_state).state_id != league_state.state_id:
+                # An account edit won while provider acquisition was in flight.
+                # The stale request must retry instead of replacing saved rules.
+                return None
             if expected_generation is None:
                 fast_connect_activation = (
                     getattr(store, "activate_league_state_for_connect", None)
@@ -1566,7 +1577,7 @@ def create_app(
         if not league_external_id:
             raise HTTPException(status_code=422, detail="Sleeper league id cannot be blank")
         try:
-            league_state = state_loader(league_external_id)
+            league_state = store.prepare_account_league_state(user_id, state_loader(league_external_id))
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Unable to load Sleeper league: {exc}") from exc
         with store.lifecycle_operation(user_id):
@@ -1607,6 +1618,96 @@ def create_app(
             ):
                 reconcile(user_id)
         return runtime_context_payload(user_id)
+
+    @application.get("/api/league/rules")
+    def get_league_rules(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        try:
+            return league_rules_payload(store.get(user_id), store.account_rule_settings, user_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    def require_rule_edit(user_id, request):
+        runtime = store.get(user_id)
+        state = runtime.league_state
+        if state is None or state.state_id != request.expected_state_id:
+            raise HTTPException(status_code=409, detail="Your league changed. Reload these settings before continuing.")
+        saved = store.account_rule_settings.get(user_id, state.league.league_id, state.league.season)
+        if (saved.revision if saved else None) != request.expected_revision:
+            raise HTTPException(status_code=409, detail="Rules changed in another window. Reload before continuing.")
+        return runtime
+
+    def save_league_rules(user_id, request, *, reset=False):
+        with store.lifecycle_operation(user_id):
+            runtime = require_rule_edit(user_id, request)
+            running = jobs.current(user_id)
+            if store.working_generation_active(user_id) or (running is not None and running.status in {
+                IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING,
+            }):
+                raise HTTPException(status_code=409, detail="League analysis is running. Save your rules when it finishes.")
+            source = provider_rule_state(runtime.league_state)
+            existing = store.account_rule_settings.get(user_id, source.league.league_id, source.league.season)
+            changes = LeagueRuleChanges() if reset else request.changes
+            draft_order = None if reset else request.draft_order
+            if (existing is not None and existing.changes == changes and existing.draft_order == draft_order
+                    and (not existing.has_overrides or (
+                        runtime.league_state.rule_configuration is not None and
+                        runtime.league_state.rule_configuration.revision == existing.revision))):
+                return {**league_rules_payload(runtime, store.account_rule_settings, user_id),
+                        "message": "Already using these settings."}
+            candidate = store.account_rule_settings.prepare(
+                user_id, source.league.league_id, source.league.season,
+                changes, draft_order, provider_rules=source.league.rules,
+            )
+            try:
+                target = apply_account_rules(source, candidate)
+                store.account_rule_settings.save(user_id, candidate, expected_revision=request.expected_revision)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            except Exception as exc:
+                _logger.exception("Account league rules could not be saved")
+                raise HTTPException(status_code=503, detail="Your rules could not be saved. Please try again.") from exc
+            activated = activate_state_with_resource_boundary(user_id, target, reason="account_rule_change")
+            if activated is None:
+                raise HTTPException(status_code=409, detail="Rules saved. Reload to apply them to the current league.")
+            payload = league_rules_payload(store.get(user_id), store.account_rule_settings, user_id)
+            payload["message"] = "Sleeper settings restored." if reset else "Your rules are saved."
+            if activated.selected_team_id is not None:
+                try:
+                    payload["job"] = _start_intelligence_reconciliation(user_id, sync_state=False)
+                    payload["message"] += " Updating your league analysis."
+                except HTTPException:
+                    payload["analysis_pending"] = True
+                    payload["message"] += " Run league analysis when the current work finishes."
+            return payload
+
+    @application.post("/api/league/rules")
+    def put_league_rules(request: LeagueRulesRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        return save_league_rules(user_id, request)
+
+    @application.post("/api/league/rules/reset")
+    def reset_league_rules(request: LeagueRulesRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        return save_league_rules(user_id, request, reset=True)
+
+    @application.post("/api/league/rules/preview")
+    def preview_league_rules(request: LeagueRulesPreviewRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = require_rule_edit(user_id, request)
+        source = provider_rule_state(runtime.league_state)
+        candidate = store.account_rule_settings.prepare(
+            user_id, source.league.league_id, source.league.season, request.changes,
+            request.draft_order, saved_at=runtime.league_state.as_of, provider_rules=source.league.rules,
+        )
+        try:
+            with heavy_claim(kind="rule_what_if", key=f"{user_id}:{runtime.league_state.state_id}"):
+                require_rule_edit(user_id, request)
+                result = build_rule_what_if(runtime, candidate, simulation_loader=simulation_loader,
+                                            stage=request.scenario_stage)
+                # Never return a stale preview as belonging to a later account edit.
+                require_rule_edit(user_id, request)
+                return result
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        finally:
+            reclaim_phase_memory(f"{user_id}:rule_what_if")
 
     @application.post("/api/behavioral/refresh")
     def refresh_behavioral_history(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -1873,7 +1974,7 @@ def create_app(
                     IntelligenceJobPhase.REFRESHING_STATE,
                     "Syncing canonical Sleeper State into an unpublished working generation.",
                 )
-                synced_state = state_loader(starting_external_id)
+                synced_state = store.prepare_account_league_state(user_id, state_loader(starting_external_id))
                 log_reconciliation_memory(user_id, "state_sync_complete")
                 with store.lifecycle_operation(user_id):
                     active_before_write = require_active_league_identity()

@@ -334,6 +334,7 @@ def install_hosted_connect_routes(
                 return
             with acquisition_cause("connection"):
                 league_state = state_loader(league_external_id)
+                league_state = runtime_store.prepare_account_league_state(user_id, league_state)
             if not _matches_sleeper_league(league_state, league_external_id):
                 raise ValueError("Sleeper state loader returned a different league")
             current_job = jobs.current(user_id)
@@ -487,6 +488,7 @@ def install_hosted_connect_routes(
 
             with acquisition_cause("unknown"):
                 league_state = state_loader(league_external_id)
+                league_state = runtime_store.prepare_account_league_state(user_id, league_state)
             if not _matches_sleeper_league(league_state, league_external_id):
                 raise ValueError("Sleeper state loader returned a different league")
             changed = (

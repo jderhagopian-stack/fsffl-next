@@ -1,3 +1,132 @@
+## Full-suite compatibility correction — #607 — 2026-11-26
+
+Stable45881123080 completed with3 failures /3,471 passed /19 skipped. Two legacy
+custom-store persistence fixtures omit the new optional rule_configuration field;
+checkpoint branching now treats an absent optional field as None. The third gate
+checks explicit fresh-connect-before-provider-acquisition sequencing; keep provider
+loading and account-rule resolution as separate statements so that standing contract
+remains inspectable. No existing tests weakened, model/input/rule semantics changed,
+or market batch ordering altered. Focused legacy/store/connect/settings regressions
+must pass, then the corrected exact head requires a new full Stable gate. No merge
+or deployment is authorized by the failed run.
+
+## Personal-rule history isolation correction — #607 — 2026-11-26
+
+Final boundary trace reproduced a personal-rule State entering the shared factual
+State-history checkpoint. Corrected the existing checkpoint to retain the embedded
+provider State instead; private derived State durability stays in account_rule_state.
+The regression failed before and passes after on complete controlled evidence.
+No new history table, reconstruction, rule inference or historical deletion. Old
+untouched provider snapshots keep their identity and normal history behavior.
+The corrected head requires a new exact Stable gate; superseded heads cannot deploy.
+
+## Static delivery correction — #607 — 2026-11-26
+
+Home/Atlas focused checks correctly require the changed product_shell.js outer
+cache key to match its actual Git blob. The manual candidate suffix violated
+that standing delivery contract. Restored the content-derived shell/navigation
+keys in index.html; existing tests remain unchanged. This is delivery only, with
+no rule/model/ownership changes. The previous in-flight Stable head is superseded;
+only the corrected exact head can authorize merge/deploy.
+
+## Release compatibility correction — #607 — 2026-11-26
+
+Stable45879500724 correctly rejected28d55f77e67351cc99a2b174f7571bbe19473f24
+at collection: a nested quoted f-string in the new capacity error copy parses on
+local Python3.12 but not supported CI Python3.11. No merge/deploy occurred. PR was
+returned to draft; copy now uses a separate noun variable. All14 changed Python
+files pass the Python3.11 grammar check, and focused settings tests are repeated.
+The next exact stable head must pass the full release gate; earlier failures and
+superseded/cancelled runs do not authorize promotion. No model or policy changes.
+
+## Roster-integrity release correction — #607 — 2026-11-26
+
+Bounded final review reproduced three unsafe configuration transitions on complete
+controlled States: reducing occupied IR/taxi limits to zero, or active capacity
+below held players, was accepted without selecting roster moves. The editor now
+rejects reductions that introduce this overfill and explains the required roster
+moves. It never cuts/reclassifies players by assumption. Compatible reductions and
+capacity increases remain eligible; provider facts and existing overages are not
+rewritten. Save AND What-If share this State validation. Three regressions cover
+both paths and unchanged ownership;130 affected checks pass. Controlled before/
+after evidence is retained privately. Earlier Stable45878836777 was superseded;
+only the corrected exact-head full-suite result can authorize promotion.
+
+## RELEASE CANDIDATE — Personal League Rules & Settings (#607) — 2026-11-26
+
+User approval clarified individual-account authority: no commissioner gate. Current
+main/live #606 remains09642cafdb09c33ce15218958a6215fa3f4a6761, Render
+ dep-dc46qt15efls73d81fcg (verified live17:35UTC; one existing0.5CPU/512MiB service).
+
+Candidate adds More → League Rules & Settings: imported settings; personal roster,
+lineup, scoring and standard playoff edits; explicit draft-order terms; reset;
+provider-conflict review; unsaved What-If preview. League/season/account scope is
+part of durable settings identity. Two small settings artifacts per changed save
+(history + current pointer), bounded128-entry cache, existing pooled adapter only;
+no migration. Personal derived State is retained under account scope and does not
+replace shared provider State/team snapshot rows. Empty config preserves legacy
+State IDs. Refresh resolves saved rules before activation; stale requests cannot
+supersede a newer edit. Restart recovers settings committed before interrupted
+activation. Saves validate before activation and fail visibly on storage failure.
+Repeated equivalent saves do not republish/recalculate. What-If State cannot be
+checkpointed as saved defaults. Rule changes use existing State resource boundary
+and owned reconciliation; source facts/ownership and model coefficients stay intact.
+
+Local retained-input acceptance: 390px full editor → lineup What-If → save explicit
+Max PF terms → reload/reopen → reset PASS;1440px navigation/layout PASS. Twelve-team
+What-If consumed existing5,000-world PROVISIONAL authority; source State, Forecast,
+Simulation baseline and saved settings remained unchanged. No browser errors or
+horizontal overflow. RSS maximum observed283,848,704B, below existing429,496,729B
+admission budget; this is LOCAL evidence, not a hosted peak claim. Actual inputs,
+results/screenshots stay private: /workspace/private-league-rules-20261126.
+
+Limits are explicit in product: unsupported Max PF/custom rules are saved as
+explicit policy, making slot projections unavailable rather than using record.
+No new future Max PF forecasting method/assumed FSFFL bylaw is introduced. Current
+scoring/season-length What-If needs a new governed ROS statistical cohort; the
+preview explains that limitation and does not relabel saved points. Saving those
+rules uses the existing full Forecast/ROS rebuild. Specific imported playoff graphs
+are retained; this editor changes only supported standard format settings.
+
+Focused tests and final exact-head release receipts belong inPR607. Physical iPhone
+and authenticated hosted settings acceptance are separate; neither is claimed by
+a passing suite/local browser. No added service, recurring expense, configuration
+change, production refresh or historical deletion.
+
+## AUTHORIZED — Account League Rules & Settings — 2026-11-26
+
+Management approved implementation after clarifying that every individual account
+controls its own analysis rules; commissioner permission and cross-account rule
+changes are out of scope. Base main/live #606:09642cafdb09c33ce15218958a6215fa3f4a6761,
+Render dep-dc46qt15efls73d81fcg. Existing State draft-policy contracts and the
+accepted generic fallback remain the foundation. This supersedes earlier wording
+that the user must repeat already-supplied FSFFL rules: recover prior evidence;
+do not label absent runtime configuration as absent prior instructions.
+
+Acceptance, recorded before implementation:
+- Accessible mobile League Rules & Settings page prepopulates canonical provider
+  scoring, lineup, roster and playoff settings; draft order clearly distinguishes
+  a confirmed rule from an estimated fallback.
+- User-scoped, league/season-scoped saved overrides persist using existing bounded
+  persistence, survive reconnect/refresh/restart, and never change another account
+  or Sleeper. Provider values remain recoverable; reset is explicit.
+- Validated rule changes enter canonical State before existing Forecast/Simulation/
+  Value/Decision/Search consumers. New identities prevent stale intelligence reuse.
+  Preserve ownership, legality and unrelated facts. Show affected results pending
+  rather than silently presenting old results as using new rules.
+- Save uses existing reconciliation/admission. GETs never compute. Concurrency and
+  failed persistence cannot silently discard an override or publish stale work.
+- What-If previews do not save defaults or mutate published State/intelligence;
+  use existing governed forecast replay and bounded scenario computation where
+  supported. Explicitly identify unsupported draft-order models rather than
+  substituting the generic record fallback or treating current Max PF as final.
+- Draft-order editor captures non-playoff ordering, playoff ordering and ties as
+  separate explicit terms. No invented FSFFL bylaw, universal preference weight,
+  new Max PF forecasting method, new paid service or recurring expense.
+- Focused isolation/refresh/restore/identity/preview regressions, mobile/browser
+  journey, exact-head stable suite/review then merge/manual deployment receipts.
+  Settings delivery does not claim Max PF forecasting is finished if unsupported.
+
 ## SEARCH CANDIDATE — funded terms and positional anchors — 2026-11-26
 
 Input release#605 is merged as0a51842ee94f4d94ef1a1176b574b9ebcd2c9133;

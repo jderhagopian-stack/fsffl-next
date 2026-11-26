@@ -69,6 +69,8 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     ) -> None:
         super().__init__()
         self._persistence = persistence_store if persistence_store is not None else persistence_store_from_env()
+        from fsffl.persistence.account_rules import AccountRuleSettingsStore
+        self.account_rule_settings = AccountRuleSettingsStore(self._persistence)
         self._state_history = state_snapshot_store
         self._restore_attempted: set[str] = set()
         # Each active user owns one ordered checkpoint worker, but idle workers are
@@ -205,7 +207,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         if self._state_history is None:
             return
         try:
-            self._state_history.save(league_state)
+            from fsffl.state.account_rules import provider_rule_state
+            # Shared factual replay must not learn a personal analysis rule.
+            # The derived State remains durable in its private artifact scope.
+            self._state_history.save(provider_rule_state(league_state))
         except Exception as exc:  # history retention must also fail open
             _logger.warning("FSFFL State history checkpoint failed league=%s error=%s", league_state.league.league_id, exc)
 
@@ -576,6 +581,19 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             if snapshot is None:
                 return current
 
+            try:
+                resolved_state = self.prepare_account_league_state(user_id, snapshot.league_state)
+            except Exception:
+                self._restore_attempted.discard(user_id)
+                raise
+            if resolved_state.state_id != snapshot.league_state.state_id:
+                # A crash can occur after the small settings commit but before
+                # State activation. Never attach the old rule generation on restore.
+                context = super().set_league_state(user_id, resolved_state)
+                if snapshot.selected_team_id is not None:
+                    context = super().select_team(user_id, snapshot.selected_team_id)
+                self._checkpoint_async(user_id, context)
+                return context
             super().set_league_state(user_id, snapshot.league_state)
             if snapshot.forecast_evidence is not None:
                 restored = super().set_intelligence_bundle(
