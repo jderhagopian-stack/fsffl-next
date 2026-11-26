@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fsffl.trade_decision.scenario import apply_bilateral_trade_with_ir_placements as apply_bilateral_trade
+
 import logging
 from time import monotonic
 from typing import Any, Callable
@@ -11,7 +13,6 @@ from fsffl.team_utility import (
     optimize_team_lineup,
 )
 from fsffl.trade_decision import (
-    apply_bilateral_trade,
     assess_bilateral_materiality,
     assess_negotiation_feasibility,
     assess_package_economics,
@@ -127,6 +128,7 @@ def build_post_trade_simulation_comparison(
         forecast_as_of=forecast_evidence.simulation_evaluation_as_of)
     roster_resolution = resolve_mandatory_roster_cuts(
         scenario.after,
+        before_state=scenario.before,
         protected_player_ids_by_team=protected,
         market_values=market_values,
     )

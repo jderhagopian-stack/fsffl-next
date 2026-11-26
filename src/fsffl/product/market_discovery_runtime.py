@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fsffl.trade_decision.scenario import apply_bilateral_trade_with_ir_placements as apply_bilateral_trade
+
 from collections import OrderedDict, defaultdict
 import logging
 from collections.abc import Callable, Iterable, Mapping
@@ -24,7 +26,6 @@ from fsffl.opportunity import (
 from fsffl.team_utility import compare_position_strengths, optimize_team_lineup
 from fsffl.team_utility.utility import OwnerStrategicPosture
 from fsffl.trade_decision import (
-    apply_bilateral_trade,
     assess_package_economics,
     assess_preliminary_bilateral_screen,
     bind_owner_behavior_evidence,
@@ -721,6 +722,7 @@ def evaluate_candidate_path(
     )
     roster_resolution = resolve_mandatory_roster_cuts(
         scenario.after,
+        before_state=scenario.before,
         protected_player_ids_by_team=protected,
         market_values=market_values,
     )

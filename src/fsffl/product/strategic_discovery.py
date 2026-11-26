@@ -428,7 +428,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         if targeted and TradeObjective.CURRENT in context.objectives and hint_checks<hint_limit and len(proposal.side_a.sends)+len(proposal.side_b.sends)<=4:
             hint_checks+=1
             try:
-                from fsffl.trade_decision import apply_bilateral_trade
+                from fsffl.trade_decision.scenario import apply_bilateral_trade_with_ir_placements as apply_bilateral_trade
                 from .simulation_forecasts import current_forecast_coordinates
                 hint_forecasts,hint_horizon,hint_cutoff=current_forecast_coordinates(runtime.league_state,runtime.forecast_evidence)
                 before=published_lineups[context.team_id]
