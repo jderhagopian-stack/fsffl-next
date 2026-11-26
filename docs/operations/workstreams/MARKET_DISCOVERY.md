@@ -1,3 +1,73 @@
+## LIVE — Explore real-league recommendation quality (#601) — 2026-11-26
+
+Implementation, paired saved-league review, browser acceptance and deployment are
+complete. Physical iPhone / authenticated live-owner acceptance is PENDING; do not
+claim commercial or whole-platform acceptance. This remains the primary quality
+milestone; iterate from actual owner feedback rather than reopen settled models.
+
+Release: candidate9fe2fd8b34a931f47cf94930afb1bed158d43d23; Stable full-suite
+run45759656399 / job139706492824 succeeded on that exact head, including BOTH head
+guards: 3,416 passed,19 skipped,1 warning,415.15s. Focused final groups140 and46
+passed (overlap; not an additive total). Expected-head squash PR601 merged as
+30ff3093340ddacb3a78e1ff28dab6731beec0f3; merge tree234cc8fcce757dfc957ce1af50bb51f985edfa13
+matches tested tree exactly. All19 changed file blobs matched the local acceptance
+source. No second suite on merge. Procedural exact-head gate is verified. GitHub subsequently rejected a direct
+documentation checkpoint because main requires a PR and two status checks;
+protection names remain inaccessible to this integration (HTTP403).
+
+Render existing service srv-dae6k7vqj5pc73af7bt0, deploy dep-dc3s1n17lnhs73elke60
+LIVE at2026-11-26T05:18:44.317346Z on30ff3093. Full startup restore at05:19:02Z
+confirmed the saved State below, Forecast/Simulation/Value=True, complete=True,
+Intrinsic=full,12 mapped owner profiles. Current RSS358,883,328 bytes,
+peak385,089,536,budget429,496,720; active=None,waiting=0. Native pick release and
+Career read hit existing persistence. No new production refresh, model materialize,
+worker, migration, service, plan or recurring expense. Auto-deploy remains off,
+one0.5CPU/512MiB instance. This post-deploy checkpoint changes documentation ONLY and is routed through
+a separate PR as required by protected main. No further deployment is needed.
+The existing PR workflows own its checks; no manual suite repetition or gate
+bypass is introduced. Main can be one documentation checkpoint ahead of the
+deployed executable commit.
+
+Direct before/after evidence: seven identical private saved requests,184 roster /
+weekly / cut screens PER implementation, covering four franchise timelines,
+player/pick packages, cuts, missing-history omission, explicit protected/youth /
+combined filters and a valid Current-picks empty case. Final replay index and
+source hashes: /workspace/private-fsffl-discovery-20261126/final-comparison-index.private.json
+(directory700/files600; no raw league/owner packages published). All FOUR former
+managed leaders fail the Current-funded owner's existing materiality check.
+Corrected initial32 screens yield THREE distinct managed choices: meaningful
+Current improvement (title odds+4.354 percentage points, visible future cost),
+a younger-QB future direction (title odds-5.836pp, not sold as win-now), and draft
+capital (visible near-term sacrifice and provisional pick evidence). A newly
+found funded contender package adds5.518pp title odds while the rebuilding other
+side gains future asset contribution. A tempting positive-both-weekly package
+fails the counterparty's full material check and is withdrawn. A tiny-gain /
+future-window reserve-QB exchange also stays out, with no player-specific rule.
+Both inferred owners may weigh timelines; explicit priority sacrifices stay
+reviewable. None of these results predicts owner acceptance or future utility.
+
+Final real saved-league mobile390px and desktop1440px Chromium journeys passed:
+initial32 screens / three choices; Find More40 / four; exact owned package into
+Trade Center; quick/analyze/simulate200; Evaluation complete and exact Simulation
+reuse; no page errors or horizontal overflow. Local current/max observed RSS
+314,658,816 within429,496,729 budget, no active/waiting work. An ordinary restored
+roster read afterward returned200 in43.27ms locally; this is NOT hosted latency.
+Physical iPhone was not available here. Only that brief real-owner check remains:
+reload Explore, inspect whether the leading options are worth pursuing, Find More,
+then open one in Trade Center. No Intelligence Refresh is needed for this code
+release. Investigate any reported weak package against its exact saved inputs.
+
+Limits: bounded search is not exhaustive. Full-season retained-baseline freshness
+is still unresolved upstream; current ROS separately mixes in-season supplemental,
+season-comparison, sparse-production and unavailable-player evidence. It is
+neither uniformly fresh independent multi-source nor wholly stale. Future asset
+contribution and provisional pick-slot sensitivity are not optimized future team
+utility or calibrated outcome uncertainty. Final Trade Center can appropriately
+say REVIEW where a surviving strategic choice has a real sacrifice. Owner history
+supports hypotheses and contextual precedents, never rejection/acceptance odds.
+The primary next action is owner usefulness feedback on this released shortlist,
+not a new infrastructure or report-module workstream.
+
 ## Final saved-case guard — 2026-11-26
 
 Real-league replay catches an important limit of a depth-conversion CANDIDATE:
