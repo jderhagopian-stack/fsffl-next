@@ -4,7 +4,7 @@ Market totals only locate a plausible negotiating envelope. They never score a
 franchise improvement, price an asset, or grant Decision authority.
 """
 from bisect import bisect_left, bisect_right
-from collections import deque
+from collections import deque, Counter
 from itertools import combinations, zip_longest
 from math import isfinite
 
@@ -101,23 +101,31 @@ def generate_guided_strategic_packages(lanes, *, as_of, bounds, market_values, e
     # construct purposeful packages. This is a compute allocation, not a score.
     exploration = max(1, bounds.max_pair_visits // 8)
     guided_limit = bounds.max_pair_visits-exploration
-    queues = deque((lane, _lane_stream(lane, bounds=bounds, values=market_values,
-                                      tolerance=economic_tolerance)) for lane in lanes)
-    by_id = {}; hypotheses = {}; visits = 0; groups = set()
-    while queues and visits < guided_limit and len(by_id) < bounds.max_candidates:
-        lane, stream = queues.popleft()
+    def path(lane):
+        return ('owner_history' if lane.purpose.kind=='observed_acquisition' else 'team_purpose') if lane.purpose else 'ordinary'
+    queues={name:deque() for name in ('ordinary','team_purpose','owner_history')}
+    for lane in lanes:
+        queues[path(lane)].append((lane,_lane_stream(lane,bounds=bounds,values=market_values,tolerance=economic_tolerance)))
+    # Resource allocation only: ordinary discovery keeps half the guided turns
+    # when all paths have work. Empty paths yield their turns to available work.
+    schedule=deque(('ordinary','ordinary','team_purpose','owner_history'))
+    by_id = {}; hypotheses = {}; visits = 0; groups = set(); path_visits=Counter()
+    while any(queues.values()) and visits < guided_limit and len(by_id) < bounds.max_candidates:
+        name=schedule[0];schedule.rotate(-1)
+        if not queues[name]:continue
+        lane, stream = queues[name].popleft()
         try:
             send, receive = next(stream)
         except StopIteration:
             continue
-        visits += 1; groups.add((lane.name, lane.counterparty.team_id))
+        visits += 1; path_visits[name]+=1; groups.add((lane.name, lane.counterparty.team_id))
         packages = [TradePackageSeed(team_id=team, assets=assets, canonical_id=canonical_package_id(team, assets))
                     for team, assets in ((lane.focal.team_id, send), (lane.counterparty.team_id, receive))]
         seed = generate_bilateral_trade_proposals((packages[0],), (packages[1],), as_of=as_of,
             policy=TradePairSearchPolicy(max_candidate_pairs=1)).proposals[0]
         by_id.setdefault(seed.point_id, seed)
         hypotheses.setdefault(seed.point_id, set()).add(lane.name)
-        queues.append((lane, stream))
+        queues[name].append((lane, stream))
     extra, diagnostics = generate_strategic_packages(lanes, as_of=as_of,
         bounds=bounds.model_copy(update={'max_pair_visits':bounds.max_pair_visits-visits,
                                         'max_candidates':bounds.max_candidates}))
@@ -126,11 +134,10 @@ def generate_guided_strategic_packages(lanes, *, as_of, bounds, market_values, e
             break
         by_id.setdefault(row.seed.point_id, row.seed)
         hypotheses.setdefault(row.seed.point_id, set()).update(row.hypotheses)
-    from collections import Counter
     seeds = tuple(StrategicSeed(seed, tuple(sorted(hypotheses[key]))) for key, seed in by_id.items())
     return seeds, {**diagnostics, 'candidate_count':len(seeds),
         'pair_visits':visits+diagnostics['pair_visits'], 'duplicate_pair_visits':visits+diagnostics['pair_visits']-len(seeds), 'guided_pair_visits':visits,
-        'exploration_pair_visits':diagnostics['pair_visits'],
+        'exploration_pair_visits':diagnostics['pair_visits'], 'guided_path_visits':dict(path_visits),
         'counterparties_visited':len({team for _,team in groups} | {s.seed.proposal.side_b.team_id for s in extra}),
         'shapes':dict(Counter(f'{len(s.seed.proposal.side_a.sends)}_for_{len(s.seed.proposal.side_b.sends)}' for s in seeds)),
         'hypotheses':dict(Counter(h for s in seeds for h in s.hypotheses)),

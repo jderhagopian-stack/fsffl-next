@@ -445,3 +445,14 @@ protected assets, market feasibility and missing evidence. Measure previous vers
 corrected grouping on the same bounded live searches before expanding generation
 or pick-based repairs. Asset contribution remains distinct from roster utility;
 no new owner policy or universal value. See `docs/opportunity/priority-aware-discovery.md`.
+
+### Purpose-driven discovery with additive owner evidence — 2026-11-26
+
+Connect competitive outlook, actual roster options and positive historical evidence
+before package evaluation. Owner intelligence broadens ingredient pools and possible
+partners; absence never excludes an owner or ordinary path. Preserve user direction,
+existing valuations and bilateral authority. Deliver pinned upgrade/depth/future
+purposes and bounded observed-acquisition routes through the existing generator,
+then validate different candidates and actual effects rather than more labels.
+Historical youth preferences remain gated by dated age evidence. See
+`docs/opportunity/purpose-discovery-delivery.md` and the strategic discovery contract.

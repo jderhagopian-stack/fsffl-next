@@ -5,7 +5,7 @@ from collections import Counter, deque
 from dataclasses import dataclass
 from datetime import datetime
 from itertools import combinations, zip_longest
-from typing import Annotated, Iterator
+from typing import Annotated, Iterator, Literal
 
 from pydantic import Field
 
@@ -22,6 +22,21 @@ class StrategicSearchBounds(FrozenModel):
     max_pair_visits: Annotated[int, Field(ge=1, le=640)] = 640
 
 
+class StrategicPurpose(FrozenModel):
+    """A source-bound reason to explore; never proof of benefit or surplus."""
+    kind: Literal['improve_lineup','test_depth_conversion','acquire_future_assets','observed_acquisition']
+    team_id: str
+    partner_team_id: str
+    source_state_id: str
+    position: str | None = None
+    horizon: str | None = None
+    asset_focus: Literal["young_players","picks"] | None = None
+    interest_kind: str | None = None
+    evidence_event_ids: tuple[str, ...] = ()
+    observed_trade_count: int | None = None
+    action_authority: Literal['hypothesis_only'] = 'hypothesis_only'
+
+
 @dataclass(frozen=True)
 class StrategicPackageLane:
     name: str
@@ -29,6 +44,7 @@ class StrategicPackageLane:
     counterparty: TeamTradeInventory
     required_receive: Asset | None = None
     required_send: Asset | None = None
+    purpose: StrategicPurpose | None = None
 
 
 @dataclass(frozen=True)
