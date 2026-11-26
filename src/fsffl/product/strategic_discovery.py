@@ -33,7 +33,7 @@ from .opportunity_posture import calculated_competitive_state, default_posture_f
 from dataclasses import replace
 
 _logger = logging.getLogger("fsffl.product.performance")
-_MODEL_VERSION = "strategic-discovery-v5:purposeful-bounded-packages"
+_MODEL_VERSION = "strategic-discovery-v6:purpose-and-owner-expansion"
 
 class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
@@ -182,6 +182,17 @@ def build_discovery_lanes(runtime, request, read):
         native_ranks = _ranks({a:metric_values[goal][a] for a in covered})
         market_ranks = _ranks({a:metric_values[TradeObjective.MARKET][a] for a in covered})
         rank_signals[goal] = {a:market_ranks[a]-native_ranks[a] for a in covered}
+    from .discovery_purposes import matching_published_lineups,pair_purpose_lanes
+    from .behavioral_runtime import cached_behavior_profile_for_team
+    from fsffl.behavioral.discovery_interests import observed_acquisition_interests
+    lineups=matching_published_lineups(runtime)
+    # Do not use position-strength snapshots from a different canonical State.
+    if not lineups:purpose_strengths={}
+    else:purpose_strengths=strengths
+    ages={p.player_id:p.age_years for p in state.player_states
+        if p.as_of<=state.as_of and p.age_years is not None and isfinite(p.age_years)}
+    interests={t.team_id:observed_acquisition_interests(cached_behavior_profile_for_team(state,t.team_id),as_of=state.as_of)
+        for t in (browser.focal_team,*teams)}
     lanes=[]
     for team in teams:
         other = inventories[team.team_id]
@@ -215,6 +226,10 @@ def build_discovery_lanes(runtime, request, read):
             add('rank_disagreement_'+goal.value,sends,receives)
         add('package_structure',_interleave_kinds(_descending(focal.assets,metric_values[TradeObjective.MARKET])),
             _interleave_kinds(_descending(other.assets,metric_values[TradeObjective.MARKET])))
+        lanes.extend(pair_purpose_lanes(state_id=state.state_id,focal=focal,other=other,context=context,
+            other_context=other_context,strengths=purpose_strengths,lineups=lineups,metrics=metric_values,
+            positions=positions,ages=ages,roster_fit=roster_fit,required_send=required_send,
+            required_receive=required,interests=interests))
         # Draft-capital packages need room for several picks, including shapes
         # that cannot arise from an alternating player/pick ingredient prefix.
         focal_picks = tuple(a for a in _descending(focal.assets,metric_values[other_goal]) if isinstance(a,PickAsset))
@@ -231,7 +246,7 @@ def build_discovery_lanes(runtime, request, read):
 
 def _representative_indices(rows,budget):
     """Categorical coverage, not a composite opportunity score."""
-    remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set(); shapes=set()
+    remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set(); shapes=set(); paths=set()
     while remaining and len(chosen)<budget:
         # Existing Decision economics precede diversity. Unknowns and strained
         # structures remain available for explicit review, never gain priority
@@ -242,6 +257,8 @@ def _representative_indices(rows,budget):
         eligible=complement or eligible
         smallest=min(len(rows[i]['send'])+len(rows[i]['receive']) for i in eligible)
         eligible=[i for i in eligible if len(rows[i]['send'])+len(rows[i]['receive'])==smallest]
+        different_path=[i for i in eligible if set(rows[i].get('discovery_paths',('ordinary',)))-paths]
+        eligible=different_path or eligible
         diverse=[i for i in eligible if rows[i]['counterparty_team_id'] not in teams]
         eligible=diverse or eligible
         diverse=[i for i in eligible if not ({a['asset_ref'] for a in rows[i]['send']} & sent)]
@@ -256,6 +273,7 @@ def _representative_indices(rows,budget):
         eligible=observed or eligible
         index=eligible[0]
         chosen.append(index);remaining.remove(index)
+        paths.update(rows[index].get('discovery_paths',('ordinary',)))
         teams.add(rows[index]['counterparty_team_id']);hypotheses.update(rows[index]['hypotheses'])
         sent.update(a['asset_ref'] for a in rows[index]['send'])
         shapes.add((len(rows[index]['send']),len(rows[index]['receive'])))
@@ -317,11 +335,18 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         for team in (browser.focal_team,*teams)}
     history_positions={p.player_id:p.position.value for p in runtime.league_state.players}
     history_context=prepare_trade_owner_history(runtime,profiles=history_profiles,player_positions=history_positions)
+    from .discovery_purposes import purpose_catalog,package_purposes,review_purposes
+    purposes=purpose_catalog(lanes)
+    ordinary_names={l.name for l in lanes if l.purpose is None}
     def make_row(proposal, point_id, hypotheses):
-        row={'point_id':point_id,'counterparty_team_id':proposal.side_b.team_id,
+        row={'point_id':point_id,'focal_team_id':proposal.side_a.team_id,'counterparty_team_id':proposal.side_b.team_id,
             'hypotheses':list(hypotheses),'send':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_a.sends],
             'receive':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_b.sends],
             'action_authority':'diagnostic_only','evidence_status':'not_roster_screened'}
+        row['discovery_purposes']=package_purposes(purposes,team_id=proposal.side_b.team_id,hypotheses=hypotheses)
+        paths={'ordinary'} if any(h in ordinary_names for h in hypotheses) or not row['discovery_purposes'] else set()
+        paths.update('owner_history' if p['kind']=='observed_acquisition' else 'team_purpose' for p in row['discovery_purposes'])
+        row['discovery_paths']=sorted(paths)
         row['owner_history']=build_trade_owner_history(runtime,proposal,context=history_context)
         evidence=bind_trade_intrinsic_values(runtime,proposal,read) if read is not None else unavailable_trade_intrinsic('Published native horizon evidence unavailable')
         def raw_priority_gain(team_context,label):
@@ -458,6 +483,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     unexamined_pool_count = len([point for point in by_point if point not in seen and point not in excluded])
     _attach_comparable_frontiers(rows,runtime)
     for row in rows:
+        review_purposes(row)
         row['display_context'] = discovery_display_context(row)
     team_contexts = {team.team_id: _competitive_context(runtime, team.team_id) for team in (browser.focal_team, *teams)}
     returned_picks = {a['asset_ref'][5:] for row in rows for a in (*row['send'],*row['receive'])
@@ -484,6 +510,9 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             'effective_preliminary_decision_budget':screen_cap,
             'changed_state_simulation_calls':0,'forecast_or_intrinsic_recomputations':0,
             'timing_ms':{'generation_and_raw_binding':round((generated-start)*1000,3),'decision_screens':round((completed-generated)*1000,3),'total':round((completed-start)*1000,3)},
+            'purpose_lane_count':sum(l.purpose is not None for l in lanes),
+            'owner_expansion_lane_count':sum(l.purpose is not None and l.purpose.kind=='observed_acquisition' for l in lanes),
+            'screened_discovery_paths':dict(Counter(path for r in screened for path in r.get('discovery_paths',()))),
             'screened_counterparties':len({row['counterparty_team_id'] for row in screened}),
             'screened_shapes':dict(Counter(f"{len(row['send'])}_for_{len(row['receive'])}" for row in screened)),
             'screened_hypotheses':dict(Counter(h for row in screened for h in row['hypotheses'])),

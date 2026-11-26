@@ -303,3 +303,41 @@ Trade Center presentation; then enrich owner intelligence and discovery.
 Directional evidence must not silently become final action authority. New
 materiality thresholds or cross-timeline exchange rates require their own
 versioned evidence and review; Market/display scales do not supply them.
+
+## Purpose-driven discovery and additive owner evidence — 2026-11-26
+
+Competitive outlook identifies potentially valuable improvements; roster construction
+identifies ways to pursue them and their costs. Owner history adds partners and
+package ideas. It must not eliminate ordinary paths, override explicit directions,
+rewrite a team's competitive state, or convert an observed acquisition into a claim
+that an owner will accept another one.
+
+Construct packages around source-bound purposes before evaluating them: a position
+upgrade, testing projected depth for draft capital, or acquiring younger/future
+assets. A contender can investigate depth-for-picks exchanges; a rebuild label does
+not forbid a player acquisition. Bench membership is a hypothesis about supply,
+not proof of surplus or replaceability. Same-State published lineups and positional
+strengths are required for lineup/depth purposes; missing evidence preserves the
+ordinary paths without creating a claim.
+
+Admitted, dated position acquisitions and receipt-backed pick acquisitions can add
+specific ingredient pools outside ordinary prefixes. These are descriptive positive
+examples, not learned preference scores. Missing history supplies no negative
+signal. Do not infer an age-at-trade or historical youth preference from today's
+player age. Current younger-player exploration and explicit age filters are separate.
+The stronger contextual/residual policy still needs its existing validation gates.
+
+Within existing guided-generation bounds, rotate two ordinary turns, one team-purpose
+turn and one owner-history turn while each has work. Empty paths yield unused turns.
+This is compute allocation, not a valuation weight. Preserve the existing exploration
+reserve, ingredient/package/visit/screen limits and economic/priority gates. Finite
+budgets cannot guarantee every previous package is retained; ordinary lane inventories
+and access remain intact, with explicit coverage diagnostics. Among otherwise
+comparable economically plausible packages, explore unvisited paths as well as
+partners and outgoing assets.
+
+Attach the purpose to each generated exchange and report what the unchanged
+bilateral screen actually supports. A preliminary asset-contribution gain is not
+optimized future franchise utility. A preserved current lineup is not confirmed
+injury resilience. Owner evidence remains a factual reason to explore; confirmed
+mutual benefit and acceptance remain separate questions.

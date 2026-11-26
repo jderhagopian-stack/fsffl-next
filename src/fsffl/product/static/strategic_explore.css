@@ -24,3 +24,5 @@
 /* Explore lives inside the generic screen. Its ID-scoped scrolling-table rule
    must not set a minimum width on this compact four-column comparison. */
 #generic-screen .strategic-explore .se-impact table{width:100%;min-width:0;max-width:100%;table-layout:fixed}
+
+.se-purpose{margin:10px 0;padding:9px 11px;border-left:2px solid #65d8d4;background:rgba(75,180,190,.07);font-size:12px}.se-purpose b,.se-purpose span{display:block}.se-purpose span{margin-top:4px;color:#a4bfce;line-height:1.4}
