@@ -60,8 +60,8 @@ def test_pick_history_adds_pick_led_offer_even_for_current_focused_counterparty(
 
 def test_upgrade_target_is_pinned_and_depth_is_not_called_surplus():
     args,wr,rb=pair()
-    args['lineups']={'a':NS(assignments=(NS(position=Position.RB,expected_points=10.),),bench_player_ids=(wr.player_id,)),
-                     'b':NS(assignments=(NS(position=Position.WR,expected_points=10.),),bench_player_ids=())}
+    args['lineups']={'a':NS(assignments=(NS(player_id="existing-rb",position=Position.RB,expected_points=10.),),bench_player_ids=(wr.player_id,)),
+                     'b':NS(assignments=(NS(player_id="existing-wr",position=Position.WR,expected_points=10.),),bench_player_ids=())}
     args['strengths']={'a':{Position.RB:NS(position=Position.RB,starter_count=1,strength_index=80.)}}
     lanes=pair_purpose_lanes(**args)
     upgrade=next(l for l in lanes if l.purpose.kind=='improve_lineup')
@@ -80,7 +80,7 @@ def test_user_offer_and_target_cannot_be_relaxed_to_follow_history():
     args['required_send']=args['focal'].assets[0]
     assert not any(l.purpose.kind=='observed_acquisition' for l in pair_purpose_lanes(**args))
     args['required_send']=None;args['required_receive']=args['other'].assets[-1]
-    args['lineups']={'a':NS(assignments=(NS(position=Position.RB,expected_points=10.),),bench_player_ids=())}
+    args['lineups']={'a':NS(assignments=(NS(player_id="existing-rb",position=Position.RB,expected_points=10.),),bench_player_ids=())}
     args['strengths']={'a':{Position.RB:NS(position=Position.RB,starter_count=1,strength_index=80.)}}
     assert not any(l.purpose.kind=='improve_lineup' for l in pair_purpose_lanes(**args))
 

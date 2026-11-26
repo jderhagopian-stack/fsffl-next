@@ -55,7 +55,8 @@ def _priority_group(row):
                         directions.append(direction if metric.get('higher_is_better', True) else -direction)
         sides.append({'gain': 1 in directions, 'loss': -1 in directions,
                       'unknown': not goals or None in directions})
-    common = {'current_uses_lineup_proxy': uses_proxy, 'decision_effect': 'no_disposition_change'}
+    common = {'current_uses_lineup_proxy': uses_proxy, 'decision_effect': 'no_disposition_change',
+              'priority_effects':dict(zip(('side_a','side_b'),sides))}
     if any(s['loss'] and not s['gain'] for s in sides):
         return {**common, 'group': 'priority_concern',
                 'limiting_gate':'priority_loss_without_offset', 'reason': 'Known losses in a franchise’s requested priorities, with no demonstrated offset in those priorities.'}

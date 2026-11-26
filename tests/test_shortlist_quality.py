@@ -98,3 +98,56 @@ def test_neutral_prior_can_group_equivalent_picks_but_never_known_slots_or_diffe
     assert key('x')==key('y') and key('x')!=key('z')
     read.pick_sources['y']['probability_basis']='published_simulation'
     assert key('x')!=key('y')
+
+
+def inferred_tradeoff(point='choice', *, current=(4,-2), three=(-20,20), career=(-30,30)):
+    r=evaluated(point,current=current,three=three,career=career)
+    for side,goals in [('side_a',['current_competitiveness','three_year_contribution','career_contribution']),
+                       ('side_b',['career_contribution'])]:
+        r['objective_assessment'][side]['context'].update(team_id=side,objectives=goals,source='calculated_state_posture_hypothesis_v1',explicitly_directed=False)
+    # Use complete native effects for BOTH sides, including cuts, never sign mocks.
+    r['horizon_asset_economics']={h:{'roster_adjusted':{side:{'status':'complete','roster_adjusted_intrinsic_delta':d[i]}
+        for i,side in enumerate(('side_a','side_b'))}} for h,d in [('three_year',three),('career',career)]}
+    r['display_context']=discovery_display_context(r)
+    return r
+
+
+def test_inferred_balanced_owner_can_consider_a_funded_current_future_exchange():
+    choice=inferred_tradeoff()
+    original=deepcopy(choice)
+    curate_shortlist([choice])
+    assert choice['shortlist_quality']['status']=='strategic_tradeoff'
+    assert choice['display_context']==original['display_context']
+    assert choice['horizon_asset_economics']==original['horizon_asset_economics']
+    assert choice['shortlist_quality']['decision_changed'] is False
+    saved=shortlist_receipt(choice)
+    curate_shortlist([saved])
+    assert saved['shortlist_quality']['status']=='strategic_tradeoff'
+    explicit=deepcopy(original)
+    explicit['objective_assessment']['side_a']['context']['explicitly_directed']=True
+    curate_shortlist([explicit])
+    assert explicit['shortlist_quality']['status']=='needs_terms'
+
+
+def test_narrow_future_window_requires_review_when_only_inferred():
+    r=inferred_tradeoff(current=(2,-8),three=(-30,30),career=(100,-100))
+    r['objective_assessment']['side_b']['context']['objectives']=['three_year_contribution']
+    r['display_context']=discovery_display_context(r)
+    curate_shortlist([r])
+    assert r['shortlist_quality']['reason']=='unconfirmed_future_window_preference'
+    assert r['shortlist_quality']['status']=='review'
+    # Long-term rebuilding can still give up Current AND 3-Year production.
+    rebuild=inferred_tradeoff(current=(-4,2),three=(-50,50),career=(300,-300))
+    rebuild['objective_assessment']['side_a']['context']['objectives']=['career_contribution']
+    rebuild['objective_assessment']['side_b']['context']['objectives']=['current_competitiveness']
+    rebuild['display_context']=discovery_display_context(rebuild)
+    curate_shortlist([rebuild])
+    assert rebuild['shortlist_quality']['status']=='shortlist'
+
+
+def test_small_current_gain_with_far_greater_future_sacrifice_loses_to_better_choice():
+    bad=inferred_tradeoff('bad',current=(.8,-1),three=(-420,420),career=(-493,493))
+    useful=inferred_tradeoff('useful',current=(4,-2),three=(-20,20),career=(-30,30))
+    curate_shortlist([bad,useful])
+    assert bad['shortlist_quality']['status']=='alternative'
+    assert useful['shortlist_quality']['status']=='strategic_tradeoff'

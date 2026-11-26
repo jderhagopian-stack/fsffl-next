@@ -51,10 +51,10 @@ def _lane_stream(lane, *, bounds, values, tolerance):
             total = sum(values[a] for a in target)
             lo, hi = bisect_left(totals, total-tolerance), bisect_right(totals, total+tolerance)
             # Hypothesis order and minimal complexity, not closest-price ranking.
-            seen_sizes=set()
+            seen_sizes=Counter()
             for _, _, offer in sorted(index[lo:hi], key=lambda row: (len(row[2]), row[1])):
-                if len(offer) in seen_sizes: continue
-                seen_sizes.add(len(offer))
+                if seen_sizes[len(offer)] >= 2: continue
+                seen_sizes[len(offer)] += 1
                 yield (target, offer) if reverse else (offer, target)
             # A larger bundle earns its size by reaching the same envelope when
             # no smaller bundle can. Stop adding assets as soon as it is reached.

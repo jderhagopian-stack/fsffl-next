@@ -20,7 +20,7 @@ from fsffl.state.models import FrozenModel, PlayerAsset, PickAsset
 from fsffl.trade_decision.roster_legality import TeamRosterLegalityResolution
 from fsffl.trade_decision.objectives import TradeObjective
 
-from .market_discovery_runtime import evaluate_candidate_path, evaluate_candidate_economics, _proposal_from_row
+from .market_discovery_runtime import evaluate_candidate_path, evaluate_candidate_economics, _proposal_from_row, _economic_band
 from .opportunity_search import _latest_season_forecast_means, _position_strengths
 from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center_view import build_trade_center_browser_view, owned_asset_index
@@ -33,7 +33,7 @@ from .opportunity_posture import calculated_competitive_state, default_posture_f
 from dataclasses import replace
 
 _logger = logging.getLogger("fsffl.product.performance")
-_MODEL_VERSION = "strategic-discovery-v7:compensated-priorities-and-alternatives"
+_MODEL_VERSION = "strategic-discovery-v8:goal-branches-and-funded-upgrades"
 
 class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
@@ -246,7 +246,7 @@ def build_discovery_lanes(runtime, request, read):
 
 def _representative_indices(rows,budget,*,visited_families=()):
     """Categorical coverage, not a composite opportunity score."""
-    remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set(); shapes=set(); paths=set(); families=set(visited_families)
+    remaining=list(range(len(rows))); chosen=[]; teams=set(); hypotheses=set(); sent=set(); shapes=set(); paths=set(); families=set(visited_families); goal_turn=0; axis_turns=Counter()
     while remaining and len(chosen)<budget:
         # Existing Decision economics precede diversity. Unknowns and strained
         # structures remain available for explicit review, never gain priority
@@ -255,10 +255,33 @@ def _representative_indices(rows,budget,*,visited_families=()):
         eligible=plausible or remaining
         complement=[i for i in eligible if rows[i].get('joint_priority_gain_hypothesis') or rows[i].get('pre_cut_horizon_complement_hypothesis')]
         eligible=complement or eligible
-        native_compatible=[i for i in eligible if rows[i].get('requested_native_compatibility') is True]
-        eligible=native_compatible or eligible
+        # Explore each requested direction before demanding a gain in every
+        # inferred horizon. A balanced inferred posture is not a veto on a
+        # useful current/future exchange. These remain unconfirmed hypotheses.
+        goals=next((r.get('search_objectives') for r in rows if r.get('search_objectives')),())
+        axis=None
+        if goals:
+            for offset in range(len(goals)):
+                goal=goals[(goal_turn+offset)%len(goals)]
+                directed=[i for i in eligible if (rows[i].get('priority_gain_hints') or {}).get(goal,0)>1e-9]
+                if directed:
+                    if goal=='current_competitiveness':
+                        targeted=[i for i in directed if any(p.get('kind')=='improve_lineup'
+                            and p.get('team_id')==rows[i].get('focal_team_id') for p in rows[i].get('discovery_purposes',()))]
+                        directed=targeted or directed
+                    eligible=directed;axis=goal;goal_turn=(goal_turn+offset+1)%len(goals);break
+        else:
+            native_compatible=[i for i in eligible if rows[i].get('requested_native_compatibility') is True]
+            eligible=native_compatible or eligible
         varied=[i for i in eligible if rows[i].get('focal_package_family',i) not in families]
         eligible=varied or eligible
+        if axis is not None:
+            # Allocate bounded small-package coverage rather than exhausting all
+            # singleton swaps before testing a funded positional improvement.
+            desired=(2,3,4)[axis_turns[axis]%3]
+            structured=[i for i in eligible if len(rows[i]['send'])+len(rows[i]['receive'])==desired]
+            eligible=structured or eligible
+            axis_turns[axis]+=1
         smallest=min(len(rows[i]['send'])+len(rows[i]['receive']) for i in eligible)
         eligible=[i for i in eligible if len(rows[i]['send'])+len(rows[i]['receive'])==smallest]
         different_path=[i for i in eligible if set(rows[i].get('discovery_paths',('ordinary',)))-paths]
@@ -267,6 +290,11 @@ def _representative_indices(rows,budget,*,visited_families=()):
         eligible=diverse or eligible
         diverse=[i for i in eligible if not ({a['asset_ref'] for a in rows[i]['send']} & sent)]
         eligible=diverse or eligible
+        if axis is not None:
+            # Magnitudes compare within ONE native coordinate, never a sum or
+            # a conversion between Current, future contribution and Market.
+            best=max(rows[i]['priority_gain_hints'][axis] for i in eligible)
+            eligible=[i for i in eligible if rows[i]['priority_gain_hints'][axis]>=best-1e-9]
         # Positive completed-trade precedents break otherwise equivalent ties.
         # Absence is never a rejection, preference estimate or economic veto.
         from fsffl.trade_decision.contextual_precedents import precedent_category
@@ -321,20 +349,20 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
     positions={p.player_id:p.position for p in runtime.league_state.players}
     same_state_simulation=(runtime.simulation_analytics is not None and runtime.simulation_analytics.league_view.context.league_state_id==runtime.league_state.state_id)
     published_lineups={v.team_id:v.optimized_lineup for v in (runtime.simulation_analytics.team_views if same_state_simulation else ()) if v.optimized_lineup is not None}
-    def current_upgrade_hypothesis(team_id,sent,received):
+    def current_gain_hint(team_id,sent,received):
         lineup=published_lineups.get(team_id)
         from .simulation_forecasts import current_forecast_coordinates
         try:
             _,hint_horizon,hint_cutoff=current_forecast_coordinates(runtime.league_state,runtime.forecast_evidence)
-        except (ValueError,AttributeError): return False
-        if lineup is None or lineup.horizon!=hint_horizon or lineup.as_of>hint_cutoff: return False
+        except (ValueError,AttributeError): return None
+        if lineup is None or lineup.horizon!=hint_horizon or lineup.as_of>hint_cutoff: return None
         floors={position:min(a.expected_points for a in lineup.assignments if a.position==position)
                 for position in {a.position for a in lineup.assignments}}
         assigned={a.player_id:a.expected_points for a in lineup.assignments}
         bench={position:max((forecast_means.get(pid,0.) for pid in lineup.bench_player_ids if positions.get(pid)==position),default=0.) for position in floors}
         outgoing=sum(max(0.,assigned.get(a.player_id,0.)-bench.get(positions.get(a.player_id),0.)) for a in sent if isinstance(a,PlayerAsset))
         incoming=sum(max(0.,forecast_means.get(a.player_id,0.)-floors.get(positions.get(a.player_id),0.)) for a in received if isinstance(a,PlayerAsset))
-        return incoming-outgoing>1e-9
+        return incoming-outgoing
     from .owner_history_runtime import build_trade_owner_history, prepare_trade_owner_history
     from .behavioral_runtime import cached_behavior_profile_for_team
     history_profiles={team.team_id:cached_behavior_profile_for_team(runtime.league_state,team.team_id)
@@ -352,7 +380,11 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             repair_inventories[inventory.team_id]=inventory.model_copy(update={'assets':assets})
     from .discovery_families import focal_package_family
     picks_by_id={p.pick_id:p for p in runtime.league_state.draft_picks}
+    hint_checks=0
+    hint_limit=min(64,pool_budget//8)
     def make_row(proposal, point_id, hypotheses):
+        nonlocal hint_checks
+
         row={'point_id':point_id,'focal_team_id':proposal.side_a.team_id,'counterparty_team_id':proposal.side_b.team_id,
             'hypotheses':list(hypotheses),'send':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_a.sends],
             'receive':[{'asset_ref':_ref(a),'label':options[_ref(a)].label} for a in proposal.side_b.sends],
@@ -373,13 +405,41 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         def possible_priority_gain(team_context,label,sent,received):
             supported={TradeObjective.THREE_YEAR:'three_year',TradeObjective.CAREER:'career'}
             for goal in team_context.objectives:
-                if goal==TradeObjective.CURRENT and current_upgrade_hypothesis(team_context.team_id,sent,received): return True
+                if goal==TradeObjective.CURRENT and (current_gain_hint(team_context.team_id,sent,received) or 0)>1e-9: return True
                 if goal in supported:
                     value=((evidence.get(supported[goal]) or {}).get(label) or {}).get('mean_delta')
                     if value is not None and value>1e-9: return True
             return False
         row['joint_priority_gain_hypothesis']=(possible_priority_gain(context,'side_a',proposal.side_a.sends,proposal.side_b.sends)
             and possible_priority_gain(contexts[proposal.side_b.team_id],'side_b',proposal.side_b.sends,proposal.side_a.sends))
+        # FLEX and replacement chains defeat the cheap independent-position
+        # subtraction. For bounded small targeted packages, reuse Team Utility's
+        # optimizer to order hypotheses. No weekly/cut or Simulation conclusion
+        # is granted by this deliberately pre-cut hint.
+        targeted=any(p.get('kind')=='improve_lineup' and p.get('team_id')==context.team_id
+            for p in row['discovery_purposes'])
+        optimized_hint=None
+        if targeted and TradeObjective.CURRENT in context.objectives and hint_checks<hint_limit and len(proposal.side_a.sends)+len(proposal.side_b.sends)<=4:
+            hint_checks+=1
+            try:
+                from fsffl.trade_decision import apply_bilateral_trade
+                from .simulation_forecasts import current_forecast_coordinates
+                hint_forecasts,hint_horizon,hint_cutoff=current_forecast_coordinates(runtime.league_state,runtime.forecast_evidence)
+                before=published_lineups[context.team_id]
+                if before.horizon!=hint_horizon or before.as_of>hint_cutoff:
+                    raise ValueError('Published lineup coordinates do not match Current Forecast')
+                after=optimize_team_lineup(apply_bilateral_trade(runtime.league_state,proposal).after,hint_forecasts,
+                    team_id=context.team_id,as_of=hint_cutoff,horizon=hint_horizon,
+                    allow_unfilled_slots=True,model_version='discovery-pre-cut-lineup-hint-v1')
+                optimized_hint=sum(a.expected_points for a in after.assignments)-sum(a.expected_points for a in before.assignments)
+            except (ValueError,KeyError,AttributeError):pass
+        row['search_objectives']=[g.value for g in context.objectives]
+        row['priority_gain_hints']={g.value:((optimized_hint if optimized_hint is not None else current_gain_hint(context.team_id,proposal.side_a.sends,proposal.side_b.sends))
+            if g==TradeObjective.CURRENT else ((evidence.get('three_year' if g==TradeObjective.THREE_YEAR else 'career') or {}).get('side_a') or {}).get('mean_delta'))
+            for g in context.objectives if g in (TradeObjective.CURRENT,TradeObjective.THREE_YEAR,TradeObjective.CAREER)}
+        row['priority_gain_hints']={g:v for g,v in row['priority_gain_hints'].items() if v is not None}
+        if optimized_hint is not None and optimized_hint>1e-9 and raw_priority_gain(contexts[proposal.side_b.team_id],'side_b'):
+            row['joint_priority_gain_hypothesis']=True
         row['counterparty_horizon_gain_current_pending']=(TradeObjective.CURRENT in context.objectives
             and raw_priority_gain(contexts[proposal.side_b.team_id],'side_b'))
         future_goals=[g for g in context.objectives if g in (TradeObjective.THREE_YEAR,TradeObjective.CAREER)]
@@ -460,6 +520,10 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
                 'horizon_asset_economics':evidence,'roster_adjusted_market_net':result.get('roster_adjusted_market_net'),
                 'objective_assessment':build_trade_objective_assessment(runtime,proposal,result,request.search_instructions),
                 'owner_history':result.get('owner_history',row.get('owner_history')), 'behavioral_context':result.get('behavioral_context'), 'decision_completeness':result.get('decision_completeness')})
+            # The raw negotiating envelope is superseded by the SAME existing
+            # economic policy applied to the actually resolved mandatory cuts.
+            row['pre_cut_economic_band']=row['preliminary_economic_band']
+            row['preliminary_economic_band']=_economic_band(runtime,row).value
         except Exception as exc:
             errors+=1
             row['evidence_status']='screen_unavailable'
@@ -541,6 +605,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
             'changed_state_simulation_calls':0,'forecast_or_intrinsic_recomputations':0,
             'timing_ms':{'generation_and_raw_binding':round((generated-start)*1000,3),'decision_screens':round((completed-generated)*1000,3),'total':round((completed-start)*1000,3)},
             'purpose_lane_count':sum(l.purpose is not None for l in lanes),
+            'pre_cut_lineup_hint_checks':hint_checks,'pre_cut_lineup_hint_limit':hint_limit,
             'owner_expansion_lane_count':sum(l.purpose is not None and l.purpose.kind=='observed_acquisition' for l in lanes),
             'screened_discovery_paths':dict(Counter(path for r in screened for path in r.get('discovery_paths',()))),
             'screened_counterparties':len({row['counterparty_team_id'] for row in screened}),

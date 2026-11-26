@@ -98,3 +98,30 @@ def test_real_current_upgrade_with_future_sacrifice_remains_an_explicit_tradeoff
     example=row(current=(8,4),three=(1,-1),career=(-80,80),goals_b=('career_contribution',))
     example['preliminary_economic_band']='robust_or_ordinary'
     assert discovery_display_context(example)['group']=='priority_tradeoff'
+
+
+def test_second_same_size_price_match_is_not_lost_before_bilateral_screen():
+    from fsffl.opportunity.guided_strategic_packages import _lane_stream
+    starter,bench,wr,target=(PlayerAsset(player_id=x) for x in ('starter','bench','wr','target'))
+    lane=StrategicPackageLane('upgrade',TeamTradeInventory(team_id='a',assets=(starter,bench,wr)),
+        TeamTradeInventory(team_id='b',assets=(target,)),required_receive=target)
+    values={starter:200.,bench:350.,wr:2800.,target:3150.}
+    options=list(_lane_stream(lane,bounds=StrategicSearchBounds(),values=values,tolerance=240.))
+    assert any(set(send)=={starter,wr} for send,receive in options)
+    assert any(set(send)=={bench,wr} for send,receive in options)
+    assert all(receive==(target,) for send,receive in options)
+
+
+def test_requested_directions_and_small_funded_shapes_receive_search_coverage():
+    def r(key,goal,hint,size):
+        return {'point_id':key,'focal_team_id':'a','counterparty_team_id':'b',
+            'preliminary_economic_band':'robust_or_ordinary','joint_priority_gain_hypothesis':True,
+            'search_objectives':['current_competitiveness','career_contribution'],
+            'priority_gain_hints':{goal:hint},'requested_native_compatibility':goal=='career_contribution',
+            'send':[{'asset_ref':key+str(i)} for i in range(size-1)],'receive':[{'asset_ref':'target'}],
+            'hypotheses':[]}
+    rows=[r('tiny_future','career_contribution',1,2),r('current','current_competitiveness',10,2),
+          r('funded','current_competitiveness',20,3),r('later','career_contribution',10,3)]
+    selected=_representative_indices(rows,4)
+    assert selected[0]==1  # Current is not suppressed by future-compatible offers.
+    assert set(selected)=={0,1,2,3}

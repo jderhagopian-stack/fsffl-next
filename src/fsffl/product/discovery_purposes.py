@@ -56,8 +56,26 @@ def pair_purpose_lanes(*,state_id,focal,other,context,other_context,strengths,li
     focal_lineup=lineups.get(focal.team_id)
     other_lineup=lineups.get(other.team_id)
     if focal_lineup is not None:
+        assigned={a.player_id:a.expected_points for a in focal_lineup.assignments}
+        # Generate affordable improvements before offering a franchise cornerstone.
+        # This estimates displaced starter production only to order ingredients;
+        # the full weekly/cut screen still owns the actual consequences.
+        bench_by_position={p:max((current.get(a,0.) for a in players(focal.assets)
+            if positions.get(a.player_id)==p and a.player_id in focal_lineup.bench_player_ids),default=0.)
+            for p in set(positions.values())}
+        def release_cost(a):
+            if not isinstance(a,PlayerAsset):return (1,0.,ref(a))
+            if a not in current:return (2,0.,ref(a))
+            cost=max(0.,assigned.get(a.player_id,0.)-bench_by_position.get(positions.get(a.player_id),0.))
+            return (0,cost,-current[a],ref(a))
+        ordered=tuple(sorted(focal.assets,key=release_cost))
+        benches=tuple(a for a in ordered if isinstance(a,PlayerAsset) and a.player_id not in assigned)
+        starters=tuple(a for a in ordered if isinstance(a,PlayerAsset) and a.player_id in assigned)
+        from itertools import zip_longest
+        upgrade_supply=tuple(a for pair in zip_longest(benches,starters) for a in pair if a is not None)
+        upgrade_supply+=tuple(a for a in ordered if not isinstance(a,PlayerAsset))
         weak=sorted((r for r in strengths.get(focal.team_id,{}).values()
-            if r.starter_count>0 and r.strength_index is not None and r.strength_index<100),
+            if r.starter_count>0 and r.strength_index is not None),
             key=lambda r:(r.strength_index,r.position.value))
         for strength in weak:
             floors=[a.expected_points for a in focal_lineup.assignments if a.position==strength.position]
@@ -66,7 +84,7 @@ def pair_purpose_lanes(*,state_id,focal,other,context,other_context,strengths,li
                 and a in current and current[a]>min(floors)]
             if required_receive is not None:candidates=[a for a in candidates if a==required_receive]
             for target in ranked(candidates,current)[:MAX_UPGRADE_TARGETS_PER_POSITION]:
-                add('improve_lineup',supply,roster_fit(other.assets,focal.team_id),
+                add('improve_lineup',upgrade_supply,roster_fit(other.assets,focal.team_id),
                     position=strength.position.value,target=target)
         # Bench membership is only a starting hypothesis. Full weekly replacement,
         # cuts and both-team objectives must still be evaluated for every package.
