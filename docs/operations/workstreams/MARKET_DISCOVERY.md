@@ -1,3 +1,54 @@
+## ACTIVE — Explore confirmation, evidence and timeline refinement — 2026-11-26
+
+Management authorizes bounded continuation of recommendation quality after#601
+and#602. Verified main d914f9320ee40afc6142ce28f57f7a7d5415e2fc; live executable
+30ff3093340ddacb3a78e1ff28dab6731beec0f3 / dep-dc3s1n17lnhs73elke60. Main differs
+only in two operations documents. All local tracked blobs match current main.
+Prior real-league and browser acceptance remains evidence, not proof these new
+controlled failures affected every saved search. User finds opportunities better.
+
+Scope, recorded BEFORE implementation:
+1. Reproduce exhausted-screen / unfinished-confirmation, confirmed-vs-weekly
+comparison, and zero-lineup-change contender depth-admission failures on main.
+Separate pending screens from pending confirmations. Permit bounded confirmation-
+only continuation without rescreening; preserve80 screens,8 confirmations, one
+full check per batch, exact State/input/tenant tokens, memory reserve and reuse.
+Deferred/incomplete checks must not be labeled a completed empty search; no
+unbounded retries or extra Simulation budget.
+2. Comparable full competitive outcomes supersede the weekly proxy for dominance
+and ordering. Consume existing Decision materiality and independent Simulation
+coordinates; preserve incomparable/incomplete and preliminary-vs-confirmed choices.
+No blended score or universal present/future exchange rate.
+3. Wire plausible bench-to-future hypotheses through existing Decision-owned
+strategy/role evidence to the bounded full check. Zero lineup improvement is not
+an inferred Current-only veto. Preliminary admission never proves surplus; full
+roles/lineup/coverage/resilience/cuts/protection/future-loss/competitive checks and
+explicit instructions remain controlling, including damaged-roster negatives.
+4. Keep outlook/objective/model contracts. Give inferred Balanced horizons real
+coverage independent of tuple ordering; preserve materially different terms for
+the same acquisition. Material Current gain does not justify any future price;
+prefer feasible no-worse / less-cost alternatives and explain remaining timeline
+choices for BOTH owners. Search direction cannot change valuations or baseline.
+
+Acceptance: failing controlled regressions first, then passing complete affected
+paths, including confirmation-only cache/identity/budget/deferred handling,
+authoritative comparisons and incomparability, complete bench path and negatives,
+and equivalent inferred-Balanced objective permutations. Replay the retained
+seven cases on identical private inputs; freeze additional held-out cases before
+fixes. Cover contender/rebuild/retool, explicit combined goals, cuts, absent history
+and valid empty results. Privately retain packages, versions, returns and before/
+after differences; assess actual offers as worth pursuing / useful negotiating
+starting point / weak with specific bilateral reasons. Counts and tests do not
+complete usefulness acceptance. No raw tenant data in public repository.
+
+Execute focused regressions while draft, then ONE stable exact-head candidate,
+required release checks, expected-head merge and existing manual Render deploy.
+Verify restored identity/readiness/resources and accessible mobile/browser paths
+before requesting a brief physical iPhone check. No new recurring expense,
+infrastructure, bulk refresh, provider/model rewrite or unrelated feature work.
+Workspace /workspace/fsffl-explore-followthrough-20261126; private continuation
+evidence will use /workspace/private-fsffl-explore-followthrough-20261126.
+
 ## LIVE — Explore real-league recommendation quality (#601) — 2026-11-26
 
 Implementation, paired saved-league review, browser acceptance and deployment are
