@@ -207,7 +207,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         if self._state_history is None:
             return
         try:
-            self._state_history.save(league_state)
+            from fsffl.state.account_rules import provider_rule_state
+            # Shared factual replay must not learn a personal analysis rule.
+            # The derived State remains durable in its private artifact scope.
+            self._state_history.save(provider_rule_state(league_state))
         except Exception as exc:  # history retention must also fail open
             _logger.warning("FSFFL State history checkpoint failed league=%s error=%s", league_state.league.league_id, exc)
 

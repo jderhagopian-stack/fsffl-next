@@ -1,3 +1,13 @@
+## Personal-rule history isolation correction — #607 — 2026-11-26
+
+Final boundary trace reproduced a personal-rule State entering the shared factual
+State-history checkpoint. Corrected the existing checkpoint to retain the embedded
+provider State instead; private derived State durability stays in account_rule_state.
+The regression failed before and passes after on complete controlled evidence.
+No new history table, reconstruction, rule inference or historical deletion. Old
+untouched provider snapshots keep their identity and normal history behavior.
+The corrected head requires a new exact Stable gate; superseded heads cannot deploy.
+
 ## Static delivery correction — #607 — 2026-11-26
 
 Home/Atlas focused checks correctly require the changed product_shell.js outer

@@ -340,3 +340,15 @@ def test_reducing_capacity_requires_explicit_roster_moves(state, field, slot, pr
     # A capacity increase can be analyzed without inventing player moves.
     chosen = candidate(AccountRuleSettingsStore(),filled,changes=LeagueRuleChanges(**{field:previous+1}))
     assert apply_account_rules(filled,chosen).team_states == filled.team_states
+
+
+def test_shared_factual_history_never_records_personal_rule_derivations(state):
+    from fsffl.state.history import InMemorySnapshotStore
+    history = InMemorySnapshotStore()
+    runtime = PersistentPrivateBetaRuntimeStore(MemoryStore(), state_snapshot_store=history)
+    personal = apply_account_rules(state, candidate(runtime.account_rule_settings, state))
+    runtime._persist_state_history(personal)
+    recorded = history.latest_at_or_before(state.league.league_id, NOW)
+    assert recorded.rule_configuration is None
+    assert recorded.state_id == state.state_id
+    assert recorded.league.rules.ir_size == 2
