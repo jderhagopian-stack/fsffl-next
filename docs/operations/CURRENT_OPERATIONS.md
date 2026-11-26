@@ -1,3 +1,14 @@
+## Final saved-case guard — 2026-11-26
+
+Real-league replay catches an important limit of a depth-conversion CANDIDATE:
+its existence does not choose between a future gain and another future loss for
+a Current-only owner. Without a material Current benefit, an inferred bench
+conversion may lead only when the existing strategy reports no future losses.
+Mixed future-window conversions remain reviewable. This prevents a tiny Current
+improvement plus a ledger-window swap from masquerading as meaningful bilateral
+benefit. The negative diagnostic from the supplied screenshots is covered; no
+player-specific exception or accepted model change is used.
+
 ## Bilateral inferred choices and Current funding — 2026-11-26
 
 Final candidate preserves the same current/future choice for EITHER inferred

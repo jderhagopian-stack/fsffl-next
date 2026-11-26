@@ -27,6 +27,7 @@ def _current_case_gates(material,assessment,required):
         strategy=owner.get('transaction_strategy') or {}
         if (context.get('source')=='calculated_state_posture_hypothesis_v1'
                 and not context.get('explicitly_directed') and strategy.get('depth_conversion_candidate') is True
+                and not strategy.get('future_losses')
                 and not any(effect.get(k)=='material_loss' for k in COMPETITIVE_METRICS)):
             conversions.append(effect['team_id']);continue
         if all(effect.get(k) in (None,'unavailable') for k in COMPETITIVE_METRICS):unknown.append(effect['team_id'])

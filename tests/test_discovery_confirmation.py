@@ -138,3 +138,19 @@ def test_either_inferred_balanced_owner_can_fund_current_help_with_future_cost()
         row['objective_assessment'][cost_side]['context']['explicitly_directed']=True
         curate_shortlist([row])
         assert row['shortlist_quality']['status']=='needs_terms'
+
+
+def test_a_candidate_depth_conversion_is_not_permission_to_choose_between_future_losses():
+    from fsffl.product.discovery_confirmation import _current_case_gates,COMPETITIVE_METRICS
+    from tests.test_trade_transaction_strategy import assess,roles
+    from tests.test_trade_objectives import metric
+    from fsffl.trade_decision.objectives import TradeObjective as G
+    values=[metric(G.CURRENT,0),metric(G.THREE_YEAR,20),metric(G.CAREER,-50),
+        metric(G.RESILIENCE,0,higher_is_better=False)]
+    strategy=assess((G.CURRENT,),values,roles())
+    assert strategy['depth_conversion_candidate'] and strategy['future_losses']
+    material={'side_a':{'team_id':'contender',**{k:'immaterial' for k in COMPETITIVE_METRICS}},
+              'side_b':{'team_id':'partner'}}
+    owner={'context':{'source':'calculated_state_posture_hypothesis_v1','explicitly_directed':False},
+           'transaction_strategy':strategy}
+    assert _current_case_gates(material,{'side_a':owner},{'contender'})==(['contender'],[],[],[])
