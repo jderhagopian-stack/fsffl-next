@@ -228,3 +228,31 @@ def test_same_search_before_after_counts_are_cumulative_cached_and_cost_no_extra
     replay=service.build(runtime,StrategicDiscoveryRequest(continuation_token=first['search_progress']['next_token']))
     assert replay['search_progress']['priority_comparison']==p['priority_comparison']
     assert len(calls)==len(set(calls))==16
+
+
+def test_later_better_terms_update_prior_shortlist_without_rescreening_or_retaining_models(monkeypatch):
+    from fsffl.product import progressive_discovery as module
+    from tests.test_shortlist_quality import evaluated
+    calls=[]
+    def build(runtime,request,*,read,previously_screened,feedback_already_attempted):
+        name='new' if previously_screened else 'old'
+        calls.append(name)
+        r=evaluated(name,current=(4,1) if name=='new' else (.8,1),three=(-10,10) if name=='new' else (-420,420),career=(-20,20) if name=='new' else (-493,493))
+        r['evaluation_kind']='root'
+        return {'candidate_packages':[r],'diagnostics':{'unexamined_pool_count':2,'repair_sequence_attempted':False}}
+    monkeypatch.setattr(module,'build_strategic_discovery',build)
+    runtime,_,_,_=read_fixture();service=ProgressiveDiscovery()
+    first=service.build(runtime,StrategicDiscoveryRequest())
+    assert first['search_progress']['preliminary_fit_count']==1
+    token=first['search_progress']['next_token']
+    scope=service._scope(runtime,StrategicDiscoveryRequest(),None)
+    receipt=service._decode(token,scope)['quality_receipts'][0]
+    assert set(receipt)=={'point_id','display_context','focal_package_family','_shortlist_effects'}
+    assert len(receipt['_shortlist_effects'])==4
+    second=service.build(runtime,StrategicDiscoveryRequest(continuation_token=token))
+    assert calls==['old','new'] and second['search_progress']['total_screened']==2
+    assert second['search_progress']['preliminary_fit_count']==1
+    assert second['shortlist_updates']['old']['status']=='alternative'
+    assert second['shortlist_updates']['old']['replaced_by_point_ids']==['new']
+    assert second['shortlist_updates']['new']['status']=='shortlist'
+    assert service.cache_bytes<=service.max_bytes

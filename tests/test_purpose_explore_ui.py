@@ -17,8 +17,10 @@ window:{fsfflMarketNorthStar:{activeTab:()=> 'for_you'},addEventListener:()=>{}}
 api:async path=>path.endsWith('/browser')?{state_id:'s',focal_team:{team_id:'a',assets:[]},counterparties:[]}:response};
 vm.createContext(c);vm.runInContext(fs.readFileSync('src/fsffl/product/static/strategic_explore.js','utf8'),c);
 (async()=>{c.window.fsfflStrategicExplore.render(host);await new Promise(r=>setImmediate(r));
-assert(host.innerHTML.includes('Try a WR-led offer'));
-assert(host.innerHTML.includes('They have traded for receivers in 3 recorded trades.'));
+assert(!host.innerHTML.includes('Try a WR-led offer'));
+assert(!host.innerHTML.includes('They have traded for receivers in 3 recorded trades.'));
+row.discovery_purposes.push({kind:'improve_lineup',source_state_id:'s',position:'RB',result:'lineup_gain'});
+c.window.fsfflStrategicExplore.render(host);assert(host.innerHTML.includes('More RB points now'));
 assert(!host.innerHTML.includes('will accept'));
 p.source_state_id='foreign';c.window.fsfflStrategicExplore.render(host);
 assert(!host.innerHTML.includes('Try a WR-led offer'));

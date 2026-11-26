@@ -67,7 +67,10 @@ class ProgressiveDiscovery:
             if (payload.get('version') != 1 or payload['scope'] != scope or not 0 <= self.clock()-payload['started'] <= 600
                 or not isinstance(ids,list) or len(ids)>MAX_TOTAL_SCREENS or len(ids)!=len(set(ids))
                 or any(not isinstance(i,str) or not i or len(i)>1024 for i in ids)
-                or not set(payload['fits']) <= set(ids)):
+                or not set(payload['fits']) <= set(ids)
+                or not isinstance(payload.get('quality_receipts',[]),list)
+                or len(payload.get('quality_receipts',[]))>MAX_TOTAL_SCREENS
+                or any(not isinstance(r,dict) or r.get('point_id') not in ids for r in payload.get('quality_receipts',[]))):
                 raise ValueError()
             return payload
         except (ValueError,TypeError,KeyError,UnicodeError,OverflowError):
@@ -107,10 +110,15 @@ class ProgressiveDiscovery:
         result=build_strategic_discovery(runtime,limited,read=read,
             previously_screened=prior['screened'],feedback_already_attempted=prior['repair'])
         rows=result['candidate_packages']
+        from fsffl.opportunity.shortlist_quality import curate_shortlist,shortlist_receipt
+        prior_rows=prior.get('quality_receipts',[])
+        combined=prior_rows+rows
+        curate_shortlist(combined)
+        quality_receipts=[shortlist_receipt(r) for r in combined if (r.get('display_context') or {}).get('group')=='preliminary_fit']
         attempted=[r['point_id'] for r in rows if r.get('evaluation_kind') in ('root','repair')]
         screened=list(dict.fromkeys([*prior['screened'],*attempted]))
-        fits=list(dict.fromkeys([*prior['fits'],*(r['point_id'] for r in rows
-            if (r.get('display_context') or {}).get('group')=='preliminary_fit')]))
+        fits=list(dict.fromkeys(r['point_id'] for r in combined if (r.get('display_context') or {}).get('group')=='preliminary_fit'
+            and r['shortlist_quality']['status']=='shortlist'))
         comparison={label:{g:int((prior.get('priority_comparison',{}).get(label) or {}).get(g,0)) for g in _GROUPS}
             for label in ('before','after')}
         gates=dict(prior.get('limiting_gates',{}))
@@ -132,13 +140,13 @@ class ProgressiveDiscovery:
         has_more=bool(attempted and pending and len(screened)<MAX_TOTAL_SCREENS)
         reason=('screening_disabled' if request.evaluation_budget==0 else 'screening_limit' if len(screened)>=MAX_TOTAL_SCREENS
             else 'pool_exhausted' if not has_more else 'shortlist_ready' if len(fits)>=SHORTLIST_TARGET else 'continue')
-        payload={**prior,'screened':screened,'fits':fits,'priority_comparison':comparison,'limiting_gates':gates,
+        payload={**prior,'screened':screened,'fits':fits,'quality_receipts':quality_receipts,'priority_comparison':comparison,'limiting_gates':gates,
             'repair':prior['repair'] or result['diagnostics']['repair_sequence_attempted'], 'batches':prior['batches']+1}
-        result={**result,'search_progress':{'screens_this_batch':len(attempted),'total_screened':len(screened),
+        result={**result,'shortlist_updates':{r['point_id']:r['shortlist_quality'] for r in combined},'search_progress':{'screens_this_batch':len(attempted),'total_screened':len(screened),
             'priority_comparison':comparison,'limiting_gates':gates,
             'priority_tradeoff_count':comparison['after']['priority_tradeoff'],
             'max_total_screens':MAX_TOTAL_SCREENS,'preliminary_fit_count':len(fits),'shortlist_target':SHORTLIST_TARGET,
-            'model_version':'bounded-discovery-continuation-v3:priority-comparison','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
+            'model_version':'bounded-discovery-continuation-v4:shortlist-receipts','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
             'next_token':self._encode(payload) if has_more else None,
             'interpretation':'Bounded preliminary screening; fits are not confirmed mutual benefits. No Simulation is run.'}}
         size=_bytes(result)+_bytes(cache_key)

@@ -82,21 +82,20 @@
   function purposeMarkup(row){
     const ps=(row.discovery_purposes||[]).filter(p=>p.source_state_id===view.result?.league_state_id);
     if(!ps.length)return '';
-    const p=ps.find(p=>['lineup_gain','current_lineup_preserved','asset_contribution_gain'].includes(p.result))||ps[0];
+    const supported=ps.filter(p=>p.kind!=='observed_acquisition');
+    const p=supported.find(p=>['lineup_gain','current_lineup_preserved','asset_contribution_gain'].includes(p.result))||supported[0];
+    if(!p)return ''; 
     let title='Explore a different way to improve';
-    if(p.kind==='improve_lineup')title=p.result==='lineup_gain'?`${p.position} upgrade`:`Target: upgrade at ${p.position}`;
+    if(p.kind==='improve_lineup')title=p.result==='lineup_gain'?`More ${p.position} points now`:`Looking for ${p.position} help`;
     if(p.kind==='test_depth_conversion')title='Explore trading depth for draft picks';
     if(p.kind==='acquire_future_assets')title=p.asset_focus==='picks'?'Build draft capital':'Explore younger talent';
-    if(p.kind==='observed_acquisition')title=p.interest_kind==='pick'?'Try a pick-led offer':`Try a ${p.position}-led offer`;
-    const history=ps.find(x=>x.kind==='observed_acquisition');
-    const note=history?`${history.team_id===view.result?.focal_team_id?'You have':'They have'} traded for ${history.interest_kind==='pick'?'draft picks':({WR:'receivers',RB:'running backs',QB:'quarterbacks',TE:'tight ends'}[history.position]||history.position)} in ${history.observed_trade_count} recorded trade${history.observed_trade_count===1?'':'s'}.`:'';
-    return `<div class="se-purpose"><b>${esc(title)}</b>${note?`<span>${esc(note)}</span>`:''}</div>`;
+    return `<div class="se-purpose"><b>${esc(title)}</b></div>`;
   }
   function card(row,rows){
     const index=rows.indexOf(row);
     const name=teamName(row.counterparty_team_id);
     const lineages=row.repair_lineages||[];
-    const related=rows.filter(other=>other.point_id!==row.point_id&&((row.linked_prior_point_ids||[]).includes(other.point_id)||lineages.some(l=>l.root_point_id===other.point_id||l.parent_point_id===other.point_id)||(other.repair_lineages||[]).some(l=>l.root_point_id===row.point_id||l.parent_point_id===row.point_id)));
+    const related=rows.filter(other=>other.point_id!==row.point_id&&((row.shortlist_quality?.alternative_point_ids||[]).includes(other.point_id)||(row.linked_prior_point_ids||[]).includes(other.point_id)||lineages.some(l=>l.root_point_id===other.point_id||l.parent_point_id===other.point_id)||(other.repair_lineages||[]).some(l=>l.root_point_id===row.point_id||l.parent_point_id===row.point_id)));
     const blocked=['side_a','side_b'].some(s=>row.objective_assessment?.[s]?.protected_players_lost?.length);
     return `<article class="se-card" data-se-group="${esc(row.display_context?.group||'needs_evidence')}"><header><div class="se-row"><span class="eyebrow">${row.display_context?.group==='priority_tradeoff'?'Tradeoff':'Preliminary'}</span><small>${esc(name)}</small></div><h2>${row.receive?.length===1?'Explore '+esc(row.receive[0].label||row.receive[0].asset_ref):esc(row.send?.length||0)+' for '+esc(row.receive?.length||0)+' package'}</h2></header><div class="se-card-body"><div class="se-package-grid"><section><p class="eyebrow">You receive · ${esc(row.receive?.length||0)}</p>${packageAssets(row.receive)}</section><section><p class="eyebrow">You send · ${esc(row.send?.length||0)}</p>${packageAssets(row.send)}</section></div>${purposeMarkup(row)}${impact(row,name)}${related.length?`<details class="se-alternatives"><summary>Compare linked package alternatives</summary>${related.map(other=>`<div><b>You give:</b> ${esc((other.send||[]).map(a=>a.label).join(' + '))}<br><b>You get:</b> ${esc((other.receive||[]).map(a=>a.label).join(' + '))}<p>${esc(other.evidence_status==='pre_simulation_screened'?'Preliminary effects are shown in its own card.':'Effects are incomplete; no benefit is assumed.')}</p><button type="button" class="text-button" data-se-compare="${rows.indexOf(other)}">View this alternative</button></div>`).join('')}</details>`:''}<button type="button" class="primary-button se-evaluate" data-se-evaluate="${index}"${blocked?' disabled':''}>Evaluate in Trade Center →</button></div></article>`;
   }
@@ -106,11 +105,11 @@
     if(view.error&&!view.result)return `<div class="se-empty" role="alert"><b>Discovery couldn’t complete.</b><p>${esc(view.error)}</p><p>Your settings are preserved. Try again when intelligence work is available.</p></div>`;
     if(!view.result)return '';
     const rows=view.result.candidate_packages||[];
-    const fits=rows.filter(r=>r.display_context?.group==='preliminary_fit');
+    const fits=rows.filter(r=>r.display_context?.group==='preliminary_fit'&&(!r.shortlist_quality||r.shortlist_quality.status==='shortlist')); 
     const tradeoffs=rows.filter(r=>r.display_context?.group==='priority_tradeoff');
     const concerns=rows.filter(r=>r.display_context?.group==='priority_concern');
-    const others=rows.filter(r=>!['preliminary_fit','priority_tradeoff','priority_concern'].includes(r.display_context?.group));
-    return `${progressMarkup()}<section class="se-results"><p class="eyebrow">Opportunities to investigate</p><h2>See the upside. Know the cost.</h2>${fits.length?fits.map(r=>card(r,rows)).join(''):tradeoffs.length?'<p class="se-fit-note">These options involve tradeoffs.</p>':'<div class="se-empty"><b>No matching opportunities yet.</b><p>Find more or explore a different direction.</p></div>'}${tradeoffs.length?`<section class="se-tradeoffs"><h3>Tradeoffs to review</h3>${tradeoffs.map(r=>card(r,rows)).join('')}</section>`:''}${concerns.length?`<details class="se-more" data-se-concerns><summary>${concerns.length} packages needing better terms</summary>${concerns.map(r=>card(r,rows)).join('')}</details>`:''}${others.length?`<details class="se-more"><summary>${others.length} additional candidates to review</summary>${others.map(r=>card(r,rows)).join('')}</details>`:''}<details class="se-evidence"><summary>Search coverage</summary><p>Up to 80 packages per search, checked in batches. Find More continues the same search. Player and pick packages are included, with up to 10 assets combined. Package adjustments currently use players only.</p><p>Fits follow the selected priorities; tradeoffs show the costs. Trade Center checks season outcomes in depth.</p></details></section>`;
+    const others=rows.filter(r=>r.shortlist_quality?.status==='alternative'||!['preliminary_fit','priority_tradeoff','priority_concern'].includes(r.display_context?.group));
+    return `${progressMarkup()}<section class="se-results"><p class="eyebrow">Opportunities to investigate</p><h2>See the upside. Know the cost.</h2>${fits.length?fits.map(r=>card(r,rows)).join(''):'<div class="se-empty"><b>No strong matches yet.</b><p>Find more, or choose the priority you want to pursue.</p></div>'}${tradeoffs.length?`<details class="se-more" data-se-tradeoffs><summary>${tradeoffs.length} tradeoffs needing a closer look</summary>${tradeoffs.map(r=>card(r,rows)).join('')}</details>`:''}${concerns.length?`<details class="se-more" data-se-concerns><summary>${concerns.length} packages needing better terms</summary>${concerns.map(r=>card(r,rows)).join('')}</details>`:''}${others.length?`<details class="se-more"><summary>${others.length} additional candidates to review</summary>${others.map(r=>card(r,rows)).join('')}</details>`:''}<details class="se-evidence"><summary>Search coverage</summary><p>Up to 80 packages per search, checked in batches. Find More continues the same search. Player and pick packages are included, with up to 10 assets combined. Package adjustments can include players and draft picks.</p><p>Fits follow the selected priorities; tradeoffs show the costs. Trade Center checks season outcomes in depth.</p></details></section>`;
   }
 
   function paint(){
@@ -147,7 +146,7 @@
     const p=view.result?.search_progress;
     if(!p)return '';
     const stop={shortlist_ready:'',screening_limit:'Search limit reached. Change direction to explore other packages.',pool_exhausted:'No more packages for this search.',screening_disabled:''};
-    return `<div class="se-progress" role="status"><b>${p.total_screened} packages evaluated · ${p.preliminary_fit_count} clear fits${Number.isInteger(p.priority_tradeoff_count)?` · ${p.priority_tradeoff_count} tradeoffs`:''}</b>${view.busy?`<p>${view.pauseRequested?'Finishing this batch…':'Finding opportunities…'}</p>`:stop[p.stop_reason]?`<p>${esc(stop[p.stop_reason])}</p>`:''}${view.error?`<p role="alert">${esc(view.error)} Completed results are preserved.</p>`:''}<div class="se-search-actions">${view.busy?'<button type="button" class="text-button" data-se-pause>Pause</button>':p.next_token?'<button type="button" class="secondary-button" data-se-more>Find More</button>':''}</div></div>`;
+    return `<div class="se-progress" role="status"><b>${p.total_screened} packages evaluated · ${p.preliminary_fit_count} matches${Number.isInteger(p.priority_tradeoff_count)?` · ${p.priority_tradeoff_count} tradeoffs`:''}</b>${view.busy?`<p>${view.pauseRequested?'Finishing this batch…':'Finding opportunities…'}</p>`:stop[p.stop_reason]?`<p>${esc(stop[p.stop_reason])}</p>`:''}${view.error?`<p role="alert">${esc(view.error)} Completed results are preserved.</p>`:''}<div class="se-search-actions">${view.busy?'<button type="button" class="text-button" data-se-pause>Pause</button>':p.next_token?'<button type="button" class="secondary-button" data-se-more>Find More</button>':''}</div></div>`;
   }
   function mergeBatch(previous,result){
     if(!previous)return result;
@@ -156,6 +155,7 @@
       const old=merged.get(row.point_id);
       if(!old||!old.evaluation_kind||row.evaluation_kind)merged.set(row.point_id,row);
     }
+    for(const [id,quality] of Object.entries(result.shortlist_updates||{})){const row=merged.get(id);if(row)merged.set(id,{...row,shortlist_quality:quality});}
     const all=[...merged.values()],evaluated=all.filter(r=>r.evaluation_kind);
     return {...result,pick_evidence:{...(previous.pick_evidence||{}),...(result.pick_evidence||{})},candidate_packages:[...evaluated,...all.filter(r=>!r.evaluation_kind)].slice(0,80)};
   }
