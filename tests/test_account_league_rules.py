@@ -17,6 +17,7 @@ from fsffl.state.account_rules import (
 from fsffl.state.models import (
     League, LeagueRules, LeagueState, LineupRequirement, ScoringRule, Team, TeamState,
     ProviderRef, RosterSlot, Provenance,
+    Player, PlayerState, RosterEntry,
 )
 from fsffl.state.draft_order_policy import resolve_draft_order_policy
 from fsffl.team_utility.future_pick import compile_supported_future_pick_policy
@@ -318,3 +319,24 @@ def test_what_if_state_cannot_be_persisted_as_saved_defaults(state):
 def test_custom_rule_requires_details():
     with pytest.raises(ValueError, match="Describe the custom"):
         DraftOrderSettings(non_playoff_order="max_pf",playoff_order="custom",tiebreak="custom")
+
+
+@pytest.mark.parametrize("field,slot,previous", [("ir_size","IR",2),("taxi_size","TAXI",2),("roster_size","BENCH",12)])
+def test_reducing_capacity_requires_explicit_roster_moves(state, field, slot, previous):
+    limit = 0 if field != "roster_size" else 3
+    count = 1 if field != "roster_size" else 4
+    players = tuple(Player(player_id=f"held-{i}",full_name=f"Held {i}",position="QB") for i in range(count))
+    entries = tuple(RosterEntry(player_id=p.player_id,slot=slot) for p in players)
+    filled = state.model_copy(update={"league":state.league.model_copy(update={"rules":state.league.rules.model_copy(update={field:previous})}),"players":players,"player_states":tuple(PlayerState(player_id=p.player_id,as_of=state.as_of,provenance=Provenance(source="fixture",retrieved_at=state.as_of,effective_at=state.as_of)) for p in players),"team_states":(
+        state.team_states[0].model_copy(update={"roster":entries}),*state.team_states[1:])})
+    client, store, _ = client_for(filled)
+    request={"expected_state_id":filled.state_id,"changes":{field:limit}}
+    response = client.post("/api/league/rules",json=request)
+    assert response.status_code == 422, response.text
+    assert "roster moves" in response.json()["detail"]
+    assert store.get("alice").league_state.state_id == filled.state_id
+    preview = client.post("/api/league/rules/preview",json=request)
+    assert preview.status_code == 422
+    # A capacity increase can be analyzed without inventing player moves.
+    chosen = candidate(AccountRuleSettingsStore(),filled,changes=LeagueRuleChanges(**{field:previous+1}))
+    assert apply_account_rules(filled,chosen).team_states == filled.team_states

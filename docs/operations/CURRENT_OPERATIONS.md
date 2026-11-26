@@ -1,3 +1,16 @@
+## Roster-integrity release correction — #607 — 2026-11-26
+
+Bounded final review reproduced three unsafe configuration transitions on complete
+controlled States: reducing occupied IR/taxi limits to zero, or active capacity
+below held players, was accepted without selecting roster moves. The editor now
+rejects reductions that introduce this overfill and explains the required roster
+moves. It never cuts/reclassifies players by assumption. Compatible reductions and
+capacity increases remain eligible; provider facts and existing overages are not
+rewritten. Save AND What-If share this State validation. Three regressions cover
+both paths and unchanged ownership;130 affected checks pass. Controlled before/
+after evidence is retained privately. Earlier Stable45878836777 was superseded;
+only the corrected exact-head full-suite result can authorize promotion.
+
 ## RELEASE CANDIDATE — Personal League Rules & Settings (#607) — 2026-11-26
 
 User approval clarified individual-account authority: no commissioner gate. Current

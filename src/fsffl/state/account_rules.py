@@ -122,6 +122,21 @@ def apply_account_rules(
             and configuration.account_scope == settings.account_scope and configuration.mode == mode):
         return state
     rules = resolved_rules(provider.league.rules, settings.changes)
+    for field, excluded in (
+        ("ir_size", {"IR"}), ("taxi_size", {"TAXI"}), ("roster_size", None),
+    ):
+        limit = getattr(rules, field)
+        if limit >= getattr(provider.league.rules, field):
+            continue
+        for team in provider.team_states:
+            occupied = sum(
+                entry.slot.value in excluded if excluded is not None else
+                entry.slot.value not in {"IR", "TAXI"}
+                for entry in team.roster
+            )
+            if occupied > limit:
+                label = {"ir_size":"IR", "taxi_size":"taxi", "roster_size":"active roster"}[field]
+                raise ValueError(f"This reduction needs explicit roster moves: a team holds {occupied} {"player" if occupied == 1 else "players"} for {limit} {label} slots. No players have been moved or cut.")
     policies = provider.draft_order_policies
     if settings.draft_order is not None:
         draft = settings.draft_order
