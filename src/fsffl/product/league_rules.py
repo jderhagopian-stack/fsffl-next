@@ -86,7 +86,11 @@ def rule_change_summary(before, after):
         new = after.league.rules.model_dump(mode="json")[name]
         if old != new:
             rows.append({"field": name, "label": label, "before": old, "after": new})
-    if before.draft_order_policies != after.draft_order_policies:
+    def draft_terms(state):
+        return sorted((row.draft_season, row.mechanism, row.description,
+                       tuple(sorted((p.name, str(p.value)) for p in row.parameters)))
+                      for row in state.draft_order_policies)
+    if draft_terms(before) != draft_terms(after):
         rows.append({"field": "draft_order", "label": "Rookie draft order",
                      "before": "Previous draft-order setting", "after": "Proposed draft-order setting"})
     return rows
@@ -114,7 +118,15 @@ def build_rule_what_if(runtime, candidate: AccountRuleSettings, *, simulation_lo
     if runtime.forecast_evidence is None or runtime.simulation_analytics is None:
         return {**payload, "message": "Run your league analysis before comparing season outcomes."}
     forecast = runtime.forecast_evidence
-    if forecast_input_fingerprint(state) != forecast_input_fingerprint(changed):
+    scoring_changed = state.league.rules.scoring != changed.league.rules.scoring
+    horizon_changed = (state.league.rules.fantasy_regular_season_end_week !=
+                       changed.league.rules.fantasy_regular_season_end_week)
+    if (state.completed_through_week or 0) > 0 and (scoring_changed or horizon_changed):
+        # Saved ROS points cannot be converted into a different scoring system
+        # without their underlying statistical cohort. Never relabel them, replace
+        # them with preseason rates, or acquire new sources from this preview.
+        return {**payload, "message": "This preview needs fresh forecasts under the proposed scoring or season length. Saving the rules will rebuild that analysis; nothing has been saved."}
+    if scoring_changed or (horizon_changed and forecast_input_fingerprint(state) != forecast_input_fingerprint(changed)):
         forecast = replay_live_forecast_evidence_for_state(changed, forecast)
     result, hit, computation = run_progressive_scenario_simulation(
         state, changed, forecast, runtime.simulation_analytics,

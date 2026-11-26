@@ -281,3 +281,40 @@ def test_what_if_without_baseline_does_not_invent_competitive_results(state):
     assert result.json()["teams"] == []
     assert "Run your league analysis" in result.json()["message"]
     assert store.get("alice").league_state.state_id == state.state_id
+
+
+def test_repeated_save_does_not_create_new_state_or_write_another_revision(state):
+    db = MemoryStore()
+    client, _, _ = client_for(state, db)
+    first = client.post("/api/league/rules", json={"expected_state_id":state.state_id,"changes":{"ir_size":3}}).json()
+    writes = len(db.writes)
+    again = client.post("/api/league/rules", json={"expected_state_id":first["state_id"],
+        "expected_revision":first["revision"],"changes":{"ir_size":3}}).json()
+    assert again["state_id"] == first["state_id"] and again["revision"] == first["revision"]
+    assert len(db.writes) == writes
+
+
+def test_current_scoring_preview_does_not_relabel_saved_ros_points(state):
+    from types import SimpleNamespace
+    state = state.model_copy(update={"completed_through_week":11})
+    client, store, _ = client_for(state)
+    original = store.get("alice")
+    store._contexts["alice"] = replace(original, forecast_evidence=SimpleNamespace(), simulation_analytics=SimpleNamespace())
+    result = client.post("/api/league/rules/preview", json={"expected_state_id":state.state_id,
+        "changes":{"scoring":[{"stat":"rec","points":0.5}]}})
+    assert result.status_code == 200, result.text
+    assert "fresh forecasts" in result.json()["message"]
+    assert result.json()["teams"] == [] and result.json()["saved"] is False
+
+
+def test_what_if_state_cannot_be_persisted_as_saved_defaults(state):
+    db = MemoryStore()
+    preview = apply_account_rules(state, candidate(AccountRuleSettingsStore(), state), mode="what_if")
+    with pytest.raises(ValueError, match="Only saved"):
+        persist_runtime_snapshot(db, user_id="alice", league_state=preview, selected_team_id=None)
+    assert not db.artifacts and not db.users and not db.leagues
+
+
+def test_custom_rule_requires_details():
+    with pytest.raises(ValueError, match="Describe the custom"):
+        DraftOrderSettings(non_playoff_order="max_pf",playoff_order="custom",tiebreak="custom")

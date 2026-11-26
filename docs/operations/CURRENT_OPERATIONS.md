@@ -1,3 +1,44 @@
+## RELEASE CANDIDATE — Personal League Rules & Settings (#607) — 2026-11-26
+
+User approval clarified individual-account authority: no commissioner gate. Current
+main/live #606 remains09642cafdb09c33ce15218958a6215fa3f4a6761, Render
+ dep-dc46qt15efls73d81fcg (verified live17:35UTC; one existing0.5CPU/512MiB service).
+
+Candidate adds More → League Rules & Settings: imported settings; personal roster,
+lineup, scoring and standard playoff edits; explicit draft-order terms; reset;
+provider-conflict review; unsaved What-If preview. League/season/account scope is
+part of durable settings identity. Two small settings artifacts per changed save
+(history + current pointer), bounded128-entry cache, existing pooled adapter only;
+no migration. Personal derived State is retained under account scope and does not
+replace shared provider State/team snapshot rows. Empty config preserves legacy
+State IDs. Refresh resolves saved rules before activation; stale requests cannot
+supersede a newer edit. Restart recovers settings committed before interrupted
+activation. Saves validate before activation and fail visibly on storage failure.
+Repeated equivalent saves do not republish/recalculate. What-If State cannot be
+checkpointed as saved defaults. Rule changes use existing State resource boundary
+and owned reconciliation; source facts/ownership and model coefficients stay intact.
+
+Local retained-input acceptance: 390px full editor → lineup What-If → save explicit
+Max PF terms → reload/reopen → reset PASS;1440px navigation/layout PASS. Twelve-team
+What-If consumed existing5,000-world PROVISIONAL authority; source State, Forecast,
+Simulation baseline and saved settings remained unchanged. No browser errors or
+horizontal overflow. RSS maximum observed283,848,704B, below existing429,496,729B
+admission budget; this is LOCAL evidence, not a hosted peak claim. Actual inputs,
+results/screenshots stay private: /workspace/private-league-rules-20261126.
+
+Limits are explicit in product: unsupported Max PF/custom rules are saved as
+explicit policy, making slot projections unavailable rather than using record.
+No new future Max PF forecasting method/assumed FSFFL bylaw is introduced. Current
+scoring/season-length What-If needs a new governed ROS statistical cohort; the
+preview explains that limitation and does not relabel saved points. Saving those
+rules uses the existing full Forecast/ROS rebuild. Specific imported playoff graphs
+are retained; this editor changes only supported standard format settings.
+
+Focused tests and final exact-head release receipts belong inPR607. Physical iPhone
+and authenticated hosted settings acceptance are separate; neither is claimed by
+a passing suite/local browser. No added service, recurring expense, configuration
+change, production refresh or historical deletion.
+
 ## AUTHORIZED — Account League Rules & Settings — 2026-11-26
 
 Management approved implementation after clarifying that every individual account

@@ -10,4 +10,4 @@
 .rules-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:24px}.rules-actions button{min-height:48px;white-space:normal}
 .rules-status{font-size:.95rem;padding:10px 12px;background:#12333c;border-radius:10px}.rules-status.attention{color:#efd0a0;background:#332d25}
 .rules-preview{border-top:1px solid #45606d;margin-top:20px;padding-top:18px}.rules-preview table{min-width:0;width:100%;font-size:.9rem}.rules-preview th,.rules-preview td{white-space:normal}
-@media(max-width:600px){.rules-grid{grid-template-columns:minmax(0,1fr);gap:8px}.league-rules-panel fieldset{padding:14px 12px}.rules-actions{display:grid;grid-template-columns:minmax(0,1fr)}.rules-actions button{width:100%}.rules-preview th,.rules-preview td{padding:8px 4px}}
+@media(max-width:600px){.rules-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#rules-draft-terms>.rules-grid{grid-template-columns:minmax(0,1fr)}.league-rules-panel fieldset{padding:14px 12px}.rules-actions{display:grid;grid-template-columns:minmax(0,1fr)}.rules-actions button{width:100%}.rules-preview th,.rules-preview td{padding:8px 4px}}

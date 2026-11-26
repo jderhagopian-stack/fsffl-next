@@ -26,6 +26,11 @@ class LeagueRuleChanges(FrozenModel):
         for rows, name in ((self.lineup, "slot"), (self.scoring, "stat")):
             if rows is not None and len({getattr(row, name) for row in rows}) != len(rows):
                 raise ValueError(f"duplicate {name} settings")
+        if self.lineup is not None:
+            if sum(row.count for row in self.lineup) > 30:
+                raise ValueError("The editable starting lineup supports at most 30 slots.")
+            if any(row.slot.value in {"BENCH", "IR", "TAXI"} for row in self.lineup):
+                raise ValueError("Bench, IR and taxi are roster limits, not starting lineup positions.")
         if self.scoring is not None:
             from math import isfinite
             if any(not isfinite(row.points) or abs(row.points) > 10_000 for row in self.scoring):

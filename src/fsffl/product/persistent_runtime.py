@@ -578,7 +578,11 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             if snapshot is None:
                 return current
 
-            resolved_state = self.prepare_account_league_state(user_id, snapshot.league_state)
+            try:
+                resolved_state = self.prepare_account_league_state(user_id, snapshot.league_state)
+            except Exception:
+                self._restore_attempted.discard(user_id)
+                raise
             if resolved_state.state_id != snapshot.league_state.state_id:
                 # A crash can occur after the small settings commit but before
                 # State activation. Never attach the old rule generation on restore.
