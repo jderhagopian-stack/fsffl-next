@@ -110,15 +110,14 @@ class ProgressiveDiscovery:
         result=build_strategic_discovery(runtime,limited,read=read,
             previously_screened=prior['screened'],feedback_already_attempted=prior['repair'])
         rows=result['candidate_packages']
-        from fsffl.opportunity.shortlist_quality import curate_shortlist,shortlist_receipt
+        from fsffl.opportunity.shortlist_quality import curate_shortlist,shortlist_receipt,inferred_timeline_choice
         prior_rows=prior.get('quality_receipts',[])
         combined=prior_rows+rows
         curate_shortlist(combined)
-        quality_receipts=[shortlist_receipt(r) for r in combined if (r.get('display_context') or {}).get('group')=='preliminary_fit']
+        quality_receipts=[shortlist_receipt(r) for r in combined if (r.get('display_context') or {}).get('group')=='preliminary_fit' or inferred_timeline_choice(r)]
         attempted=[r['point_id'] for r in rows if r.get('evaluation_kind') in ('root','repair')]
         screened=list(dict.fromkeys([*prior['screened'],*attempted]))
-        fits=list(dict.fromkeys(r['point_id'] for r in combined if (r.get('display_context') or {}).get('group')=='preliminary_fit'
-            and r['shortlist_quality']['status']=='shortlist'))
+        fits=list(dict.fromkeys(r['point_id'] for r in combined if r['shortlist_quality']['status'] in ('shortlist','strategic_tradeoff')))
         comparison={label:{g:int((prior.get('priority_comparison',{}).get(label) or {}).get(g,0)) for g in _GROUPS}
             for label in ('before','after')}
         gates=dict(prior.get('limiting_gates',{}))
@@ -138,15 +137,17 @@ class ProgressiveDiscovery:
         _logger.info('FSFFL discovery priority gates scope=%s gates=%s',scope[:12],gates)
         pending=result['diagnostics']['unexamined_pool_count']
         has_more=bool(attempted and pending and len(screened)<MAX_TOTAL_SCREENS)
+        goals=(result.get('priority_context') or {}).get('objectives') or ()
+        minimum_screens=min(24,8*max(1,len(goals)))
         reason=('screening_disabled' if request.evaluation_budget==0 else 'screening_limit' if len(screened)>=MAX_TOTAL_SCREENS
-            else 'pool_exhausted' if not has_more else 'shortlist_ready' if len(fits)>=SHORTLIST_TARGET else 'continue')
+            else 'pool_exhausted' if not has_more else 'shortlist_ready' if len(fits)>=SHORTLIST_TARGET and len(screened)>=minimum_screens else 'continue')
         payload={**prior,'screened':screened,'fits':fits,'quality_receipts':quality_receipts,'priority_comparison':comparison,'limiting_gates':gates,
             'repair':prior['repair'] or result['diagnostics']['repair_sequence_attempted'], 'batches':prior['batches']+1}
         result={**result,'shortlist_updates':{r['point_id']:r['shortlist_quality'] for r in combined},'search_progress':{'screens_this_batch':len(attempted),'total_screened':len(screened),
             'priority_comparison':comparison,'limiting_gates':gates,
             'priority_tradeoff_count':comparison['after']['priority_tradeoff'],
-            'max_total_screens':MAX_TOTAL_SCREENS,'preliminary_fit_count':len(fits),'shortlist_target':SHORTLIST_TARGET,
-            'model_version':'bounded-discovery-continuation-v4:shortlist-receipts','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
+            'max_total_screens':MAX_TOTAL_SCREENS,'minimum_direction_screens':minimum_screens,'preliminary_fit_count':sum(r['shortlist_quality']['status']=='shortlist' for r in combined),'shortlisted_choice_count':len(fits),'shortlist_target':SHORTLIST_TARGET,
+            'model_version':'bounded-discovery-continuation-v5:goal-branch-coverage','batch_count':payload['batches'],'stop_reason':reason,'cache_hit':False,
             'next_token':self._encode(payload) if has_more else None,
             'interpretation':'Bounded preliminary screening; fits are not confirmed mutual benefits. No Simulation is run.'}}
         size=_bytes(result)+_bytes(cache_key)

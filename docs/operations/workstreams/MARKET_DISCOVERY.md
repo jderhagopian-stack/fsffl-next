@@ -1,3 +1,51 @@
+## PRIMARY PRIORITY — credible real-league Explore opportunities — 2026-11-26
+
+Management directive: complete actual recommendation quality, not another populated
+screen or candidate-count milestone. Current main/live verified
+0ebf11b3968634711d663b83c06a3a31f603afbc (#600), Render
+dep-dc3pjqt9el5s7398hml0 LIVE. Prior fixture/code/restore acceptance stands;
+real-owner usefulness is OPEN. November18 audit is supporting dated evidence:
+its earlier deployed SHA, history/context coverage and recommendation wiring must
+not be repeated as current facts after #595–600.
+
+Acceptance:
+1. Privately capture a bounded cohort of CURRENT real-league searches and exact
+State/input/model/publication identities, selected franchises, inferred vs explicit
+priorities, constraints, packages, results and source provenance. Reuse retained
+evidence. Current user explicitly authorizes this bounded private capture/replay;
+prior broad/public private-data export denial does NOT authorize exposing data.
+No tenant-unrelated export, public raw data, secrets, new service or recurring cost.
+If automatic review rejects capture, stop that action rather than bypass it.
+2. Directly assess leading recommendations for meaningful benefits/sacrifices,
+both-owner purpose/timeline, lineup/depth/cuts, price, novelty and explanations.
+Trace each failure to generation/screen/evaluation/ranking/input/explanation.
+3. Construct a few plausible diagnostic packages as general missed-opportunity
+probes, not hard-coded preferred players/deals. Determine generated/rejected/buried.
+4. Implement bounded evidence-supported corrections; preserve model authority,
+ownership/legality/cuts/protection/user directions/continuity. A credible current-
+future exchange can sacrifice a metric; do not equate all-positive vectors with
+usefulness or merely hide every tradeoff. History supports a hypothesis, not
+interest/acceptance probability; asset contribution is not franchise utility.
+5. Paired before/after replay on identical saved inputs must demonstrate removed/
+downgraded weak proposals, newly discoverable worthwhile ideas, distinct choices,
+honest bilateral explanations, and selected promising deals remaining defensible
+under full evaluation. Include contender/rebuild/retool, players+picks/cuts,
+missing-history and valid no-worthwhile-opportunity cases.
+6. Focused regression during draft work; exact-head Stable before merge; existing
+manual Render deployment, identity/restore/resource verification. No new expense.
+All accessible validation precedes a brief physical-iPhone request. Roster/session
+fixes only where they block recommendation evaluation/action. Do not report full
+completion until improved real-league shortlist is directly assessed.
+
+Workspace /workspace/fsffl-real-discovery-20261126. No delegated agents. Current
+Cloud network excludes app/DB endpoints, no configured secret/auth identity and no
+desktop control tool in this chat. Use connected read-only sources and existing
+private evidence first. No production refresh or recomputation started.
+
+
+This is the existing committed discovery workstream. The dated sections below are
+retained as historical decisions, not a claim that earlier deployments are current.
+
 # Workstream — Market / Trade Discovery
 
 ## State
