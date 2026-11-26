@@ -9,7 +9,8 @@ which Current gains pay for losses in native 3-Year or Career contribution.
 
 Within the existing visit/screen budgets, a screened requested native loss can
 seed a compensation path. Add one or two already-owned players/picks, retain the
-original assets, and run each child through normal legality, mandatory cuts,
+original assets, respect the existing Market negotiating envelope before full
+screen allocation, and run each child through normal legality, mandatory cuts,
 lineup, Market and both-owner native-horizon screens. Use actual child effects,
 including cuts, for a second step. This is a bounded negotiating hypothesis, not
 an automatic entitlement to the other owner's picks. No child gains action

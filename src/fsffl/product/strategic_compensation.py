@@ -7,7 +7,7 @@ from fsffl.state.models import PlayerAsset, PickAsset
 _HORIZONS = {'three_year_contribution': 'three_year', 'career_contribution': 'career'}
 
 
-def compensation_path(runtime, root, read, *, inventories, visits, max_steps=2, feedback=None):
+def compensation_path(runtime, root, read, *, inventories, visits, max_steps=2, feedback=None, market_values=None, economic_tolerance=None):
     """Offer one/two assets to repair an observed requested native loss.
 
     Every child consumes the caller's normal full roster/cut/lineup screen. No
@@ -62,7 +62,16 @@ def compensation_path(runtime, root, read, *, inventories, visits, max_steps=2, 
             loss = [h for h, d in deltas.items() if d < -1e-9]
             if not loss:
                 return
-            candidates = [a for a in available if a not in used and all(value(a, h) > 0 for h in loss)]
+            def within_market_envelope(asset):
+                if market_values is None or economic_tolerance is None:return True
+                proposed=[list(leg) for leg in packages]
+                proposed[donor].append(asset)
+                def price(a):return market_values.get(a.player_id if isinstance(a,PlayerAsset) else a.pick_id)
+                if any(price(a) is None for leg in proposed for a in leg):return True
+                totals=[sum(price(a) for a in leg) for leg in proposed]
+                return abs(totals[0]-totals[1])<=economic_tolerance
+            candidates = [a for a in available if a not in used and all(value(a, h) > 0 for h in loss)
+                          and within_market_envelope(a)]
             if not candidates:
                 return
             # First seek one asset that covers all remaining native deficits.

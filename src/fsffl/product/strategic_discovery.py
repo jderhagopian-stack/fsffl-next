@@ -474,7 +474,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         if not (can_feedback or can_compensate) or sequence_used or screen_cap-len(screened)<2: continue
         from .strategic_compensation import compensation_path
         from itertools import chain
-        path=chain(compensation_path(runtime,root,read,inventories=repair_inventories,visits=visits,feedback=lambda point_id:seen.get(point_id)) if can_compensate else (),
+        path=chain(compensation_path(runtime,root,read,inventories=repair_inventories,visits=visits,feedback=lambda point_id:seen.get(point_id),market_values=market_values,economic_tolerance=tolerance) if can_compensate else (),
                    repair_path(runtime,root,read,protected_player_ids=context.protected_player_ids,visits=visits) if can_feedback else ())
         for point,lineage in path:
             if any(not _matches_target(options[_ref(a)],request) for a in point.counterparty_package.assets):

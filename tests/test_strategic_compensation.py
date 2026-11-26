@@ -120,3 +120,16 @@ def test_second_step_consumes_actual_cut_adjusted_feedback_instead_of_the_pre_cu
         return r
     path=list(compensation_path(runtime,root,read,inventories=inventories,visits=FeedbackVisits(8),feedback=feedback))
     assert len(path)==2
+
+
+def test_compensation_cannot_use_a_native_deficit_to_demand_an_overpriced_pick():
+    runtime,root,read,inventories=fixture()
+    read.pick_values={'three_year':{'p':500,'q':100},'career':{'p':600,'q':100}}
+    # The large pick would close the deficit but is outside the existing Market
+    # envelope. The smaller feasible ingredient stays available; no new pricing
+    # coefficient or closest-price opportunity score is introduced.
+    path=list(compensation_path(runtime,root,read,inventories=inventories,visits=FeedbackVisits(8),
+        market_values={'a':100,'b':100,'p':1000,'q':50},economic_tolerance=100))
+    assert len(path)==1
+    assert PickAsset(pick_id='q') in path[0][0].counterparty_package.assets
+    assert PickAsset(pick_id='p') not in path[0][0].counterparty_package.assets
