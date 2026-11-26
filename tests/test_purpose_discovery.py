@@ -166,3 +166,15 @@ def test_owner_evidence_adds_lanes_without_changing_ordinary_inventory_or_user_c
     assert ordinary[1]==expanded[1]
     assert any(l.purpose and l.purpose.kind=='observed_acquisition' for l in expanded[0])
     assert all(a.player_id!='t0-0' for l in expanded[0] for a in l.focal.assets if isinstance(a,PlayerAsset))
+
+
+def test_current_receipt_must_be_observed_and_does_not_supply_historical_positions():
+    from tests.test_owner_current_season import profiles,NOW as CURRENT_CUTOFF
+    a,b=profiles()
+    assert not observed_acquisition_interests(a,as_of=CURRENT_CUTOFF)
+    assert any(i.kind=='pick' for i in observed_acquisition_interests(a,as_of=CURRENT_CUTOFF+timedelta(days=3)))
+    activity=b.current_season_activity;move=activity.trade_examples[0]
+    labels=tuple(asset.model_copy(update={'position':'WR'}) for asset in move.event.acquired)
+    move=move.model_copy(update={'event':move.event.model_copy(update={'acquired':labels})})
+    b=b.model_copy(update={'current_season_activity':activity.model_copy(update={'trade_examples':(move,)})})
+    assert not observed_acquisition_interests(b,as_of=CURRENT_CUTOFF+timedelta(days=3))
