@@ -33,7 +33,7 @@ from .opportunity_posture import calculated_competitive_state, default_posture_f
 from dataclasses import replace
 
 _logger = logging.getLogger("fsffl.product.performance")
-_MODEL_VERSION = "strategic-discovery-v8:goal-branches-and-funded-upgrades"
+_MODEL_VERSION = "strategic-discovery-v9:funded-later-pick-terms-and-anchor-targets"
 
 class StrategicDiscoveryRequest(FrozenModel):
     search_instructions: TradeSearchInstructions | None = None
@@ -83,6 +83,22 @@ def _matches_target(option, request):
         age is not None and isfinite(age) and 0 <= age < request.target_player_max_age + 1)
 
 
+def _pick_sweetener(option, request):
+    return option.asset_kind == 'pick' and (request.target_asset_kinds is None or 'pick' in request.target_asset_kinds)
+
+
+def _matches_target_package(options, request):
+    """A position names a player anchor; explicitly allowed picks can accompany it."""
+    options = tuple(options)
+    if not options or not all(_matches_target(o, request) or _pick_sweetener(o, request) for o in options):
+        return False
+    # An explicitly pick-only search retains its existing meaning; position
+    # applies to player acquisitions, not the pick's eventual NFL position.
+    if request.target_position is not None and request.target_asset_kinds != ('pick',):
+        return any(o.asset_kind == 'player' and _matches_target(o, request) for o in options)
+    return any(_matches_target(o, request) for o in options)
+
+
 def prepare_discovery(runtime, request):
     state, focal = runtime.league_state, runtime.selected_team_id
     if state is None or focal is None:
@@ -114,6 +130,7 @@ def prepare_discovery(runtime, request):
             raise ValueError('Target position must exist in the current league player population')
     if request.target_asset_ref is not None and not any(
         a.asset_ref == request.target_asset_ref and _matches_target(a, request)
+        and (request.target_position is None or request.target_asset_kinds == ('pick',) or a.asset_kind == 'player')
         for team in teams for a in team.assets
     ):
         raise ValueError('The target asset must match the requested asset type, age and position')
@@ -203,7 +220,8 @@ def build_discovery_lanes(runtime, request, read):
     for team in teams:
         other = inventories[team.team_id]
         if request.target_position is not None or request.target_asset_kinds is not None or request.target_player_max_age is not None:
-            eligible = {a.asset_ref for a in team.assets if _matches_target(a, request)}
+            eligible = {a.asset_ref for a in team.assets if _matches_target(a, request)
+                and (request.target_position is None or request.target_asset_kinds == ('pick',) or a.asset_kind == 'player')}
             other = other.model_copy(update={'assets': tuple(a for a in other.assets if _ref(a) in eligible)})
         other_context = objective_context(runtime,team.team_id)
         other_goal = next((g for g in _exploration_goals(other_context) if metric_values[g]),TradeObjective.MARKET)
@@ -212,6 +230,18 @@ def build_discovery_lanes(runtime, request, read):
             if sends and receives:
                 lanes.append(StrategicPackageLane(name,focal.model_copy(update={'assets':sends}),
                     other.model_copy(update={'assets':receives}),required_receive=required,required_send=required_send))
+                # Keep ordinary positional coverage intact. Picks accompany a
+                # pinned matching player in a bounded term lane, never replace
+                # that anchor or consume visits on pick-only RB hypotheses.
+                if name == 'roster_fit' and request.target_position is not None and request.target_asset_kinds != ('pick',):
+                    sweeteners = tuple(a for a in inventories[team.team_id].assets
+                        if isinstance(a,PickAsset) and (request.target_asset_kinds is None or 'pick' in request.target_asset_kinds))
+                    anchors = (required,) if required is not None else receives[:2]
+                    for anchor in anchors if sweeteners else ():
+                        lanes.append(StrategicPackageLane('position_target_terms:'+_ref(anchor),
+                            focal.model_copy(update={'assets':sends}),
+                            other.model_copy(update={'assets':(anchor,*sweeteners)}),
+                            required_receive=anchor,required_send=required_send))
         add('roster_surplus', tuple(sorted(roster_fit(focal.assets,team.team_id), key=lambda a: not (isinstance(a,PlayerAsset) and a.player_id in benches.get(focal.team_id,set())))), roster_fit(other.assets,focal.team_id))
         # Explore inferred goal sets without a universal Current-first prefix.
         goals = tuple(dict.fromkeys((*_exploration_goals(context),TradeObjective.THREE_YEAR,TradeObjective.CAREER)))
@@ -287,6 +317,9 @@ def _representative_indices(rows,budget,*,visited_families=()):
             desired=(2,3,4)[axis_turns[axis]%3]
             structured=[i for i in eligible if len(rows[i]['send'])+len(rows[i]['receive'])==desired]
             eligible=structured or eligible
+            if desired == 4:
+                funded=[i for i in eligible if 'funded_later_pick_terms' in rows[i].get('hypotheses',())]
+                eligible=funded or eligible
             axis_turns[axis]+=1
         smallest=min(len(rows[i]['send'])+len(rows[i]['receive']) for i in eligible)
         eligible=[i for i in eligible if len(rows[i]['send'])+len(rows[i]['receive'])==smallest]
@@ -346,6 +379,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         and profiles[(a.player_id if isinstance(a,PlayerAsset) else a.pick_id)].market_price is not None}
     seeds,diagnostics=generate_guided_strategic_packages(lanes,as_of=runtime.league_state.as_of,
         market_values=typed_market,economic_tolerance=tolerance,
+        pick_rounds={PickAsset(pick_id=p.pick_id):p.round for p in runtime.league_state.draft_picks},
         bounds=StrategicSearchBounds(max_candidates=generation_limit,max_pair_visits=generation_limit))
     options={a.asset_ref:a for team in (browser.focal_team,*teams) for a in team.assets}
     asset_index=owned_asset_index(browser)
@@ -466,7 +500,8 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         if request.search_instructions is not None:
             row['trade_center_request']['search_instructions']=request.search_instructions.model_dump(mode='json')
         return row
-    rows=[make_row(item.seed.proposal,item.seed.point_id,item.hypotheses) for item in seeds]
+    rows=[make_row(item.seed.proposal,item.seed.point_id,item.hypotheses) for item in seeds
+          if _matches_target_package((options[_ref(a)] for a in item.seed.proposal.side_b.sends), request)]
     pool_count=len(rows)
     by_point={row['point_id']:row for row in rows}
     excluded = frozenset(previously_screened)
@@ -547,7 +582,7 @@ def build_strategic_discovery(runtime, request, *, read=None, previously_screene
         path=chain(compensation_path(runtime,root,read,inventories=repair_inventories,visits=visits,feedback=lambda point_id:seen.get(point_id),market_values=market_values,economic_tolerance=tolerance) if can_compensate else (),
                    repair_path(runtime,root,read,protected_player_ids=context.protected_player_ids,visits=visits) if can_feedback else ())
         for point,lineage in path:
-            if any(not _matches_target(options[_ref(a)],request) for a in point.counterparty_package.assets):
+            if not _matches_target_package((options[_ref(a)] for a in point.counterparty_package.assets),request):
                 visits.skipped['repair_outside_requested_targets'] += 1
                 break
             sequence_used=True

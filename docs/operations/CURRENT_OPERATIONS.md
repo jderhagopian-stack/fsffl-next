@@ -1,3 +1,37 @@
+## SEARCH CANDIDATE — funded terms and positional anchors — 2026-11-26
+
+Input release#605 is merged as0a51842ee94f4d94ef1a1176b574b9ebcd2c9133;
+Render dep-dc46cce1egvs73ffhsgg live17:04UTC; full saved-State restore and
+resource receipts are inPR605. Tested treee6134f9f3071328b11280faa5feee14e22d94437.
+
+This separate search change uses the SAME roster-corrected State/Forecast/native
+values and baseline. Guided generation can test one funded player+two later-pick
+alternative even with an in-range singleton. Canonical round evidence only;
+ordinary window and a separate12-ingredient funding window stay bounded, with
+at most48 scalar price checks per anchor and unchanged global visits/screens/
+confirmation/memory limits. Existing four-asset screening turns may admit valid
+funded terms; no new blended score or future-price cutoff.
+
+Position searches retain ordinary player inventories; up to2 required matching
+anchors per partner get dedicated pick-sweetener lanes. A broad-pick-inventory
+exploration was discarded after it crowded out credible player coverage. This
+is explicit whole-funnel evidence, not a reason to promote more pick packages.
+Explicit player-only, pick-only, youth, ownership and protections remain binding.
+Focused135 passed. Crowded reproduction retains singleton AND funded terms;
+negative price/missing-round cases and bidirectional/screen selection are tested.
+
+Private paired80-screen Automatic/RB baselines are complete,8 confirmations each;
+final corrected comparisons and browser validation remain pending. Actual offers
+and displaced screens, rather than counts alone, decide promotion. Raw packages
+stay in /workspace/private-explore-integrity-20261126. This PR will carry final
+exact-head Stable/merge/deploy/runtime receipts. No added recurring expense.
+
+Max PF remains separately unresolved: live kernel compiles standard rules only;
+existing historical ranked-metric production is not a future Max PF forecast.
+Exact FSFFL non-playoff/playoff/tie policy requested, no assumptions substituted,
+no current Max PF total mislabeled as an end-season projection. The explicitly
+accepted standard fallback and source identity remain visible internally.
+
 ## INPUT-CORRECTNESS CANDIDATE — incoming IR plan — 2026-11-26
 
 On the unchanged #604 saved State/forecasts/values, the audited exchange now has
