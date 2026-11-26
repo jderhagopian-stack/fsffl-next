@@ -443,6 +443,24 @@ class League(FrozenModel):
     provider_refs: tuple[ProviderRef, ...] = ()
 
 
+class LeagueRuleConfiguration(FrozenModel):
+    """Account-local derivation; retain the provider coordinate for reset/replay."""
+
+    account_scope: str
+    revision: str
+    mode: Literal["saved", "what_if"]
+    provider_rules: LeagueRules
+    provider_draft_order_policies: tuple[DraftOrderPolicyEvidence, ...] = ()
+    provider_as_of: datetime
+
+    @field_validator("provider_as_of")
+    @classmethod
+    def require_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("provider_as_of must be timezone-aware")
+        return value
+
+
 class Team(FrozenModel):
     team_id: str
     league_id: str
@@ -646,6 +664,7 @@ class LeagueState(FrozenModel):
     nfl_team_byes: tuple[NflTeamBye, ...] = ()
     player_week_availability: tuple[PlayerWeekAvailability, ...] = ()
     draft_order_policies: tuple[DraftOrderPolicyEvidence, ...] = ()
+    rule_configuration: LeagueRuleConfiguration | None = None
     provenance: tuple[Provenance, ...] = ()
 
     @field_validator("as_of")

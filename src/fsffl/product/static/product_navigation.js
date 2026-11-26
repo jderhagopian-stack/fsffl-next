@@ -10,6 +10,7 @@
     {route:'trade_center',label:'Trade',short:'Trade',question:'What does this deal change?',icon:'trade',teamScoped:true},
   ];
   const LEAGUE_INTELLIGENCE=[
+    {route:'league_settings',label:'League Rules & Settings',description:'Manage your rules or try a What-If.',icon:'league'},
     {route:'behavioral_intelligence',label:'Owners',description:'Understand observed manager behavior.',icon:'owner'},
   ];
   const SCENARIOS=[

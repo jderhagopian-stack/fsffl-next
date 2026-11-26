@@ -5,21 +5,15 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from fsffl.state.draft_order_policy import DraftOrderPolicyEvidence
+from fsffl.state.draft_order_policy import (
+    DraftOrderPolicyEvidence, STANDARD_DRAFT_ORDER_MECHANISM_V1,
+    STANDARD_REGULAR_SEASON_TIEBREAK, STANDARD_PLAYOFF_ORDER,
+)
 from fsffl.state.models import FrozenModel
 
 
-STANDARD_DRAFT_ORDER_MECHANISM_V1 = (
-    "standard_record_h2h_pf_then_playoff_elimination_v1"
-)
 STANDARD_DRAFT_ORDER_POLICY_ID = "governed-standard-draft-order-fallback"
 STANDARD_DRAFT_ORDER_POLICY_VERSION = "v1"
-STANDARD_REGULAR_SEASON_TIEBREAK = (
-    "worse_record_then_resolvable_head_to_head_then_lower_points_for"
-)
-STANDARD_PLAYOFF_ORDER = (
-    "round_eliminated_then_regular_season_tiebreaks_runner_up_champion"
-)
 
 
 class PickSlotProbability(FrozenModel):

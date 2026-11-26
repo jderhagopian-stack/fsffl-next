@@ -1,3 +1,37 @@
+## AUTHORIZED — Account League Rules & Settings — 2026-11-26
+
+Management approved implementation after clarifying that every individual account
+controls its own analysis rules; commissioner permission and cross-account rule
+changes are out of scope. Base main/live #606:09642cafdb09c33ce15218958a6215fa3f4a6761,
+Render dep-dc46qt15efls73d81fcg. Existing State draft-policy contracts and the
+accepted generic fallback remain the foundation. This supersedes earlier wording
+that the user must repeat already-supplied FSFFL rules: recover prior evidence;
+do not label absent runtime configuration as absent prior instructions.
+
+Acceptance, recorded before implementation:
+- Accessible mobile League Rules & Settings page prepopulates canonical provider
+  scoring, lineup, roster and playoff settings; draft order clearly distinguishes
+  a confirmed rule from an estimated fallback.
+- User-scoped, league/season-scoped saved overrides persist using existing bounded
+  persistence, survive reconnect/refresh/restart, and never change another account
+  or Sleeper. Provider values remain recoverable; reset is explicit.
+- Validated rule changes enter canonical State before existing Forecast/Simulation/
+  Value/Decision/Search consumers. New identities prevent stale intelligence reuse.
+  Preserve ownership, legality and unrelated facts. Show affected results pending
+  rather than silently presenting old results as using new rules.
+- Save uses existing reconciliation/admission. GETs never compute. Concurrency and
+  failed persistence cannot silently discard an override or publish stale work.
+- What-If previews do not save defaults or mutate published State/intelligence;
+  use existing governed forecast replay and bounded scenario computation where
+  supported. Explicitly identify unsupported draft-order models rather than
+  substituting the generic record fallback or treating current Max PF as final.
+- Draft-order editor captures non-playoff ordering, playoff ordering and ties as
+  separate explicit terms. No invented FSFFL bylaw, universal preference weight,
+  new Max PF forecasting method, new paid service or recurring expense.
+- Focused isolation/refresh/restore/identity/preview regressions, mobile/browser
+  journey, exact-head stable suite/review then merge/manual deployment receipts.
+  Settings delivery does not claim Max PF forecasting is finished if unsupported.
+
 ## SEARCH CANDIDATE — funded terms and positional anchors — 2026-11-26
 
 Input release#605 is merged as0a51842ee94f4d94ef1a1176b574b9ebcd2c9133;

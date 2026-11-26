@@ -489,6 +489,8 @@ class PrivateBetaRuntimeStore:
     """
 
     def __init__(self) -> None:
+        from fsffl.persistence.account_rules import AccountRuleSettingsStore
+        self.account_rule_settings = AccountRuleSettingsStore()
         self._lock = RLock()
         # Lifecycle mutation authority is per-user. A short registry lock only
         # creates/retrieves user locks; no lifecycle work or persistence runs under it.
@@ -500,6 +502,14 @@ class PrivateBetaRuntimeStore:
         self._pending_intelligence: dict[str, _PendingIntelligenceSnapshot] = {}
         self._league_generations: dict[str, int] = {}
         self._read_local = local()
+
+    def prepare_account_league_state(self, user_id: str, league_state: LeagueState) -> LeagueState:
+        """Resolve personal rules before State activation, never on model GETs."""
+        from fsffl.state.account_rules import apply_account_rules
+        settings = self.account_rule_settings.get(
+            user_id, league_state.league.league_id, league_state.league.season,
+        )
+        return apply_account_rules(league_state, settings)
 
     def _published_context(self, user_id: str) -> UserRuntimeContext:
         return self._contexts.get(user_id, UserRuntimeContext(user_id=user_id))

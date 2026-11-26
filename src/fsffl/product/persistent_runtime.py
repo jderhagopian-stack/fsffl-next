@@ -69,6 +69,8 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     ) -> None:
         super().__init__()
         self._persistence = persistence_store if persistence_store is not None else persistence_store_from_env()
+        from fsffl.persistence.account_rules import AccountRuleSettingsStore
+        self.account_rule_settings = AccountRuleSettingsStore(self._persistence)
         self._state_history = state_snapshot_store
         self._restore_attempted: set[str] = set()
         # Each active user owns one ordered checkpoint worker, but idle workers are
@@ -576,6 +578,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             if snapshot is None:
                 return current
 
+            resolved_state = self.prepare_account_league_state(user_id, snapshot.league_state)
+            if resolved_state.state_id != snapshot.league_state.state_id:
+                # A crash can occur after the small settings commit but before
+                # State activation. Never attach the old rule generation on restore.
+                context = super().set_league_state(user_id, resolved_state)
+                if snapshot.selected_team_id is not None:
+                    context = super().select_team(user_id, snapshot.selected_team_id)
+                self._checkpoint_async(user_id, context)
+                return context
             super().set_league_state(user_id, snapshot.league_state)
             if snapshot.forecast_evidence is not None:
                 restored = super().set_intelligence_bundle(

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .account_rule_state import persist_account_rule_state, restore_account_rule_state
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Mapping
@@ -320,6 +322,10 @@ def persist_runtime_identity(
         durable_state is not None
         and durable_state.state_hash == league_state.state_id
     )
+    if not state_is_durable and league_state.rule_configuration is not None:
+        state_is_durable = restore_account_rule_state(
+            store, user_id=user_id, league_id=league_state.league.league_id, state_id=league_state.state_id,
+        ) is not None
     if not state_is_durable:
         fallback = restore_last_good_state_identity(
             store,
@@ -376,33 +382,36 @@ def persist_runtime_snapshot(
         provider, external_id = _provider_external_id(league_state)
         now = utc_now()
         state_payload = league_state.model_dump(mode="json")
-        store.put_league_snapshot(
-            LeagueSnapshotRecord(
-                provider=provider,
-                league_id=league_state.league.league_id,
-                season=league_state.league.season,
-                state_hash=league_state.state_id,
-                payload=state_payload,
-                source_updated_at=league_state.as_of,
-                recorded_at=now,
-            )
-        )
-        team_states = {row.team_id: row for row in league_state.team_states}
-        for team in league_state.teams:
-            store.put_team_snapshot(
-                TeamSnapshotRecord(
+        if league_state.rule_configuration is not None:
+            persist_account_rule_state(store, user_id=user_id, league_state=league_state, payload=state_payload)
+        else:
+            store.put_league_snapshot(
+                LeagueSnapshotRecord(
                     provider=provider,
                     league_id=league_state.league.league_id,
-                    team_id=team.team_id,
+                    season=league_state.league.season,
                     state_hash=league_state.state_id,
-                    payload={
-                        "team": team.model_dump(mode="json"),
-                        "team_state": team_states[team.team_id].model_dump(mode="json"),
-                    },
+                    payload=state_payload,
                     source_updated_at=league_state.as_of,
                     recorded_at=now,
                 )
             )
+            team_states = {row.team_id: row for row in league_state.team_states}
+            for team in league_state.teams:
+                store.put_team_snapshot(
+                    TeamSnapshotRecord(
+                        provider=provider,
+                        league_id=league_state.league.league_id,
+                        team_id=team.team_id,
+                        state_hash=league_state.state_id,
+                        payload={
+                            "team": team.model_dump(mode="json"),
+                            "team_state": team_states[team.team_id].model_dump(mode="json"),
+                        },
+                        source_updated_at=league_state.as_of,
+                        recorded_at=now,
+                    )
+                )
     terminal_bundle = _terminal_bundle(
         forecast_evidence,
         simulation_analytics,
@@ -1096,6 +1105,11 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         candidate_state = LeagueState.model_validate(league_record.payload)
         if candidate_state.state_id == context.state_hash:
             league_state = candidate_state
+
+    if league_state is None:
+        league_state = restore_account_rule_state(
+            store, user_id=user_id, league_id=context.league_id, state_id=context.state_hash,
+        )
 
     if league_state is None:
         # Session-isolation fallback: a shared latest league row may have been
