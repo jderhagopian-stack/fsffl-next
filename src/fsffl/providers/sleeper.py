@@ -74,6 +74,32 @@ def _normalize_sleeper_player_status(raw: Mapping[str, Any]) -> PlayerStatus:
     return status_map.get(status_key, PlayerStatus.UNKNOWN)
 
 
+def resolve_sleeper_fantasy_position(
+    raw: Mapping[str, Any],
+    supported: Mapping[str, Position],
+) -> Position | None:
+    """Resolve source-provided multi-position eligibility without inventing roles.
+
+    A recognized primary position remains authoritative. When a primary position
+    is not modeled (e.g. DB for a dual-eligible DB/WR), use a provider-declared,
+    supported fantasy position. This keeps source identity and owner membership
+    intact without treating defensive statistics as receiving production.
+
+    An entirely unmodeled position is deliberately returned as None. Callers
+    handling *owned* assets must fail explicitly, never silently discard them.
+    """
+    primary = str(raw.get("position") or "").strip().upper()
+    if primary in supported:
+        return supported[primary]
+    alternatives = raw.get("fantasy_positions")
+    if isinstance(alternatives, (tuple, list)):
+        for value in alternatives:
+            label = str(value or "").strip().upper()
+            if label in supported:
+                return supported[label]
+    return None
+
+
 @dataclass(frozen=True)
 class SleeperPayloadBundle:
     league: Mapping[str, Any]
@@ -410,10 +436,14 @@ class SleeperNormalizer:
         player_states: list[PlayerState] = []
         for external_id in sorted(referenced_player_ids):
             raw = bundle.players.get(external_id, {})
-            raw_position = str(raw.get("position") or "")
-            position = self._position_map.get(raw_position)
+            position = resolve_sleeper_fantasy_position(raw, self._position_map)
             if position is None:
-                continue
+                raise ValueError(
+                    f"Sleeper owned player {external_id} has no modeled fantasy position "
+                    f"(primary={raw.get('position')!r}, "
+                    f"fantasy_positions={raw.get('fantasy_positions')!r}); "
+                    "cannot silently drop roster membership"
+                )
             player_id = f"sleeper:player:{external_id}"
             full_name = str(
                 raw.get("full_name")
