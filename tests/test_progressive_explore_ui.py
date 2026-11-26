@@ -23,22 +23,22 @@ search_progress:{total_screened:batch*8,max_total_screens:80,preliminary_fit_cou
 (async()=>{
  ui.render(host);await flush();assert.equal(pending.length,1);
  pending.shift()(response(1,[row('first','First valid result')],'one'));await flush();
- assert(host.innerHTML.includes('First valid result'));assert(host.innerHTML.includes('8 packages evaluated'));
+ assert(host.innerHTML.includes('First valid result'));assert(host.innerHTML.includes('8 packages screened'));
  assert.equal(JSON.parse(calls.filter(c=>c.options).at(-1).options.body).continuation_token,'one');
  controls['[data-se-pause]']();
  pending.shift()(response(2,[row('first','Must not downgrade',false),row('second','Second valid result')],'two'));await flush();
  assert(!pending.length);assert(host.innerHTML.includes('First valid result'));assert(!host.innerHTML.includes('Must not downgrade'));
- assert(host.innerHTML.includes('Second valid result'));assert(host.innerHTML.includes('16 packages evaluated'));
+ assert(host.innerHTML.includes('Second valid result'));assert(host.innerHTML.includes('16 packages screened'));
  controls['[data-se-more]']();await flush();
  assert.equal(JSON.parse(calls.filter(c=>c.options).at(-1).options.body).continuation_token,'two');
  pending.shift()(response(3,[row('third','Third valid result')],'three'));await flush();
  const shortlisted=response(4,[row('fourth','Fourth valid result')],'four');shortlisted.search_progress.stop_reason='shortlist_ready';
  pending.shift()(shortlisted);await flush();
- assert(!pending.length);assert(host.innerHTML.includes('32 packages evaluated'));assert(host.innerHTML.includes('First valid result'));
+ assert(!pending.length);assert(host.innerHTML.includes('32 packages screened'));assert(host.innerHTML.includes('First valid result'));
  assert(host.innerHTML.includes('Find More'));controls['[data-se-more]']();await flush();
  assert.equal(JSON.parse(calls.filter(c=>c.options).at(-1).options.body).continuation_token,'four');
  pending.shift()(response(5,[row('new','New after thirty-two')],null));await flush();
- assert(host.innerHTML.includes('40 packages evaluated'));assert(host.innerHTML.includes('First valid result'));
+ assert(host.innerHTML.includes('40 packages screened'));assert(host.innerHTML.includes('First valid result'));
  assert(host.innerHTML.includes('New after thirty-two'));
  controls['[data-se-different]']();assert(!pending.length);assert(host.innerHTML.includes('New after thirty-two'));
  tab='trade_finder';ui.render(host,null,{directed:true});assert(host.innerHTML.includes('Offer / shop an asset'));assert(!host.innerHTML.includes('Directed search'));

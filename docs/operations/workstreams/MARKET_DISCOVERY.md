@@ -1,3 +1,16 @@
+## Release integration correction — Explore #603 — 2026-11-26
+
+Candidate aff50e535aa9cce312bd637b7c2a2a3362c58623 failed Stable45836757740:
+3,419 passed,19 skipped,9 failed. Eight failures correctly caught a one-script
+`v` override violating the shared asset-generation contract; one caught the
+intentional evaluated→screened progress wording in the existing Node UI journey.
+PR returned to draft before the correction. Preserve the shared `v` generation
+and use the existing per-asset `c` revision for the updated Explore script;
+update the UI label expectation without weakening route/pause/resume/merge tests.
+No recommendation/model behavior changed. The failed candidate cannot authorize
+merge. The corrected exact head requires a fresh successful Stable gate.
+Release evidence will be recorded in linked PR603; no infrastructure change.
+
 ## RELEASE CANDIDATE — Explore follow-through (#603) — 2026-11-26
 
 The authorized scope/criteria immediately below were recorded in the draft PR
