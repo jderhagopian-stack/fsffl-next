@@ -1,3 +1,12 @@
+## Static delivery correction — #607 — 2026-11-26
+
+Home/Atlas focused checks correctly require the changed product_shell.js outer
+cache key to match its actual Git blob. The manual candidate suffix violated
+that standing delivery contract. Restored the content-derived shell/navigation
+keys in index.html; existing tests remain unchanged. This is delivery only, with
+no rule/model/ownership changes. The previous in-flight Stable head is superseded;
+only the corrected exact head can authorize merge/deploy.
+
 ## Release compatibility correction — #607 — 2026-11-26
 
 Stable45879500724 correctly rejected28d55f77e67351cc99a2b174f7571bbe19473f24
