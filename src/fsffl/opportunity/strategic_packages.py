@@ -45,6 +45,7 @@ class StrategicPackageLane:
     required_receive: Asset | None = None
     required_send: Asset | None = None
     purpose: StrategicPurpose | None = None
+    incoming_asset_limit: int | None = None
 
 
 @dataclass(frozen=True)
@@ -117,7 +118,7 @@ def _lane_pairs(lane, *, bounds, as_of, shape_offset):
             return
         received = (lane.required_receive, *(a for a in received if a != lane.required_receive))
     inventory_b = lane.counterparty.model_copy(update={'assets': received[:bounds.ingredients_per_side]})
-    shapes = _shapes(bounds, len(inventory_a.assets), len(inventory_b.assets))
+    shapes = _shapes(bounds, len(inventory_a.assets), min(len(inventory_b.assets), lane.incoming_asset_limit or bounds.max_assets_per_side))
     if not shapes:
         return
     shape_offset %= len(shapes)

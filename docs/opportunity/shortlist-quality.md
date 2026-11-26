@@ -1,3 +1,27 @@
+## Funded terms and position anchors
+
+An in-range singleton does not prove that funded terms are unnecessary. Guided
+search may emit one player+two later-picks alternative per target/lane using
+canonical pick rounds and the unchanged price envelope. A separate bounded
+term window uses at most12 ingredients (up to4 later picks), at most48 scalar
+price checks per anchor; emitted alternatives consume existing generation visits.
+It does not increase the80 screens,8 confirmations, global visit limit or memory
+reserve. The existing four-total-assets direction turn can investigate an
+admissible funded alternative; no shape overrides economics or user constraints.
+
+Position searches preserve ordinary player lanes. Up to2 matching player anchors
+per partner get dedicated sweetener lanes with a required incoming anchor and
+at most3 incoming assets (the player plus up to2 picks), so
+picks cannot become a stand-in for the requested position. Explicit player-only
+excludes sweeteners. Explicit pick-only retains its prior behavior: a position
+selector does not impose an NFL position on a draft pick. Age constraints apply
+to player anchors. Repairs use the same whole-package matching contract.
+
+Coverage is not promotion. Required cuts, legal IR plans, requested priorities,
+native availability, competitive confirmation and alternative comparisons retain
+authority. Publish paired actual packages and displaced screens, including weak
+or unconfirmed candidates. An extra pair of picks is not inherently a good deal.
+
 # Search quality: compensate, compare, and curate
 
 A positive coordinate does not establish that a costly trade is worth pursuing.
