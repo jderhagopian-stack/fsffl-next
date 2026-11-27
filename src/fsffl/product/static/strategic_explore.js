@@ -8,7 +8,7 @@
   const signed=(v,d=1)=>{if(!finite(v))return 'Unavailable';const rounded=Number(v.toFixed(d));return(rounded>0?'+':'')+(rounded===0?0:v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});};
   const ctx=()=>typeof state!=='undefined'?state.context||{}:{};
   const contextKey=()=>JSON.stringify([ctx().user_id,ctx().league_id,ctx().team_id,ctx().state_id,ctx().capability_readiness?.publication?.generation_id||ctx().publication_generation_id]);
-  const fresh=()=>({key:contextKey(),sequence:0,result:null,browser:null,busy:false,inFlight:false,pauseRequested:false,pendingBatch:null,started:false,error:'',browserError:'',browserLoading:false,mode:'automatic',goals:[ALL[0]],young:false,picks:false,partner:'',position:'',target:'',offer:'',protected:[],directed:false,expanded:false,dirty:false});
+  const fresh=()=>({key:contextKey(),prices:new Map(),priceBusy:false,sequence:0,result:null,browser:null,busy:false,inFlight:false,pauseRequested:false,pendingBatch:null,started:false,error:'',browserError:'',browserLoading:false,mode:'automatic',goals:[ALL[0]],young:false,picks:false,partner:'',position:'',target:'',offer:'',protected:[],directed:false,expanded:false,dirty:false});
   let view=fresh(),host=null;
   function reconcile(){if(view.key!==contextKey())view=fresh();}
   function visibleHost(){return host?.isConnected&&typeof state!=='undefined'&&state.route==='opportunities'&&host.id==='market-ns-body'&&['for_you','trade_finder'].includes(window.fsfflMarketNorthStar?.activeTab?.());}
@@ -92,13 +92,83 @@
     if(p.kind==='acquire_future_assets')title=p.asset_focus==='picks'?'Build draft capital':'Explore younger talent';
     return `<div class="se-purpose"><b>${esc(title)}</b></div>`;
   }
+  function pointAssets(point, side){
+    return point[side].map(({asset:term,label})=>{
+      const ref=term.kind==='player'?'player:'+term.player_id:'pick:'+term.pick_id;
+      const detail=term.kind==='pick'?asset(ref)?.detail?.split(' · ')[0]:'';
+      return {asset_ref:ref,label:detail?label+' ('+detail+')':label};
+    });
+  }
+  function priceMarkup(row,index){
+    if(!row.evaluation_kind||view.dirty)return '';
+    const entry=view.prices.get(row.point_id);
+    const choices=[['buy','Buying: compare offers',!view.offer],['sell','Selling: compare returns',!(view.target||view.position||view.young||view.picks)]];
+    const buttons=choices.filter(item=>item[2]).map(([side,label])=>
+      `<button type="button" class="text-button" data-se-price="${index}" data-side="${side}" ${view.priceBusy||view.busy?'disabled':''}>${label}</button>`).join(' ');
+    if(!buttons)return '';
+    let body='';
+    if(entry?.message)body=`<p role="status">${esc(entry.message)}</p>`;
+    if(entry?.result){
+      const result=entry.result, plan=result.negotiating_terms;
+      const describe=(id,title)=>{
+        const point=result.points.find(p=>p.point_id===id);
+        if(!point)return '';
+        const give=pointAssets(point,'focal_assets').map(a=>a.label).join(' + ');
+        const get=pointAssets(point,'counterparty_assets').map(a=>a.label).join(' + ');
+        const lines=[['You',result.focal_team_id],[teamName(result.counterparty_team_id),result.counterparty_team_id]].map(([label,id])=>{
+          const effect=point.counter_review.effects.teams[id],cuts=point.price_check.cuts[id];
+          const unit=point.price_check.basis==='remaining_regular_season_weekly_mean'?'pts/week':'projected lineup pts';
+          return `<p>${esc(label)}: ${signed(effect.current)} ${unit} · ${signed(effect.three_year)} over three years · ${signed(effect.career)} career${cuts?' · '+cuts+' required cut'+(cuts===1?'':'s'):''}.</p>`;
+        }).join('');
+        return `<div><strong>${title}</strong><p>Give ${esc(give)} for ${esc(get)}.</p>${lines}<button type="button" class="text-button" data-se-term="${index}" data-point="${esc(id)}">Check this offer in Trade Center →</button></div>`;
+      };
+      if(plan.opening){
+        body=describe(plan.opening,plan.conditional_opening?'Ask if they’d consider this':entry.side==='buy'?'Open with this offer':'Start by asking for this return');
+        if(plan.conditional_opening){
+          const check=result.points.find(p=>p.point_id===plan.opening).price_check;
+          body+=`<p>This helps ${esc(teamName(result.counterparty_team_id))} at ${esc(check.needs_filled.join(' and '))}. They would give up market value, so they have a reason to ask for more.</p>`;
+        }
+        if(plan.fallback){
+          const opened=result.points.find(p=>p.point_id===plan.opening);
+          const next=result.points.find(p=>p.point_id===plan.fallback);
+          const team=result.counterparty_team_id, before=opened.counter_review.effects.teams[team], after=next.counter_review.effects.teams[team];
+          const reason=after.career>before.career?'a better long-term return':after.three_year>before.three_year?'more over the next three years':after.current>before.current?'more lineup production now':'better market value';
+          body+=`<p>Compared with the opening terms, the alternative gives ${esc(teamName(team))} ${reason}.</p>`;
+        }
+        body+=plan.fallback?describe(plan.fallback,entry.side==='buy'?'If they ask for more':'If they offer less'):'<p>Keep these terms. The other checked prices give you no clear reason to concede.</p>';
+        if(plan.outside){
+          const outside=result.points.find(p=>p.point_id===plan.outside);
+          const terms=pointAssets(outside,'counterparty_assets').map(a=>a.label).join(' + ');
+          body+=`<p><b>Lower offer checked:</b> At ${esc(terms)}, you would give up more in market value than the price check supports. Consider keeping what you have.</p>`;
+        }
+        body+='<small>Check the season impact before agreeing.</small>';
+      }else if(plan.reason==='missing_publication')body='<p>A matching forecast and long-term values are needed to compare prices.</p>';
+      else body='<p>No opening price established. The checked packages need better terms or stronger evidence for both teams.</p>';
+    }
+    return `<div class="se-negotiation">${buttons}${body}</div>`;
+  }
+  async function comparePrices(index,side){
+    const owner=view, row=view.result?.candidate_packages[index], key=contextKey(), seq=view.sequence;
+    if(!row||view.priceBusy||view.busy||view.dirty)return;
+    const active=()=>view===owner&&contextKey()===key&&owner.sequence===seq&&!owner.dirty;
+    const openPanels=[...host.querySelectorAll('details.se-more')].map(el=>el.open);
+    const redraw=()=>{paint();host?.querySelectorAll('details.se-more').forEach((el,i)=>{el.open=Boolean(openPanels[i]);});};
+    owner.priceBusy=true;owner.prices.set(row.point_id,{message:'Checking nearby prices…'});redraw();
+    try{
+      const result=await api('/api/trade-center/frontier',{method:'POST',body:JSON.stringify({...row.trade_center_request,price_side:side})});
+      if(!active())return;
+      if(result.state_id_before!==view.result.league_state_id||result.publication_generation_id!==view.result.publication_generation_id||result.focal_team_id!==view.result.focal_team_id||result.counterparty_team_id!==row.counterparty_team_id)throw Error('The league changed. Run the search again.');
+      owner.prices.set(row.point_id,{side,result});
+    }catch(error){if(active())owner.prices.set(row.point_id,{message:error.message||'Please retry the price check.'});}
+    finally{owner.priceBusy=false;if(view===owner&&visibleHost())redraw();}
+  }
   function card(row,rows){
     const index=rows.indexOf(row);
     const name=teamName(row.counterparty_team_id);
     const lineages=row.repair_lineages||[];
     const related=rows.filter(other=>other.point_id!==row.point_id&&((row.shortlist_quality?.alternative_point_ids||[]).includes(other.point_id)||(row.linked_prior_point_ids||[]).includes(other.point_id)||lineages.some(l=>l.root_point_id===other.point_id||l.parent_point_id===other.point_id)||(other.repair_lineages||[]).some(l=>l.root_point_id===row.point_id||l.parent_point_id===row.point_id)));
     const blocked=['side_a','side_b'].some(s=>row.objective_assessment?.[s]?.protected_players_lost?.length);
-    return `<article class="se-card" data-se-group="${esc(row.display_context?.group||'needs_evidence')}"><header><div class="se-row"><span class="eyebrow">${row.display_context?.group==='priority_tradeoff'?'Tradeoff':'Preliminary'}</span><small>${esc(name)}</small></div><h2>${row.receive?.length===1?'Explore '+esc(row.receive[0].label||row.receive[0].asset_ref):esc(row.send?.length||0)+' for '+esc(row.receive?.length||0)+' package'}</h2></header><div class="se-card-body"><div class="se-package-grid"><section><p class="eyebrow">You receive · ${esc(row.receive?.length||0)}</p>${packageAssets(row.receive)}</section><section><p class="eyebrow">You send · ${esc(row.send?.length||0)}</p>${packageAssets(row.send)}</section></div>${choiceSummary(row,name)}${purposeMarkup(row)}${impact(row,name)}${related.length?`<details class="se-alternatives"><summary>Compare linked package alternatives</summary>${related.map(other=>`<div><b>You give:</b> ${esc((other.send||[]).map(a=>a.label).join(' + '))}<br><b>You get:</b> ${esc((other.receive||[]).map(a=>a.label).join(' + '))}<p>${esc(other.evidence_status==='pre_simulation_screened'?'Preliminary effects are shown in its own card.':'Effects are incomplete; no benefit is assumed.')}</p><button type="button" class="text-button" data-se-compare="${rows.indexOf(other)}">View this alternative</button></div>`).join('')}</details>`:''}<button type="button" class="primary-button se-evaluate" data-se-evaluate="${index}"${blocked?' disabled':''}>Evaluate in Trade Center →</button></div></article>`;
+    return `<article class="se-card" data-se-group="${esc(row.display_context?.group||'needs_evidence')}"><header><div class="se-row"><span class="eyebrow">${row.display_context?.group==='priority_tradeoff'?'Tradeoff':'Preliminary'}</span><small>${esc(name)}</small></div><h2>${row.receive?.length===1?'Explore '+esc(row.receive[0].label||row.receive[0].asset_ref):esc(row.send?.length||0)+' for '+esc(row.receive?.length||0)+' package'}</h2></header><div class="se-card-body"><div class="se-package-grid"><section><p class="eyebrow">You receive · ${esc(row.receive?.length||0)}</p>${packageAssets(row.receive)}</section><section><p class="eyebrow">You send · ${esc(row.send?.length||0)}</p>${packageAssets(row.send)}</section></div>${choiceSummary(row,name)}${purposeMarkup(row)}${priceMarkup(row,index)}${impact(row,name)}${related.length?`<details class="se-alternatives"><summary>Compare linked package alternatives</summary>${related.map(other=>`<div><b>You give:</b> ${esc((other.send||[]).map(a=>a.label).join(' + '))}<br><b>You get:</b> ${esc((other.receive||[]).map(a=>a.label).join(' + '))}<p>${esc(other.evidence_status==='pre_simulation_screened'?'Preliminary effects are shown in its own card.':'Effects are incomplete; no benefit is assumed.')}</p><button type="button" class="text-button" data-se-compare="${rows.indexOf(other)}">View this alternative</button></div>`).join('')}</details>`:''}<button type="button" class="primary-button se-evaluate" data-se-evaluate="${index}"${blocked?' disabled':''}>Evaluate in Trade Center →</button></div></article>`;
   }
   function choiceSummary(row,name){
     if(row.evidence_status!=='pre_simulation_screened')return '';
@@ -150,8 +220,21 @@
     host.innerHTML=`<div class="strategic-explore">${direction()}${refinements()}<button type="button" class="primary-button se-search" data-se-run${view.busy?' disabled':''}>${view.busy?'Discovering…':'Find opportunities'}</button>${results()}</div>`;
     wire();
   }
-  function changed(){view.expanded=host?.querySelector('.se-refine')?.open??view.expanded;view.sequence+=1;view.dirty=true;paint();}
+  function changed(){view.prices.clear();view.expanded=host?.querySelector('.se-refine')?.open??view.expanded;view.sequence+=1;view.dirty=true;paint();}
   function wire(){
+    host.querySelectorAll('[data-se-price]').forEach(b=>b.onclick=()=>comparePrices(Number(b.dataset.sePrice),b.dataset.side));
+    host.querySelectorAll('[data-se-term]').forEach(b=>b.onclick=()=>{
+      if(view.dirty||view.key!==contextKey())return;
+      const row=view.result.candidate_packages[Number(b.dataset.seTerm)];
+      const point=view.prices.get(row.point_id)?.result?.points.find(p=>p.point_id===b.dataset.point);
+      if(point)window.fsfflOpenOpportunityInTradeCenter?.({send:pointAssets(point,'focal_assets'),receive:pointAssets(point,'counterparty_assets'),
+        counterparty_team_id:row.counterparty_team_id,counterparty_name:teamName(row.counterparty_team_id),
+        league_state_id:view.result.league_state_id,publication_generation_id:view.result.publication_generation_id,
+        negotiation_note:point.point_id===view.prices.get(row.point_id).result.negotiating_terms.opening
+          ?(view.prices.get(row.point_id).result.negotiating_terms.conditional_opening?'Possible opener. Your partner would be giving up market value.':'Opening terms from Explore.')
+          :'Fallback terms from Explore.',
+        trade_center_request:{search_instructions:row.trade_center_request.search_instructions}});
+    });
     host.querySelectorAll('[data-se-mode]').forEach(b=>b.addEventListener('click',()=>{if(view.mode===b.dataset.seMode)return;view.mode=b.dataset.seMode;changed();}));
     host.querySelectorAll('[data-se-priority]').forEach(b=>b.addEventListener('change',()=>{const set=new Set(view.goals);b.checked?set.add(b.dataset.sePriority):set.delete(b.dataset.sePriority);view.goals=ALL.filter(g=>set.has(g));changed();}));
     for(const name of ['young','picks'])host.querySelector('[data-se-'+name+']')?.addEventListener('change',e=>{view[name]=e.target.checked;view.target='';changed();});
@@ -202,7 +285,7 @@
     const active=()=>view===current&&contextKey()===key&&id===view.sequence&&state.route==='opportunities'&&['for_you','trade_finder'].includes(window.fsfflMarketNorthStar?.activeTab?.());
     let token=continueSearch?view.result?.search_progress?.next_token:null;
     if(continueSearch&&!token)return;
-    if(!continueSearch)view.result=null;
+    if(!continueSearch){view.result=null;view.prices.clear();}
     view.started=true;view.busy=true;view.inFlight=true;view.pauseRequested=false;view.error='';view.dirty=false;paint();
     // Sequential bounded batches; finalist checks share the existing Trade Center evaluator.
     try{
