@@ -1,3 +1,13 @@
+## Explore negotiation closeout — PR #612
+
+Branch `explore-negotiating-terms`, main `fec89aa0`. The price comparison reads each side’s existing cut-adjusted Market Capital delta, alone or alongside a lineup goal. Four regression cases reproduced the earlier exception. 91 focused tests passed after correction. Two private saved mobile replays followed the fallback buttons through full analysis, verifying the exact assets, both owners’ objective contexts, future contributions and cuts. A seller can consider a concession independently of the decision to keep the player. Physical Safari and release approval remain pending. The next product workstream after acceptance is Reports & History.
+
+## Explore opening offers and concessions — 2026-11-27
+
+Base main and checked deployment `fec89aa0`. From a saved Explore result an owner can hold the acquisition or sale fixed and compare nearby legal offers. Discovery keeps its 80 screens and eight confirmations. An explicit comparison uses the existing limit of 24 nearby evaluations. An exploratory opening bid needs an identified lineup fit and a supported fallback. Show both owners’ costs and present a fallback as a negotiable alternative.
+
+Two private saved-session journeys exercised buying a starter and selling a starter for future assets in a touch-enabled phone-sized browser. Both exact opening packages reached Trade Center and completed the existing 50,000-simulation analysis. Focused tests passed (86). Physical Safari and deployed acceptance remain outstanding.
+
 ## FSFFL rookie-pick rollover — release candidate, 2026-11-27
 
 Base main `e00a9bdd26dcfcf7c7d486269f83f2f8409b8393`. FSFFL's linked Sleeper leagues use three draft classes and advance after the ordinary rookie draft completes. State retains the original franchise, current holder, evidenced slot and used selections separately. Uncertain use is excluded from trade eligibility. Existing non-FSFFL policies, Max PF and ranking calculations are preserved.
