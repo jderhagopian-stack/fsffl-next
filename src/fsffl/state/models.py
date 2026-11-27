@@ -608,6 +608,7 @@ class RosterEntry(FrozenModel):
 
 
 class TeamState(FrozenModel):
+    final_regular_record: tuple[Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)]] | None = None
     team_id: str
     roster: tuple[RosterEntry, ...]
     faab_balance: Annotated[int, Field(ge=0)] = 0
@@ -673,6 +674,10 @@ class Transaction(FrozenModel):
 
 
 class LeagueState(FrozenModel):
+    overall_record_standings: bool = False
+    regular_totals_observed_leg: Annotated[int, Field(ge=1)] | None = None
+    regular_totals_confirmed: bool = False
+    final_regular_totals_week: Annotated[int, Field(ge=1, le=18)] | None = None
     rookie_pick_window: RookiePickWindow | None = None
     winners_bracket: tuple[BracketGame, ...] = ()
     schema_version: str = "1"

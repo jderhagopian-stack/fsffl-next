@@ -9,6 +9,14 @@ from .models import LeagueState
 
 def _sorted_payload(state: LeagueState) -> dict[str, Any]:
     payload = state.model_dump(mode="json", exclude_none=False)
+    if not state.overall_record_standings:
+        payload.pop("overall_record_standings")
+    if state.regular_totals_observed_leg is None:
+        payload.pop("regular_totals_observed_leg")
+    if not state.regular_totals_confirmed:
+        payload.pop("regular_totals_confirmed")
+    if state.final_regular_totals_week is None:
+        payload.pop("final_regular_totals_week")
     if state.rookie_pick_window is None:
         payload.pop("rookie_pick_window")
     for pick in payload["draft_picks"]:
@@ -58,6 +66,8 @@ def _sorted_payload(state: LeagueState) -> dict[str, Any]:
     payload["teams"] = sorted(payload["teams"], key=lambda item: item["team_id"])
     payload["team_states"] = sorted(payload["team_states"], key=lambda item: item["team_id"])
     for team_state in payload["team_states"]:
+        if team_state["final_regular_record"] is None:
+            team_state.pop("final_regular_record")
         # Preserve identity for durable snapshots written before Max PF existed.
         if team_state.get("max_points_for") is None:
             team_state.pop("max_points_for", None)

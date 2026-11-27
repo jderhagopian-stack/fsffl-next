@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pydantic import model_validator
 
+from fsffl.state.settled_draft_order import settled_origin_order
 from fsffl.state.models import Asset, FrozenModel, LeagueState, PickAsset, PlayerAsset, RosterSlot
 
 
@@ -13,6 +14,9 @@ class TradeAssetOption(FrozenModel):
     detail: str | None = None
     player_id: str | None = None
     pick_id: str | None = None
+    rule_slot: int | None = None
+    official_slot: int | None = None
+    slot_disagreement: bool = False
     roster_slot: RosterSlot | None = None
     age_years: float | None = None
 
@@ -44,7 +48,7 @@ class TradeCenterBrowserView(FrozenModel):
     product_version: str = "next8-trade-browser-v2:player-state-age"
 
 
-def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
+def _team_browser(league_state: LeagueState, team_id: str, orders) -> TeamTradeBrowser:
     team = next((item for item in league_state.teams if item.team_id == team_id), None)
     team_state = next((item for item in league_state.team_states if item.team_id == team_id), None)
     if team is None or team_state is None:
@@ -78,6 +82,15 @@ def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
         pick = picks_by_id.get(ownership.pick_id)
         if pick is None:
             continue
+        order = orders.get(pick.season, {}).get(pick.original_team_id)
+        rule_slot = order.slot if order else None
+        slot = pick.verified_slot or rule_slot
+        conflict = bool(order and order.conflicts(pick.verified_slot))
+        notes = [order.reason] if order else []
+        if pick.verified_slot:
+            notes.append(f"Sleeper board slot {pick.verified_slot}")
+        if conflict:
+            notes.append(f"Conflicting league-rule slot {rule_slot}; exact valuation withheld")
         original_team = next(
             (item.display_name for item in league_state.teams if item.team_id == pick.original_team_id),
             pick.original_team_id,
@@ -86,10 +99,11 @@ def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
             TradeAssetOption(
                 asset_ref=f"pick:{pick.pick_id}",
                 asset_kind="pick",
-                label=(f"{pick.season} {pick.round}.{pick.verified_slot:02d}" if pick.verified_slot
+                label=(f"{pick.season} {pick.round}.{slot:02d}" if slot
                        else f"{pick.season} Round {pick.round}"),
                 available=pick.pick_id not in unconfirmed,
-                detail=f"Originally {original_team}" + (" · Awaiting draft update" if pick.pick_id in unconfirmed else ""),
+                rule_slot=rule_slot, official_slot=pick.verified_slot, slot_disagreement=conflict,
+                detail=" · ".join([f"Originally {original_team}", *notes]) + (" · Awaiting draft update" if pick.pick_id in unconfirmed else ""),
                 pick_id=pick.pick_id,
             )
         )
@@ -115,9 +129,10 @@ def build_trade_center_browser_view(
     State so product surfaces can share one ownership-aware asset catalog.
     """
 
-    focal = _team_browser(league_state, focal_team_id)
+    orders = {year: settled_origin_order(league_state, year) for year in {p.season for p in league_state.draft_picks}}
+    focal = _team_browser(league_state, focal_team_id, orders)
     counterparties = tuple(
-        _team_browser(league_state, team.team_id)
+        _team_browser(league_state, team.team_id, orders)
         for team in sorted(league_state.teams, key=lambda item: (item.display_name, item.team_id))
         if team.team_id != focal_team_id
     )
@@ -160,7 +175,7 @@ def resolve_owned_asset_ref(
 ) -> Asset:
     """Resolve one submitted UI asset ref against current canonical ownership."""
 
-    browser = _team_browser(league_state, team_id)
+    browser = _team_browser(league_state, team_id, {})
     option = next((item for item in browser.assets if item.asset_ref == asset_ref), None)
     if option is None:
         raise ValueError("submitted asset is not currently owned by the specified team")
