@@ -37,12 +37,15 @@ def _validate_leg_ownership(
     roster_ids = {entry.player_id for entry in team_state.roster}
     pick_owner = {ownership.pick_id: ownership.owner_team_id for ownership in league_state.pick_ownership}
 
+    unconfirmed = league_state.unconfirmed_pick_ids()
     faab_sent = 0
     for asset in leg.sends:
         if isinstance(asset, PlayerAsset):
             if asset.player_id not in roster_ids:
                 raise ValueError(f"team {leg.team_id} does not roster player {asset.player_id}")
         elif isinstance(asset, PickAsset):
+            if asset.pick_id in unconfirmed:
+                raise ValueError("Pick use is awaiting a draft update")
             if pick_owner.get(asset.pick_id) != leg.team_id:
                 raise ValueError(f"team {leg.team_id} does not own pick {asset.pick_id}")
         elif isinstance(asset, FaabAsset):

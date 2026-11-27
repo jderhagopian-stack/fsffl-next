@@ -47,8 +47,10 @@ class SleeperSnapshotNormalizer:
     def __init__(
         self, *, include_unrostered_players: bool = True,
         include_player_ids: Sequence[str] = (),
+        prior_pick_window=None,
     ) -> None:
         self._normalizer = SleeperNormalizer()
+        self._prior_pick_window = prior_pick_window
         self._include_unrostered_players = include_unrostered_players
         self._include_player_ids = frozenset(str(player_id) for player_id in include_player_ids)
 
@@ -65,7 +67,22 @@ class SleeperSnapshotNormalizer:
         if missing:
             raise ValueError(f"Sleeper snapshot missing required payloads: {', '.join(missing)}")
 
+        from .sleeper_rookie_window import in_family
+        league = payload["league"]
+        ancestors = payload.get("rookie_ancestors", ())
+        previous = None
+        if self._prior_pick_window and (in_family(league, ancestors) or payload.get("rookie_lineage_unavailable")):
+            for league_id in (league["league_id"], league.get("previous_league_id")):
+                if league_id:
+                    previous = self._prior_pick_window(f"sleeper:{league_id}", snapshot.captured_at)
+                    if previous is not None:
+                        break
         bundle = SleeperPayloadBundle(
+            rookie_drafts=payload.get("rookie_drafts"),
+            rookie_selections=payload.get("rookie_selections"),
+            rookie_transfers=payload.get("rookie_transfers", ()),
+            rookie_ancestors=ancestors,
+            prior_pick_window=previous,
             league=payload["league"],
             users=payload["users"],
             rosters=payload["rosters"],

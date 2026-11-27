@@ -16,7 +16,7 @@
  * Unavailable inference is labeled Awaiting PIT history rather than rendered as a score.
  */
 
-const fsfflBehaviorUiVersion='20261123-owner-live1';
+const fsfflBehaviorUiVersion='20261127-owner-pick-window';
 let fsfflBehaviorSelectedOwnerId=null;
 let fsfflBehaviorRouteGuardInstalled=false;
 let fsfflBehaviorProfiles=[];
@@ -80,12 +80,13 @@ function fsfflBehaviorResume(profile){
 function fsfflBehaviorCurrentSeason(profile){
   const c=profile?.current_season;if(!c)return '';
   const r=c.record,counts=c.counts,groups=new Map();
-  for(const p of c.picks||[]){const k=`${p.season} · Round ${p.round}`;groups.set(k,(groups.get(k)||0)+1)}
+  for(const p of c.picks||[]){const k=`${p.season} · ${p.verified_slot?p.round+'.'+String(p.verified_slot).padStart(2,'0'):'Round '+p.round} · Originally ${p.original_team}${p.available===false?' · Awaiting draft update':''}`;groups.set(k,(groups.get(k)||0)+1)}
   const record=r?`${r.wins}–${r.losses}${r.ties?`–${r.ties}`:''}`:'—';
   const list=items=>(items||[]).map(escapeHtml).join(' + ')||'—';
   function move(m){return `<div class="behavior-live-move"><small>${escapeHtml(fsfflBehaviorDate(m.completed_at))} · ${escapeHtml({trade:'Trade',waiver:'Waiver',free_agent:'Free agent'}[m.kind]||'Move')}</small><p><strong>${list(m.received)}</strong>${m.sent?.length?`<br><span>${m.kind==='trade'?'Sent':'Dropped'} ${list(m.sent)}</span>`:''}</p></div>`}
   const moves=c.recent_moves||[],drafts=c.draft_selections||[];
-  return `<section class="panel behavior-current-season"><p class="eyebrow">${c.season} · This season</p><h2>Where things stand</h2><button type="button" class="secondary-button" data-behavior-refresh-season>Update season activity</button><div class="behavior-resume-stats"><div><strong>${escapeHtml(record)}</strong><span>${r?`Head-to-head · through Week ${r.through_week}`:'Record unavailable'}</span></div><div><strong>${counts?counts.trades:'—'}</strong><span>completed trades</span></div><div><strong>${(c.picks||[]).length}</strong><span>draft picks held</span></div></div>
+  return `<section class="panel behavior-current-season"><p class="eyebrow">${c.season} · This season</p><h2>Where things stand</h2><button type="button" class="secondary-button" data-behavior-refresh-season>Update season activity</button><div class="behavior-resume-stats"><div><strong>${escapeHtml(record)}</strong><span>${r?`Head-to-head · through Week ${r.through_week}`:'Record unavailable'}</span></div><div><strong>${counts?counts.trades:'—'}</strong><span>completed trades</span></div><div><strong>${c.pick_window_notice&&!(c.picks||[]).length?'—':(c.picks||[]).length}</strong><span>draft picks held</span></div></div>
+  ${c.pick_window_notice?`<p>${escapeHtml(c.pick_window_notice)}</p>`:''}
   ${(c.insights||[]).map(t=>`<p>${escapeHtml(t)}</p>`).join('')}
   <details class="behavior-resume-detail"><summary>Draft capital · ${(c.picks||[]).length} picks</summary>${[...groups].map(([k,n])=>`<p><strong>${escapeHtml(k)}</strong> · ${n}</p>`).join('')||'<p>No current picks recorded.</p>'}</details>
   ${drafts.length?`<details class="behavior-resume-detail" open><summary>${c.season} draft · ${drafts.length} selection${drafts.length===1?'':'s'}</summary>${drafts.map(d=>`<p><strong>${escapeHtml(d.player_name)}</strong> · Round ${d.round}, #${d.pick_no}</p>`).join('')}</details>`:''}

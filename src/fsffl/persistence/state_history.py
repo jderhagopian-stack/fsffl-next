@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from fsffl.state.history import StateSnapshotStore
-from fsffl.state.models import LeagueState
+from fsffl.state.models import LeagueState, RookiePickWindow
 
 
 ConnectFactory = Callable[[], Any]
@@ -122,13 +122,26 @@ class PostgresStateSnapshotStore(StateSnapshotStore):
                     raise ValueError("stored State history snapshot postdates query cutoff")
                 yield state
 
+    def last_verified_pick_window(self, league_id: str, as_of: datetime) -> RookiePickWindow | None:
+        # Only read the small verified window coordinate, never deserialize the
+        # roster history. Legacy States lack this evidence.
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """select payload->'rookie_pick_window' as pick_window
+                   from fsffl.state_snapshot_history
+                   where league_id=%s and as_of<=%s
+                     and payload->'rookie_pick_window'->>'status'='verified'
+                   order by as_of desc, recorded_at desc, state_hash desc limit 1""", (league_id, as_of))
+            row = cursor.fetchone()
+        return RookiePickWindow.model_validate(row["pick_window"]) if row else None
+
     def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
         recent = self.recent_at_or_before(league_id, as_of, limit=1)
         return recent[0] if recent else None
 
 
-def state_snapshot_store_from_env() -> PostgresStateSnapshotStore | None:
+def state_snapshot_store_from_env(*, connect_factory=None) -> PostgresStateSnapshotStore | None:
     database_url = os.getenv("FSFFL_DATABASE_URL", "").strip()
     if not database_url:
         return None
-    return PostgresStateSnapshotStore(database_url)
+    return PostgresStateSnapshotStore(database_url, connect_factory=connect_factory)

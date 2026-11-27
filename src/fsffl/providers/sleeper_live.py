@@ -128,6 +128,7 @@ class SleeperLiveSource:
                 if key.startswith("matchup:")
             },
         }
+        probe_payload.update(self._rookie_window(league_payload))
         probe_payload.update(self._postseason(league_id, league_payload, nfl_state))
         encoded = json.dumps(
             probe_payload,
@@ -192,6 +193,7 @@ class SleeperLiveSource:
             "nfl_state": results["nfl_state"],
             "nfl_schedule": results["nfl_schedule"],
         }
+        payload.update(self._rookie_window(league_payload))
         payload.update(self._postseason(league_id, league_payload, results["nfl_state"]))
         return ProviderSnapshot(
             provider_name=self.provider_name,
@@ -199,6 +201,18 @@ class SleeperLiveSource:
             captured_at=captured_at,
             payload=payload,
         )
+
+    def _rookie_window(self, league):
+        from .sleeper_rookie_window import acquire
+
+        def optional(path):
+            try:
+                return self._get(path)
+            except (OSError, ValueError):
+                logging.getLogger(__name__).warning("Sleeper rookie draft evidence unavailable")
+                return None
+
+        return acquire(optional, league)
 
     def _postseason(self, league_id, league, nfl_state):
         try:

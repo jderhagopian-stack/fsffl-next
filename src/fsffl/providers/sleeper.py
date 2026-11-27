@@ -18,6 +18,7 @@ from fsffl.state.models import (
     Position,
     Provenance,
     ProviderRef,
+    RookiePickWindow,
     RosterEntry,
     RosterSlot,
     ScoringRule,
@@ -84,6 +85,11 @@ class SleeperPayloadBundle:
     matchups: Mapping[str, Sequence[Mapping[str, Any]]] | None = None
     nfl_state: Mapping[str, Any] | None = None
     retrieved_at: datetime | None = None
+    rookie_ancestors: tuple = ()
+    rookie_drafts: list | None = None
+    rookie_transfers: Sequence[Mapping[str, Any]] = ()
+    rookie_selections: list | None = None
+    prior_pick_window: RookiePickWindow | None = None
 
 
 def sleeper_completed_week(league, nfl_state):
@@ -475,9 +481,19 @@ class SleeperNormalizer:
         draft_picks: list[DraftPick] = []
         pick_ownership: list[PickOwnership] = []
         rounds = league.rules.rookie_draft_rounds
-        for season in range(league.season + 1, league.season + 4):
+        from .sleeper_rookie_window import in_family, inventory
+        governed = bundle.prior_pick_window is not None or in_family(bundle.league, bundle.rookie_ancestors)
+        policy = inventory(bundle, bundle.prior_pick_window) if governed else None
+        first = policy.window.first_year if policy else league.season + 1
+        for season in range(first, first + 3) if first is not None else ():
             for roster_id, original_team_id in roster_id_to_team_id.items():
                 for round_number in range(1, rounds + 1):
+                    slot = None
+                    if policy and season <= league.season:
+                        slot = policy.slots.get(roster_id)
+                        if (round_number, slot) in policy.spent or (not slot and any(
+                                rnd == round_number and used not in policy.slots.values() for rnd, used in policy.spent)):
+                            continue
                     pick_id = f"{league_id}:pick:{season}:{round_number}:{roster_id}"
                     draft_picks.append(
                         DraftPick(
@@ -485,7 +501,7 @@ class SleeperNormalizer:
                             league_id=league_id,
                             season=season,
                             round=round_number,
-                            original_team_id=original_team_id,
+                            original_team_id=original_team_id, verified_slot=slot,
                         )
                     )
                     pick_ownership.append(
@@ -493,7 +509,9 @@ class SleeperNormalizer:
                     )
 
         ownership_by_pick = {entry.pick_id: entry.owner_team_id for entry in pick_ownership}
-        for trade in bundle.traded_picks:
+        reported_holders = {}
+        transfers = (*bundle.traded_picks, *bundle.rookie_transfers) if policy else bundle.traded_picks
+        for trade in transfers:
             try:
                 season = int(trade["season"])
                 round_number = int(trade["round"])
@@ -505,6 +523,12 @@ class SleeperNormalizer:
             owner_team_id = roster_id_to_team_id.get(owner_roster_id)
             if pick_id in ownership_by_pick and owner_team_id is not None:
                 ownership_by_pick[pick_id] = owner_team_id
+                if policy:
+                    reported_holders.setdefault(pick_id, set()).add(owner_team_id)
+        for pick_id, holders in reported_holders.items():
+            if len(holders) > 1:
+                # A disputed transfer cannot authorize either owner to offer the right.
+                del ownership_by_pick[pick_id]
         pick_ownership = [
             PickOwnership(pick_id=pick_id, owner_team_id=owner_team_id)
             for pick_id, owner_team_id in sorted(ownership_by_pick.items())
@@ -517,6 +541,7 @@ class SleeperNormalizer:
             team_states=tuple(team_states),
             players=tuple(players),
             player_states=tuple(player_states),
+            rookie_pick_window=policy.window if policy else None,
             draft_picks=tuple(draft_picks),
             pick_ownership=tuple(pick_ownership),
             matchups=tuple(

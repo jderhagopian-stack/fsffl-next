@@ -9,6 +9,11 @@ from .models import LeagueState
 
 def _sorted_payload(state: LeagueState) -> dict[str, Any]:
     payload = state.model_dump(mode="json", exclude_none=False)
+    if state.rookie_pick_window is None:
+        payload.pop("rookie_pick_window")
+    for pick in payload["draft_picks"]:
+        if pick["verified_slot"] is None:
+            pick.pop("verified_slot")
     if not state.winners_bracket:
         payload.pop("winners_bracket", None)
     # Existing provider snapshots retain their exact identity. Personal rules are

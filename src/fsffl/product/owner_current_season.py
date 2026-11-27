@@ -22,6 +22,7 @@ def current_owner_view(state, team_id, profile):
     holdings=sorted((picks[o.pick_id] for o in state.pick_ownership
         if o.owner_team_id==team_id and o.pick_id in picks and picks[o.pick_id].season>=state.league.season),
         key=lambda p:(p.season,p.round,p.pick_id))
+    unconfirmed = state.unconfirmed_pick_ids()
     labels=asset_labels(state)
     activity=profile.current_season_activity
     provider_ids={r.external_id for r in state.league.provider_refs if r.provider=='sleeper'}
@@ -54,9 +55,11 @@ def current_owner_view(state, team_id, profile):
     if firsts:
         year=min(p.season for p in firsts);n=sum(p.season==year for p in firsts)
         insights.append(f'Holds {n} first-round pick'+('s' if n!=1 else '')+f' in {year}.')
-    return {'state_id':state.state_id,'as_of':state.as_of.isoformat(),'season':state.league.season,
+    return {'pick_window_notice':state.rookie_pick_window.notice if state.rookie_pick_window else None,
+        'state_id':state.state_id,'as_of':state.as_of.isoformat(),'season':state.league.season,
         'record':current_record_context(state,team_id),'record_basis':'completed_head_to_head_games',
         'picks':[{'pick_id':p.pick_id,'season':p.season,'round':p.round,
+            'available':p.pick_id not in unconfirmed,'verified_slot':p.verified_slot,'owner_team_id':team_id,'original_team_id':p.original_team_id,
             'original_team':teams.get(p.original_team_id,p.original_team_id)} for p in holdings],
         'draft_selections':drafts,'activity_as_of':activity.cutoff.isoformat() if activity else None,
         'activity_observed_at':activity.observed_at.isoformat() if activity else None,
