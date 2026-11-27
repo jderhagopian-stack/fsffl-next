@@ -201,11 +201,14 @@ class SleeperLiveSource:
         )
 
     def _postseason(self, league_id, league, nfl_state):
-        boundary = sleeper_completed_week(league, nfl_state)
         try:
-            start = int(league.get("settings", {}).get("playoff_week_start"))
-        except (ValueError, TypeError):
+            start = int((league.get("settings") or {}).get("playoff_week_start"))
+            season = int(league["season"])
+        except (KeyError, ValueError, TypeError):
             return {}
+        if season <= 0:
+            return {}
+        boundary = sleeper_completed_week(league, nfl_state)
         if boundary is None or not 1 <= start <= min(18, boundary + 1):
             return {}
 
