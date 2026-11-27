@@ -8,7 +8,7 @@ import secrets
 from pathlib import Path
 from threading import RLock
 from uuid import uuid4
-from typing import Callable
+from typing import Callable, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
@@ -134,6 +134,10 @@ class AnalyzeTradeRequest(FrozenModel):
 
 class EvaluateTradeRequest(AnalyzeTradeRequest):
     search_instructions: TradeSearchInstructions | None = None
+
+
+class FrontierRequest(EvaluateTradeRequest):
+    price_side: Literal["buy", "sell"] | None = None
 
 
 class EvaluateWaiverRequest(FrozenModel):
@@ -3067,23 +3071,31 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @application.post("/api/trade-center/frontier")
-    def explore_trade_frontier(request: EvaluateTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
-        runtime = store.get(user_id)
-        try:
-            proposal = _proposal_from_request(
-                runtime,
-                request,
-                draft_prefix="product-frontier",
-            )
-            return build_negotiation_frontier(
-                runtime,
-                proposal,
-                focal_team_id=runtime.selected_team_id,
-                search_instructions=request.search_instructions,
-                horizon_provider=discovery_horizon_provider,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    def explore_trade_frontier(request: FrontierRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        with ExitStack() as stack:
+            if request.price_side and heavy_work_coordinator is not None:
+                try:
+                    stack.enter_context(heavy_work_coordinator.claim(kind="negotiating_terms",
+                        key=f"{user_id}:negotiating-terms", timeout_seconds=0.05))
+                except (TimeoutError, RuntimeError, MemoryError) as exc:
+                    raise HTTPException(status_code=409, detail="Another evaluation is running. Try again shortly.") from exc
+            runtime = store.get(user_id)
+            try:
+                proposal = _proposal_from_request(
+                    runtime,
+                    request,
+                    draft_prefix="product-frontier",
+                )
+                return build_negotiation_frontier(
+                    runtime,
+                    proposal,
+                    focal_team_id=runtime.selected_team_id,
+                    search_instructions=request.search_instructions,
+                    horizon_provider=discovery_horizon_provider,
+                    price_side=request.price_side,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @application.post("/api/trade-center/simulate")
     def simulate_trade(request: EvaluateTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:

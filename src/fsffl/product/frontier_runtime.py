@@ -93,6 +93,7 @@ def build_negotiation_frontier(
     max_evaluations: int = 24,
     search_instructions: TradeSearchInstructions | None = None,
     horizon_provider=None,
+    price_side=None,
 ) -> dict[str, object]:
     """Explore a responsive first slice of the governed negotiation frontier.
 
@@ -143,6 +144,13 @@ def build_negotiation_frontier(
         except Exception as exc:
             _logger.warning("Counter raw horizons unavailable error_type=%s",type(exc).__name__)
             read=None
+    if price_side and (read is None or runtime.forecast_evidence is None):
+        return {"state_id_before": league_state.state_id,
+                "publication_generation_id": runtime.publication_generation_id,
+                "focal_team_id": focal_team_id, "counterparty_team_id": counter_leg.team_id,
+                "points": [], "evaluated_count": 0,
+                "negotiating_terms": {"opening": None, "fallback": None, "eligible_count": 0,
+                                      "reason": "missing_publication"}}
     screen_inputs={}
     if read is not None and runtime.forecast_evidence is not None:
         from .simulation_forecasts import current_forecast_coordinates
@@ -166,6 +174,12 @@ def build_negotiation_frontier(
     history_profiles=cached_trade_profiles(runtime,proposal)
     history_positions={p.player_id:p.position.value for p in league_state.players}
     history_context=prepare_trade_owner_history(runtime,profiles=history_profiles,player_positions=history_positions)
+    partner_strength = {}
+    analytics = runtime.simulation_analytics if price_side else None
+    if analytics is not None and analytics.league_view.context.league_state_id == league_state.state_id:
+        partner_strength = {room.position.value: room.strength_index for team in analytics.team_views
+                            if team.team_id == counter_leg.team_id for room in team.position_strengths
+                            if room.strength_index is not None}
     seed_effects=None
 
     detail_by_point: dict[str, dict[str, object]] = {}
@@ -191,9 +205,33 @@ def build_negotiation_frontier(
             context=discovery_display_context({'evidence_status':'pre_simulation_screened',
                 'objective_assessment':assessment,'preliminary_decision_screen':result.get('preliminary_bilateral_screen')})
             effects=counter_effects(result,focal_team_id,counter_leg.team_id)
+            price_check = {}
+            if price_side:
+                from .market_discovery_runtime import _economic_band
+                band = _economic_band(runtime, {**result, "counterparty_team_id": counter_leg.team_id})
+                price_context = discovery_display_context({
+                    "evidence_status": "pre_simulation_screened", "objective_assessment": assessment,
+                    "preliminary_decision_screen": result.get("preliminary_bilateral_screen"),
+                    "preliminary_economic_band": band.value,
+                })
+                markets = result["roster_adjusted_market_net"]
+                rooms = next((team["positions"] for team in result.get("positional_context", ())
+                              if team["team_id"] == counter_leg.team_id), ())
+                needs_filled = [room["position"] for room in rooms
+                                if set(room["incoming_player_ids"]).intersection(room["after_starter_ids"])
+                                and room.get("expected_points_delta", 0) > 0
+                                and partner_strength.get(room["position"], 100) < 100]
+                price_check = {"price_check": {
+                    "needs_filled": needs_filled, "band": band.value,
+                    "group": price_context["group"], "gate": price_context["limiting_gate"],
+                    "market": {markets[s]["team_id"]: markets[s]["roster_adjusted_market_delta"]
+                               for s in ("side_a", "side_b")},
+                    "cuts": {r["team_id"]: r["required_cut_count"] for r in result["roster_legality"]},
+                    "basis": effects["basis"],
+                }}
             if point.point_id==seed.point_id:seed_effects=effects
             review=review_counter(seed_effects,effects,display_group=context['group'])
-            detail_by_point[point.point_id]={'owner_history':result.get('owner_history') or build_trade_owner_history(runtime,point_proposal,context=history_context), 'objective_assessment':assessment,'counter_review':review,
+            detail_by_point[point.point_id]={**price_check,'owner_history':result.get('owner_history') or build_trade_owner_history(runtime,point_proposal,context=history_context), 'objective_assessment':assessment,'counter_review':review,
                 'decision_shape':result['decision_shape'],
                 'feasibility_shape':'mutual_gain_candidate' if review['status'] in ('improves_terms','alternative') else 'mixed',
                 'action_authority':'diagnostic_only','reasons':['materiality_not_evaluated','unknown_acceptance']}
@@ -286,8 +324,8 @@ def build_negotiation_frontier(
     policy = FrontierSearchPolicy(
         max_depth=max_depth,
         max_evaluations=max_evaluations,
-        expand_focal_side=True,
-        expand_counterparty_side=True,
+        expand_focal_side=price_side != "sell",
+        expand_counterparty_side=price_side != "buy",
         include_substitutions=targeted,
     )
     result = explore_negotiation_frontier(
@@ -301,7 +339,7 @@ def build_negotiation_frontier(
         order_neighbors=order_neighbors if targeted else None,
         # A counter should retain at least one asset the user is trying to get.
         # Replacing the sole target is a different search, not better terms.
-        allow_neighbor=(lambda p: bool(set(p.counterparty_package.assets) & set(seed.counterparty_package.assets))) if targeted else None,
+        allow_neighbor=(lambda p: bool(set(p.counterparty_package.assets) & set(seed.counterparty_package.assets))) if targeted and not price_side else None,
     )
 
     points = []
@@ -334,7 +372,14 @@ def build_negotiation_frontier(
             }
         )
 
+    plan = {}
+    if price_side:
+        from fsffl.opportunity.negotiating_terms import negotiating_terms
+        plan = {"negotiating_terms": negotiating_terms(points, focal_team=focal_team_id,
+                                                        other_team=counter_leg.team_id, buying=price_side == "buy"),
+                "publication_generation_id": runtime.publication_generation_id}
     return {
+        **plan,
         "seed_point_id": result.seed_point_id,
         "state_id_before": league_state.state_id,
         "focal_team_id": focal_team_id,

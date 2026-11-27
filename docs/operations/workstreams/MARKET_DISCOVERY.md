@@ -1,3 +1,9 @@
+## Explore opening offers and concessions — 2026-11-27
+
+Base main and checked deployment `fec89aa0`. From a saved Explore result an owner can hold the acquisition or sale fixed and compare nearby legal offers. Discovery keeps its 80 screens and eight confirmations. An explicit comparison uses the existing limit of 24 nearby evaluations. An exploratory opening bid needs an identified lineup fit and a supported fallback. Show both owners’ costs and identify the last supported concession among the offers checked.
+
+Two private saved-session journeys exercised buying a starter and selling a starter for future assets in a touch-enabled phone-sized browser. Both exact opening packages reached Trade Center and completed the existing 50,000-simulation analysis. Focused tests passed (86). Physical Safari and deployed acceptance remain outstanding.
+
 ## Full-suite compatibility correction — #607 — 2026-11-26
 
 Stable45881123080 completed with3 failures /3,471 passed /19 skipped. Two legacy
