@@ -20,12 +20,18 @@ def verified_path(state, rules):
     games = state.winners_bracket
     if not games or not rules or rules.simulation_unavailability_reason():
         return ()
+    return verified_championship_tree(state, rules.round_weeks, rules.playoff_team_count, rules.bye_count)
+
+
+def verified_championship_tree(state, weeks, field_size, bye_count):
+    games = state.winners_bracket
+    if not games or not weeks:
+        return ()
     seeds = set()
     byes = set()
     routed = set()
     known = {t.team_id for t in state.teams}
     prior = {}
-    weeks = rules.round_weeks
     for g in games:
         if g.week not in weeks or g.game in prior:
             return ()
@@ -52,7 +58,7 @@ def verified_path(state, rules):
         elif any(x is not None for x in (g.winner, g.loser, g.left_points, g.right_points)):
             return ()
         prior[g.game] = g
-    if (len(seeds) != rules.playoff_team_count or len(byes) != rules.bye_count
+    if (len(seeds) != field_size or len(byes) != bye_count
             or len(games) != len(seeds)-1 or games[-1].week != weeks[-1]
             or set(prior)-routed != {games[-1].game}):
         return ()

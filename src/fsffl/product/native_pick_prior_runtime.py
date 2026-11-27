@@ -46,7 +46,7 @@ def published_pick_values(runtime, release: NativePickPriorRelease | None, simul
                 values[horizon][pick.pick_id] = release.slot_point(round_number=pick.round,
                     slot=origin.slot, draft_season=pick.season, horizon=horizon)
             probability_basis = "settled_league_rule"
-            slot_model = "settled_non_playoff_max_pf_v1"
+            slot_model = origin.model
             source_simulation = None
         elif pick.season == release.draft_season:
             evidence = probabilities.get(pick.original_team_id)

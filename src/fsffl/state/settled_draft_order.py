@@ -4,6 +4,7 @@ from fractions import Fraction
 from itertools import groupby
 from math import isfinite
 
+from .postseason import verified_championship_tree
 from .draft_order_policy import STANDARD_DRAFT_ORDER_MECHANISM_V1, resolve_draft_order_policy
 
 
@@ -13,6 +14,7 @@ class OriginOrder:
     reason: str
 
     provisional: bool = False
+    model: str = "settled_non_playoff_max_pf_v1"
 
     def conflicts(self, official):
         return self.slot is not None and official is not None and self.slot != official
@@ -65,17 +67,73 @@ def _playoff_field(state, cutoff, count):
     return entrants
 
 
+def playoff_finish_order(state, field, cutoff, terms):
+    def pending(reason):
+        return dict.fromkeys(field, OriginOrder(None, reason))
+
+    if terms.get("playoff_order") != "elimination":
+        return pending("The saved playoff order needs separate placement evidence or rules.")
+    games = state.winners_bracket
+    weeks = tuple(range(cutoff + 1, max(g.week for g in games) + 1))
+    field_size = len(field)
+    expected_rounds = (field_size - 1).bit_length()
+    if len(weeks) != expected_rounds:
+        return pending("The playoff format needs verification.")
+    path = verified_championship_tree(state, weeks, field_size, 2**expected_rounds - field_size)
+    if not path or not path[-1].winner:
+        return pending("Waiting for a completed championship bracket and matching scores.")
+    model = "settled_playoff_elimination_v1"
+    def settled(slot, reason):
+        return OriginOrder(slot, reason, model=model)
+    result = {}
+    first = state.league.rules.team_count - field_size + 1
+    records = {r.team_id: r.final_regular_record for r in state.team_states}
+    for week, group in groupby(path[:-1], key=lambda g: g.week):
+        teams = [g.loser for g in group]
+        if len(teams) == 1:
+            result[teams[0]] = settled(first, f"Eliminated in Week {week}.")
+        elif (state.regular_totals_confirmed and state.overall_record_standings
+              and all(records[t] and sum(records[t]) for t in teams)):
+            def record(team):
+                w, l, ties = records[team]
+                return Fraction(2*w + ties, 2*(w+l+ties))
+            rank = first
+            for _, equal in groupby(sorted(teams, key=record), key=record):
+                tied = list(equal)
+                placement = (settled(rank, f"Eliminated in Week {week} · lower regular-season finish picks earlier.")
+                             if len(tied) == 1 else OriginOrder(None, "Same-round finish tied; official regular-season order needed."))
+                result.update(dict.fromkeys(tied, placement))
+                rank += len(tied)
+        else:
+            result.update(dict.fromkeys(teams, OriginOrder(None, "Confirmed regular-season finish needed for same-round teams.")))
+        first += len(teams)
+    result[path[-1].loser] = settled(first, "Championship runner-up.")
+    result[path[-1].winner] = settled(first+1, "League champion.")
+    return result
+
+
 def settled_origin_order(state, draft_year):
     """An empty mapping delegates to the existing policy path."""
     policy = resolve_draft_order_policy(state.draft_order_policies, league_id=state.league.league_id,
                                         draft_season=draft_year, as_of=state.as_of)
-    if not policy or policy.mechanism == STANDARD_DRAFT_ORDER_MECHANISM_V1:
+    if not policy:
         return {}
     teams = {team.team_id for team in state.teams}
 
     def unresolved(reason):
         return dict.fromkeys(teams, OriginOrder(None, reason))
 
+    if policy.mechanism == STANDARD_DRAFT_ORDER_MECHANISM_V1:
+        # Preserve the standard simulation path while the season is in progress.
+        rules = state.league.rules
+        cutoff = rules.fantasy_regular_season_end_week
+        if not cutoff or draft_year != state.league.season + 1 or (state.completed_through_week or 0) <= cutoff:
+            return {}
+        field = _playoff_field(state, cutoff, rules.playoff_team_count)
+        terms = {p.name: p.value for p in policy.parameters}
+        if not field or terms.get("placement_games_affect_order") is not False:
+            return {}
+        return playoff_finish_order(state, field, cutoff, {"playoff_order":"elimination"})
     if policy.mechanism != "account_custom_draft_order_v1":
         return unresolved("The saved draft-order rule is unsupported.")
     terms = {p.name: p.value for p in policy.parameters}
@@ -97,7 +155,7 @@ def settled_origin_order(state, draft_year):
     field = _playoff_field(state, cutoff, rules.playoff_team_count)
     if field is None or len(teams) != rules.team_count or not teams - field:
         return unresolved("Waiting for a confirmed playoff field.")
-    result = {team: OriginOrder(None, "Playoff teams follow their separate ordering rules.") for team in field}
+    result = playoff_finish_order(state, field, cutoff, terms)
     rows = [row for row in state.team_states if row.team_id not in field]
     if any(row.max_points_for is None or not isfinite(row.max_points_for) for row in rows):
         result.update(dict.fromkeys(teams-field, OriginOrder(None, "Final Max PF is missing for a non-playoff team.")))

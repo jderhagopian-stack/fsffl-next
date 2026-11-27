@@ -112,6 +112,20 @@ def test_exact_curve_flows_to_trade_without_simulation_and_conflict_withholds():
     assert moved_read.pick_values==projection.pick_values
     assert moved_read.pick_sources["pick:alpha"]["owner_team_id"]=="beta"
     assert bind_trade_intrinsic_values(moved_runtime,proposal,moved_read)["status"]=="unavailable"
+    # The finalist's pick remains owned by the buyer and takes the finalist's slot.
+    completed_game=bracket[0].model_copy(update={"left":"alpha","right":"delta","winner":"delta","loser":"alpha",
+        "left_points":98,"right_points":107})
+    playoff_state=moved.model_copy(update={"winners_bracket":(completed_game,),"completed_through_week":13})
+    buyer=replace(runtime,league_state=playoff_state)
+    artifact.league_state_id=playoff_state.state_id
+    buyer_read=read(buyer,artifact,release,None)
+    from fsffl.trade_decision.models import TradeLeg
+    traded=proposal.model_copy(update={"side_a":TradeLeg(team_id="alpha",sends=(proposal.side_a.sends[0].model_copy(
+        update={"pick_id":"pick:beta"}),)), "side_b":TradeLeg(team_id="beta",sends=proposal.side_a.sends)})
+    economics=bind_trade_intrinsic_values(buyer,traded,buyer_read)
+    assert economics["source"]["pick_sources"]["pick:alpha"]["rule_slot"]==3
+    for horizon in ("three_year","career"):
+        assert economics[horizon]["side_b"]["sent_mean"]==release.slot_point(round_number=1,slot=3,draft_season=2027,horizon=horizon)
     conflict=state.model_copy(update={"draft_picks":tuple(p.model_copy(update={"verified_slot":2})
         if p.original_team_id=="alpha" else p for p in state.draft_picks)})
     for wrong_state,wrong_release in [(conflict,release),(state,release.model_copy(update={"scoring_signature":"other"}))]:
@@ -157,3 +171,22 @@ def test_first_post_correction_and_later_confirmation_without_a_board():
     order = settled_origin_order(configured(checked),2026)
     assert checked.regular_totals_confirmed and (order[a].slot,order[b].slot)==(2,1)
     assert not order[a].provisional
+
+
+def test_playoff_finish_uses_verified_final_and_independent_origins():
+    state = saved_state(17,rounds())
+    ids = {int(t.provider_refs[0].external_id): t.team_id for t in state.teams}
+    wins = {1:7, 2:10, 5:9, 9:8}
+    totals = [(100+i,(w,14-w,0)) for i,r in enumerate(state.team_states)
+              for w in [wins.get(int(r.team_id.split(":")[-1]),7)]]
+    state = configured(factual(state,totals).model_copy(update={"overall_record_standings":True}))
+    def ranks(s):
+        return {i:settled_origin_order(s,2026)[ids[i]].slot for i in [9,2,1,5,12,8]}
+    assert list(ranks(state).values()) == list(range(7,13))
+    assert ranks(state.model_copy(update={"overall_record_standings":False}))[9] is None
+    broken = state.winners_bracket[-1].model_copy(update={"winner":ids[12]})
+    assert all(v is None for v in ranks(state.model_copy(update={
+        "winners_bracket":(*state.winners_bracket[:-1],broken)})).values())
+    tied = state.model_copy(update={"team_states":tuple(r.model_copy(update={"final_regular_record":(8,6,0)})
+        if r.team_id==ids[2] else r for r in state.team_states)})
+    assert list(ranks(tied).values()) == [None,None,9,10,11,12]

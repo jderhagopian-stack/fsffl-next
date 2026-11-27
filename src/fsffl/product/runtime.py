@@ -80,6 +80,7 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
             ownership.model_dump(mode="json")
             for ownership in sorted(league_state.pick_ownership, key=lambda item: item.pick_id)
         ],
+        **({"overall_record_standings": True} if league_state.overall_record_standings else {}),
         **({"regular_totals_confirmed": True} if league_state.regular_totals_confirmed else {}),
         **({"regular_totals_observed_leg": league_state.regular_totals_observed_leg} if league_state.regular_totals_observed_leg else {}),
         **({"final_regular_totals_week": league_state.final_regular_totals_week} if league_state.final_regular_totals_week else {}),

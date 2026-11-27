@@ -563,6 +563,7 @@ class SleeperNormalizer:
                     key=lambda item: (item.week, item.team_a_id, item.team_b_id),
                 )
             ),
+            overall_record_standings=bool(final_totals_week and settings.get("divisions") == 0),
             regular_totals_observed_leg=scored_week if final_totals_week else None,
             final_regular_totals_week=final_totals_week,
             completed_through_week=completed_through_week,

@@ -53,7 +53,7 @@ def league_rules_payload(runtime, settings_store, user_id):
         supported = False
     if order:
         reasons = dict.fromkeys(row.reason for row in order.values() if row.slot is None or row.provisional)
-        message = " ".join(([f"{settled} non-playoff slots settled by final Max PF."] if settled else [])
+        message = " ".join(([f"{settled} draft slots settled under your saved rules."] if settled else [])
                            + sorted(reasons))
     elif not supported:
         message = "Draft positions cannot yet be projected under this rule."
