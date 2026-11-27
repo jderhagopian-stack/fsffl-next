@@ -99,6 +99,28 @@
       return {asset_ref:ref,label:detail?label+' ('+detail+')':label};
     });
   }
+  function concessionSummary(opening, fallback, result){
+    const you=result.focal_team_id, partner=result.counterparty_team_id;
+    const before=opening.counter_review.effects.teams, after=fallback.counter_review.effects.teams;
+    const weekly=fallback.price_check.basis==='remaining_regular_season_weekly_mean';
+    const sent=pointAssets(opening,'focal_assets'), nextSent=pointAssets(fallback,'focal_assets');
+    const added=nextSent.filter(a=>!sent.some(b=>b.asset_ref===a.asset_ref));
+    const onlyAdds=added.length && nextSent.length===sent.length+added.length;
+    const phrases=onlyAdds?['You would add '+added.map(a=>a.label).join(' and ')+'.']:[];
+    if(opening.price_check.basis===fallback.price_check.basis && [you,partner].every(team=>
+      signed(before[team].current)===signed(after[team].current))){
+      phrases.push(weekly?'Each team’s projected weekly score stays the same as in the opening offer, to the nearest tenth.':'Both teams’ projected lineup changes round to the same totals as before.');
+    }
+    for(const [team,label] of [[you,'You'],[partner,teamName(partner)]]){
+      const from=before[team].career, to=after[team].career;
+      if(from>0 && to<0)phrases.push(label+' would go from gaining career value to giving it up.');
+      else if(from<0 && to>0)phrases.push(label+' would go from giving up career value to gaining it.');
+      else if(to!==from)phrases.push(label+' would get '+(to>from?'more':'less')+' projected career value than in the opening offer.');
+      const cuts=fallback.price_check.cuts[team];
+      if(cuts)phrases.push(label+' would need to cut '+(cuts===1?'one player':cuts+' players')+'.');
+    }
+    return phrases.join(' ');
+  }
   function priceMarkup(row,index){
     if(!row.evaluation_kind||view.dirty)return '';
     const entry=view.prices.get(row.point_id);
@@ -110,7 +132,7 @@
     if(entry?.message)body=`<p role="status">${esc(entry.message)}</p>`;
     if(entry?.result){
       const result=entry.result, plan=result.negotiating_terms;
-      const describe=(id,title)=>{
+      const describe=(id,title,explanation)=>{
         const point=result.points.find(p=>p.point_id===id);
         if(!point)return '';
         const give=pointAssets(point,'focal_assets').map(a=>a.label).join(' + ');
@@ -120,28 +142,26 @@
           const unit=point.price_check.basis==='remaining_regular_season_weekly_mean'?'pts/week':'projected lineup pts';
           return `<p>${esc(label)}: ${signed(effect.current)} ${unit} · ${signed(effect.three_year)} over three years · ${signed(effect.career)} career${cuts?' · '+cuts+' required cut'+(cuts===1?'':'s'):''}.</p>`;
         }).join('');
-        return `<div><strong>${title}</strong><p>Give ${esc(give)} for ${esc(get)}.</p>${lines}<button type="button" class="text-button" data-se-term="${index}" data-point="${esc(id)}">Check this offer in Trade Center →</button></div>`;
+        const proof=row.screen_confirmation;
+        const odds=point.is_seed?proof?.competitive?.[result.focal_team_id]?.championship_probability:null;
+        const season=finite(odds)?'Your title chances with this offer: '+signed(odds*100)+' percentage points.':'Check this exact offer in Trade Center for its season outlook.';
+        return `<section><h3>${title}</h3><p>Give <b>${esc(give)}</b> for <b>${esc(get)}</b>.</p>${explanation?'<p>'+esc(explanation)+'</p>':''}<p>${esc(season)}</p><details><summary>Both teams’ projected gains and costs</summary>${lines}</details><button type="button" class="text-button" data-se-term="${index}" data-point="${esc(id)}">Analyze ${id===plan.opening?'opening offer':'alternative'} →</button></section>`;
       };
       if(plan.opening){
-        body=describe(plan.opening,plan.conditional_opening?'Ask if they’d consider this':entry.side==='buy'?'Open with this offer':'Start by asking for this return');
-        if(plan.conditional_opening){
-          const check=result.points.find(p=>p.point_id===plan.opening).price_check;
-          body+=`<p>This helps ${esc(teamName(result.counterparty_team_id))} at ${esc(check.needs_filled.join(' and '))}. They would give up market value, so they have a reason to ask for more.</p>`;
-        }
+        const opening=result.points.find(p=>p.point_id===plan.opening);
+        const partner=teamName(result.counterparty_team_id);
+        const reason=plan.conditional_opening?'This fills a need at '+opening.price_check.needs_filled.join(' and ')+' for '+partner+'. They give up market value and may ask for more.':'';
+        body=describe(plan.opening,plan.conditional_opening?'Ask about this first':entry.side==='buy'?'Your opening offer':'Your opening ask',reason);
         if(plan.fallback){
-          const opened=result.points.find(p=>p.point_id===plan.opening);
-          const next=result.points.find(p=>p.point_id===plan.fallback);
-          const team=result.counterparty_team_id, before=opened.counter_review.effects.teams[team], after=next.counter_review.effects.teams[team];
-          const reason=after.career>before.career?'a better long-term return':after.three_year>before.three_year?'more over the next three years':after.current>before.current?'more lineup production now':'better market value';
-          body+=`<p>Compared with the opening terms, the alternative gives ${esc(teamName(team))} ${reason}.</p>`;
-        }
-        body+=plan.fallback?describe(plan.fallback,entry.side==='buy'?'If they ask for more':'If they offer less'):'<p>Keep these terms. The other checked prices give you no clear reason to concede.</p>';
+          const fallback=result.points.find(p=>p.point_id===plan.fallback);
+          body+=describe(plan.fallback,entry.side==='buy'?'If they ask for more':'If they offer less',concessionSummary(opening,fallback,result));
+        }else body+='<p>No further concession stood out among the offers checked.</p>';
         if(plan.outside){
           const outside=result.points.find(p=>p.point_id===plan.outside);
           const terms=pointAssets(outside,'counterparty_assets').map(a=>a.label).join(' + ');
           body+=`<p><b>Lower offer checked:</b> At ${esc(terms)}, you would give up more in market value than the price check supports. Consider keeping what you have.</p>`;
         }
-        body+='<small>Check the season impact before agreeing.</small>';
+
       }else if(plan.reason==='missing_publication')body='<p>A matching forecast and long-term values are needed to compare prices.</p>';
       else body='<p>No opening price established. The checked packages need better terms or stronger evidence for both teams.</p>';
     }
@@ -168,7 +188,8 @@
     const lineages=row.repair_lineages||[];
     const related=rows.filter(other=>other.point_id!==row.point_id&&((row.shortlist_quality?.alternative_point_ids||[]).includes(other.point_id)||(row.linked_prior_point_ids||[]).includes(other.point_id)||lineages.some(l=>l.root_point_id===other.point_id||l.parent_point_id===other.point_id)||(other.repair_lineages||[]).some(l=>l.root_point_id===row.point_id||l.parent_point_id===row.point_id)));
     const blocked=['side_a','side_b'].some(s=>row.objective_assessment?.[s]?.protected_players_lost?.length);
-    return `<article class="se-card" data-se-group="${esc(row.display_context?.group||'needs_evidence')}"><header><div class="se-row"><span class="eyebrow">${row.display_context?.group==='priority_tradeoff'?'Tradeoff':'Preliminary'}</span><small>${esc(name)}</small></div><h2>${row.receive?.length===1?'Explore '+esc(row.receive[0].label||row.receive[0].asset_ref):esc(row.send?.length||0)+' for '+esc(row.receive?.length||0)+' package'}</h2></header><div class="se-card-body"><div class="se-package-grid"><section><p class="eyebrow">You receive · ${esc(row.receive?.length||0)}</p>${packageAssets(row.receive)}</section><section><p class="eyebrow">You send · ${esc(row.send?.length||0)}</p>${packageAssets(row.send)}</section></div>${choiceSummary(row,name)}${purposeMarkup(row)}${priceMarkup(row,index)}${impact(row,name)}${related.length?`<details class="se-alternatives"><summary>Compare linked package alternatives</summary>${related.map(other=>`<div><b>You give:</b> ${esc((other.send||[]).map(a=>a.label).join(' + '))}<br><b>You get:</b> ${esc((other.receive||[]).map(a=>a.label).join(' + '))}<p>${esc(other.evidence_status==='pre_simulation_screened'?'Preliminary effects are shown in its own card.':'Effects are incomplete; no benefit is assumed.')}</p><button type="button" class="text-button" data-se-compare="${rows.indexOf(other)}">View this alternative</button></div>`).join('')}</details>`:''}<button type="button" class="primary-button se-evaluate" data-se-evaluate="${index}"${blocked?' disabled':''}>Evaluate in Trade Center →</button></div></article>`;
+    const comparing=Boolean(view.prices.get(row.point_id)?.result?.negotiating_terms?.opening)&&!view.dirty;
+    return `<article class="se-card" data-se-group="${esc(row.display_context?.group||'needs_evidence')}"><header><div class="se-row"><span class="eyebrow">${row.display_context?.group==='priority_tradeoff'?'Tradeoff':'Preliminary'}</span><small>${esc(name)}</small></div><h2>${row.receive?.length===1?'Explore '+esc(row.receive[0].label||row.receive[0].asset_ref):esc(row.send?.length||0)+' for '+esc(row.receive?.length||0)+' package'}</h2></header><div class="se-card-body">${comparing?'<details class="se-original"><summary>Original Explore offer and season outlook</summary>':''}<div class="se-package-grid"><section><p class="eyebrow">You receive · ${esc(row.receive?.length||0)}</p>${packageAssets(row.receive)}</section><section><p class="eyebrow">You send · ${esc(row.send?.length||0)}</p>${packageAssets(row.send)}</section></div>${choiceSummary(row,name)}${purposeMarkup(row)}${comparing?'':priceMarkup(row,index)}${impact(row,name)}${related.length?`<details class="se-alternatives"><summary>Compare linked package alternatives</summary>${related.map(other=>`<div><b>You give:</b> ${esc((other.send||[]).map(a=>a.label).join(' + '))}<br><b>You get:</b> ${esc((other.receive||[]).map(a=>a.label).join(' + '))}<p>${esc(other.evidence_status==='pre_simulation_screened'?'Preliminary effects are shown in its own card.':'Effects are incomplete; no benefit is assumed.')}</p><button type="button" class="text-button" data-se-compare="${rows.indexOf(other)}">View this alternative</button></div>`).join('')}</details>`:''}<button type="button" class="primary-button se-evaluate" data-se-evaluate="${index}"${blocked?' disabled':''}>Evaluate in Trade Center →</button>${comparing?'</details>':''}${comparing?priceMarkup(row,index):''}</div></article>`;
   }
   function choiceSummary(row,name){
     if(row.evidence_status!=='pre_simulation_screened')return '';
