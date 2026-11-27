@@ -190,3 +190,14 @@ def test_playoff_finish_uses_verified_final_and_independent_origins():
     tied = state.model_copy(update={"team_states":tuple(r.model_copy(update={"final_regular_record":(8,6,0)})
         if r.team_id==ids[2] else r for r in state.team_states)})
     assert list(ranks(tied).values()) == [None,None,9,10,11,12]
+
+
+def test_standard_mechanism_with_different_playoff_terms_cannot_certify_slots():
+    state = configured(saved_state(17, rounds()), "record", "record_h2h_points_for")
+    policy = state.draft_order_policies[-1]
+    changed = tuple(term.model_copy(update={"value": "custom_order"})
+                    if term.name == "playoff_order_policy" else term for term in policy.parameters)
+    state = state.model_copy(update={"draft_order_policies": (policy.model_copy(update={"parameters": changed}),)})
+    order = settled_origin_order(state, 2026)
+    assert len(order) == state.league.rules.team_count
+    assert all(row.slot is None and "unsupported" in row.reason for row in order.values())

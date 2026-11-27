@@ -1,11 +1,14 @@
-"""Resolve observed non-playoff order for the active league/year policy."""
+"""Resolve observed draft slots for the active league and draft-year policy."""
 from dataclasses import dataclass
 from fractions import Fraction
 from itertools import groupby
 from math import isfinite
 
 from .postseason import verified_championship_tree
-from .draft_order_policy import STANDARD_DRAFT_ORDER_MECHANISM_V1, resolve_draft_order_policy
+from .draft_order_policy import (
+    STANDARD_DRAFT_ORDER_MECHANISM_V1, STANDARD_PLAYOFF_ORDER,
+    STANDARD_REGULAR_SEASON_TIEBREAK, resolve_draft_order_policy,
+)
 
 
 @dataclass(frozen=True)
@@ -131,9 +134,18 @@ def settled_origin_order(state, draft_year):
             return {}
         field = _playoff_field(state, cutoff, rules.playoff_team_count)
         terms = {p.name: p.value for p in policy.parameters}
-        if not field or terms.get("placement_games_affect_order") is not False:
-            return {}
-        return playoff_finish_order(state, field, cutoff, {"playoff_order":"elimination"})
+        if terms.get("placement_games_affect_order"):
+            return {}  # The existing placement-game policy owns these picks.
+        elimination_terms = {
+            "non_playoff_tiebreak_policy": STANDARD_REGULAR_SEASON_TIEBREAK,
+            "playoff_order_policy": STANDARD_PLAYOFF_ORDER,
+            "origin_slot_carries_across_rounds": True,
+        }
+        if {k: v for k, v in terms.items() if k != "placement_games_affect_order"} != elimination_terms:
+            return unresolved("The saved draft-order terms are unsupported.")
+        if not field:
+            return unresolved("Waiting for a confirmed playoff field.")
+        return playoff_finish_order(state, field, cutoff, {"playoff_order": "elimination"})
     if policy.mechanism != "account_custom_draft_order_v1":
         return unresolved("The saved draft-order rule is unsupported.")
     terms = {p.name: p.value for p in policy.parameters}
