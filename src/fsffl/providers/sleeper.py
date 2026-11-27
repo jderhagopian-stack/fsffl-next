@@ -198,6 +198,15 @@ class SleeperNormalizer:
         league_id = f"sleeper:{league_external_id}"
         settings = bundle.league.get("settings", {})
         completed_through_week = sleeper_completed_week(bundle.league, bundle.nfl_state)
+        settings = bundle.league.get("settings") or {}
+        playoff_start = settings.get("playoff_week_start")
+        # The NFL clock alone cannot certify that this league posted its totals.
+        scored_week = settings.get("last_scored_leg")
+        final_totals_week = None
+        if (type(playoff_start) is int and 2 <= playoff_start <= 19
+                and type(scored_week) is int and scored_week >= playoff_start - 1
+                and (completed_through_week or 0) >= playoff_start - 1):
+            final_totals_week = playoff_start - 1
         roster_positions = list(bundle.league.get("roster_positions", []))
         scoring_settings = bundle.league.get("scoring_settings", {})
 
@@ -334,11 +343,15 @@ class SleeperNormalizer:
                 if max_points_for is not None
                 else None
             )
+            record = tuple(roster_settings.get(key) for key in ("wins", "losses", "ties"))
+            final_record = (record if final_totals_week is not None
+                            and all(type(n) is int and n >= 0 for n in record) else None)
             team_states.append(
                 TeamState(
                     team_id=team_id,
                     roster=tuple(entries),
                     faab_balance=current_faab,
+                    final_regular_record=final_record,
                     max_points_for=max_points_for,
                     max_points_for_provenance=max_points_for_provenance,
                 )
@@ -550,6 +563,7 @@ class SleeperNormalizer:
                     key=lambda item: (item.week, item.team_a_id, item.team_b_id),
                 )
             ),
+            final_regular_totals_week=final_totals_week,
             completed_through_week=completed_through_week,
             provenance=(provenance,),
         )

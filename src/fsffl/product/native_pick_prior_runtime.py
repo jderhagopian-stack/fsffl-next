@@ -1,6 +1,8 @@
 """Translate published Simulation evidence to an already released Value prior."""
 from types import MappingProxyType
 
+from fsffl.state.settled_draft_order import settled_origin_order
+
 from fsffl.value.native_pick_prior import NativePickPriorRelease
 from fsffl.value.origin_aware_pick import AUTHORITATIVE_SIMULATION_COUNT
 from .origin_aware_pick_value_runtime import build_origin_probability_evidence_from_simulation
@@ -29,13 +31,24 @@ def published_pick_values(runtime, release: NativePickPriorRelease | None, simul
                      and state.as_of >= FUTURE_PICK_POSITION_AVAILABLE_AT)
     owners = {p.pick_id: p.owner_team_id for p in state.pick_ownership}
     release_id = release.release_id
+    order = settled_origin_order(state, release.draft_season)
     future_references = {}
     for pick in state.draft_picks:
         if (pick.season < release.draft_season or not 1 <= pick.round <= release.round_count
             or pick.pick_id not in owners):
             continue
         ranges = {}
-        if pick.season == release.draft_season:
+        origin = order.get(pick.original_team_id) if pick.season == release.draft_season else None
+        if origin:
+            if origin.slot is None or origin.conflicts(pick.verified_slot):
+                continue
+            for horizon in values:
+                values[horizon][pick.pick_id] = release.slot_point(round_number=pick.round,
+                    slot=origin.slot, draft_season=pick.season, horizon=horizon)
+            probability_basis = "settled_league_rule"
+            slot_model = "settled_non_playoff_max_pf_v1"
+            source_simulation = None
+        elif pick.season == release.draft_season:
             evidence = probabilities.get(pick.original_team_id)
             if evidence is None:
                 continue
@@ -60,6 +73,7 @@ def published_pick_values(runtime, release: NativePickPriorRelease | None, simul
             slot_model = prior.model_version
             source_simulation = None
         sources[pick.pick_id] = MappingProxyType({
+            **({"rule_slot": origin.slot, "official_slot": pick.verified_slot} if origin else {}),
             "release_id": release_id, "model_version": release.model_version,
             "status": release.status, "comparison_policy": release.comparison_policy,
             "original_team_id": pick.original_team_id, "owner_team_id": owners[pick.pick_id],

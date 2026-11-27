@@ -8,6 +8,7 @@ from fsffl.state.account_rules import (
     AccountRuleSettings, DraftOrderSettings, LeagueRuleChanges, apply_account_rules, provider_rule_state,
 )
 from fsffl.state.models import FrozenModel
+from fsffl.state.settled_draft_order import settled_origin_order
 from fsffl.state.draft_order_policy import resolve_draft_order_policy
 from fsffl.team_utility.future_pick import compile_supported_future_pick_policy
 from .scenario_cache import ScenarioComputationStage, run_progressive_scenario_simulation
@@ -40,6 +41,8 @@ def league_rules_payload(runtime, settings_store, user_id):
         state.draft_order_policies, league_id=state.league.league_id,
         draft_season=state.league.season + 1, as_of=state.as_of,
     )
+    order = settled_origin_order(state, state.league.season + 1)
+    settled = sum(row.slot is not None for row in order.values())
     supported = True
     try:
         compile_supported_future_pick_policy(
@@ -48,6 +51,16 @@ def league_rules_payload(runtime, settings_store, user_id):
         )
     except ValueError:
         supported = False
+    if order:
+        reasons = dict.fromkeys(row.reason for row in order.values() if row.slot is None)
+        message = " ".join(([f"{settled} non-playoff slots settled by final Max PF."] if settled else [])
+                           + sorted(reasons))
+    elif not supported:
+        message = "Draft positions cannot yet be projected under this rule."
+    elif policy:
+        message = "Using your draft-order rule."
+    else:
+        message = "Draft order needs clarification. Positions are currently estimated from record and playoff finish."
     return {
         "league_id": state.league.league_id, "league_name": state.league.name,
         "season": state.league.season, "draft_season": state.league.season + 1,
@@ -63,11 +76,7 @@ def league_rules_payload(runtime, settings_store, user_id):
         "draft_order_confirmed": policy is not None,
         "draft_order_description": policy.description if policy else None,
         "draft_order_supported": supported,
-        "draft_order_message": (
-            "Draft positions cannot yet be projected under this rule."
-            if not supported else "Using your draft-order rule." if policy else
-            "Draft order needs clarification. Positions are currently estimated from record and playoff finish."
-        ),
+        "draft_order_message": message,
         "settings_applied": (
             not settings or not settings.has_overrides or
             bool(state.rule_configuration and state.rule_configuration.revision == settings.revision)

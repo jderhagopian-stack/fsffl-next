@@ -1,3 +1,9 @@
+## Settled non-playoff draft order — predeployment review, 2026-11-27
+
+Base main `fec89aa0ec3bac0a5593278a71255becb3924dfc`, branch `settled-nonplayoff`. State reads the effective account policy for the league and draft year. Confirmed championship entrants, the configured regular-season cutoff and posted regular totals gate settlement. Final Max PF ranks original franchises, with the selected record or unresolved tiebreak. The holder receives the pick. Trade Center displays both rule and board evidence and withholds an exact rule value on disagreement. Accepted release compatibility and existing slot values govern native Intrinsic.
+
+The retrospective 2025 FSFFL check used archived end-of-season roster totals, the owner-supplied Sleeper bracket and the requested rule saved through the settings path. All six derived slots agreed with the later official board, which was withheld during calculation. This is a reconstruction, not a contemporaneous Week 14 capture. The focused suite passed 144 tests, including cutoff, missing evidence, double ties, late corrections, traded ownership, a different league policy, compatibility and bilateral value binding. Next gate is exact-head release validation. No deployment.
+
 ## FSFFL rookie-pick rollover — release candidate, 2026-11-27
 
 Base main `e00a9bdd26dcfcf7c7d486269f83f2f8409b8393`. FSFFL's linked Sleeper leagues use three draft classes and advance after the ordinary rookie draft completes. State retains the original franchise, current holder, evidenced slot and used selections separately. Uncertain use is excluded from trade eligibility. Existing non-FSFFL policies, Max PF and ranking calculations are preserved.
