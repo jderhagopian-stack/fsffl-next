@@ -159,9 +159,10 @@ class SeasonComparisonService:
                     simulation_source_state_id=state.state_id, simulation_basis="completed_actuals_only")
             from fsffl.team_utility import resolved_playoff_rules_from_league_state
             playoff_rules = resolved_playoff_rules_from_league_state(state)
-            if (playoff_rules is not None and playoff_rules.round_weeks
+            from fsffl.state.postseason import verified_path
+            if (not verified_path(state, playoff_rules) and playoff_rules is not None and playoff_rules.round_weeks
                     and min(playoff_rules.round_weeks) <= (state.completed_through_week or 0)):
-                # No accepted factual postseason bracket continuation exists.
+                # Official championship path is missing or contradicts final scores.
                 # Withhold Simulation instead of resampling a completed round or
                 # failing the whole Forecast/Value/Intrinsic publication.
                 return replace(evidence, uncertainty_ready=False,

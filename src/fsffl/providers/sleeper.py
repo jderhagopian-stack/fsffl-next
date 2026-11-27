@@ -86,6 +86,48 @@ class SleeperPayloadBundle:
     retrieved_at: datetime | None = None
 
 
+def sleeper_completed_week(league, nfl_state):
+    raw_leg = league.get("settings", {}).get("leg")
+    try:
+        current_matchup_week = int(raw_leg) if raw_leg is not None else None
+    except (TypeError, ValueError):
+        current_matchup_week = None
+    league_leg_completed = (
+        max(0, current_matchup_week - 1)
+        if current_matchup_week is not None and current_matchup_week >= 1
+        else None
+    )
+
+    nfl_state_completion_candidates: list[int] = []
+    if isinstance(nfl_state, Mapping):
+        raw_season = nfl_state.get("season")
+        try:
+            nfl_season = int(raw_season) if raw_season not in (None, "") else None
+        except (TypeError, ValueError):
+            nfl_season = None
+        season_type = str(nfl_state.get("season_type") or "regular").lower()
+        if nfl_season in (None, int(league.get("season"))) and season_type == "regular":
+            # Sleeper can temporarily lag display_week and league.settings.leg
+            # behind its NFL state week/leg after a completed slate. Treat all
+            # same-season regular-season week coordinates as factual provider
+            # evidence and retain the strongest completed-week boundary.
+            for key in ("display_week", "week", "leg"):
+                raw_value = nfl_state.get(key)
+                try:
+                    value = int(raw_value) if raw_value not in (None, "") else None
+                except (TypeError, ValueError):
+                    value = None
+                if value is not None and value >= 1:
+                    nfl_state_completion_candidates.append(max(0, value - 1))
+
+    completion_candidates = [
+        week
+        for week in (league_leg_completed, *nfl_state_completion_candidates)
+        if week is not None
+    ]
+    return max(completion_candidates, default=None)
+
+
 class SleeperNormalizer:
     """Pure mapping layer from Sleeper-shaped payloads to canonical FSFFL state.
 
@@ -149,46 +191,7 @@ class SleeperNormalizer:
         league_external_id = str(bundle.league["league_id"])
         league_id = f"sleeper:{league_external_id}"
         settings = bundle.league.get("settings", {})
-        raw_leg = settings.get("leg")
-        try:
-            current_matchup_week = int(raw_leg) if raw_leg is not None else None
-        except (TypeError, ValueError):
-            current_matchup_week = None
-        league_leg_completed = (
-            max(0, current_matchup_week - 1)
-            if current_matchup_week is not None and current_matchup_week >= 1
-            else None
-        )
-
-        nfl_state_completion_candidates: list[int] = []
-        nfl_state = bundle.nfl_state
-        if isinstance(nfl_state, Mapping):
-            raw_season = nfl_state.get("season")
-            try:
-                nfl_season = int(raw_season) if raw_season not in (None, "") else None
-            except (TypeError, ValueError):
-                nfl_season = None
-            season_type = str(nfl_state.get("season_type") or "regular").lower()
-            if nfl_season in (None, int(bundle.league.get("season"))) and season_type == "regular":
-                # Sleeper can temporarily lag display_week and league.settings.leg
-                # behind its NFL state week/leg after a completed slate. Treat all
-                # same-season regular-season week coordinates as factual provider
-                # evidence and retain the strongest completed-week boundary.
-                for key in ("display_week", "week", "leg"):
-                    raw_value = nfl_state.get(key)
-                    try:
-                        value = int(raw_value) if raw_value not in (None, "") else None
-                    except (TypeError, ValueError):
-                        value = None
-                    if value is not None and value >= 1:
-                        nfl_state_completion_candidates.append(max(0, value - 1))
-
-        completion_candidates = [
-            week
-            for week in (league_leg_completed, *nfl_state_completion_candidates)
-            if week is not None
-        ]
-        completed_through_week = max(completion_candidates, default=None)
+        completed_through_week = sleeper_completed_week(bundle.league, bundle.nfl_state)
         roster_positions = list(bundle.league.get("roster_positions", []))
         scoring_settings = bundle.league.get("scoring_settings", {})
 

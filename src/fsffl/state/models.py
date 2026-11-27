@@ -7,6 +7,9 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
+from .postseason import BracketGame
+
+
 _NFL_TEAM_ALIASES = {
     "JAC": "JAX",
     "LA": "LAR",
@@ -650,6 +653,7 @@ class Transaction(FrozenModel):
 
 
 class LeagueState(FrozenModel):
+    winners_bracket: tuple[BracketGame, ...] = ()
     schema_version: str = "1"
     league: League
     as_of: datetime

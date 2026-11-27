@@ -15,6 +15,7 @@ from typing import Annotated, Callable, Literal
 from pydantic import Field, model_validator
 
 from fsffl.state.draft_order_policy import DraftOrderPolicyEvidence
+from fsffl.state.postseason import BracketGame, verified_path
 from fsffl.state.models import FrozenModel, LeaguePlayoffRules, LeagueState
 
 from .future_pick import (
@@ -110,6 +111,7 @@ class CompletedMatchup(FrozenModel):
 
 
 class RegularSeasonSimulationInput(FrozenModel):
+    factual_path: tuple[BracketGame, ...] = ()
     scoring: tuple[TeamScoringDistribution, ...] = ()
     weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = ()
     playoff_weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = ()
@@ -213,6 +215,7 @@ class RegularSeasonSimulationInput(FrozenModel):
             required_playoff_weekly = {
                 (week, team_id)
                 for week in self.playoff_rules.round_weeks
+                if not self.factual_path or any(g.week == week and g.winner is None for g in self.factual_path)
                 for team_id in known
             }
             if set(playoff_weekly_keys) != required_playoff_weekly:
@@ -225,6 +228,7 @@ class RegularSeasonSimulationInput(FrozenModel):
         if (
             self.playoff_rules is not None
             and self.playoff_rules.simulation_unavailability_reason() is None
+            and not (self.factual_path and self.factual_path[-1].winner)
             and not self.scoring
             and not self.playoff_weekly_scoring
         ):
@@ -794,7 +798,11 @@ def build_regular_season_simulation_input(
     )
     playoff_team_count = league_rules.playoff_team_count
     playoff_rules = resolved_playoff_rules_from_league_state(league_state)
+    path = verified_path(league_state, playoff_rules)
+    if playoff_rules and playoff_rules.round_weeks and (league_state.completed_through_week or 0) >= playoff_rules.round_weeks[0] and not path:
+        raise ValueError("Current postseason Simulation requires factual completed-bracket evidence")
     return RegularSeasonSimulationInput(
+        factual_path=path,
         scoring=scoring,
         weekly_scoring=weekly_scoring,
         playoff_weekly_scoring=playoff_weekly_scoring,
@@ -885,6 +893,50 @@ def _playoff_distributions(
         )
         return {week: static for week in playoff_rules.round_weeks}
     raise ValueError("configured championship simulation requires playoff scoring evidence")
+
+
+def _compile_official_path(request, team_index, weekly, static):
+    """Compile decided results once. Only unresolved games consume playoff draws."""
+    resolved = {}
+    eliminated = {}
+    open_games = []
+    for g in request.factual_path:
+        rnd = request.playoff_rules.round_weeks.index(g.week) + 1
+        if g.winner is not None:
+            resolved[g.game] = team_index[g.winner]
+            eliminated[team_index[g.loser]] = rnd
+            continue
+        # A nonnegative ref is a roster index. A negative ref is a prior open game.
+        def participant(team, parent):
+            return team_index[team] if parent is None else resolved[parent]
+        left = participant(g.left, g.left_from)
+        right = participant(g.right, g.right_from)
+        distributions = tuple(weekly.get((g.week, team)) or static.get(team) for team in team_index)
+        if any(d is None for d in distributions):
+            raise ValueError("Official playoff path lacks remaining scoring evidence")
+        open_games.append((left, right, rnd, distributions))
+        resolved[g.game] = -len(open_games)
+    return open_games, eliminated, resolved[request.factual_path[-1].game]
+
+
+def _simulate_official_path(plan, gauss):
+    games, completed_losses, final = plan
+    if final >= 0:
+        return final, completed_losses
+    winners = []
+    eliminated = completed_losses.copy()
+    for left, right, rnd, scoring in games:
+        a = left if left >= 0 else winners[-left-1]
+        b = right if right >= 0 else winners[-right-1]
+        da, db = scoring[a], scoring[b]
+        pa = max(0.0, gauss(da.mean_points, da.stddev_points)) if da.stddev_points else da.mean_points
+        pb = max(0.0, gauss(db.mean_points, db.stddev_points)) if db.stddev_points else db.mean_points
+        if pa == pb:
+            raise ValueError("Tied simulated playoff game needs official seed evidence")
+        winner, loser = (a, b) if pa > pb else (b, a)
+        winners.append(winner)
+        eliminated[loser] = rnd
+    return winners[-final-1], eliminated
 
 
 def _playoff_game_from_week_scoring(left, right, week_scoring, gauss):
@@ -1399,6 +1451,7 @@ def _empirical_percentile(values: array, threshold: float) -> float:
 
 def _build_multiverse_examples(
     *,
+    official_field=None,
     candidates: dict[str, dict[str, object]],
     team_ids: tuple[str, ...],
     playoff_team_count: int | None,
@@ -1525,13 +1578,14 @@ def _build_multiverse_examples(
                 playoff_seed=(
                     standings_indexes.index(index) + 1
                     if (
-                        playoff_supported
+                        official_field is None and playoff_supported
                         and playoff_team_count is not None
                         and standings_indexes.index(index) < playoff_team_count
                     )
                     else None
                 ),
                 made_playoffs=(
+                    index in official_field if official_field is not None else
                     standings_indexes.index(index) < playoff_team_count
                     if playoff_supported and playoff_team_count is not None
                     else None
@@ -2037,6 +2091,15 @@ def simulate_regular_season(
     )
     bye_supported = bye_unavailability_reason is None
     championship_supported = championship_unavailability_reason is None
+    if request.factual_path:
+        official_field = {team_index[t] for g in request.factual_path for t, parent in
+                          ((g.left, g.left_from), (g.right, g.right_from)) if parent is None}
+        bye_field = {team_index[t] for g in request.factual_path if g.week != request.factual_path[0].week
+                     for t, parent in ((g.left, g.left_from), (g.right, g.right_from)) if parent is None}
+        official_plan = _compile_official_path(request, team_index, by_playoff_week_team, by_team)
+        if future_pick_policy and future_pick_policy.placement_games_affect_order:
+            future_pick_policy = None
+            future_pick_unavailability_reason = "official_postseason_placement_order_unavailable"
     playoff_scoring = (
         _playoff_distributions(
             team_ids,
@@ -2044,7 +2107,7 @@ def simulate_regular_season(
             by_playoff_week_team,
             request.playoff_rules,
         )
-        if championship_supported
+        if championship_supported and not request.factual_path
         else None
     )
     canonical_playoff_matchups = ()
@@ -2068,7 +2131,7 @@ def simulate_regular_season(
 
     future_pick_slot_counts: list[list[float]] | None = None
     if future_pick_policy is not None:
-        if playoff_scoring is None or request.playoff_rules is None:
+        if (playoff_scoring is None and not request.factual_path) or request.playoff_rules is None:
             future_pick_unavailability_reason = (
                 "future_pick_playoff_elimination_evidence_unavailable"
             )
@@ -2490,7 +2553,7 @@ def simulate_regular_season(
         for rank_index, team_idx in enumerate(standings):
             finish_count[team_idx][rank_index] += 1
         if playoff_supported:
-            for index in standings[: request.playoff_team_count]:
+            for index in (official_field if request.factual_path else standings[: request.playoff_team_count]):
                 playoff_count[index] += 1
         if standings_started is not None:
             standings_wall_seconds += (
@@ -2500,7 +2563,9 @@ def simulate_regular_season(
         playoff_elimination_rounds = None
         playoff_started = _profile_wall_clock() if profile_enabled else None
         if championship_supported:
-            if (
+            if request.factual_path:
+                champion, playoff_elimination_rounds = _simulate_official_path(official_plan, playoff_gauss)
+            elif (
                 future_pick_slot_counts is not None
                 and future_pick_policy is not None
                 and future_pick_policy.placement_games_affect_order
@@ -2540,7 +2605,8 @@ def simulate_regular_season(
         future_pick_started = _profile_wall_clock() if profile_enabled else None
         if future_pick_slot_counts is not None and future_pick_policy is not None:
             playoff_team_count = future_pick_policy.playoff_team_count
-            non_playoff = standings[playoff_team_count:]
+            non_playoff = ([t for t in standings if t not in official_field]
+                           if request.factual_path else standings[playoff_team_count:])
             if len(non_playoff) != future_pick_policy.non_playoff_team_count:
                 raise ValueError(
                     "future-pick non-playoff team count conflicts with policy"
@@ -2792,7 +2858,7 @@ def simulate_regular_season(
 
         if playoff_supported and request.playoff_team_count is not None:
             strongest_rank = standings.index(strongest_expected_team) + 1
-            if strongest_rank > request.playoff_team_count:
+            if (strongest_expected_team not in official_field if request.factual_path else strongest_rank > request.playoff_team_count):
                 strong_team_miss_count += 1
                 miss = multiverse_candidates.get("strong_team_misses_playoffs")
                 should_replace = (
@@ -2818,7 +2884,7 @@ def simulate_regular_season(
                         )
                     )
 
-        if champion is not None:
+        if champion is not None and not request.factual_path:
             champion_seed = standings.index(champion) + 1
             champion_seed_counts[champion_seed] += 1
             low_seed = multiverse_candidates.get("low_seed_champion")
@@ -2887,7 +2953,7 @@ def simulate_regular_season(
         probabilities = tuple(count / n for count in finish_count[index])
         playoff_seed_probabilities = (
             probabilities[: request.playoff_team_count]
-            if playoff_supported and request.playoff_team_count is not None
+            if playoff_supported and request.playoff_team_count is not None and not request.factual_path
             else None
         )
         bye_probability = (
@@ -2898,6 +2964,8 @@ def simulate_regular_season(
             if bye_supported and request.playoff_rules is not None
             else None
         )
+        if request.factual_path:
+            bye_probability = float(index in bye_field)
         outcomes.append(TeamCompetitiveOutcome(
             team_id=team_id,
             expected_wins=expected,
@@ -2933,6 +3001,8 @@ def simulate_regular_season(
             )
         )
     identity_payload = request.model_dump(mode="json")
+    if not request.factual_path:
+        identity_payload.pop("factual_path", None)
     if not request.playoff_weekly_scoring:
         # Preserve replay identity for requests whose semantics did not gain
         # separate postseason evidence; populated postseason evidence remains
@@ -3006,6 +3076,7 @@ def simulate_regular_season(
     ).hexdigest()
     multiverse_result_started = _profile_wall_clock() if profile_enabled else None
     multiverse_worlds = _build_multiverse_examples(
+        official_field=official_field if request.factual_path else None,
         candidates=multiverse_candidates,
         team_ids=team_ids,
         playoff_team_count=request.playoff_team_count,

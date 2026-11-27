@@ -6,6 +6,7 @@ from fsffl.providers.acquisition_telemetry import observe_acquisition, observed_
 
 import hashlib
 import json
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -13,6 +14,7 @@ from typing import Any, Callable, Mapping, Sequence
 from urllib.request import Request, urlopen
 
 from .acquisition import ProviderSnapshot
+from .sleeper import sleeper_completed_week
 
 
 JsonGetter = Callable[[str], Any]
@@ -126,6 +128,7 @@ class SleeperLiveSource:
                 if key.startswith("matchup:")
             },
         }
+        probe_payload.update(self._postseason(league_id, league_payload, nfl_state))
         encoded = json.dumps(
             probe_payload,
             sort_keys=True,
@@ -189,12 +192,39 @@ class SleeperLiveSource:
             "nfl_state": results["nfl_state"],
             "nfl_schedule": results["nfl_schedule"],
         }
+        payload.update(self._postseason(league_id, league_payload, results["nfl_state"]))
         return ProviderSnapshot(
             provider_name=self.provider_name,
             league_external_id=league_id,
             captured_at=captured_at,
             payload=payload,
         )
+
+    def _postseason(self, league_id, league, nfl_state):
+        boundary = sleeper_completed_week(league, nfl_state)
+        try:
+            start = int(league.get("settings", {}).get("playoff_week_start"))
+        except (ValueError, TypeError):
+            return {}
+        if boundary is None or not 1 <= start <= min(18, boundary + 1):
+            return {}
+
+        def optional(path):
+            try:
+                return self._get(f"/league/{league_id}/{path}")
+            except (OSError, ValueError):
+                logging.getLogger(__name__).warning("Sleeper postseason evidence unavailable: %s", path)
+                return []
+
+        scores = {}
+        for week in range(start, min(boundary, 18) + 1):
+            rows = optional(f"matchups/{week}")
+            if isinstance(rows, list):
+                scores[str(week)] = [
+                    {k: row.get(k) for k in ("roster_id", "points", "custom_points")}
+                    for row in rows if isinstance(row, Mapping)
+                ]
+        return {"winners_bracket": optional("winners_bracket"), "postseason_scores": scores}
 
     def fetch_at_or_before(
         self,

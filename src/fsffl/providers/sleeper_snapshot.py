@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from fsffl.providers.acquisition import ProviderSnapshot
+from fsffl.providers.sleeper_bracket import championship_path
 from fsffl.providers.sleeper import (
     SleeperNormalizer,
     SleeperPayloadBundle,
@@ -100,6 +101,17 @@ class SleeperSnapshotNormalizer:
                     retain_player_ids=self._include_player_ids,
                 )
         state = _attach_fantasy_regular_season_horizon(state, payload.get("league"))
+        bracket = championship_path(state, payload.get("winners_bracket"),
+            payload.get("postseason_scores", {}), state.league.rules.playoff_start_week)
+        if bracket:
+            state = state.model_copy(update={
+                "winners_bracket": bracket,
+                "provenance": state.provenance + (Provenance(
+                    source="sleeper:winners_bracket_and_weekly_scores",
+                    retrieved_at=snapshot.captured_at, effective_at=as_of,
+                    provider_ref=ProviderRef(provider="sleeper", external_id=str(payload["league"]["league_id"])),
+                ),),
+            })
         byes, schedule_provenance = _normalize_nfl_byes(
             payload.get("nfl_schedule", ()),
             season=state.league.season,

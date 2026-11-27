@@ -205,7 +205,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     league_view: LeagueAnalyticsView
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
-    scoring_dispersion_diagnostic: LeagueScoringDispersionDiagnostic
+    scoring_dispersion_diagnostic: LeagueScoringDispersionDiagnostic | None
     scenario_preparation: ScenarioSimulationPreparation | None = None
     model_version: str = LIVE_SIMULATION_MODEL_VERSION
 
@@ -257,6 +257,7 @@ def simulation_structure_dependency_fingerprint(league_state: LeagueState) -> st
             for player in sorted(league_state.players, key=lambda item: item.player_id)
         ),
         tuple(item.model_dump(mode="json") for item in league_state.matchups),
+        *([tuple(g.model_dump(mode="json") for g in league_state.winners_bracket)] if league_state.winners_bracket else []),
         league_state.completed_through_week,
         tuple(item.model_dump(mode="json") for item in league_state.nfl_team_byes),
         tuple(
@@ -359,8 +360,12 @@ def build_live_simulation_analytics(
         )
         else ()
     )
+    from fsffl.state.postseason import verified_path
+    factual_path = verified_path(league_state, playoff_rules)
+    if factual_path:
+        playoff_weeks = tuple(w for w in playoff_weeks if w > (league_state.completed_through_week or 0))
     scoring_panel_weeks = tuple(sorted(set(fantasy_weeks) | set(playoff_weeks)))
-    if not scoring_panel_weeks:
+    if not scoring_panel_weeks and not factual_path:
         raise ValueError(
             "canonical forward fantasy scoring weeks are required for live simulation"
         )
@@ -420,7 +425,9 @@ def build_live_simulation_analytics(
     }
 
     with sample_rss_phase("simulation.weekly_scoring_panel"):
-        if scenario_reuse is None:
+        if not scoring_panel_weeks:
+            forward_weekly_scoring = ()
+        elif scenario_reuse is None:
             forward_weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
                 league_state,
                 effective_forecasts,
@@ -544,7 +551,7 @@ def build_live_simulation_analytics(
             simulation,
             baseline_lineups=lineups,
             fallback_player_ids=fallback_ids,
-        )
+        ) if forward_weekly_scoring else None
         outcomes = {item.team_id: item for item in simulation.outcomes}
         competitive_state_policy = (
             derive_league_relative_competitive_state_policy(
@@ -679,7 +686,8 @@ def build_live_simulation_analytics(
             ModelLineageEntry(component="simulation", model_version=simulation.model_version),
             ModelLineageEntry(
                 component="scoring_dispersion_diagnostic",
-                model_version=scoring_dispersion_diagnostic.model_version,
+                model_version=(scoring_dispersion_diagnostic.model_version if scoring_dispersion_diagnostic
+                               else "unavailable:no-unplayed-games"),
             ),
             ModelLineageEntry(
                 component="competitive_state_policy",
