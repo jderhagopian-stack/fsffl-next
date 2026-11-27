@@ -1,3 +1,7 @@
+## Forecast availability label — 2026-11-27
+
+Release base `fec89aa0`. A saved publication with scored Forecast rows, two partial rows outside the simulation blockers, and current rest-of-season simulation inputs exposed a presentation bug. Shared readiness and Franchise mapped nonblocking coverage to “unavailable.” Both now report limited coverage. Provisional and missing evidence retain separate labels. The provider's full-season fallback remains a separate freshness issue. Verify the shared status on a signed-in phone after release approval.
+
 ## Explore negotiation closeout — PR #612
 
 Branch `explore-negotiating-terms`, main `fec89aa0`. The price comparison reads each side’s existing cut-adjusted Market Capital delta, alone or alongside a lineup goal. Four regression cases reproduced the earlier exception. 91 focused tests passed after correction. Two private saved mobile replays followed the fallback buttons through full analysis, verifying the exact assets, both owners’ objective contexts, future contributions and cuts. A seller can consider a concession independently of the decision to keep the player. Physical Safari and release approval remain pending. The next product workstream after acceptance is Reports & History.

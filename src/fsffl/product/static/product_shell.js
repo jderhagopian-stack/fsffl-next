@@ -29,7 +29,7 @@ const fsfflProductSurfaceCopy={
 const fsfflStaticVersion='20260927-dualstate1';
 const leagueAtlasStaticVersion='20261005-atlas-5ed1182ecd48';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const franchiseNorthStarStaticVersion='20261007-franchise-db64afb4f620';
+const franchiseNorthStarStaticVersion='20261007-franchise-030aaf044b05';
 const ownerHistoryStaticVersion='20261127-owner-pick-window';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
@@ -249,9 +249,13 @@ function fsfflSharedReadinessSnapshot(){
               :'Intelligence partially available';
   return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull&&!reconciliationActive,lifecycleComplete:capabilityFull&&!reconciliationActive,partial:capabilities?.overall_status==='partial'||rebuilding||Boolean(surfaceIssue),rebuilding,updating:reconciliationActive,capabilities,asOf};
 }
+function fsfflCapabilityDisplay(status){
+  if(status==='partial_nonblocking'||status==='non_material_partial')return 'Available with limited coverage';
+  return status==='partial_provisional'?'Partial':status==='full'?'Full':status==='building'?'Building':status==='separate_surface'?'Separate':'Unavailable';
+}
 function fsfflCapabilityChip(label,key){
   const status=fsfflCapabilityStatus(key);
-  const display=status==='partial_provisional'?'Partial':status==='full'?'Full':status==='building'?'Building':status==='separate_surface'?'Separate':'Unavailable';
+  const display=fsfflCapabilityDisplay(status);
   return '<span class="fsffl-capability-chip '+fsfflSharedReadinessEscape(status)+'"><b>'+fsfflSharedReadinessEscape(label)+'</b> '+fsfflSharedReadinessEscape(display)+'</span>';
 }
 function fsfflMobileCapabilityException(status){
@@ -266,6 +270,7 @@ function fsfflMobileCapabilityException(status){
   for(const [label,key] of checks){
     const value=String(status?.capabilities?.[key]?.status||fsfflCapabilityStatus(key));
     if(value==='building')return label+' building';
+    if(value==='partial_nonblocking'||value==='non_material_partial')return label+' available with limited coverage';
     if(value==='partial_provisional')return label+' partial';
     if(value==='unavailable'||value==='not_configured')return label+' unavailable';
   }
