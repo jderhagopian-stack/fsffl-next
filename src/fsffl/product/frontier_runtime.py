@@ -224,7 +224,8 @@ def build_negotiation_frontier(
                 price_check = {"price_check": {
                     "needs_filled": needs_filled, "band": band.value,
                     "group": price_context["group"], "gate": price_context["limiting_gate"],
-                    "market": {markets[s]["team_id"]: markets[s]["roster_adjusted_market_delta"]
+                    "market": {markets[s]["team_id"]: (markets[s]["roster_adjusted_market_delta"]
+                                if markets[s]["status"] == "complete" else None)
                                for s in ("side_a", "side_b")},
                     "cuts": {r["team_id"]: r["required_cut_count"] for r in result["roster_legality"]},
                     "basis": effects["basis"],

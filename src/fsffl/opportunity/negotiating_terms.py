@@ -3,12 +3,18 @@ from math import isfinite
 
 
 def negotiating_terms(points, *, focal_team, other_team, buying=False):
+    metric_keys = {"current_competitiveness": "current", "three_year_contribution": "three_year",
+                   "career_contribution": "career", "market_capital": "market"}
     eligible = []
     probes = []
     costly_returns = []
     for point in points:
         check = point.get("price_check") or {}
         if not check:
+            continue
+        if any(goal not in metric_keys for side in ("side_a", "side_b")
+               for goal in point["objective_assessment"][side]["context"]["objectives"]):
+            # The preliminary comparison has no confirmed resilience measurement.
             continue
         markets = check["market"]
         effects = point["counter_review"]["effects"]["teams"]
@@ -33,10 +39,10 @@ def negotiating_terms(points, *, focal_team, other_team, buying=False):
 
     def goals(point, side, team):
         context = point["objective_assessment"][side]["context"]
-        metrics = {"current_competitiveness": "current", "three_year_contribution": "three_year",
-                   "career_contribution": "career"}
         effects = point["counter_review"]["effects"]["teams"][team]
-        return tuple(effects[metrics[g]] for g in context["objectives"])
+        coordinates = {**effects, "market": price(point, team)}
+        return tuple(coordinates[metric_keys[goal]]
+                     for goal in context["objectives"])
 
     def dominates(left, right):
         # A worse-priced package buys nothing extra on either owner's objectives.

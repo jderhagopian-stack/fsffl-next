@@ -1,3 +1,5 @@
+import pytest
+
 from fsffl.opportunity.negotiating_terms import negotiating_terms
 
 
@@ -49,3 +51,28 @@ def test_smaller_return_outside_the_economic_gate_is_a_stop_only():
     low = offer("one", -500, 2, band="focal_economic_strain")
     result = plan([low, opening], buying=False)
     assert result["outside"] == "one" and result["fallback"] is None
+
+
+@pytest.mark.parametrize("buying", [True, False], ids=["buy", "sell"])
+@pytest.mark.parametrize("goals", [
+    ["market_capital"], ["current_competitiveness", "market_capital"],
+])
+def test_market_capital_counts_as_a_concession_for_both_comparisons(buying, goals):
+    opening = offer("opening", 30, 20)
+    alternative = offer("alternative", 10, 20)
+    for point in (opening, alternative):
+        for side in ("side_a", "side_b"):
+            point["objective_assessment"][side]["context"]["objectives"] = goals
+    # Lineup and both future horizons are identical. Only post-cut market value improves.
+    result = plan([opening, alternative], buying)
+    assert (result["opening"], result["fallback"]) == ("opening", "alternative")
+
+    # A required cut can erase the partner's improvement even at a lower asking price.
+    alternative["price_check"]["market"]["b"] = opening["price_check"]["market"]["b"]
+    assert plan([opening, alternative], buying)["fallback"] is None
+
+
+def test_market_with_an_unmeasured_goal_does_not_quote_a_price():
+    point = offer("candidate", 12, 10)
+    point["objective_assessment"]["side_a"]["context"]["objectives"] = ["market_capital", "resilience"]
+    assert plan([point])["opening"] is None

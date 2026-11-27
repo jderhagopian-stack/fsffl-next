@@ -133,15 +133,15 @@
           const next=result.points.find(p=>p.point_id===plan.fallback);
           const team=result.counterparty_team_id, before=opened.counter_review.effects.teams[team], after=next.counter_review.effects.teams[team];
           const reason=after.career>before.career?'a better long-term return':after.three_year>before.three_year?'more over the next three years':after.current>before.current?'more lineup production now':'better market value';
-          body+=`<p>If talks stall, the next package gives ${esc(teamName(team))} ${reason}.</p>`;
+          body+=`<p>Compared with the opening terms, the alternative gives ${esc(teamName(team))} ${reason}.</p>`;
         }
         body+=plan.fallback?describe(plan.fallback,entry.side==='buy'?'If they ask for more':'If they offer less'):'<p>Keep these terms. The other checked prices give you no clear reason to concede.</p>';
         if(plan.outside){
           const outside=result.points.find(p=>p.point_id===plan.outside);
           const terms=pointAssets(outside,'counterparty_assets').map(a=>a.label).join(' + ');
-          body+=`<p><b>Where to stop:</b> At ${esc(terms)}, you would give up more in market value than the price check supports. Consider keeping what you have.</p>`;
+          body+=`<p><b>Lower offer checked:</b> At ${esc(terms)}, you would give up more in market value than the price check supports. Consider keeping what you have.</p>`;
         }
-        body+=plan.fallback&&!plan.outside?'<p>Beyond these terms, compare keeping what you have. Check the season impact before agreeing.</p>':'<small>Check the season impact before agreeing.</small>';
+        body+='<small>Check the season impact before agreeing.</small>';
       }else if(plan.reason==='missing_publication')body='<p>A matching forecast and long-term values are needed to compare prices.</p>';
       else body='<p>No opening price established. The checked packages need better terms or stronger evidence for both teams.</p>';
     }
