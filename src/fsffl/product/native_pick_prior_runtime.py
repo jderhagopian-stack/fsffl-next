@@ -40,7 +40,7 @@ def published_pick_values(runtime, release: NativePickPriorRelease | None, simul
         ranges = {}
         origin = order.get(pick.original_team_id) if pick.season == release.draft_season else None
         if origin:
-            if origin.slot is None or origin.conflicts(pick.verified_slot):
+            if origin.provisional or origin.slot is None or origin.conflicts(pick.verified_slot):
                 continue
             for horizon in values:
                 values[horizon][pick.pick_id] = release.slot_point(round_number=pick.round,

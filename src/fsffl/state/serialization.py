@@ -9,6 +9,10 @@ from .models import LeagueState
 
 def _sorted_payload(state: LeagueState) -> dict[str, Any]:
     payload = state.model_dump(mode="json", exclude_none=False)
+    if state.regular_totals_observed_leg is None:
+        payload.pop("regular_totals_observed_leg")
+    if not state.regular_totals_confirmed:
+        payload.pop("regular_totals_confirmed")
     if state.final_regular_totals_week is None:
         payload.pop("final_regular_totals_week")
     if state.rookie_pick_window is None:

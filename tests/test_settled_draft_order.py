@@ -26,7 +26,7 @@ def configured(state, metric="max_pf", tie="record"):
 
 def factual(state, totals):
     prov = Provenance(source="test-final-rosters", effective_at=state.as_of, retrieved_at=state.as_of)
-    return state.model_copy(update={"final_regular_totals_week":state.league.rules.fantasy_regular_season_end_week,
+    return state.model_copy(update={"regular_totals_confirmed":True,"final_regular_totals_week":state.league.rules.fantasy_regular_season_end_week,
         "team_states": tuple(row.model_copy(update={
         "max_points_for": value, "max_points_for_provenance": prov if value is not None else None,
         "final_regular_record": record}) for row, (value, record) in zip(state.team_states, totals, strict=True))})
@@ -96,6 +96,9 @@ def test_exact_curve_flows_to_trade_without_simulation_and_conflict_withholds():
     artifact.league_state_id=state.state_id
     projection=read(runtime,artifact,release,None)
     bound=bind_trade_intrinsic_values(runtime,proposal,projection)
+    provisional=state.model_copy(update={"regular_totals_confirmed":False})
+    provisional_values,_=published_pick_values(replace(runtime,league_state=provisional),release,None)
+    assert "pick:alpha" not in provisional_values["career"]
     assert bound["three_year"]["side_a"]["sent_mean"]==release.slot_point(
         round_number=1,slot=1,draft_season=2027,horizon="three_year")
     assert bound["source"]["pick_sources"]["pick:alpha"]["rule_slot"]==1
@@ -128,3 +131,29 @@ def test_sleeper_keeps_only_settled_regular_record():
     assert all(r.final_regular_record is None for r in normalize(4).team_states)
     assert normalize(5,3).final_regular_totals_week is None
     assert all(r.final_regular_record == (3, 1, 0) for r in normalize(5).team_states)
+
+
+def test_first_post_correction_and_later_confirmation_without_a_board():
+    from datetime import timedelta
+    from fsffl.product.runtime import PrivateBetaRuntimeStore
+    base = saved_state(14, rounds())
+    origins = [r.team_id for r in base.team_states]
+    base = factual(base, [(100+i, (7,7,0)) for i in range(len(origins))])
+    initial = base.model_copy(update={"regular_totals_observed_leg":14, "regular_totals_confirmed":False})
+    store = PrivateBetaRuntimeStore()
+    first = configured(initial)
+    order = settled_origin_order(first,2026)
+    a,b = sorted((k for k,v in order.items() if v.slot), key=lambda k:order[k].slot)[:2]
+    assert (order[a].slot,order[b].slot)==(1,2) and order[a].provisional
+    store.set_league_state("owner",initial)
+    moved = initial.model_copy(update={"as_of":initial.as_of+timedelta(days=1),"team_states":tuple(
+        r.model_copy(update={"max_points_for":0}) if r.team_id==b else r for r in initial.team_states)})
+    posted = store.prepare_account_league_state("owner",moved)
+    assert not posted.regular_totals_confirmed
+    store.set_league_state("owner",posted)
+    assert not store.prepare_account_league_state("owner",moved).regular_totals_confirmed
+    final = moved.model_copy(update={"as_of":moved.as_of+timedelta(days=7),"regular_totals_observed_leg":15})
+    checked = store.prepare_account_league_state("owner",final)
+    order = settled_origin_order(configured(checked),2026)
+    assert checked.regular_totals_confirmed and (order[a].slot,order[b].slot)==(2,1)
+    assert not order[a].provisional

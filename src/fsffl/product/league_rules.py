@@ -42,7 +42,7 @@ def league_rules_payload(runtime, settings_store, user_id):
         draft_season=state.league.season + 1, as_of=state.as_of,
     )
     order = settled_origin_order(state, state.league.season + 1)
-    settled = sum(row.slot is not None for row in order.values())
+    settled = sum(row.slot is not None and not row.provisional for row in order.values())
     supported = True
     try:
         compile_supported_future_pick_policy(
@@ -52,7 +52,7 @@ def league_rules_payload(runtime, settings_store, user_id):
     except ValueError:
         supported = False
     if order:
-        reasons = dict.fromkeys(row.reason for row in order.values() if row.slot is None)
+        reasons = dict.fromkeys(row.reason for row in order.values() if row.slot is None or row.provisional)
         message = " ".join(([f"{settled} non-playoff slots settled by final Max PF."] if settled else [])
                            + sorted(reasons))
     elif not supported:

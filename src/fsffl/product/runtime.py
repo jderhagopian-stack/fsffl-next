@@ -80,6 +80,8 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
             ownership.model_dump(mode="json")
             for ownership in sorted(league_state.pick_ownership, key=lambda item: item.pick_id)
         ],
+        **({"regular_totals_confirmed": True} if league_state.regular_totals_confirmed else {}),
+        **({"regular_totals_observed_leg": league_state.regular_totals_observed_leg} if league_state.regular_totals_observed_leg else {}),
         **({"final_regular_totals_week": league_state.final_regular_totals_week} if league_state.final_regular_totals_week else {}),
         **({"winners_bracket": [g.model_dump() for g in league_state.winners_bracket]} if league_state.winners_bracket else {}),
         "completed_through_week": league_state.completed_through_week,
@@ -527,6 +529,8 @@ class PrivateBetaRuntimeStore:
     def prepare_account_league_state(self, user_id: str, league_state: LeagueState) -> LeagueState:
         """Resolve personal rules before State activation, never on model GETs."""
         from fsffl.state.account_rules import apply_account_rules
+        from fsffl.state.settled_draft_order import confirm_regular_totals
+        league_state = confirm_regular_totals(league_state, self.get(user_id).league_state)
         settings = self.account_rule_settings.get(
             user_id, league_state.league.league_id, league_state.league.season,
         )
