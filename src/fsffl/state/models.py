@@ -551,7 +551,27 @@ class NflTeamBye(FrozenModel):
         return canonical_nfl_team(value)
 
 
+class RookiePickWindow(FrozenModel):
+    first_year: int | None
+    status: Literal["verified", "retained", "unresolved"]
+    draft_id: str | None = None
+
+    draft_season: int | None = None
+    # Linear-draft slots map to original rosters independently of transfers.
+    original_slots: tuple[tuple[int, int], ...] = ()
+    used_slots: tuple[tuple[int, int], ...] = ()
+
+    @property
+    def notice(self) -> str | None:
+        if self.status == "unresolved":
+            return "Draft pick window unresolved. Waiting for the regular rookie draft record."
+        if self.status == "retained":
+            return f"Last verified draft classes: {self.first_year}–{self.first_year + 2}."
+        return None
+
+
 class DraftPick(FrozenModel):
+    verified_slot: Annotated[int, Field(ge=1)] | None = None
     pick_id: str
     league_id: str
     season: int
@@ -653,6 +673,7 @@ class Transaction(FrozenModel):
 
 
 class LeagueState(FrozenModel):
+    rookie_pick_window: RookiePickWindow | None = None
     winners_bracket: tuple[BracketGame, ...] = ()
     schema_version: str = "1"
     league: League
@@ -758,6 +779,11 @@ class LeagueState(FrozenModel):
         if len(policy_keys) != len(set(policy_keys)):
             raise ValueError("duplicate draft-order policy evidence")
         return self
+
+    def unconfirmed_pick_ids(self) -> frozenset[str]:
+        if not self.rookie_pick_window or self.rookie_pick_window.status != "retained":
+            return frozenset()
+        return frozenset(p.pick_id for p in self.draft_picks if p.season <= self.league.season)
 
     def canonical_json(self) -> str:
         from .serialization import canonical_state_json

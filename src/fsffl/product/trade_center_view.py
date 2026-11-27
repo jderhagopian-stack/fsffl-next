@@ -6,6 +6,7 @@ from fsffl.state.models import Asset, FrozenModel, LeagueState, PickAsset, Playe
 
 
 class TradeAssetOption(FrozenModel):
+    available: bool = True
     asset_ref: str
     asset_kind: str
     label: str
@@ -39,6 +40,7 @@ class TradeCenterBrowserView(FrozenModel):
     focal_team: TeamTradeBrowser
     counterparties: tuple[TeamTradeBrowser, ...]
     state_id: str
+    pick_window_notice: str | None = None
     product_version: str = "next8-trade-browser-v2:player-state-age"
 
 
@@ -69,6 +71,7 @@ def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
         )
 
     picks_by_id = {pick.pick_id: pick for pick in league_state.draft_picks}
+    unconfirmed = league_state.unconfirmed_pick_ids()
     for ownership in league_state.pick_ownership:
         if ownership.owner_team_id != team_id:
             continue
@@ -83,8 +86,10 @@ def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
             TradeAssetOption(
                 asset_ref=f"pick:{pick.pick_id}",
                 asset_kind="pick",
-                label=f"{pick.season} Round {pick.round}",
-                detail=f"Originally {original_team}",
+                label=(f"{pick.season} {pick.round}.{pick.verified_slot:02d}" if pick.verified_slot
+                       else f"{pick.season} Round {pick.round}"),
+                available=pick.pick_id not in unconfirmed,
+                detail=f"Originally {original_team}" + (" · Awaiting draft update" if pick.pick_id in unconfirmed else ""),
                 pick_id=pick.pick_id,
             )
         )
@@ -120,12 +125,15 @@ def build_trade_center_browser_view(
         focal_team=focal,
         counterparties=counterparties,
         state_id=league_state.state_id,
+        pick_window_notice=league_state.rookie_pick_window.notice if league_state.rookie_pick_window else None,
     )
 
 
 def asset_from_trade_option(option: TradeAssetOption) -> Asset:
     """Convert one already ownership-validated browser option to canonical Asset."""
 
+    if not option.available:
+        raise ValueError("Pick use is awaiting a draft update")
     if option.asset_kind == "player" and option.player_id is not None:
         return PlayerAsset(player_id=option.player_id)
     if option.asset_kind == "pick" and option.pick_id is not None:
@@ -140,7 +148,7 @@ def owned_asset_index(view: TradeCenterBrowserView) -> dict[tuple[str, str], Ass
     return {
         (team.team_id, option.asset_ref): asset_from_trade_option(option)
         for team in teams
-        for option in team.assets
+        for option in team.assets if option.available
     }
 
 

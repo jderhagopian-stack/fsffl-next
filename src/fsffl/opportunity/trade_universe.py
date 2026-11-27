@@ -74,10 +74,11 @@ def build_team_trade_inventory(
     if bounds.include_players:
         assets.extend(PlayerAsset(player_id=entry.player_id) for entry in team_state.roster)
     if bounds.include_picks:
+        unconfirmed = league_state.unconfirmed_pick_ids()
         assets.extend(
             PickAsset(pick_id=ownership.pick_id)
             for ownership in league_state.pick_ownership
-            if ownership.owner_team_id == team_id
+            if ownership.owner_team_id == team_id and ownership.pick_id not in unconfirmed
         )
     if bounds.include_faab and team_state.faab_balance > 0:
         options: list[int] = []

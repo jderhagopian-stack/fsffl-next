@@ -133,7 +133,9 @@ _projection_history_store = projection_history_store_from_env(
         _persistence_store.connection if _persistence_store is not None else None
     )
 )
-_state_snapshot_store = state_snapshot_store_from_env()
+_state_snapshot_store = state_snapshot_store_from_env(
+    connect_factory=_persistence_store.connection if _persistence_store is not None else None,
+)
 _runtime_store = PersistentPrivateBetaRuntimeStore(
     _persistence_store,
     state_snapshot_store=_state_snapshot_store,
@@ -176,7 +178,10 @@ def _load_sleeper_state_under_heavy_claim(league_external_id: str):
         timeout_seconds=300.0,
     ):
         release_unused_process_memory(label="before-sleeper-state-sync")
-        state = default_sleeper_state_loader(league_external_id)
+        state = default_sleeper_state_loader(
+            league_external_id,
+            prior_pick_window=getattr(_state_snapshot_store, "last_verified_pick_window", None),
+        )
         logging.getLogger("uvicorn.error").info(
             "FSFFL intelligence memory phase=state_materialization_complete current_rss=%s",
             _heavy_work_coordinator.snapshot().current_rss_bytes,

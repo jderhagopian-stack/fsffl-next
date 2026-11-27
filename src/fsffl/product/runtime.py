@@ -273,14 +273,33 @@ LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
 LiveValueLoader = Callable[[LeagueState], CurrentMarketValueRuntimeResult]
 
 
-def default_sleeper_state_loader(league_external_id: str) -> LeagueState:
+# Bridge successful live captures between refreshes, including the interval
+# before the asynchronous State-history checkpoint becomes visible.
+_verified_rookie_windows = {}
+_rookie_window_lock = RLock()
+
+
+def default_sleeper_state_loader(league_external_id: str, *, prior_pick_window=None) -> LeagueState:
     """Materialize current canonical state through the governed provider path."""
+    def previous(league_id, cutoff):
+        with _rookie_window_lock:
+            saved = _verified_rookie_windows.get(league_id)
+        if saved is not None and saved[0] <= cutoff:
+            return saved[1]
+        return prior_pick_window(league_id, cutoff) if prior_pick_window else None
 
     service = ProviderBackedStateService(
         source=SleeperLiveSource(),
-        normalizer=SleeperSnapshotNormalizer(),
+        normalizer=SleeperSnapshotNormalizer(prior_pick_window=previous),
     )
-    return service.materialize_live(league_external_id=league_external_id)
+    state = service.materialize_live(league_external_id=league_external_id)
+    window = state.rookie_pick_window
+    if window and window.status == "verified":
+        with _rookie_window_lock:
+            saved = _verified_rookie_windows.get(state.league.league_id)
+            if saved is None or saved[0] <= state.as_of:
+                _verified_rookie_windows[state.league.league_id] = state.as_of, window
+    return state
 
 
 def default_live_forecast_loader(

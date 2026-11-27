@@ -1,3 +1,9 @@
+## FSFFL rookie-pick rollover — release candidate, 2026-11-27
+
+Base main `e00a9bdd26dcfcf7c7d486269f83f2f8409b8393`. FSFFL's linked Sleeper leagues use three draft classes and advance after the ordinary rookie draft completes. State retains the original franchise, current holder, evidenced slot and used selections separately. Uncertain use is excluded from trade eligibility. Existing non-FSFFL policies, Max PF and ranking calculations are preserved.
+
+The private 2025 closeout / linked 2026 replay checked all owners in Trade Center and Owner Intelligence. The pre-draft stage was reconstructed from archived transfers with the final slot order withheld. Both views retired selections at the same boundary. Focused provider, persistence, ownership, UI and trade regressions passed (125 passed, one skipped). Report results before deployment.
+
 ## Playoff continuity release candidate — 2026-11-27
 
 Base main `2f233474a19522ece980447fba3eb12f33430e14`. Completed championship games require agreement between Sleeper winner links and finalized scores. Retain byes, lock played games and use the existing simulation budget only for unplayed matchups. Withhold odds on incomplete evidence while displaying available bracket rows.
