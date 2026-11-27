@@ -321,3 +321,25 @@ def test_shared_readiness_timer_is_suspended_for_active_job_and_resumes_after_te
     assert "fsfflStopSharedReadinessPolling()" in start
     assert "if(fsfflSharedReadinessJobActive())fsfflStopSharedReadinessPolling()" in accept
     assert "else fsfflStartSharedReadinessPolling()" in accept
+
+
+def test_forecast_labels_match_scored_coverage_on_both_surfaces():
+    import subprocess
+
+    shell = _shell()
+    helpers = shell[shell.index("function fsfflCapabilityDisplay"):shell.index("function fsfflSharedReadinessMarkup")]
+    franchise = _franchise().split("function myTeamCapabilityNote()", 1)[1].split("function renderMyTeamCommandCenter", 1)[0]
+    subprocess.run(["node", "-e", helpers + "function myTeamCapabilityNote()" + franchise + """
+      const assert=require('node:assert/strict');
+      const capabilities={forecast:{},simulation:{status:'full'},current_value:{status:'full'},intrinsic:{status:'full'},overall_status:'partial'};
+      const state={context:{capability_readiness:capabilities}};
+      const fsfflSurfaceReadinessIssue=()=>null, fsfflCapabilityStatus=k=>capabilities[k].status;
+      const myTeamEsc=String, fsfflSharedReadinessEscape=String;
+      for(const [status,label] of Object.entries({partial_nonblocking:'Available with limited coverage',
+        non_material_partial:'Available with limited coverage',full:'Full',unavailable:'Unavailable',partial_provisional:'Partial'})){
+        capabilities.forecast.status=status;
+        assert.ok(fsfflCapabilityChip('Forecast','forecast').includes('</b> '+label));
+        assert.ok(myTeamCapabilityNote().includes('Forecast '+label.toLowerCase()));
+        if(status!=='full')assert.equal(fsfflMobileCapabilityException({capabilities}),'Current Forecast '+label.toLowerCase());
+      }
+    """], check=True)

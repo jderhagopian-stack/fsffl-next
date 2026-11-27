@@ -1,3 +1,7 @@
+## Forecast availability label — 2026-11-27
+
+Release base `fec89aa0`. A saved publication with scored Forecast rows, two partial rows outside the simulation blockers, and current rest-of-season simulation inputs exposed a presentation bug. Shared readiness and Franchise mapped nonblocking coverage to “unavailable.” Both now report limited coverage. Provisional and missing evidence retain separate labels. The provider's full-season fallback remains a separate freshness issue. Verify the shared status on a signed-in phone after release approval.
+
 ## FSFFL rookie-pick rollover — release candidate, 2026-11-27
 
 Base main `e00a9bdd26dcfcf7c7d486269f83f2f8409b8393`. FSFFL's linked Sleeper leagues use three draft classes and advance after the ordinary rookie draft completes. State retains the original franchise, current holder, evidenced slot and used selections separately. Uncertain use is excluded from trade eligibility. Existing non-FSFFL policies, Max PF and ranking calculations are preserved.

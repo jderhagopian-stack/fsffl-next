@@ -109,7 +109,7 @@ function myTeamDiagnosisSentence(view,strongest,weakest){if(!view?.forecast_auth
 function myTeamCapabilityNote(){
   const readiness=state?.context?.capability_readiness||{},overall=readiness?.overall_status;
   if(!overall||overall==='full')return'';
-  const forecast=readiness?.forecast?.status==='partial_provisional'?'Forecast partial':readiness?.forecast?.status==='full'?'Forecast full':'Forecast unavailable';
+  const forecast='Forecast '+fsfflCapabilityDisplay(readiness?.forecast?.status).toLowerCase();
   const simulation=readiness?.simulation?.status==='full'?'Simulation full':'Simulation unavailable';
   const value=readiness?.current_value?.status==='full'?'Current Value full':'Current Value unavailable';
   return `<aside class="franchise-forecast-authority partial"><strong>Current intelligence is partially available</strong><span>${myTeamEsc(forecast)} · ${myTeamEsc(simulation)} · ${myTeamEsc(value)}. Unavailable fields below remain blank rather than using substitutes.</span></aside>`;
