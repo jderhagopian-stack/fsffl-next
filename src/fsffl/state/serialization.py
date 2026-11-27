@@ -9,6 +9,8 @@ from .models import LeagueState
 
 def _sorted_payload(state: LeagueState) -> dict[str, Any]:
     payload = state.model_dump(mode="json", exclude_none=False)
+    if not state.winners_bracket:
+        payload.pop("winners_bracket", None)
     # Existing provider snapshots retain their exact identity. Personal rules are
     # an explicit, isolated derived State, never a mutation of provider evidence.
     if payload.get("rule_configuration") is None:

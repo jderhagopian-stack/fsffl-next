@@ -317,14 +317,23 @@ function bindLeagueActions(){
   document.querySelectorAll('[data-pick-team]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.selectedPickTeamId=button.dataset.pickTeam||null;fsfflLeagueStructureState.selectedRoom=null;renderLeagueComparison()}));
   bindLeagueRaceHeaderScroll();
 }
+function laWinnersBracket(){
+  const atlas=laAtlas(), games=atlas.winners_bracket||[];
+  if(!games.length)return '';
+  const names=atlas.bracket_team_names||{};
+  const side=(id,points)=>laEsc(names[id]||'To be decided')+(Number.isFinite(points)?' '+points.toFixed(2):'');
+  return '<section class="league-section"><h3>Playoff bracket</h3>'+games.map(g=>
+    '<p>Week '+laEsc(String(g.week))+' · '+side(g.left,g.left_points)+' vs '+side(g.right,g.right_points)+'</p>'
+  ).join('')+'</section>';
+}
 function renderLeagueComparison(){
   const panel=leagueComparisonPanel();if(!panel)return;const views=fsfflLeagueStructureState.views;
   laConsumeDeepLinkIntent();
-  if(!views.length||!fsfflLeagueStructureState.atlas){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>No governed league structure is available yet.</h2><p class="lead">Load current league evidence from Home, then return here.</p>';return}
+  if(!views.length||!fsfflLeagueStructureState.atlas){panel.innerHTML=laWinnersBracket()||'<p class="eyebrow">League Atlas</p><h2>No governed league structure is available yet.</h2><p class="lead">Load current league evidence from Home, then return here.</p>';return}
   panel.classList.add('league-structure-panel','league-atlas-north-star');
   const freshness=fsfflLeagueStructureState.atlas?.intelligence_freshness||{};
   const staleBanner=freshness.stale?'<aside class="league-last-good-status" role="status"><strong>State current · last-good intelligence</strong><span>Derived fields as of '+laEsc(freshness.served_as_of||'last-good snapshot')+'.</span></aside>':'';
-  panel.innerHTML=staleBanner+laAtlasHeader()+'<main class="league-atlas-content">'+laActiveTab()+laEvidenceDetail()+'</main>'+laRoomDrawer()+laPickDrawer();
+  panel.innerHTML=staleBanner+laAtlasHeader()+'<main class="league-atlas-content">'+laWinnersBracket()+laActiveTab()+laEvidenceDetail()+'</main>'+laRoomDrawer()+laPickDrawer();
   bindLeagueActions();setTimeout(laApplyDeepLinkFocus,0);laRecordDynastyUsefulRender();
 }
 function laRecordDynastyUsefulRender(){

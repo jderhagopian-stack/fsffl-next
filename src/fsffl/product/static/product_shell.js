@@ -27,7 +27,7 @@ const fsfflProductSurfaceCopy={
 };
 
 const fsfflStaticVersion='20260927-dualstate1';
-const leagueAtlasStaticVersion='20261005-atlas-5b72f0c76856';
+const leagueAtlasStaticVersion='20261005-atlas-5ed1182ecd48';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
 const franchiseNorthStarStaticVersion='20261007-franchise-db64afb4f620';
 const ownerHistoryStaticVersion='20261123-owner-live1';

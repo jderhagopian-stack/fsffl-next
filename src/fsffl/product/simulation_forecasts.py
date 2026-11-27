@@ -8,7 +8,12 @@ def simulation_forecasts(evidence):
 
 
 def require_forward_simulation_evidence(state, evidence, baseline=None, *, changed_state=False):
-    if getattr(evidence, "simulation_basis", None) == "completed_postseason_requires_factual_bracket":
+    from fsffl.team_utility import resolved_playoff_rules_from_league_state
+    from fsffl.state.postseason import verified_path
+    rules = resolved_playoff_rules_from_league_state(state) if getattr(state, "league", None) else None
+    if (getattr(evidence, "simulation_basis", None) == "completed_postseason_requires_factual_bracket"
+            or (rules and rules.round_weeks and (state.completed_through_week or 0) >= rules.round_weeks[0]
+                and not verified_path(state, rules))):
         raise ValueError("Current postseason Simulation requires factual completed-bracket evidence")
     if getattr(evidence, "simulation_missing_player_ids", ()):
         raise ValueError("Current ROS coverage is incomplete; no confirmed competitive outcomes are available")

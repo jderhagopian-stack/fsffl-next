@@ -1,3 +1,9 @@
+## Playoff continuity release candidate — 2026-11-27
+
+Base main `2f233474a19522ece980447fba3eb12f33430e14`. Completed championship games require agreement between Sleeper winner links and finalized scores. Retain byes, lock played games and use the existing simulation budget only for unplayed matchups. Withhold odds on incomplete evidence while displaying available bracket rows.
+
+Private 2025 Weeks 14–17 replay matched the owner-supplied Sleeper bracket. Focused refresh/restore, elimination, provider and Atlas checks passed (179 tests). Mobile-width Chromium rendered the final score with odds withheld. Physical Safari acceptance is optional. Next gate is the stable PR-head suite. Deployment remains on hold.
+
 # Workstream — Performance
 
 ## State

@@ -551,6 +551,8 @@ def build_league_atlas_payload(
         "season": state.league.season,
         "as_of": state.as_of.isoformat(),
         "last_completed_week": completed_through_week(state),
+        "winners_bracket": [g.model_dump(mode="json") for g in state.winners_bracket],
+        "bracket_team_names": {t.team_id: t.display_name for t in state.teams} if state.winners_bracket else {},
         "managed_team_id": runtime.selected_team_id,
         "dynasty_position_breadth": [
             row.model_dump(mode="json")
