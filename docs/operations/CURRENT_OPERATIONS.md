@@ -1,3 +1,9 @@
+## Phase 4 — on-demand trade annual, 2026-11-28
+
+Release candidate on `feature/on-demand-trade-edition` from main `c7e1dfb62fe67a6fbcf43a86a3f5ec167cb617da`. More → Reports → Trade Annual generates the connected league's current-season ledger. Each franchise receives separate season and dynasty editorial calls. The former compares starts in completed regular-season weeks after the deal and before the next recorded transfer. The latter compares the exchanged assets at the saved publication's market prices. These are retrospective opinions. Missing receipts block an incomplete ledger. Missing outcome evidence withholds the affected mark. Generate reads the existing owner publication plus at most one schedule and 18 weekly boxes, with three concurrent source reads, one admitted generator of lineup boxes and three compact cache entries. Print expands every trade.
+
+Private replay matched the completed league ledger and tested generation and expansion at 390 pixels. Separate archived regular-season lineup replay covered 14 weeks. Current live Sleeper box reads were denied in the development environment. Hosted generation, physical Safari and release acceptance remain open. Focused reports, owner-history and provider checks passed (23 passed, one optional database test skipped). No schema changes or new service.
+
 ## Roster integrity before Reports & History — 2026-11-28
 
 Base main and private beta both verified at `8ca037b16db8c4bfef689616b741486d64a02771` (#615). Branch `fix/roster-catalog-integrity`. A partial catalog previously allowed a roster membership to disappear from the saved league. The provider now requires position evidence for each ID on a Sleeper roster before constructing State. The existing refresh failure path keeps the prior publication available and identifies the affected player. A first import shows incomplete league data. Explicitly unsupported positions keep their existing treatment.

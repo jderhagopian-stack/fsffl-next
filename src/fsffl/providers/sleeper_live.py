@@ -10,6 +10,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import partial
 from typing import Any, Callable, Mapping, Sequence
 from urllib.request import Request, urlopen
 
@@ -51,10 +52,11 @@ class SleeperLiveSource:
         http_get_json: JsonGetter | None = None,
         clock: Clock | None = None,
         max_workers: int = 8,
+        timeout_seconds: float = 30,
     ) -> None:
         if max_workers < 1:
             raise ValueError("Sleeper max_workers must be positive")
-        self._http_get_json = observed_getter(http_get_json or _default_get_json, "sleeper")
+        self._http_get_json = observed_getter(http_get_json or partial(_default_get_json, timeout=timeout_seconds), "sleeper")
         self._clock = clock or (lambda: datetime.now(UTC))
         self._max_workers = max_workers
 
@@ -69,6 +71,12 @@ class SleeperLiveSource:
         """Acquire Sleeper's regular-season schedule for one NFL season."""
 
         return self._nfl_regular_season_schedule(season)
+
+    @observe_acquisition("sleeper", "matchups", cause="trade_report")
+    def fetch_league_matchup_week(self, league_id: str, week: int):
+        if not league_id.isdecimal() or not 1 <= week <= 18:
+            raise ValueError("Invalid league matchup coordinate")
+        return self._get(f"/league/{league_id}/matchups/{week}")
 
     @observe_acquisition("sleeper", "probe", cause="saved_session_probe")
     def fetch_sync_probe(self, *, league_external_id: str) -> SleeperSyncProbe:
@@ -322,7 +330,7 @@ class SleeperLiveSource:
         return self._http_get_json(f"{self.base_url}{path}")
 
 
-def _default_get_json(url: str) -> Any:
+def _default_get_json(url: str, *, timeout: float = 30) -> Any:
     request = Request(url, headers={"User-Agent": "fsffl-next/0.1"})
-    with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider base
+    with urlopen(request, timeout=timeout) as response:  # nosec B310 - fixed HTTPS provider base
         return json.loads(response_body_read(response).decode("utf-8"))

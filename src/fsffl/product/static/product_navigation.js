@@ -18,7 +18,7 @@
     {route:'simulator',label:'Simulator',description:'Test multiple roster shocks together.',icon:'simulation',teamScoped:true},
   ];
   const ANALYSIS=[
-    {route:'reports',label:'Reports',description:'Read polished decision intelligence.',icon:'report'},
+    {route:'reports',label:'Reports',description:'Create your league’s trade annual or read team reports.',icon:'report'},
     {route:'analytics',label:'Analytics',description:'Investigate the governed evidence stack.',icon:'analytics'},
   ];
   const COMPATIBILITY=[
