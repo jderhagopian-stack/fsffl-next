@@ -61,8 +61,10 @@ def season_take(event, moves, weeks, later, season, completed, label):
     outgoing = {a.asset_ref for a in event.disposed}
     received = {a.asset_ref for a in event.acquired}
     relevant = (*event.acquired, *event.disposed)
-    if any(a.kind == "faab" or (a.kind == "pick" and a.pick_season <= season) for a in relevant):
-        return "TOO SOON", "This deal needs the player bought with the cash or selected with the pick to settle its season return."
+    def untraced(assets):
+        return any(a.kind == "faab" or (a.kind == "pick" and a.pick_season <= season) for a in assets)
+
+    unresolved = untraced(relevant)
     tally = [0., 0.]
     starts = [0, 0]
     performances = [Counter(), Counter()]
@@ -85,26 +87,40 @@ def season_take(event, moves, weeks, later, season, completed, label):
                     tally[side] += pts
                     starts[side] += 1
                     performances[side][label(a)] += pts
+    if unresolved and not any(a.kind == "player" for a in event.acquired):
+        return "TOO SOON", "Their season return depends on what the pick or waiver money bought."
     if not count or not sum(starts):
         return "TOO SOON", "Neither side has a scored start in the full weeks checked after this trade."
     diff = tally[0] - tally[1]
     stars = performances[0] if diff >= 0 else performances[1]
     leader = max(stars, key=stars.get) if stars else None
     detail = f" {leader} accounted for {stars[leader]:g} of those points." if leader else ""
-    return verdict(diff, (90, 45, 12)), (
+    mark = verdict(diff, (90, 45, 12))
+    if unresolved:
+        if not any(a.kind == "player" for a in event.disposed):
+            if not starts[0]:
+                return "TOO SOON", "The incoming player has yet to post a start in the weeks checked."
+            return ("NICE" if tally[0] >= 12 else "FAIR"), (
+                f"The player return delivered {tally[0]:g} points in {starts[0]} starts. "
+                "What the pick or cash bought is still open.")
+        detail += " This grade covers the players. The pick or waiver-money return is still open."
+    return mark, (
         f"The return put up {tally[0]:g} points in {starts[0]} starts. The players sent away put up "
         f"{tally[1]:g} in {starts[1]} starts for their new teams." + detail)
 
 
 def dynasty_take(event, prices, label, season):
     assets = (*event.acquired, *event.disposed)
-    if not assets or any(a.asset_ref not in prices for a in assets):
+    missing = [a for a in assets if a.asset_ref not in prices]
+    cash_only_gap = (missing and all(a.kind == "faab" for a in missing)
+                     and all(any(a.asset_ref in prices for a in side) for side in (event.acquired, event.disposed)))
+    if not assets or (missing and not cash_only_gap):
         picks = [a for a in event.acquired if a.kind == "pick"]
         if picks:
             return "TOO SOON", f"They took back {len(picks)} draft pick(s). The full package still lacks a comparable price."
         return "UNAVAILABLE", "A price is missing for part of this deal."
-    got = sum(prices[a.asset_ref] for a in event.acquired)
-    paid = sum(prices[a.asset_ref] for a in event.disposed)
+    got = sum(prices[a.asset_ref] for a in event.acquired if a.asset_ref in prices)
+    paid = sum(prices[a.asset_ref] for a in event.disposed if a.asset_ref in prices)
     if not max(got, paid):
         return "TOO SOON", "Neither package has a positive market price."
     edge = (got-paid)/max(got, paid)
@@ -120,8 +136,10 @@ def dynasty_take(event, prices, label, season):
         reason = ("They bought draft capital whose eventual slots will decide the return." if owner_took_picks else
                   "They paid for a known return with picks whose slots can still change.")
     else:
-        lead = max(assets, key=lambda a: prices[a.asset_ref])
+        lead = max((a for a in assets if a.asset_ref in prices), key=lambda a: prices[a.asset_ref])
         reason = f"{label(lead)} carries the biggest price tag in this deal."
+    if cash_only_gap:
+        reason += " The grade covers players and picks. Waiver cash is priced separately by each owner."
     return mark, f"{reason} The return prices at {got:,.0f} against {paid:,.0f} sent."
 
 

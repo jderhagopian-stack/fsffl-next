@@ -96,3 +96,22 @@ def test_box_scores_require_saved_totals_and_complete_starters():
     rows[0]["starters_points"]=[]
     with pytest.raises(ValueError,match="Incomplete weekly starters"):
         scored_weeks(state,"live",NOW,provider)
+
+
+def test_cash_kicker_does_not_hide_observed_player_return_or_impute_cash_price():
+    from fsffl.behavioral.models import BehavioralAsset
+    from fsffl.product.trade_edition import dynasty_take, season_take
+    _, record=fixture()
+    event=record.result.profiles[0].current_season_activity.trade_examples[0].event
+    incoming=BehavioralAsset(kind="player",asset_ref="sleeper:player:99")
+    cash=BehavioralAsset(kind="faab",asset_ref="sleeper:faab:test:1:2",faab_amount=3)
+    mixed=event.model_copy(update={"acquired":(incoming,),"disposed":(cash,*event.disposed)})
+    prices={incoming.asset_ref:100,event.disposed[0].asset_ref:90}
+    grade,why=dynasty_take(mixed,prices,lambda a:a.asset_ref,2026)
+    assert grade=="FAIR" and "players and picks" in why
+    buyer=mixed.model_copy(update={"disposed":(cash,)})
+    coords=date(2026,11,8)
+    week=(coords,coords,{buyer.roster_id:{incoming.asset_ref:24}})
+    mark,why=season_take(buyer,[NS(event=buyer)],(week,),{},2026,event.occurred_at,lambda a:a.asset_ref)
+    assert mark=="NICE" and "24 points" in why
+    assert dynasty_take(buyer,prices,lambda a:a.asset_ref,2026)[0]=="UNAVAILABLE"
