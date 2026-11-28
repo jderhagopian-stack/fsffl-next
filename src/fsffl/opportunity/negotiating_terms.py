@@ -57,20 +57,31 @@ def negotiating_terms(points, *, focal_team, other_team, buying=False):
     if not choices:
         return {"opening": None, "fallback": None, "eligible_count": 0}
     opening = choices[0]
-    seed = next((p for p in choices if p["is_seed"]), None)
+    seed = next((p for p in eligible if p["is_seed"]), None)
     if seed:
+        def better_for_seeker(point):
+            return (price(point, focal_team) > price(seed, focal_team)
+                    and all(a >= b for a, b in zip(goals(point, "side_a", focal_team),
+                                                    goals(seed, "side_a", focal_team))))
+
+        # Start with the smallest favorable price improvement that preserves
+        # the seeker's priorities and still gives the partner a reason to talk.
+        improvements = [p for p in choices if better_for_seeker(p)
+                        and any(v > 0 for v in goals(p, "side_b", other_team))]
+        opening = min(improvements, key=lambda p: price(p, focal_team),
+                      default=seed if seed in choices else choices[0])
         # Keep the incoming player and the position the seller would acquire.
         supported_rooms = set(seed["price_check"]["needs_filled"])
         plausible = [p for p in probes if supported_rooms.intersection(p["price_check"]["needs_filled"])
-                     and price(p, focal_team) > price(seed, focal_team)
+                     and better_for_seeker(p)
                      and all(a >= b for a, b in zip(goals(seed, "side_b", other_team), goals(p, "side_b", other_team)))]
-        if plausible:
-            probe = max(plausible, key=lambda p: price(p, focal_team))
+        if plausible and opening is seed:
+            probe = min(plausible, key=lambda p: price(p, focal_team))
             return {"opening": probe["point_id"], "fallback": seed["point_id"],
                     "conditional_opening": True, "eligible_count": len(choices)}
     before = goals(opening, "side_b", other_team)
     # Only quote a concession when the other owner receives better terms.
-    fallback = next((p for p in reversed(choices)
+    fallback = next((p for p in sorted(choices, key=lambda p: p is not seed)
                      if price(p, focal_team) < price(opening, focal_team)
                      and price(p, other_team) > price(opening, other_team)
                      and any(a > b for a, b in zip(goals(p, "side_b", other_team), before))), None)

@@ -12,7 +12,7 @@ def _key(asset):
     return f'{asset.kind}:{asset.player_id if asset.kind == "player" else asset.pick_id}'
 
 
-def order_counter_hypotheses(seed, neighbors, *, seed_effects, published, starters, history_matches=None):
+def order_counter_hypotheses(seed, neighbors, *, seed_effects, published, starters, history_matches=None, price_side=None):
     """Interleave distinct repair questions, then small structural alternatives.
 
     Each native horizon/team cost gets its own queue, ordered by closing the original
@@ -27,25 +27,45 @@ def order_counter_hypotheses(seed, neighbors, *, seed_effects, published, starte
     def packages(point):
         return (point.focal_package, point.counterparty_package)
     original = tuple({_key(a): a for a in p.assets} for p in packages(seed))
+    def package_value(package, horizon):
+        total = 0
+        for asset in package.assets:
+            if asset.kind not in ('player', 'pick'):
+                return None
+            table = published.values if asset.kind == 'player' else published.pick_values
+            key = asset.player_id if asset.kind == 'player' else asset.pick_id
+            value = table.get(horizon, {}).get(key)
+            if value is None or not isfinite(value):
+                return None
+            total += value
+        return total
+
     def native_net(point, horizon, side):
-        totals = []
-        for package in packages(point):
-            values = []
-            for a in package.assets:
-                if a.kind not in ('player', 'pick'):
-                    return None
-                table = published.values if a.kind == 'player' else published.pick_values
-                value = table.get(horizon, {}).get(a.player_id if a.kind == 'player' else a.pick_id)
-                if value is None or not isfinite(value):
-                    return None
-                values.append(value)
-            totals.append(sum(values))
-        return totals[1-side] - totals[side]
+        totals = [package_value(package, horizon) for package in packages(point)]
+        return None if None in totals else totals[1-side] - totals[side]
     # Smaller structures remain available, even if no repair can be inferred.
     def structural(point):
         return (sum(len(p.assets) for p in packages(point)), point.point_id)
     ordered = sorted(neighbors, key=structural)
     queues = []
+    if price_side in ("buy", "sell"):
+        # Look for a small improvement on the original price even when the
+        # original has no shortfall. Only the mutable package needs a quote.
+        side = 0 if price_side == "buy" else 1
+        for horizon in ("three_year", "career"):
+            base = package_value(packages(seed)[side], horizon)
+            if base is None:
+                continue
+            improvements = []
+            for point in ordered:
+                value = package_value(packages(point)[side], horizon)
+                if value is None:
+                    continue
+                gain = base - value if price_side == "buy" else value - base
+                if gain > 0:
+                    improvements.append((gain, structural(point), point))
+            if improvements:
+                queues.append(deque(p for _, _, p in sorted(improvements, key=lambda row: row[:2])))
     for side, team in enumerate(teams):
         effects = seed_effects['teams'].get(team, {})
         if effects.get('current') is not None and effects['current'] < -1e-9:

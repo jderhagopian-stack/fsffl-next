@@ -76,3 +76,15 @@ def test_market_with_an_unmeasured_goal_does_not_quote_a_price():
     point = offer("candidate", 12, 10)
     point["objective_assessment"]["side_a"]["context"]["objectives"] = ["market_capital", "resilience"]
     assert plan([point])["opening"] is None
+
+
+@pytest.mark.parametrize("buying", [True, False])
+def test_opening_improves_on_seed_in_small_steps_with_a_reason_for_both_owners(buying):
+    seed = offer("base", 0, -10, seed=True)
+    small = offer("small", 4, -6)
+    large = offer("large", 12, -3)
+    bad_for_seeker = offer("bad_for_seeker", 1, -15)
+    bad_for_partner = offer("bad_for_partner", 2, 20)
+    result = plan([large, bad_for_partner, seed, bad_for_seeker, small], buying)
+    assert (result["opening"], result["fallback"]) == ("small", "base")
+    assert plan([seed, bad_for_partner, bad_for_seeker], buying)["opening"] == "base"

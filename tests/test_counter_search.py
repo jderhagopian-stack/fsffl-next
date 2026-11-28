@@ -128,3 +128,24 @@ def test_selective_history_still_adds_a_question_without_excluding_alternatives(
     assert result[0] == chosen
     assert {p.point_id for p in result} == {p.point_id for p in neighbors}
     assert result[1:] == baseline[:-1]
+
+
+@pytest.mark.parametrize('direction', ['buy', 'sell'])
+def test_price_comparison_checks_a_modest_improvement_before_generic_neighbors(direction):
+    fixed = PlayerAsset(player_id='fixed')
+    def point(name):
+        variable = PlayerAsset(player_id=name)
+        a, b = (variable, fixed) if direction == 'buy' else (fixed, variable)
+        return make_frontier_point(_seed('a', a), _seed('b', b))
+
+    seed, small, large, adverse = map(point, ['original', 'small', 'large', 'adverse'])
+    # No seed losses to repair and no valuation for the fixed asset.
+    sign = -1 if direction == 'buy' else 1
+    evidence = SimpleNamespace(values={'three_year': {'original': 30, 'small': 30+2*sign,
+        'large': 30+20*sign, 'adverse': 30-5*sign}}, pick_values={})
+    kwargs = dict(seed_effects={'teams': {'a': {}, 'b': {}}}, published=evidence, starters={})
+    neighbors = (adverse, large, small)
+    assert order_counter_hypotheses(seed, neighbors, **kwargs)[0] == adverse
+    ordered = order_counter_hypotheses(seed, neighbors, price_side=direction, **kwargs)
+    assert ordered[0] == small
+    assert {p.point_id for p in ordered} == {p.point_id for p in neighbors}
