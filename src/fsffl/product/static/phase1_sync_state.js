@@ -2,6 +2,7 @@
   const labels={
     checking:['Checking league updates','Stored league is usable while Sleeper is revalidated.'],
     current:['League data current','Latest provider check completed successfully.'],
+    unavailable:['League data unavailable','The league could not be loaded.'],
     stale:['Using stored league','Sleeper refresh is unavailable right now. Your last valid stored league remains usable.'],
   };
   function ensure(){
@@ -22,7 +23,11 @@
     if(!node||!labels[state])return;
     const [title,copy]=labels[state];
     node.dataset.state=state;
-    node.innerHTML=`<strong>${title}</strong><span>${detail||copy}</span>`;
+    const heading=document.createElement('strong');
+    heading.textContent=title;
+    const message=document.createElement('span');
+    message.textContent=detail||copy;
+    node.replaceChildren(heading,message);
     node.hidden=false;
   }
   function clear(){const node=document.querySelector('#fsffl-sync-state');if(node)node.hidden=true}

@@ -134,6 +134,10 @@ def sleeper_completed_week(league, nfl_state):
     return max(completion_candidates, default=None)
 
 
+class IncompleteSleeperRosterCatalog(ValueError):
+    """A roster membership cannot be resolved from the same provider capture."""
+
+
 class SleeperNormalizer:
     """Pure mapping layer from Sleeper-shaped payloads to canonical FSFFL state.
 
@@ -418,9 +422,13 @@ class SleeperNormalizer:
         players: list[Player] = []
         player_states: list[PlayerState] = []
         for external_id in sorted(referenced_player_ids):
-            raw = bundle.players.get(external_id, {})
-            raw_position = str(raw.get("position") or "")
-            position = self._position_map.get(raw_position)
+            raw = bundle.players.get(external_id)
+            raw_position = raw.get("position") if isinstance(raw, Mapping) else None
+            if not isinstance(raw_position, str) or not raw_position.strip():
+                raise IncompleteSleeperRosterCatalog(
+                    f"Sleeper has incomplete player details for rostered player ID {external_id}."
+                )
+            position = self._position_map.get(raw_position.strip())
             if position is None:
                 continue
             player_id = f"sleeper:player:{external_id}"

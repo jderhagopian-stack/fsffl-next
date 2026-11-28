@@ -1,3 +1,9 @@
+## Roster integrity before Reports & History — 2026-11-28
+
+Base main and private beta both verified at `8ca037b16db8c4bfef689616b741486d64a02771` (#615). Branch `fix/roster-catalog-integrity`. A partial catalog previously allowed a roster membership to disappear from the saved league. The provider now requires position evidence for each ID on a Sleeper roster before constructing State. The existing refresh failure path keeps the prior publication available and identifies the affected player. A first import shows incomplete league data. Explicitly unsupported positions keep their existing treatment.
+
+Private replay through the hosted routes preserved all 243 memberships, the selected franchise and its Trade Center asset through a failed refresh and cold restart. Applying a recorded player transfer subsequently produced the expected ownership across all 243 memberships. At 390 × 844 the saved-session and first-import failure messages both identified the missing ID. Focused provider, restore and mobile regressions passed. Physical Safari and deployment acceptance remain open. Next gate is review and exact-head release validation before promotion.
+
 ## Buyer and seller opening terms — 2026-11-28
 
 Release base `99bee49`. The explicit negotiation comparison checks nearby improvements on the original deal, including when neither team has a shortfall. After cuts, favor a modest improvement on price that preserves the seeking owner's priorities and gives the partner a reason to participate. Keep the original when it is the best credible starting point checked. Discovery and confirmation budgets are unchanged.

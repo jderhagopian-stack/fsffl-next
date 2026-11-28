@@ -379,6 +379,7 @@ def test_stale_while_revalidate_is_visible_and_explains_stored_state() -> None:
           return {
             tagName:tag.toUpperCase(), id:'', className:'', hidden:true,
             dataset:{}, attributes:{}, innerHTML:'', textContent:'',
+            replaceChildren(...children){this.children=children},
             setAttribute(name,value){this.attributes[name]=String(value)},
             insertAdjacentElement(_where,node){if(node.id)nodes['#'+node.id]=node},
           };
@@ -399,6 +400,7 @@ def test_stale_while_revalidate_is_visible_and_explains_stored_state() -> None:
           checking:['Checking league updates','Stored league is usable while Sleeper is revalidated.'],
           current:['League data current','Latest provider check completed successfully.'],
           stale:['Using stored league','Your last valid stored league remains usable.'],
+          unavailable:['League data unavailable','The league could not be loaded.'],
         };
         for(const [state,[title,copy]] of Object.entries(expected)){
           window.fsfflSyncState.set(state);
@@ -408,9 +410,12 @@ def test_stale_while_revalidate_is_visible_and_explains_stored_state() -> None:
           assert.strictEqual(node.attributes['aria-live'],'polite');
           assert.strictEqual(node.dataset.state,state);
           assert.strictEqual(node.hidden,false);
-          assert(node.innerHTML.includes(title));
-          assert(node.innerHTML.includes(copy));
+          assert.strictEqual(node.children[0].textContent,title);
+          assert(node.children[1].textContent.includes(copy));
         }
+        const reason='Sleeper has incomplete player details for rostered player ID p4.';
+        window.fsfflSyncState.set('stale',reason);
+        assert.strictEqual(nodes['#fsffl-sync-state'].children[1].textContent,reason);
         window.fsfflSyncState.clear();
         assert.strictEqual(nodes['#fsffl-sync-state'].hidden,true);
         """
