@@ -1,3 +1,9 @@
+## Buyer and seller opening terms — 2026-11-28
+
+Release base `99bee49`. The explicit negotiation comparison checks nearby improvements on the original deal, including when neither team has a shortfall. After cuts, favor a modest improvement on price that preserves the seeking owner's priorities and gives the partner a reason to participate. Keep the original when it is the best credible starting point checked. Discovery and confirmation budgets are unchanged.
+
+In two private saved comparisons, each bounded to 24 evaluations, the buyer retained its conditional one-for-one opener. The seller found a more favorable player-plus-pick return that also eliminated the partner’s mandatory cut. Price and objective checks found no useful further concession in that case. 52 focused regressions passed; physical Safari remains unverified. Next product workstream: Reports & History.
+
 ## Forecast availability label — 2026-11-27
 
 Release base `fec89aa0`. A saved publication with scored Forecast rows, two partial rows outside the simulation blockers, and current rest-of-season simulation inputs exposed a presentation bug. Shared readiness and Franchise mapped nonblocking coverage to “unavailable.” Both now report limited coverage. Provisional and missing evidence retain separate labels. The provider's full-season fallback remains a separate freshness issue. Verify the shared status on a signed-in phone after release approval.

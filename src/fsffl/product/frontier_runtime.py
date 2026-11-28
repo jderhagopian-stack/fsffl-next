@@ -318,7 +318,7 @@ def build_negotiation_frontier(
         starters = {team: frozenset(a.player_id for a in lineup.assignments if a.player_id is not None)
             for team, lineup in screen_inputs['baseline_by_team'].items()}
         return order_counter_hypotheses(seed, neighbors, seed_effects=seed_effects,
-            published=read, starters=starters,
+            published=read, starters=starters, price_side=price_side,
             history_matches={p.point_id:build_trade_owner_history(runtime,_proposal(p,as_of=league_state.as_of),
                 context=history_context)[counter_leg.team_id]['matching_features'] for p in neighbors})
 

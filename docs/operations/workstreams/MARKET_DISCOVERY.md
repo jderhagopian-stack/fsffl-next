@@ -1,3 +1,9 @@
+## Buyer and seller opening terms — 2026-11-28
+
+Release base `99bee49`. The explicit negotiation comparison checks nearby improvements on the original deal, including when neither team has a shortfall. After cuts, favor a modest improvement on price that preserves the seeking owner's priorities and gives the partner a reason to participate. Keep the original when it is the best credible starting point checked. Discovery and confirmation budgets are unchanged.
+
+In two private saved comparisons, each bounded to 24 evaluations, the buyer retained its conditional one-for-one opener. The seller found a more favorable player-plus-pick return that also eliminated the partner’s mandatory cut. Price and objective checks found no useful further concession in that case. 52 focused regressions passed; physical Safari remains unverified. Next product workstream: Reports & History.
+
 ## Explore offer comparison clarity — 2026-11-27
 
 Release base `e8c4510`, branch `explore-clear-terms`. When a negotiation comparison opens, group the original offer and its analysis together. Attach confirmed title odds only to the original package. Describe the concession relative to the opener, with bilateral figures available on demand. A rendered comparison regression uses the reported two-offer values to check package identity, rounding, future costs, roster cuts and distinct analysis actions. Focused suite passed (23). Private beta deployment and physical Safari acceptance are pending.

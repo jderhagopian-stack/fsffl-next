@@ -150,7 +150,19 @@
       if(plan.opening){
         const opening=result.points.find(p=>p.point_id===plan.opening);
         const partner=teamName(result.counterparty_team_id);
-        const reason=plan.conditional_opening?'This fills a need at '+opening.price_check.needs_filled.join(' and ')+' for '+partner+'. They give up market value and may ask for more.':'';
+        const base=result.points.find(p=>p.is_seed);
+        let reason='';
+        if(plan.conditional_opening){
+          reason='This fills a need at '+opening.price_check.needs_filled.join(' and ')+' for '+partner+'. They give up market value and may ask for more.';
+        }else if(opening.is_seed){
+          reason='I’d open with the original deal. None of the other prices checked gave you a better starting point for your goals.';
+        }else if(base && opening.price_check.market[result.focal_team_id]>base.price_check.market[result.focal_team_id]){
+          const buying=entry.side==='buy', side=buying?'focal_assets':'counterparty_assets';
+          const original=pointAssets(base,side), proposed=pointAssets(opening,side);
+          const keptOrAdded=(buying?original:proposed).filter(a=>!(buying?proposed:original).some(b=>a.asset_ref===b.asset_ref));
+          reason=keptOrAdded.length?(buying?'This lets you keep ':'Compared with the original deal, you ask for ')+keptOrAdded.map(a=>a.label).join(' and ')+'.':
+            buying?'You offer less market value than in the original deal.':'You ask for more market value than in the original deal.';
+        }
         body=describe(plan.opening,plan.conditional_opening?'Ask about this first':entry.side==='buy'?'Your opening offer':'Your opening ask',reason);
         if(plan.fallback){
           const fallback=result.points.find(p=>p.point_id===plan.fallback);
