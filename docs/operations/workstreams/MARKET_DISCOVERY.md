@@ -1,3 +1,7 @@
+## Explore offer comparison clarity — 2026-11-27
+
+Release base `e8c4510`, branch `explore-clear-terms`. When a negotiation comparison opens, group the original offer and its analysis together. Attach confirmed title odds only to the original package. Describe the concession relative to the opener, with bilateral figures available on demand. A rendered comparison regression uses the reported two-offer values to check package identity, rounding, future costs, roster cuts and distinct analysis actions. Focused suite passed (23). Private beta deployment and physical Safari acceptance are pending.
+
 ## Explore negotiation closeout — PR #612
 
 Branch `explore-negotiating-terms`, main `fec89aa0`. The price comparison reads each side’s existing cut-adjusted Market Capital delta, alone or alongside a lineup goal. Four regression cases reproduced the earlier exception. 91 focused tests passed after correction. Two private saved mobile replays followed the fallback buttons through full analysis, verifying the exact assets, both owners’ objective contexts, future contributions and cuts. A seller can consider a concession independently of the decision to keep the player. Physical Safari and release approval remain pending. The next product workstream after acceptance is Reports & History.
