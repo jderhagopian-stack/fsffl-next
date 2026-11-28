@@ -31,13 +31,15 @@ def test_authenticated_report_route_replays_both_legs_and_handles_missing_boxes(
     store = PrivateBetaRuntimeStore()
     store.set_league_state("local-beta-user",state)
     monkeypatch.setattr("fsffl.product.trade_edition_boxes.report_boxes",lambda *args: ())
+    monkeypatch.setattr("fsffl.product.trade_annual_editorial.read_editorial",
+                        lambda *args:pytest.fail("automatic report read a private edition"))
     client = TestClient(create_app(runtime_store=store, behavioral_coordinator=NS(current=lambda *a,**k:record)))
     result = client.post("/api/reports/trade-season")
     assert result.status_code == 200, result.text
     issue = result.json()
     assert issue["counts"] == {"player":1,"pick":1}
     assert len(issue["ledger"][0]["sides"]) == 2
-    assert issue["ledger"][0]["sides"][0]["season"][0] == "UNAVAILABLE"
+    assert issue["ledger"][0]["sides"][0]["season"][0] == "TOO SOON"
     record.sleeper_league_external_id = "other"
     assert client.post("/api/reports/trade-season").status_code == 409
 

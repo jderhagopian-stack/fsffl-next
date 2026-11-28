@@ -4,6 +4,7 @@ from math import isfinite
 
 from .owner_current_season import asset_labels
 from .trade_annual_editorial import reviewed_trade
+from .trade_report_story import production_index, side_story, opening_terms
 
 
 def collect_trades(state, record):
@@ -145,19 +146,29 @@ def dynasty_take(event, prices, label, season):
 
 
 
-def build_edition(runtime, names, cutoff, trades, weeks, editorial=None):
+def build_edition(runtime, names, cutoff, trades, weeks, editorial=None, *, results=None):
     editorial = editorial or {}
     names = {r: editorial.get("teams", {}).get(str(r), name) for r, name in names.items()}
     state = runtime.league_state
     labels = asset_labels(state)
+    positions = {f"sleeper:player:{r.external_id}":p.position.value for p in state.players
+                 for r in p.provider_refs if r.provider=="sleeper"}
+    production = production_index(state, results or {})
     values = runtime.value_evidence
     canonical = {r.asset_id: r.score for r in values.fsffl_cardinal_values
                  if isfinite(r.score)} if values and values.league_state_id == state.state_id else {}
     prices = dict(canonical)
+    outstanding = {}
+    holders = {o.pick_id:o.owner_team_id for o in getattr(state,"pick_ownership",())}
+    team_labels = {t.team_id:names[int(r.external_id)] for t in state.teams for r in t.provider_refs
+                   if r.provider=="sleeper" and r.external_id.isdecimal() and int(r.external_id) in names}
+    uncertain = state.unconfirmed_pick_ids() if state.draft_picks else set()
     for pick in state.draft_picks:
         origin = next((r.external_id for t in state.teams if t.team_id == pick.original_team_id
                        for r in t.provider_refs if r.provider == "sleeper"), None)
         ref = f"sleeper:pick:{pick.season}:{pick.round}:{origin}"
+        if pick.pick_id not in uncertain and holders.get(pick.pick_id) in team_labels:
+            outstanding[ref]=team_labels[holders[pick.pick_id]]
         if pick.pick_id in canonical:
             prices[ref] = canonical[pick.pick_id]
 
@@ -177,6 +188,7 @@ def build_edition(runtime, names, cutoff, trades, weeks, editorial=None):
     for moves in reversed(trades):
         completed = moves[0].completed_at
         sides = []
+        story = [opening_terms(moves,names,positions,label)]
         reviewed = reviewed_trade(editorial, moves)
         for m in sorted(moves, key=lambda m: m.event.roster_id):
             e = m.event
@@ -189,11 +201,22 @@ def build_edition(runtime, names, cutoff, trades, weeks, editorial=None):
                               sent=list(map(label, e.disposed)), season=season_take(
                                   e, moves, weeks, next_exit, state.league.season, completed, label),
                               dynasty=dynasty_take(e, prices, label, state.league.season)))
+            argument, fallback = side_story(
+                m, names, state.league.season, cutoff, state.completed_through_week or 0,
+                production, next_exit, label)
+            story.append(argument)
+            pick_refs = [a.asset_ref for a in e.acquired if a.kind=="pick"]
+            if pick_refs and all(outstanding.get(ref)==names[e.roster_id] for ref in pick_refs):
+                count=len(pick_refs)
+                story.append(f"As of {state.as_of.date()}, {names[e.roster_id]} still held "
+                             + ("that pick." if count==1 else "both picks." if count==2 else f"all {count} picks."))
+            if fallback and sides[-1]["season"][0] == "UNAVAILABLE":
+                sides[-1]["season"] = fallback
             if reviewed:
                 marks = reviewed["grades"][str(e.roster_id)]
                 sides[-1].update(season=(marks[0], ""), dynasty=(marks[1], ""))
         ledger.append(dict(date=completed.date().isoformat(), sides=sides,
-                           argument=reviewed["argument"] if reviewed else None,
+                           argument=reviewed["argument"] if reviewed else " ".join(filter(None,story)),
                            reviewed_on=editorial["published"] if reviewed else None))
         for m in moves:
             for a in m.event.disposed:

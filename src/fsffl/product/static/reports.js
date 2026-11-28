@@ -44,9 +44,10 @@ function renderReportMessage(title,message){const panel=reportPanel();if(panel){
 async function loadReportKind(){const requested=fsfflReportState.kind;if(fsfflReportState.kind==='trades'){tradeEditionHome();return}renderReportMessage('Building report…','Loading current governed evidence.');try{if(fsfflReportState.kind==='team')await loadTeamReport();else if(fsfflReportState.kind==='league')await loadLeagueReport();else if(fsfflReportState.kind==='power')await loadPowerRankings();else if(fsfflReportState.kind==='preseason')await loadPreseasonGuide();else await loadEvidenceReport()}catch(error){if(requested===fsfflReportState.kind)renderReportMessage('Report unavailable',error.message)}}
 function tradeEditionHome(){
   const panel=reportPanel();
-  panel.innerHTML=reportSwitcher()+'<section class="report-title"><p class="eyebrow">The trade annual</p><h2>Trades Are Dead</h2><p class="lead">Every deal, both sides, and two grades to argue about.</p><button type="button" class="primary-button" id="create-trade-edition">Create this season’s report</button></section>';
+  panel.innerHTML=reportSwitcher()+'<section class="report-title"><p class="eyebrow">The trade annual</p><h2>Trades Are Dead</h2><p class="lead">Every deal, both sides, and two grades to argue about.</p><button type="button" class="primary-button" id="create-trade-edition">Create this season’s report</button> <button class="secondary-button" id="archive-trade-edition">Use archived calls where available</button></section>';
   wireReportSwitcher();
-  panel.querySelector('#create-trade-edition').addEventListener('click',generateTradeEdition);
+  panel.querySelector('#create-trade-edition').addEventListener('click',()=>generateTradeEdition());
+  panel.querySelector('#archive-trade-edition').onclick=()=>generateTradeEdition(true);
 }
 const annualMarks=['DISASTER','DUMPSTER','OOF','FAIR','NICE','ON FIRE','NUCLEAR'];
 const annualSymbols=['☠','▾','↓','◆','↑','♨','✹'];
@@ -99,7 +100,7 @@ function annualMarkup(issue){
     ${d.argument?`<p class="argument"><b>Why people will argue about it.</b> ${esc(d.argument)}</p>`:''}</details>`).join('');
   return `<article class="annual"><header class="annual-cover"><p class="eyebrow kicker">${esc(issue.league)} • ${season} • The annual league argument</p><h2 class="mast">TRADES<br>ARE DEAD</h2><h3>And Other Bullshit You Dopes Say</h3><p>${count} deals. ${pieces} moving parts. Everybody kept receipts.</p><p>Inside: the trading calendar, two scorecards, the hardware, and every deal the group chat still owes somebody an explanation for.</p><div><button type="button" data-print-edition>Print or save PDF</button></div></header>
   <section class="spread"><p class="kicker">Executive summary</p><h3>This league picked up the phone.</h3><p>${issue.participating} franchises moved players ${issue.counts.player||0} times and picks ${issue.counts.pick||0} times. Another $${issue.faab_dollars} changed hands in waiver money.</p><div class="calendar" aria-label="Trades by month">${calendar}</div><small>Completed deals through ${esc(issue.cutoff.slice(0,10))} UTC.</small></section>
-  <section class="spread"><p class="kicker">The scorecard</p><h3>Two horizons. Two arguments.</h3><p>${reviewed.length?`${reviewed.length} deals carry the original editorial calls from ${esc(reviewed[0].reviewed_on)}. `:''}Averages use graded sides only. The count is in parentheses.</p><p>${annualMarks.map(pill).join(' ')}</p><div class="grid">${board('season',season+' so far')}${board('dynasty','Dynasty outlook')}</div></section>
+  <section class="spread"><p class="kicker">The scorecard</p><h3>Two horizons. Two arguments.</h3><p>${reviewed.length?`${reviewed.length} deals carry the original editorial calls from ${esc(reviewed[0].reviewed_on)}. `:''}Automatic season calls use verified fantasy starts or, when labeled, NFL production from nflverse game logs. Averages use graded sides only. The count is in parentheses.</p><p>${annualMarks.map(pill).join(' ')}</p><div class="grid">${board('season',season+' so far')}${board('dynasty','Dynasty outlook')}</div></section>
   <section class="spread"><p class="kicker">Awards season</p><h3>Handing out hardware.</h3><div class="grid">${award('Trading king',winner(teams,'deals'))}${award('Pick goblin',winner(pickCounts,'picks acquired'))}${award('First-round dragon',winner(firstCounts,'firsts acquired'))}${issue.biggest?award('Most paperwork',issue.biggest.sides.map(s=>esc(s.team)).join(' / ')+' · '+issue.biggest.sides.reduce((n,s)=>n+s.received.length,0)+' pieces'):''}</div></section>
   <section class="spread"><p class="kicker">Biggest wins</p><h3>These owners get the microphone.</h3><div class="grid">${feature('season','Season payoff')+feature('dynasty','Dynasty haul')||'The bragging rights are still open.'}</div></section>
   <section class="spread ledger"><p class="kicker">The full ledger</p><h3>Every deal. Both sides.</h3>${ledger||'No completed trades this season.'}</section>
@@ -122,14 +123,14 @@ function printTradeEdition(article){
   sheet.focus();
   sheet.print();
 }
-async function generateTradeEdition(){
+async function generateTradeEdition(archived=false){
   const panel=reportPanel(), league=state.context?.league_id;
   renderReportMessage('Pulling the trade receipts…','Checking the deals and completed lineups.');
   const marker=document.createElement('span');
   panel.appendChild(marker);
   const active=()=>marker.isConnected && state.context?.league_id===league && fsfflReportState.kind==='trades';
   try{
-    const issue=await api('/api/reports/trade-season',{method:'POST'});
+    const issue=await api('/api/reports/trade-season'+(archived?'?archived=true':''),{method:'POST'});
     if(!active())return;
     panel.innerHTML=reportSwitcher()+annualMarkup(issue);
     wireReportSwitcher();
@@ -138,7 +139,7 @@ async function generateTradeEdition(){
     if(!active())return;
     renderReportMessage('Trade report unavailable',error.message);
     const retry=document.createElement('button');
-    retry.className='secondary-button';retry.textContent='Try again';retry.onclick=generateTradeEdition;panel.appendChild(retry);
+    retry.className='secondary-button';retry.textContent='Try again';retry.onclick=()=>generateTradeEdition(archived);panel.appendChild(retry);
   }
 }
 
