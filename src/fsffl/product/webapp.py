@@ -1750,6 +1750,31 @@ def create_app(
 
     from .owner_current_season import current_owner_view
 
+    @application.post("/api/reports/trade-season")
+    def trade_season_edition(archived: bool = False, user_id: str = Depends(require_beta_user)) -> dict:
+        from .trade_edition import build_edition, collect_trades
+        from .trade_edition_boxes import report_boxes
+        from .trade_annual_editorial import read_editorial, reviewed_trade
+
+        runtime = store.get(user_id)
+        state = runtime.league_state
+        if state is None:
+            raise HTTPException(status_code=409, detail="Load a league to create its trade report.")
+        history = behavior_jobs.current(user_id, league_state=state)
+        try:
+            league, names, cutoff, trades = collect_trades(state, history)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        from fsffl.providers.trade_report_results import published_results
+        editorial = read_editorial(league, state.league.season, state.as_of) if archived else {}
+        needs_boxes = any(not reviewed_trade(editorial, moves) for moves in trades)
+        try:
+            weeks = report_boxes(state, league, cutoff) if needs_boxes else ()
+        except BlockingIOError as exc:
+            raise HTTPException(status_code=429, detail=str(exc)) from exc
+        results, reserves = published_results(state.league.season) if needs_boxes and state.completed_through_week else ({}, ())
+        return build_edition(runtime, names, cutoff, trades, weeks, editorial, results=results, reserves=reserves)
+
     @application.get("/api/behavioral/profiles")
     def behavioral_profiles(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
