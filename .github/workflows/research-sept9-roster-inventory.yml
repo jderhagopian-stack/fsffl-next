@@ -1,0 +1,33 @@
+name: Research September 9 franchise source inventory
+on:
+  pull_request:
+    paths:
+      - 'scripts/research_export_sept9_almanac_inventory.py'
+      - '.github/workflows/research-sept9-roster-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m py_compile scripts/research_export_sept9_almanac_inventory.py
+      - name: Produce exact source-backed 238-player and 108-pick ledger
+        run: >-
+          python -m scripts.research_export_sept9_almanac_inventory
+          --output "$RUNNER_TEMP/preseason-franchise-ledger.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fsffl-sept9-complete-franchise-ledger
+          path: ${{ runner.temp }}/preseason-franchise-ledger.json
+          retention-days: 14
+          if-no-files-found: error

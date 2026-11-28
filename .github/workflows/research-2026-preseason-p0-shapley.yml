@@ -1,0 +1,66 @@
+name: Research 2026 preseason P0 + Shapley backcast
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/research_2026_preseason_p0_shapley.py'
+      - 'tests/test_research_2026_preseason_p0_shapley.py'
+      - '.github/workflows/research-2026-preseason-p0-shapley.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preseason-p0:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact review head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Python 3.12.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install accepted FSFFL model
+        run: python -m pip install -e '.[dev]'
+      - name: Run synthetic PIT scoring tests
+        run: python -m pytest -q tests/test_research_2026_preseason_p0_shapley.py
+      - name: Compile the research bridge
+        run: python -m py_compile scripts/research_2026_preseason_p0_shapley.py
+      - name: Small 128-permutation source and model smoke test
+        env:
+          FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/preseason-frozen-sources
+        run: >-
+          python scripts/research_2026_preseason_p0_shapley.py
+          --permutations 128 --output "$RUNNER_TEMP/preseason-p0-smoke.json"
+      - name: Run full accepted 2048-permutation 3-Year Shapley
+        env:
+          FSFFL_HISTORICAL_SOURCE_CACHE_DIR: ${{ runner.temp }}/preseason-frozen-sources
+        run: >-
+          python scripts/research_2026_preseason_p0_shapley.py
+          --permutations 2048 --output "$RUNNER_TEMP/preseason-p0-full.json"
+      - name: Verify cohort accounting and explicit incomplete publication
+        run: >-
+          python -c 'import json,sys;
+          a=json.load(open(sys.argv[1]));
+          c=a["coverage"];
+          assert a["status"]=="provisional_historical_preseason_p0_y2y3_shapley_research";
+          assert a["publication_ready"] is False;
+          assert a["reconstruction"]["roster_count"]==238;
+          assert a["reconstruction"]["hunter_preserved"];
+          assert c["preseason_y1_model_qualified"]+len(c["missing"])==c["rostered"];
+          assert len(a["player_results"])==c["preseason_y1_model_qualified"];
+          print("PRESEASON_COVERAGE_AND_SOURCE_GATES_PASSED")'
+          "$RUNNER_TEMP/preseason-p0-full.json"
+      - name: Save bounded research output
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsffl-2026-preseason-p0-three-year-research
+          path: ${{ runner.temp }}/preseason-p0-full.json
+          if-no-files-found: error
+          retention-days: 14
