@@ -32,7 +32,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     document.head.appendChild(script);
   };
   loadHelper('script[data-fsffl-phase1-latency]','/static/phase1_latency.js?v=20260909-phase1-latency1','fsfflPhase1Latency');
-  loadHelper('script[data-fsffl-sync-state]','/static/phase1_sync_state.js?v=20260909-phase1-sync1','fsfflSyncState');
+  loadHelper('script[data-fsffl-sync-state]','/static/phase1_sync_state.js?v=20260909-phase1-sync1&c=git-f46022d2d8e7','fsfflSyncState');
   const publishSyncState=(syncState,message=null)=>{
     const detail={state:syncState,message};
     window.fsfflPendingSyncState=detail;
@@ -139,7 +139,11 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         if(operation!=='connect'||(contextMatchesLeague(context,leagueId)&&context?.state_id))return context;
         throw new Error('League import completed without activating the requested Sleeper league.');
       }
-      if(job?.status==='failed')throw new Error(job.error||'Sleeper league import failed');
+      if(job?.status==='failed'){
+        const failure=new Error(job.error||job.message||'Sleeper league import failed');
+        failure.jobMessage=job.message;
+        throw failure;
+      }
 
       await sleep(document.visibilityState==='hidden'?Math.max(1500,pollDelay):pollDelay);
       pollDelay=Math.min(2200,Math.round(pollDelay*1.35));
@@ -222,7 +226,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }catch(error){
       // Stored state remains usable. Revalidation failure should not evict the user
       // from an already-restored league session.
-      publishSyncState('stale','Refresh unavailable. Continuing with the last valid stored league.');
+      publishSyncState('stale',error?.jobMessage||'Refresh unavailable. Continuing with the last valid stored league.');
       console.warn('FSFFL background league refresh failed; using stored state',error);
     }
   }
@@ -319,6 +323,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       recordLatency('restore_ready',started,'success','provider_fallback');
       return true;
     }catch(error){
+      if(error?.jobMessage)publishSyncState('unavailable',error.jobMessage);
       recordLatency('restore_ready',started,'failed',String(error?.message||error));
       console.error('Unable to restore previous FSFFL session',error);
       return false;
@@ -378,7 +383,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       else localStorage.setItem(LEAGUE_KEY,previousLeagueId);
       if(previousTeamId===null)localStorage.removeItem(TEAM_KEY);
       else localStorage.setItem(TEAM_KEY,previousTeamId);
-      publishSyncState('stale','League connection failed. '+String(error?.message||error));
+      publishSyncState(activeBefore?'stale':'unavailable',error?.jobMessage||String(error?.message||error));
       recordLatency('first_connect_ready',started,'failed','requested='+normalized+';'+String(error?.message||error));
       window.alert(`Could not connect league: ${error.message}`);
     }finally{

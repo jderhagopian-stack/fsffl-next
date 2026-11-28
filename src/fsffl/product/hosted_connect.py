@@ -14,6 +14,7 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException
 
 from fsffl.persistence import PersistenceStore, SyncCursorRecord
+from fsffl.providers.sleeper import IncompleteSleeperRosterCatalog
 from fsffl.providers.sleeper_live import SleeperSyncProbe
 from fsffl.state.models import LeagueState
 
@@ -168,15 +169,20 @@ class LeagueConnectCoordinator:
                 current.operation,
                 exc,
             )
+            message = (
+                "League refresh failed. Stored league data remains available."
+                if current.operation == "refresh"
+                else "League import failed."
+            )
+            error = f"{type(exc).__name__}: {exc}"
+            if isinstance(exc, IncompleteSleeperRosterCatalog):
+                error = str(exc)
+                message = f"{message} {error}"
             self._set(
                 job_id,
                 status=LeagueConnectStatus.FAILED,
-                message=(
-                    "League refresh failed. Stored league data remains available."
-                    if current.operation == "refresh"
-                    else "League import failed."
-                ),
-                error=f"{type(exc).__name__}: {exc}",
+                message=message,
+                error=error,
             )
             return
         _logger.info(
