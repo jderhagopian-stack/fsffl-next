@@ -1,6 +1,5 @@
 """Compact public NFL results for retrospective reporting (nflverse player stats and schedule)."""
 import csv
-import io
 import re
 from collections import defaultdict
 from datetime import date
@@ -9,6 +8,7 @@ from time import monotonic
 from urllib.request import urlopen
 
 SCHEDULE = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
+ROSTERS = "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_{}.csv"
 WEEKLY = "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{}.csv"
 _lock = Lock()
 _cache = {}
@@ -46,26 +46,54 @@ def read_results(season, games, rows):
     return {key:tuple(sorted(games.values())) for key,games in lines.items() if key not in ambiguous}
 
 
+def read_reserves(season, games, rows):
+    weeks = defaultdict(list)
+    for game in games:
+        if game["season"] == str(season) and game["game_type"] == "REG":
+            weeks[int(game["week"])].append(game)
+    reserves = defaultdict(dict)
+    for row in rows:
+        if row["season"] == str(season) and row["game_type"] == "REG" and row["sleeper_id"]:
+            statuses = reserves[int(row["week"])]
+            ref = "sleeper:player:" + row["sleeper_id"]
+            status = row["status"] == "RES"
+            statuses[ref] = statuses.get(ref, True) and status
+    return tuple(sorted((max(date.fromisoformat(g["gameday"]) for g in games), week,
+                         frozenset(ref for ref, reserve in reserves[week].items() if reserve))
+                        for week, games in weeks.items() if week in reserves and
+                        all(g["home_score"] != "" and g["away_score"] != "" for g in games)))
+
+
 def _rows(url):
     with urlopen(url,timeout=5) as response:
-        data = response.read(12_000_001)
-    if len(data)>12_000_000:
-        raise ValueError("Report source exceeds the season file limit")
-    return csv.DictReader(io.StringIO(data.decode("utf-8-sig")))
+        def lines():
+            total = 0
+            while line := response.readline(65_536):
+                total += len(line)
+                if total > 32_000_000 or len(line) == 65_536:
+                    raise ValueError("Report source exceeds the season file limit")
+                yield line.decode("utf-8-sig")
+        yield from csv.DictReader(lines())
 
 
 def published_results(season):
-    """One public season at a time; a failed update preserves the previous release."""
+    """Public NFL production and completed-week reserve lists for an edition."""
     if not 2000 <= season <= date.today().year+1:
-        return {}
+        return {}, ()
     with _lock:
-        expires, previous = _cache.get(season,(0,{}))
+        expires, previous = _cache.get(season,(0,({}, ())))
         if monotonic()<expires:
             return previous
         try:
-            current = read_results(season,_rows(SCHEDULE),_rows(WEEKLY.format(season)))
-            if not current:
+            schedule = [r for r in _rows(SCHEDULE) if r["season"] == str(season)]
+            production = read_results(season,schedule,_rows(WEEKLY.format(season)))
+            if not production:
                 raise ValueError("Empty weekly release")
+            try:
+                reserves = read_reserves(season,schedule,_rows(ROSTERS.format(season)))
+            except (OSError,ValueError,KeyError,csv.Error):
+                reserves = previous[1]
+            current = production, reserves
             ttl=3600
         except (OSError,ValueError,KeyError,csv.Error):
             current,ttl=previous,120

@@ -24,7 +24,7 @@ def production_index(state, results):
     return index
 
 
-def side_story(move, names, season, cutoff, max_week, index, exits, label):
+def side_story(move, names, season, cutoff, max_week, index, exits, label, reserves=()):
     e=move.event
     owner=names[e.roster_id]
     players=[a for a in e.acquired if a.kind=="player"]
@@ -32,6 +32,10 @@ def side_story(move, names, season, cutoff, max_week, index, exits, label):
     facts=[]
     performances=[]
     known_out=0
+    recent = [row for row in reserves if row[1] <= max_week and
+              0 < (e.occurred_at.date()-row[0]).days <= 10]
+    previous = max(recent,key=lambda row:row[0],default=None)
+    reserve_count = 0
     for a in players:
         name=label(a)
         injury=SEASON_ENDINGS.get((a.asset_ref,season))
@@ -39,6 +43,9 @@ def side_story(move, names, season, cutoff, max_week, index, exits, label):
             facts.append(f"{owner} bought {name} for next season. By trade day, {injury[1]} had already ended his year.")
             known_out+=1
             continue
+        if previous and a.asset_ref in previous[2]:
+            facts.append(f"{owner} took on a wait with {name}. He was on the NFL reserve list in Week {previous[1]}, before the offer.")
+            reserve_count+=1
         pos,rows=index.get(a.asset_ref,("",()))
         exit_at=exits.get((e.roster_id,a.asset_ref))
         eligible=[r for r in rows if move.completed_at.date()<r[0]<cutoff.date()
@@ -68,6 +75,8 @@ def side_story(move, names, season, cutoff, max_week, index, exits, label):
         fallback=(mark, "This call grades the strongest NFL production in the player return. Fantasy starts are unverified.")
     elif players and known_out==len(players) and not picks:
         fallback=("OOF","The entire player return was already out for the season.")
+    elif players and reserve_count==len(players):
+        fallback=("TOO SOON","The return was on reserve before the offer. A post-trade payoff is still unverified.")
     if picks:
         years=sorted({a.pick_season for a in picks})
         rounds=Counter(a.pick_round for a in picks)

@@ -1772,8 +1772,8 @@ def create_app(
             weeks = report_boxes(state, league, cutoff) if needs_boxes else ()
         except BlockingIOError as exc:
             raise HTTPException(status_code=429, detail=str(exc)) from exc
-        results = published_results(state.league.season) if needs_boxes and state.completed_through_week else {}
-        return build_edition(runtime, names, cutoff, trades, weeks, editorial, results=results)
+        results, reserves = published_results(state.league.season) if needs_boxes and state.completed_through_week else ({}, ())
+        return build_edition(runtime, names, cutoff, trades, weeks, editorial, results=results, reserves=reserves)
 
     @application.get("/api/behavioral/profiles")
     def behavioral_profiles(user_id: str = Depends(require_beta_user)) -> dict[str, object]:

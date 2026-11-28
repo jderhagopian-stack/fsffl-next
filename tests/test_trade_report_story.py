@@ -37,3 +37,20 @@ def test_injury_context_needs_public_prognosis_before_offer():
         return side_story(m,{1:"North"},2026,datetime(2026,11,1,tzinfo=UTC),8,{}, {},lambda a:"Achane")
     assert "ACL" not in story(27)[0]
     assert "ACL" in story(29)[0] and story(29)[1][0]=="OOF"
+
+
+def test_reserve_history_is_generic_and_never_reads_an_unfinished_or_later_week():
+    from fsffl.providers.trade_report_results import read_reserves
+    games=[dict(season="2027",game_type="REG",week=str(w),gameday=f"2027-10-{d}",home_score="7",away_score=away)
+           for w,d,away in [(4,10,"0"),(5,17,"")]]
+    roster=[dict(season="2027",game_type="REG",week=w,sleeper_id="42",status="RES") for w in ("4","5")]
+    weeks=read_reserves(2027,games,roster)
+    assert len(weeks)==1
+    dt=lambda d:datetime(2027,10,d,tzinfo=UTC)
+    player=N(kind="player",asset_ref="sleeper:player:42")
+    def mark(day):
+        move=N(event=N(acquired=(player,),roster_id=1,occurred_at=dt(day)),completed_at=dt(day))
+        return side_story(move,{1:"North"},2027,dt(28),6,{}, {},lambda a:"Some Receiver",weeks)
+    assert "reserve list in Week 4" in mark(14)[0]
+    assert "reserve list" not in mark(9)[0]
+    assert "reserve list" not in mark(25)[0]

@@ -146,7 +146,7 @@ def dynasty_take(event, prices, label, season):
 
 
 
-def build_edition(runtime, names, cutoff, trades, weeks, editorial=None, *, results=None):
+def build_edition(runtime, names, cutoff, trades, weeks, editorial=None, *, results=None, reserves=()):
     editorial = editorial or {}
     names = {r: editorial.get("teams", {}).get(str(r), name) for r, name in names.items()}
     state = runtime.league_state
@@ -203,7 +203,7 @@ def build_edition(runtime, names, cutoff, trades, weeks, editorial=None, *, resu
                               dynasty=dynasty_take(e, prices, label, state.league.season)))
             argument, fallback = side_story(
                 m, names, state.league.season, cutoff, state.completed_through_week or 0,
-                production, next_exit, label)
+                production, next_exit, label, reserves)
             story.append(argument)
             pick_refs = [a.asset_ref for a in e.acquired if a.kind=="pick"]
             if pick_refs and all(outstanding.get(ref)==names[e.roster_id] for ref in pick_refs):
