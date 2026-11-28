@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 from math import isfinite
 
 from .owner_current_season import asset_labels
+from .trade_annual_editorial import reviewed_trade
 
 
 def collect_trades(state, record):
@@ -105,7 +106,7 @@ def season_take(event, moves, weeks, later, season, completed, label):
                 "What the pick or cash bought is still open.")
         detail += " This grade covers the players. The pick or waiver-money return is still open."
     return mark, (
-        f"The return put up {tally[0]:g} points in {starts[0]} starts. The players sent away put up "
+        f"Across {count} verified full weeks, the return put up {tally[0]:g} points in {starts[0]} starts. The players sent away put up "
         f"{tally[1]:g} in {starts[1]} starts for their new teams." + detail)
 
 
@@ -144,7 +145,9 @@ def dynasty_take(event, prices, label, season):
 
 
 
-def build_edition(runtime, names, cutoff, trades, weeks):
+def build_edition(runtime, names, cutoff, trades, weeks, editorial=None):
+    editorial = editorial or {}
+    names = {r: editorial.get("teams", {}).get(str(r), name) for r, name in names.items()}
     state = runtime.league_state
     labels = asset_labels(state)
     values = runtime.value_evidence
@@ -174,6 +177,7 @@ def build_edition(runtime, names, cutoff, trades, weeks):
     for moves in reversed(trades):
         completed = moves[0].completed_at
         sides = []
+        reviewed = reviewed_trade(editorial, moves)
         for m in sorted(moves, key=lambda m: m.event.roster_id):
             e = m.event
             counts.update(a.kind.value for a in e.acquired)
@@ -185,7 +189,12 @@ def build_edition(runtime, names, cutoff, trades, weeks):
                               sent=list(map(label, e.disposed)), season=season_take(
                                   e, moves, weeks, next_exit, state.league.season, completed, label),
                               dynasty=dynasty_take(e, prices, label, state.league.season)))
-        ledger.append(dict(date=completed.date().isoformat(), sides=sides))
+            if reviewed:
+                marks = reviewed["grades"][str(e.roster_id)]
+                sides[-1].update(season=(marks[0], ""), dynasty=(marks[1], ""))
+        ledger.append(dict(date=completed.date().isoformat(), sides=sides,
+                           argument=reviewed["argument"] if reviewed else None,
+                           reviewed_on=editorial["published"] if reviewed else None))
         for m in moves:
             for a in m.event.disposed:
                 next_exit[m.event.roster_id, a.asset_ref] = completed

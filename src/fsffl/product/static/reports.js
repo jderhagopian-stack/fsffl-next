@@ -48,6 +48,64 @@ function tradeEditionHome(){
   wireReportSwitcher();
   panel.querySelector('#create-trade-edition').addEventListener('click',generateTradeEdition);
 }
+const annualMarks=['DISASTER','DUMPSTER','OOF','FAIR','NICE','ON FIRE','NUCLEAR'];
+const annualSymbols=['☠','▾','↓','◆','↑','♨','✹'];
+const annualStyle=`
+.annual{--paper:#faf6eb;--ink:#132322;--accent2:#ffd049;color:var(--ink);background:var(--paper);font:16px/1.45 system-ui,sans-serif;text-align:left;border-radius:12px;overflow:hidden}
+.annual *{box-sizing:border-box}.annual h2,.annual h3,.annual h4,.annual p{color:inherit;margin:0 0 .5em}.annual h3{font:bold clamp(23px,4vw,34px)/1.08 Georgia,serif}.annual h4{font-size:1.03em}.annual .annual-cover{background:#122526;color:#fff9e9;padding:clamp(22px,5vw,54px);border-bottom:9px solid var(--accent2)}
+.annual .mast{color:var(--accent2);font:bold clamp(52px,9vw,88px)/.88 system-ui;letter-spacing:-.06em;margin:36px 0 12px}.annual .annual-cover h3{font-size:22px}.annual .kicker{font:bold 11px/1.4 system-ui;letter-spacing:.12em;text-transform:uppercase;color:#8c4416}.annual .annual-cover .kicker{color:var(--accent2)}
+.annual .spread{padding:22px clamp(16px,4vw,40px);border-bottom:1px solid #c7c4b6}.annual .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,225px),1fr));gap:12px}.annual .award,.annual .feature{border-top:3px solid #185f55;padding:10px 0}.annual .calendar{display:flex;gap:5px;align-items:end;min-height:74px;margin:14px 0}.annual .month{flex:1;text-align:center;font-size:11px}.annual .month b{display:block;border-bottom:4px solid #c67d24;background:#f1ddb0;color:#183d38}
+.annual ol{padding-left:23px;margin:0}.annual li{padding:3px}.annual .small{font-size:.81em;color:#4e5a54}.annual .pill{display:inline-block;border-radius:4px;background:#e0ded4;color:#23322d;padding:2px 6px;font:bold 11px/1.5 system-ui;margin-right:4px}.annual .up{background:#c6e6ca;color:#17462c}.annual .down{background:#f7d3c1;color:#772e14}.annual .deal{margin:12px 0;border-top:1px solid #a6b6a9;padding-top:9px}.annual summary{cursor:pointer;font-weight:750}.annual .legs{margin:10px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px}.annual .leg{padding:8px 0}.annual .argument{font-family:Georgia,serif;border-left:3px solid #ca8a30;padding-left:10px}.annual button{margin-top:10px}
+@media print{@page{size:letter;margin:14mm}.annual{font:10pt/1.34 system-ui;overflow:visible;border-radius:0;print-color-adjust:exact;-webkit-print-color-adjust:exact}.annual .annual-cover{min-height:85vh;display:flex;flex-direction:column;justify-content:center;break-after:page}.annual .mast{font-size:90pt}.annual .spread{padding:12px 0}.annual .ledger{break-before:page}.annual h3,.annual h4,.annual summary{break-after:avoid}.annual .deal,.annual .award,.annual .feature{break-inside:avoid}.annual .legs,.annual .grid{grid-template-columns:1fr 1fr}.annual button{display:none}}
+`;
+function annualMarkup(issue){
+  const esc=reportEsc, deals=[...issue.ledger].reverse(), reviewed=deals.filter(d=>d.reviewed_on);
+  const scores=new Map(), months=new Map(), teams=new Map();
+  function pill(mark){
+    const i=annualMarks.indexOf(mark),tone=i<0||i===3?'':i>3?'up':'down';
+    return `<span class="pill ${tone}">${annualSymbols[i]||'·'} ${esc(mark)}</span>`;
+  }
+  for(const d of deals){
+    const month=d.date.slice(0,7);months.set(month,(months.get(month)||0)+1);
+    for(const s of d.sides){
+      teams.set(s.team,(teams.get(s.team)||0)+1);
+      if(!scores.has(s.team))scores.set(s.team,{season:[],dynasty:[]});
+      for(const key of ['season','dynasty']){
+        const rank=annualMarks.indexOf(s[key][0]);if(rank>=0)scores.get(s.team)[key].push(rank);
+      }
+    }
+  }
+  const mean=a=>a.reduce((n,x)=>n+x,0)/a.length;
+  const ranks=key=>[...scores].filter(([,v])=>v[key].length).sort((a,b)=>mean(b[1][key])-mean(a[1][key])||a[0].localeCompare(b[0]));
+  function board(key,title){const rows=ranks(key);return `<div><h4>${esc(title)}</h4><ol>${rows.map(([name,v])=>`<li>${esc(name)} · <b>${mean(v[key]).toFixed(2)}</b> <small>(${v[key].length})</small></li>`).join('')}</ol>${rows.length?'':'No graded deals yet.'}</div>`;}
+  const date=d=>esc(d.date);
+  const feature=(key,title)=>{
+    const ranked=deals.flatMap(d=>d.sides.map(s=>({d,s}))).filter(x=>annualMarks.indexOf(x.s[key][0])>=4)
+      .sort((a,b)=>annualMarks.indexOf(b.s[key][0])-annualMarks.indexOf(a.s[key][0]));
+    return ranked.slice(0,2).map(({d,s})=>`<div class="feature"><p class="kicker">${title}</p><h4>${esc(s.team)} · ${pill(s[key][0])}</h4><p>${esc(s.received.join(', '))}</p><p>${esc(d.argument||s[key][1])}</p></div>`).join('');
+  };
+  const season=esc(issue.season), count=deals.length, pieces=(issue.counts.player||0)+(issue.counts.pick||0)+(issue.counts.faab||0);
+  const peak=Math.max(1,...months.values());
+  const calendar=[...months].map(([key,n])=>`<div class="month"><b style="padding-top:${Math.round(37*n/peak)}px">${n}</b>${new Date(key+'-15T12:00Z').toLocaleString('en-US',{month:'short',timeZone:'UTC'})}</div>`).join('');
+  const pickCounts=new Map(),firstCounts=new Map();
+  for(const d of deals)for(const s of d.sides)for(const a of s.received){
+    if(/^\d{4} round \d+ \(/.test(a))pickCounts.set(s.team,(pickCounts.get(s.team)||0)+1);
+    if(/^\d{4} round 1 \(/.test(a))firstCounts.set(s.team,(firstCounts.get(s.team)||0)+1);
+  }
+  const winner=(map,unit)=>{const high=Math.max(0,...map.values());return high?[...map].filter(([,v])=>v===high).map(([n])=>esc(n)).join(' & ')+` · ${high} ${unit}`:'Nobody yet.';};
+  const award=(title,copy)=>`<div class="award"><p class="kicker">${title}</p><b>${copy}</b></div>`;
+  const ledger=deals.map((d,i)=>`<details class="deal"><summary>${i+1}. ${d.sides.map(s=>esc(s.team)).join(' / ')} <small>· ${date(d)}</small></summary>
+    <div class="legs">${d.sides.map(s=>`<div class="leg"><h4>${esc(s.team)}</h4><p>Received ${esc(s.received.join(', ')||'no assets')}.</p><p>${season} ${pill(s.season[0])} Dynasty ${pill(s.dynasty[0])}</p>${[s.season[1],s.dynasty[1],...s.onward].filter(Boolean).map(v=>`<p class="small">${esc(v)}</p>`).join('')}</div>`).join('')}</div>
+    ${d.argument?`<p class="argument"><b>Why people will argue about it.</b> ${esc(d.argument)}</p>`:''}</details>`).join('');
+  return `<article class="annual"><header class="annual-cover"><p class="eyebrow kicker">${esc(issue.league)} • ${season} • The annual league argument</p><h2 class="mast">TRADES<br>ARE DEAD</h2><h3>And Other Bullshit You Dopes Say</h3><p>${count} deals. ${pieces} moving parts. Everybody kept receipts.</p><p>Inside: the trading calendar, two scorecards, the hardware, and every deal the group chat still owes somebody an explanation for.</p><div><button type="button" data-print-edition>Print or save PDF</button></div></header>
+  <section class="spread"><p class="kicker">Executive summary</p><h3>This league picked up the phone.</h3><p>${issue.participating} franchises moved players ${issue.counts.player||0} times and picks ${issue.counts.pick||0} times. Another $${issue.faab_dollars} changed hands in waiver money.</p><div class="calendar" aria-label="Trades by month">${calendar}</div><small>Completed deals through ${esc(issue.cutoff.slice(0,10))} UTC.</small></section>
+  <section class="spread"><p class="kicker">The scorecard</p><h3>Two horizons. Two arguments.</h3><p>${reviewed.length?`${reviewed.length} deals carry the original editorial calls from ${esc(reviewed[0].reviewed_on)}. `:''}Averages use graded sides only. The count is in parentheses.</p><p>${annualMarks.map(pill).join(' ')}</p><div class="grid">${board('season',season+' so far')}${board('dynasty','Dynasty outlook')}</div></section>
+  <section class="spread"><p class="kicker">Awards season</p><h3>Handing out hardware.</h3><div class="grid">${award('Trading king',winner(teams,'deals'))}${award('Pick goblin',winner(pickCounts,'picks acquired'))}${award('First-round dragon',winner(firstCounts,'firsts acquired'))}${issue.biggest?award('Most paperwork',issue.biggest.sides.map(s=>esc(s.team)).join(' / ')+' · '+issue.biggest.sides.reduce((n,s)=>n+s.received.length,0)+' pieces'):''}</div></section>
+  <section class="spread"><p class="kicker">Biggest wins</p><h3>These owners get the microphone.</h3><div class="grid">${feature('season','Season payoff')+feature('dynasty','Dynasty haul')||'The bragging rights are still open.'}</div></section>
+  <section class="spread ledger"><p class="kicker">The full ledger</p><h3>Every deal. Both sides.</h3>${ledger||'No completed trades this season.'}</section>
+  <section class="spread"><p class="kicker">Closing arguments</p><h3>Everybody thinks they cooked.</h3><p>${winner(teams,'deals')}. ${count?'That bought them plenty of airtime in the group chat. The next argument belongs to the owners still holding the picks.':'The first argument starts with the first trade.'}</p></section></article>`;
+}
+
 function printTradeEdition(article){
   const sheet=window.open('','_blank');
   if(!sheet)return;
@@ -55,7 +113,7 @@ function printTradeEdition(article){
   const doc=sheet.document;
   doc.title='Trades Are Dead — '+article.querySelector('.eyebrow').textContent;
   const style=doc.createElement('style');
-  style.textContent='body{max-width:48rem;margin:2rem auto;padding:0 1rem;color:#162f2a;font:16px/1.5 system-ui}h2{font: bold 2.8rem Georgia}summary,h3{font-weight:bold}details{border-top:1px solid #bbc9c1;padding:1rem 0}section{break-inside:avoid}p{margin:.5rem 0}';
+  style.textContent=annualStyle;
   doc.head.append(style);
   const copy=article.cloneNode(true);
   copy.querySelectorAll('details').forEach(row=>row.open=true);
@@ -73,16 +131,7 @@ async function generateTradeEdition(){
   try{
     const issue=await api('/api/reports/trade-season',{method:'POST'});
     if(!active())return;
-    const esc=reportEsc, year=esc(issue.season);
-    const grade=(title,[mark,reason])=>`<p><strong>${title} · ${esc(mark)}</strong><br>${esc(reason)}</p>`;
-    const ledger=issue.ledger.map(deal=>`<details class="report-callout"><summary><strong>${deal.sides.map(s=>esc(s.team)).join(' / ')}</strong> · ${esc(deal.date)}</summary>${deal.sides.map(side=>`<section><h3>${esc(side.team)}</h3><p>Got ${side.received.map(esc).join(', ')||'no assets'}.<br>Sent ${side.sent.map(esc).join(', ')||'no assets'}.</p>${grade(year,side.season)}${grade('Dynasty',side.dynasty)}${side.onward.map(note=>`<p>${esc(note)}</p>`).join('')}</section>`).join('')}</details>`).join('');
-    panel.innerHTML=`${reportSwitcher()}<article class="report-section"><p class="eyebrow">${esc(issue.league)} · ${year} trade annual</p><h2>Trades Are Dead</h2><p class="lead">And Other Bullshit You Dopes Say</p><p>Deals through ${esc(issue.cutoff.slice(0,10))} · Editorial grades</p><button class="secondary-button" type="button" data-print-edition>Print or save PDF</button>
-      <p>${issue.ledger.length} completed deals. ${issue.participating} franchises at the table.</p>
-      ${issue.leaders.length?`<div class="report-callout"><strong>Most likely to be on the other end of the phone</strong><p>${issue.leaders.map(esc).join(' & ')} closed ${issue.leader_count} deals.</p></div>`:''}
-      <p>${issue.counts.player||0} player moves · ${issue.counts.pick||0} pick moves · $${issue.faab_dollars} across ${issue.counts.faab||0} waiver-money transfers</p>
-      <p>${issue.scored_weeks?`Season grades compare points from actual starts in full weeks after each deal, through Week ${issue.scored_weeks}.`:'Completed lineup scores are unavailable for this edition.'} Dynasty grades compare the exchanged assets at their ${esc(issue.as_of.slice(0,10))} market prices.</p>
-      ${issue.biggest?`<div class="report-callout"><strong>Most paperwork</strong><p>${issue.biggest.sides.map(s=>esc(s.team)).join(' / ')} moved ${issue.biggest.sides.reduce((n,s)=>n+s.received.length,0)} pieces on ${esc(issue.biggest.date)}.</p></div>`:''}
-      <h3>The trade ledger</h3>${ledger||'<p>No completed trades this season.</p>'}</article>`;
+    panel.innerHTML=reportSwitcher()+annualMarkup(issue);
     wireReportSwitcher();
     panel.querySelector('[data-print-edition]').onclick=()=>printTradeEdition(panel.querySelector('article'));
   }catch(error){
@@ -94,4 +143,4 @@ async function generateTradeEdition(){
 }
 
 window.renderFsfflReports=loadReportKind;
-(function installReportStyles(){const style=document.createElement('style');style.textContent=`.report-switcher{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.report-switcher button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:8px 12px;cursor:pointer}.report-switcher button.active{background:var(--accent);color:#07101c;border-color:var(--accent)}.report-title{margin-bottom:16px}.publication-title{padding-bottom:12px;border-bottom:1px solid var(--line)}.report-kpis,.report-state-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.report-kpis>div,.report-state-strip>div,.report-source-grid>div{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:5px}.report-kpis span,.report-state-strip span,.report-state-strip small,.report-source-grid span,.report-source-grid small{color:var(--muted)}.report-kpis strong,.report-state-strip strong{font-size:1.35rem}.report-callout{border:1px solid var(--line);border-radius:12px;padding:14px;background:#0a1120;margin:12px 0}.report-callout p{color:var(--muted);line-height:1.5}.report-section{margin:22px 0}.report-pick-list,.report-source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.report-pick-list>div{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;justify-content:space-between;gap:10px}.capitalize{text-transform:capitalize}.managed-row{outline:1px solid rgba(87,166,255,.3)}.power-ranking-list{display:grid;gap:12px;margin:16px 0}.power-rank-card{display:grid;grid-template-columns:64px 1fr;gap:14px;border:1px solid var(--line);border-radius:14px;padding:16px;background:#0a1120}.power-rank-number{font-size:2.2rem;font-weight:800;line-height:1;color:var(--accent)}.power-rank-heading{display:flex;justify-content:space-between;gap:12px}.power-rank-heading h3{margin:0}.power-rank-heading span,.power-rank-heading small{color:var(--muted);display:block;margin-top:4px}.power-rank-metrics{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0}.power-rank-body p,.preseason-copy p{color:var(--muted);line-height:1.5;margin:6px 0 0}.managed-rank,.managed-guide{outline:1px solid rgba(87,166,255,.55)}.preseason-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}.preseason-team{border:1px solid var(--line);border-radius:14px;padding:16px;background:#0a1120}.preseason-team-head{display:flex;justify-content:space-between;gap:12px}.preseason-team-head h3{margin:0}.preseason-team-head small{color:var(--accent)}.preseason-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}.preseason-kpis span{color:var(--muted);font-size:12px}.preseason-kpis strong{display:block;color:var(--text);font-size:1rem;margin-top:3px}.preseason-copy{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}@media(max-width:760px){.report-kpis,.report-state-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.report-pick-list,.report-source-grid,.preseason-grid{grid-template-columns:1fr}.power-rank-card{grid-template-columns:44px 1fr}.power-rank-number{font-size:1.7rem}.preseason-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:460px){.report-kpis,.report-state-strip{grid-template-columns:1fr}.report-switcher button{flex:1 1 45%}.power-rank-heading{display:block}.power-rank-heading>strong{display:block;margin-top:8px}}`;document.head.appendChild(style)})();
+(function installReportStyles(){const style=document.createElement('style');style.textContent=`.report-switcher{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.report-switcher button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:8px 12px;cursor:pointer}.report-switcher button.active{background:var(--accent);color:#07101c;border-color:var(--accent)}.report-title{margin-bottom:16px}.publication-title{padding-bottom:12px;border-bottom:1px solid var(--line)}.report-kpis,.report-state-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.report-kpis>div,.report-state-strip>div,.report-source-grid>div{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:5px}.report-kpis span,.report-state-strip span,.report-state-strip small,.report-source-grid span,.report-source-grid small{color:var(--muted)}.report-kpis strong,.report-state-strip strong{font-size:1.35rem}.report-callout{border:1px solid var(--line);border-radius:12px;padding:14px;background:#0a1120;margin:12px 0}.report-callout p{color:var(--muted);line-height:1.5}.report-section{margin:22px 0}.report-pick-list,.report-source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.report-pick-list>div{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;justify-content:space-between;gap:10px}.capitalize{text-transform:capitalize}.managed-row{outline:1px solid rgba(87,166,255,.3)}.power-ranking-list{display:grid;gap:12px;margin:16px 0}.power-rank-card{display:grid;grid-template-columns:64px 1fr;gap:14px;border:1px solid var(--line);border-radius:14px;padding:16px;background:#0a1120}.power-rank-number{font-size:2.2rem;font-weight:800;line-height:1;color:var(--accent)}.power-rank-heading{display:flex;justify-content:space-between;gap:12px}.power-rank-heading h3{margin:0}.power-rank-heading span,.power-rank-heading small{color:var(--muted);display:block;margin-top:4px}.power-rank-metrics{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0}.power-rank-body p,.preseason-copy p{color:var(--muted);line-height:1.5;margin:6px 0 0}.managed-rank,.managed-guide{outline:1px solid rgba(87,166,255,.55)}.preseason-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}.preseason-team{border:1px solid var(--line);border-radius:14px;padding:16px;background:#0a1120}.preseason-team-head{display:flex;justify-content:space-between;gap:12px}.preseason-team-head h3{margin:0}.preseason-team-head small{color:var(--accent)}.preseason-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}.preseason-kpis span{color:var(--muted);font-size:12px}.preseason-kpis strong{display:block;color:var(--text);font-size:1rem;margin-top:3px}.preseason-copy{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}@media(max-width:760px){.report-kpis,.report-state-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.report-pick-list,.report-source-grid,.preseason-grid{grid-template-columns:1fr}.power-rank-card{grid-template-columns:44px 1fr}.power-rank-number{font-size:1.7rem}.preseason-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:460px){.report-kpis,.report-state-strip{grid-template-columns:1fr}.report-switcher button{flex:1 1 45%}.power-rank-heading{display:block}.power-rank-heading>strong{display:block;margin-top:8px}}`;style.textContent+=annualStyle;document.head.appendChild(style)})();

@@ -19,7 +19,7 @@ def scored_weeks(state, league, cutoff, source):
         week = int(game["week"])
         if 1 <= week <= end:
             dates.setdefault(week, []).append(_schedule_coordinate(game)[1])
-    weeks = [w for w in range(1, end+1) if max(dates[w]) < cutoff.date()]
+    weeks = [w for w in range(1, end+1) if dates.get(w) and max(dates[w]) < cutoff.date()]
     roster_ids = {int(r.external_id): t.team_id for t in state.teams for r in t.provider_refs if r.provider == "sleeper"}
     scores = {(m.week, team): points for m in state.matchups for team, points in
               ((m.team_a_id, m.team_a_points), (m.team_b_id, m.team_b_points))}
@@ -49,8 +49,14 @@ def scored_weeks(state, league, cutoff, source):
         if lineups.keys() != roster_ids.keys():
             raise ValueError("Missing weekly lineup")
         return min(dates[week]), max(dates[week]), lineups
+    def available(week):
+        try:
+            return read(week)
+        except (OSError, TypeError, KeyError, ValueError):
+            return None
+
     with ThreadPoolExecutor(max_workers=3) as executor:
-        return tuple(executor.map(read, weeks))
+        return tuple(box for box in executor.map(available, weeks) if box is not None)
 
 
 # Keep only the compact scores. State objects and full provider payloads may be large.

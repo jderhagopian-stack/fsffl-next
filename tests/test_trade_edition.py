@@ -90,12 +90,10 @@ def test_box_scores_require_saved_totals_and_complete_starters():
                 fetch_league_matchup_week=lambda *a:rows)
     assert scored_weeks(state,"live",NOW,provider)[0][2][1]=={"sleeper:player:1":10}
     rows[0]["points"]+=1
-    with pytest.raises(ValueError,match="saved standings"):
-        scored_weeks(state,"live",NOW,provider)
+    assert scored_weeks(state,"live",NOW,provider) == ()
     rows[0]["points"]-=1
     rows[0]["starters_points"]=[]
-    with pytest.raises(ValueError,match="Incomplete weekly starters"):
-        scored_weeks(state,"live",NOW,provider)
+    assert scored_weeks(state,"live",NOW,provider) == ()
 
 
 def test_cash_kicker_does_not_hide_observed_player_return_or_impute_cash_price():
@@ -115,3 +113,25 @@ def test_cash_kicker_does_not_hide_observed_player_return_or_impute_cash_price()
     mark,why=season_take(buyer,[NS(event=buyer)],(week,),{},2026,event.occurred_at,lambda a:a.asset_ref)
     assert mark=="NICE" and "24 points" in why
     assert dynasty_take(buyer,prices,lambda a:a.asset_ref,2026)[0]=="UNAVAILABLE"
+
+
+def test_dated_editorial_survives_lineup_outage_only_for_matching_receipts(tmp_path, monkeypatch):
+    import json
+    from fsffl.product.trade_annual_editorial import read_editorial, reviewed_trade
+    state, record = fixture()
+    _, names, cutoff, trades = collect_trades(state, record)
+    digest = trades[0][0].source_sha256
+    private = {"league":"123","season":2026,"published":"2026-11-17","teams":{"1":"Alpha"},
+               "trades":{digest:{"grades":{"1":["NICE","FAIR"],"2":["OOF","ON FIRE"]},
+                                 "argument":"Alpha got their receiver."}}}
+    (tmp_path/"trade-annual-123-2026.json").write_text(json.dumps(private))
+    monkeypatch.setenv("FSFFL_REPORT_EDITION_DIR",str(tmp_path))
+    assert read_editorial("123",2026,NOW.replace(day=1)) == {}
+    assert read_editorial("456",2026,NOW) == {}
+    edition = read_editorial("123",2026,NOW)
+    issue = build_edition(NS(league_state=state,value_evidence=None),names,cutoff,trades,(),edition)
+    deal = issue["ledger"][0]
+    assert deal["reviewed_on"]=="2026-11-17" and deal["sides"][0]["season"]==("NICE","")
+    assert deal["argument"]=="Alpha got their receiver."
+    assert reviewed_trade(edition,trades[0][:1]) is None
+    assert reviewed_trade({**edition,"trades":{}},trades[0]) is None

@@ -1754,6 +1754,7 @@ def create_app(
     def trade_season_edition(user_id: str = Depends(require_beta_user)) -> dict:
         from .trade_edition import build_edition, collect_trades
         from .trade_edition_boxes import report_boxes
+        from .trade_annual_editorial import read_editorial, reviewed_trade
 
         runtime = store.get(user_id)
         state = runtime.league_state
@@ -1764,11 +1765,13 @@ def create_app(
             league, names, cutoff, trades = collect_trades(state, history)
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+        editorial = read_editorial(league, state.league.season, state.as_of)
+        needs_boxes = any(not reviewed_trade(editorial, moves) for moves in trades)
         try:
-            weeks = report_boxes(state, league, cutoff) if trades else ()
+            weeks = report_boxes(state, league, cutoff) if needs_boxes else ()
         except BlockingIOError as exc:
             raise HTTPException(status_code=429, detail=str(exc)) from exc
-        return build_edition(runtime, names, cutoff, trades, weeks)
+        return build_edition(runtime, names, cutoff, trades, weeks, editorial)
 
     @application.get("/api/behavioral/profiles")
     def behavioral_profiles(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
